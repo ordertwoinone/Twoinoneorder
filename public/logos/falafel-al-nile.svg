@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#ffffff" rx="20"/>
+  <circle cx="100" cy="80" r="50" fill="none" stroke="#e67e22" stroke-width="3"/>
+  <text x="100" y="92" text-anchor="middle" font-family="Arial,sans-serif" font-size="42" fill="#e67e22">🧆</text>
+  <text x="100" y="150" text-anchor="middle" font-family="Georgia,serif" font-size="14" font-weight="bold" fill="#e67e22">Falafel Al Nile</text>
+  <text x="100" y="172" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" fill="#e67e22">فلافل النيل</text>
+</svg>
