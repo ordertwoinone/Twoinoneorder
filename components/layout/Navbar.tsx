@@ -16,7 +16,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-white border-b border-gray-100" style={{ boxShadow: "0 1px 12px rgba(0,0,0,0.06)" }}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Hamburger */}
           <button
@@ -27,8 +27,8 @@ export default function Navbar() {
             <Menu size={22} className="text-gray-700" />
           </button>
 
-          {/* Brand — centered */}
-          <div className="flex flex-col items-center">
+          {/* Brand — centered, links to home */}
+          <Link href="/" className="flex flex-col items-center">
             <div className="flex items-center gap-2">
               <span
                 className="text-3xl text-green-700 leading-none"
@@ -43,12 +43,12 @@ export default function Navbar() {
             <p className="text-[10px] text-gray-400 tracking-wide mt-0.5 hidden sm:block">
               4 Restaurants. One Destination.
             </p>
-          </div>
+          </Link>
 
           {/* Phone CTA */}
           <a
-            href="tel:+971501234567"
-            className="w-10 h-10 flex items-center justify-center bg-green-600 hover:bg-green-700 rounded-full text-white transition-colors shadow-md"
+            href="tel:+971522305216"
+            className="w-10 h-10 flex items-center justify-center bg-green-50 hover:bg-green-100 rounded-full text-green-600 transition-colors border border-green-100"
             aria-label="Call us"
           >
             <Phone size={17} />

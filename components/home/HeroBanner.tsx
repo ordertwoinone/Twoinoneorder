@@ -8,78 +8,73 @@ interface Banner {
   id: number;
   tag: string;
   headline: string;
-  accent: string;
-  subtext: string;
+  sub: string;
   cta: string;
   ctaHref: string;
-  bg: string;
-  glow: string;
+  color: string;
+  ctaBg: string;
   foodImage: string;
   foodAlt: string;
-  promoText: string;
-  promoSub: string;
+  promoTop: string;
+  promoBot: string;
 }
 
 const BANNERS: Banner[] = [
   {
     id: 1,
-    tag: "Today's Special",
-    headline: "FREE",
-    accent: "DELIVERY",
-    subtext: "On orders above AED 30 — karak, falafel, pastries & more.",
+    tag: "⚡ Today's Special",
+    headline: "Free Delivery\nAll Day",
+    sub: "On orders above AED 30 from all restaurants.",
     cta: "ORDER NOW",
     ctaHref: "#restaurants",
-    bg: "linear-gradient(135deg, #064e3b 0%, #065f46 55%, #047857 100%)",
-    glow: "#34d399",
-    foodImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80",
+    color: "#15803d",
+    ctaBg: "#16a34a",
+    foodImage: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80",
     foodAlt: "Delicious food spread",
-    promoText: "AED 30",
-    promoSub: "MIN ORDER",
+    promoTop: "AED 30",
+    promoBot: "min order",
   },
   {
     id: 2,
-    tag: "Falafel Al Nile",
-    headline: "CRISPY",
-    accent: "FALAFEL",
-    subtext: "Authentic Egyptian falafel & shawarma delivered fresh to your door.",
-    cta: "ORDER FALAFEL",
+    tag: "🧆 Falafel Al Nile",
+    headline: "Crispy Falafel\nDelivered",
+    sub: "Authentic Egyptian falafel, shawarma & classic wraps.",
+    cta: "ORDER NOW",
     ctaHref: "https://order.falafelalnile.com",
-    bg: "linear-gradient(135deg, #431407 0%, #7c2d12 55%, #9a3412 100%)",
-    glow: "#fb923c",
-    foodImage: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=600&q=80",
+    color: "#c2410c",
+    ctaBg: "#ea580c",
+    foodImage: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=800&q=80",
     foodAlt: "Fresh falafel plate",
-    promoText: "20%",
-    promoSub: "OFF TODAY",
+    promoTop: "20%",
+    promoBot: "off today",
   },
   {
     id: 3,
-    tag: "Karak & Snack",
-    headline: "AUTHENTIC",
-    accent: "KARAK",
-    subtext: "Spiced karak chai, masala tea & street snacks delivered piping hot.",
+    tag: "☕ Karak & Snack",
+    headline: "Hot Karak\nEvery Day",
+    sub: "Spiced karak chai, masala tea & street snacks delivered hot.",
     cta: "GET KARAK",
     ctaHref: "https://www.karaksnack.com",
-    bg: "linear-gradient(135deg, #4c0519 0%, #881337 55%, #9f1239 100%)",
-    glow: "#fb7185",
-    foodImage: "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=600&q=80",
+    color: "#be123c",
+    ctaBg: "#dc2626",
+    foodImage: "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=800&q=80",
     foodAlt: "Spiced karak tea",
-    promoText: "HOT",
-    promoSub: "DAILY BREW",
+    promoTop: "HOT",
+    promoBot: "daily brew",
   },
   {
     id: 4,
-    tag: "Catering Service",
-    headline: "BOOK YOUR",
-    accent: "EVENT",
-    subtext: "Weddings, corporate & birthdays. Premium catering across UAE.",
+    tag: "🎉 Catering",
+    headline: "Book Your\nEvent Today",
+    sub: "Weddings, corporate events & birthdays across UAE.",
     cta: "BOOK NOW",
     ctaHref: "/catering",
-    bg: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #1e40af 100%)",
-    glow: "#60a5fa",
-    foodImage: "https://images.unsplash.com/photo-1555244162-803834f70033?w=600&q=80",
+    color: "#1d4ed8",
+    ctaBg: "#2563eb",
+    foodImage: "https://images.unsplash.com/photo-1555244162-803834f70033?w=800&q=80",
     foodAlt: "Catering food spread",
-    promoText: "5★",
-    promoSub: "RATED",
+    promoTop: "5 ★",
+    promoBot: "rated",
   },
 ];
 
@@ -101,101 +96,51 @@ export default function HeroBanner() {
   const b = BANNERS[current];
 
   return (
-    <section
-      className="px-4 pt-3 pb-2"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
+    <section className="px-4 pt-3 pb-2" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       <div className="max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={b.id}
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.38, ease: "easeInOut" }}
-            className="rounded-3xl overflow-hidden relative"
-            style={{ background: b.bg }}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ duration: 0.35, ease: "easeInOut" }}
+            className="rounded-3xl overflow-hidden"
+            style={{ background: "#ffffff", boxShadow: "0 4px 32px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)" }}
           >
-            {/* Decorative orbs */}
-            <div
-              className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none"
-              style={{
-                background: `radial-gradient(circle, ${b.glow}25 0%, transparent 70%)`,
-                transform: "translate(25%, -25%)",
-              }}
-            />
-            <div
-              className="absolute bottom-0 left-1/4 w-40 h-40 rounded-full pointer-events-none"
-              style={{
-                background: `radial-gradient(circle, ${b.glow}15 0%, transparent 70%)`,
-                transform: "translateY(50%)",
-              }}
-            />
-
-            {/* Main content row */}
-            <div className="relative flex items-center px-5 sm:px-8 py-5 sm:py-8 gap-3 sm:gap-8">
-              {/* ── LEFT: text ── */}
-              <div className="flex-1 min-w-0 z-10">
-                {/* Tag pill */}
-                <motion.div
-                  initial={{ opacity: 0, x: -14 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.08 }}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-[10px] font-bold"
-                  style={{
-                    background: `${b.glow}22`,
-                    color: b.glow,
-                    border: `1px solid ${b.glow}40`,
-                  }}
+            <div className="flex items-stretch h-48 sm:h-64">
+              {/* LEFT: text */}
+              <div className="flex flex-col justify-center px-5 sm:px-8 py-5 w-[58%] sm:w-[55%]">
+                <motion.span
+                  initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}
+                  className="inline-block text-[10px] font-bold px-2.5 py-1 rounded-full mb-3 w-fit"
+                  style={{ background: `${b.color}12`, color: b.color, border: `1px solid ${b.color}25` }}
                 >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full animate-pulse"
-                    style={{ background: b.glow }}
-                  />
                   {b.tag}
-                </motion.div>
+                </motion.span>
 
-                {/* Headline */}
-                <motion.div
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.16 }}
-                  className="mb-2"
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
+                  className="font-black leading-tight whitespace-pre-line mb-2 text-gray-900"
+                  style={{ fontSize: "clamp(20px, 4.5vw, 34px)" }}
                 >
-                  <p className="text-[24px] sm:text-[38px] font-black text-white/60 leading-none tracking-tight">
-                    {b.headline}
-                  </p>
-                  <p
-                    className="text-[30px] sm:text-[48px] font-black leading-none tracking-tight"
-                    style={{ color: b.glow }}
-                  >
-                    {b.accent}
-                  </p>
-                </motion.div>
+                  {b.headline}
+                </motion.h2>
 
-                {/* Subtext */}
                 <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.24 }}
-                  className="text-[11px] sm:text-sm text-white/55 mb-4 leading-relaxed max-w-[185px] sm:max-w-xs"
+                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }}
+                  className="text-[11px] sm:text-sm text-gray-400 mb-5 leading-relaxed line-clamp-2"
                 >
-                  {b.subtext}
+                  {b.sub}
                 </motion.p>
 
-                {/* CTA button */}
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.31 }}
-                >
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
                   <a
                     href={b.ctaHref}
                     target={b.ctaHref.startsWith("http") ? "_blank" : undefined}
                     rel={b.ctaHref.startsWith("http") ? "noopener noreferrer" : undefined}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[11px] sm:text-sm font-bold transition-all hover:gap-3 active:scale-95 shadow-lg"
-                    style={{ background: b.glow, color: "#fff" }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-[11px] sm:text-sm font-bold transition-all hover:gap-3 active:scale-95"
+                    style={{ background: b.ctaBg, boxShadow: `0 4px 16px ${b.ctaBg}45` }}
                   >
                     {b.cta}
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -205,87 +150,39 @@ export default function HeroBanner() {
                 </motion.div>
               </div>
 
-              {/* ── RIGHT: circular food image with promo badge ── */}
-              <div className="relative flex-shrink-0 w-[120px] h-[120px] sm:w-[190px] sm:h-[190px] z-10">
-                {/* Glow halo */}
-                <div
-                  className="absolute inset-0 rounded-full pointer-events-none"
-                  style={{
-                    background: `radial-gradient(circle, ${b.glow}35 0%, transparent 65%)`,
-                    transform: "scale(1.4)",
-                  }}
-                />
-                {/* Rotating dashed ring */}
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 rounded-full border-2 border-dashed opacity-25"
-                  style={{ borderColor: b.glow, transform: "scale(1.15)" }}
-                />
-                {/* Solid ring */}
-                <div
-                  className="absolute inset-0 rounded-full border-2 opacity-40"
-                  style={{ borderColor: b.glow, transform: "scale(1.06)" }}
-                />
-                {/* Food image */}
-                <div
-                  className="relative w-full h-full rounded-full overflow-hidden border-[3px]"
-                  style={{ borderColor: `${b.glow}70` }}
-                >
+              {/* RIGHT: diagonal food image */}
+              <div className="flex-1 relative">
+                <div className="absolute inset-0" style={{ clipPath: "polygon(18% 0, 100% 0, 100% 100%, 0 100%)" }}>
                   <Image
-                    src={b.foodImage}
-                    alt={b.foodAlt}
-                    fill
+                    src={b.foodImage} alt={b.foodAlt} fill
                     className="object-cover"
-                    sizes="(max-width: 640px) 120px, 190px"
+                    sizes="(max-width: 640px) 42vw, 45vw"
                     priority={b.id === 1}
                   />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(255,255,255,0.55) 0%, transparent 30%)" }} />
                 </div>
-
-                {/* Promo badge */}
                 <div
-                  className="absolute -top-1 -right-1 sm:top-0 sm:right-0 rounded-full flex flex-col items-center justify-center text-center shadow-xl"
-                  style={{ width: "52px", height: "52px", background: b.glow }}
+                  className="absolute top-4 right-4 rounded-2xl flex flex-col items-center justify-center px-2.5 py-2 z-10"
+                  style={{ background: b.ctaBg, boxShadow: `0 4px 16px ${b.ctaBg}55` }}
                 >
-                  <span className="text-[12px] sm:text-[13px] font-black text-white leading-none">
-                    {b.promoText}
-                  </span>
-                  <span className="text-[7px] font-bold text-white/90 leading-none mt-0.5">
-                    {b.promoSub}
-                  </span>
+                  <span className="text-white font-black text-sm sm:text-base leading-none">{b.promoTop}</span>
+                  <span className="text-white/80 text-[8px] font-semibold leading-none mt-0.5 uppercase tracking-wide">{b.promoBot}</span>
                 </div>
               </div>
             </div>
 
-            {/* Dots + arrows */}
-            <div className="relative flex items-center justify-center gap-2.5 pb-3 sm:pb-4">
-              <button
-                onClick={prev}
-                className="opacity-40 hover:opacity-80 transition-opacity rounded-full p-0.5"
-                style={{ color: b.glow }}
-                aria-label="Previous slide"
-              >
+            {/* Dots */}
+            <div className="flex items-center justify-center gap-2 py-3 bg-white">
+              <button onClick={prev} className="opacity-30 hover:opacity-60 transition-opacity" style={{ color: b.color }} aria-label="Previous">
                 <ChevronLeft size={15} />
               </button>
               {BANNERS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  aria-label={`Slide ${i + 1}`}
+                <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
                   className="rounded-full transition-all duration-300"
-                  style={{
-                    width: i === current ? "22px" : "6px",
-                    height: "6px",
-                    background: i === current ? b.glow : `${b.glow}40`,
-                  }}
+                  style={{ width: i === current ? "22px" : "6px", height: "6px", background: i === current ? b.color : `${b.color}30` }}
                 />
               ))}
-              <button
-                onClick={next}
-                className="opacity-40 hover:opacity-80 transition-opacity rounded-full p-0.5"
-                style={{ color: b.glow }}
-                aria-label="Next slide"
-              >
+              <button onClick={next} className="opacity-30 hover:opacity-60 transition-opacity" style={{ color: b.color }} aria-label="Next">
                 <ChevronRight size={15} />
               </button>
             </div>

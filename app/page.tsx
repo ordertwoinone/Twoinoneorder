@@ -17,7 +17,7 @@ export default function HomePage() {
       <TopBar />
       <Navbar />
       <main className="pb-20 sm:pb-0">
-        <div className="bg-white sticky top-16 z-30 shadow-sm">
+        <div className="sticky top-16 z-30 bg-white border-b border-gray-100" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.05)" }}>
           <LocationBar />
           <SearchBar />
         </div>

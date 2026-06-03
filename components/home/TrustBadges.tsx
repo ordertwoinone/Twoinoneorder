@@ -10,7 +10,7 @@ const BADGES = [
 
 export default function TrustBadges() {
   return (
-    <section className="px-4 py-5 bg-white">
+    <section className="px-4 py-5">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-4 gap-3">
           {BADGES.map((b, i) => (
@@ -20,11 +20,12 @@ export default function TrustBadges() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.07, duration: 0.4 }}
-              className="flex flex-col items-center text-center bg-gray-50 rounded-2xl py-3 px-2"
+              className="flex flex-col items-center text-center rounded-2xl py-4 px-2 bg-white"
+              style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)" }}
             >
-              <span className="text-2xl sm:text-3xl mb-1.5">{b.emoji}</span>
+              <span className="text-2xl sm:text-3xl mb-2">{b.emoji}</span>
               <p className="text-[11px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
-              <p className="text-[10px] sm:text-xs text-gray-400 leading-tight">{b.desc}</p>
+              <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.desc}</p>
             </motion.div>
           ))}
         </div>
