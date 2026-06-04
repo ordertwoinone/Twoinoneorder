@@ -20,52 +20,57 @@ export default function RestaurantCards() {
             <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Our Restaurants</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">Tap to order · Fast delivery across UAE</p>
           </div>
-          <span className="flex items-center gap-1.5 text-xs text-green-700 font-semibold bg-white px-3 py-1.5 rounded-full" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+          <span
+            className="flex items-center gap-1.5 text-xs text-green-700 font-semibold bg-white px-3 py-1.5 rounded-full"
+            style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+          >
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             All Open
           </span>
         </div>
 
-        {/* 2-col on mobile, 4-col on desktop */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {restaurants.map((r, i) => {
             const badge = r.badge ? BADGES[r.badge] : null;
             return (
-              <motion.a
+              <motion.div
                 key={r.id}
-                href={r.url}
-                target="_blank"
-                rel="noopener noreferrer"
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.4 }}
                 whileHover={{ y: -4 }}
-                className="relative rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer group flex flex-col"
+                className="relative rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer group"
                 style={{
-                  height: "clamp(260px, 40vw, 360px)",
+                  height: "320px",
                   boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
                 }}
               >
+                {/* Wrap the whole card in an <a> — no interactive children */}
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute inset-0 z-20"
+                  aria-label={`Order from ${r.name}`}
+                />
+
                 {/* ── Full-bleed food image ── */}
-                <div className="absolute inset-0">
-                  <Image
-                    src={r.foodImage}
-                    alt={r.name}
-                    fill
-                    loading="lazy"
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
-                  />
-                </div>
+                <Image
+                  src={r.foodImage}
+                  alt={r.name}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+                  priority={i < 2}
+                />
 
                 {/* ── Dark gradient overlay ── */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
 
-                {/* ── Top row: logo + badge ── */}
+                {/* ── Top: logo + badge ── */}
                 <div className="absolute top-3 left-3 right-3 flex items-start justify-between z-10">
-                  {/* Logo */}
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white shadow-md p-1.5 overflow-hidden flex-shrink-0">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white shadow-md p-1.5 overflow-hidden">
                     <Image
                       src={r.logo}
                       alt={`${r.name} logo`}
@@ -74,8 +79,6 @@ export default function RestaurantCards() {
                       className="object-contain w-full h-full"
                     />
                   </div>
-
-                  {/* Badge */}
                   {badge && (
                     <span
                       className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-full text-white shadow-md"
@@ -86,10 +89,10 @@ export default function RestaurantCards() {
                   )}
                 </div>
 
-                {/* ── Bottom overlay: rating + name + cuisine ── */}
+                {/* ── Bottom: info + ORDER NOW ── */}
                 <div className="absolute bottom-0 left-0 right-0 z-10">
-                  <div className="px-3 pt-2 pb-2.5">
-                    {/* Rating + time */}
+                  {/* Rating + time + name + cuisine */}
+                  <div className="px-3 pt-3 pb-2.5">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="flex items-center gap-0.5 text-amber-400 font-bold text-[11px]">
                         <Star size={11} className="fill-amber-400" />
@@ -101,28 +104,24 @@ export default function RestaurantCards() {
                         {r.deliveryTime}
                       </span>
                     </div>
-
-                    {/* Restaurant name */}
                     <h3 className="text-white font-extrabold text-base sm:text-lg leading-tight mb-0.5 drop-shadow">
                       {r.name}
                     </h3>
-
-                    {/* Cuisine */}
                     <p className="text-white/55 text-[10px] sm:text-[11px] truncate">
                       {r.cuisine.join(" · ")}
                     </p>
                   </div>
 
-                  {/* ORDER NOW — full-width solid color button */}
-                  <button
+                  {/* ORDER NOW — full-width, div not button (avoids <button> inside <a>) */}
+                  <div
                     className="w-full py-3 sm:py-3.5 text-white font-bold text-[12px] sm:text-sm flex items-center justify-center gap-2 transition-all group-hover:brightness-110"
                     style={{ background: r.color }}
                   >
                     ORDER NOW
-                    <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                  </button>
+                    <ArrowUpRight size={14} />
+                  </div>
                 </div>
-              </motion.a>
+              </motion.div>
             );
           })}
         </div>
