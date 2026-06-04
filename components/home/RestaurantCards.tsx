@@ -1,24 +1,20 @@
 "use client";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Star, Clock, Truck, TrendingUp, Flame, ArrowUpRight } from "lucide-react";
+import { Star, Clock, ArrowUpRight } from "lucide-react";
 import { restaurants } from "@/data/restaurants";
 
-const BADGE_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  "Free Delivery": { label: "Free Delivery", icon: <Truck size={9} />,       color: "#16a34a" },
-  "Best Seller":   { label: "Best Seller",   icon: <TrendingUp size={9} />,  color: "#d97706" },
-  "Popular":       { label: "Popular",        icon: <Flame size={9} />,       color: "#dc2626" },
+const BADGES: Record<string, { label: string; bg: string }> = {
+  "Free Delivery": { label: "Free Delivery", bg: "#ea580c" },
+  "Best Seller":   { label: "Best Seller",   bg: "#16a34a" },
+  "Popular":       { label: "Popular",        bg: "#dc2626" },
 };
-
-const CARD = {
-  background: "#ffffff",
-  boxShadow: "0 2px 20px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)",
-} as const;
 
 export default function RestaurantCards() {
   return (
     <section id="restaurants" className="py-4 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Our Restaurants</h2>
@@ -30,9 +26,10 @@ export default function RestaurantCards() {
           </span>
         </div>
 
+        {/* 2-col on mobile, 4-col on desktop */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {restaurants.map((r, i) => {
-            const badge = r.badge ? BADGE_CONFIG[r.badge] : null;
+            const badge = r.badge ? BADGES[r.badge] : null;
             return (
               <motion.a
                 key={r.id}
@@ -43,58 +40,86 @@ export default function RestaurantCards() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.4 }}
-                whileHover={{ y: -5, boxShadow: "0 8px 32px rgba(0,0,0,0.10)" }}
-                className="rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer group flex flex-col"
-                style={CARD}
+                whileHover={{ y: -4 }}
+                className="relative rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer group flex flex-col"
+                style={{
+                  height: "clamp(260px, 40vw, 360px)",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
+                }}
               >
-                {/* Food image */}
-                <div className="relative h-32 sm:h-44 overflow-hidden">
+                {/* ── Full-bleed food image ── */}
+                <div className="absolute inset-0">
                   <Image
                     src={r.foodImage}
                     alt={r.name}
                     fill
                     loading="lazy"
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                   />
+                </div>
+
+                {/* ── Dark gradient overlay ── */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
+
+                {/* ── Top row: logo + badge ── */}
+                <div className="absolute top-3 left-3 right-3 flex items-start justify-between z-10">
+                  {/* Logo */}
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white shadow-md p-1.5 overflow-hidden flex-shrink-0">
+                    <Image
+                      src={r.logo}
+                      alt={`${r.name} logo`}
+                      width={40}
+                      height={40}
+                      className="object-contain w-full h-full"
+                    />
+                  </div>
+
+                  {/* Badge */}
                   {badge && (
                     <span
-                      className="absolute top-2.5 right-2.5 flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full text-white"
-                      style={{ background: badge.color }}
+                      className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-full text-white shadow-md"
+                      style={{ background: badge.bg }}
                     >
-                      {badge.icon}{badge.label}
+                      {badge.label}
                     </span>
                   )}
                 </div>
 
-                {/* Info */}
-                <div className="p-3 sm:p-4 flex flex-col flex-1">
-                  <div className="flex items-center gap-2.5 mb-2.5">
-                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gray-50 border border-gray-100 p-1.5 flex-shrink-0 overflow-hidden">
-                      <Image src={r.logo} alt={`${r.name} logo`} width={40} height={40} className="object-contain w-full h-full" />
+                {/* ── Bottom overlay: rating + name + cuisine ── */}
+                <div className="absolute bottom-0 left-0 right-0 z-10">
+                  <div className="px-3 pt-2 pb-2.5">
+                    {/* Rating + time */}
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="flex items-center gap-0.5 text-amber-400 font-bold text-[11px]">
+                        <Star size={11} className="fill-amber-400" />
+                        {r.rating}
+                      </span>
+                      <span className="text-white/40 text-[10px]">·</span>
+                      <span className="flex items-center gap-1 text-white/70 text-[10px]">
+                        <Clock size={10} />
+                        {r.deliveryTime}
+                      </span>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="font-extrabold text-[13px] sm:text-sm leading-tight truncate" style={{ color: r.color }}>
-                        {r.name}
-                      </h3>
-                      <p className="text-[9px] sm:text-[10px] text-gray-400 truncate">{r.cuisine.join(", ")}</p>
-                    </div>
+
+                    {/* Restaurant name */}
+                    <h3 className="text-white font-extrabold text-base sm:text-lg leading-tight mb-0.5 drop-shadow">
+                      {r.name}
+                    </h3>
+
+                    {/* Cuisine */}
+                    <p className="text-white/55 text-[10px] sm:text-[11px] truncate">
+                      {r.cuisine.join(" · ")}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="flex items-center gap-0.5 text-amber-500 font-bold text-[11px]">
-                      <Star size={10} className="fill-amber-400" />{r.rating}
-                    </span>
-                    <span className="flex items-center gap-0.5 text-gray-400 text-[10px]">
-                      <Clock size={9} />{r.deliveryTime}
-                    </span>
-                  </div>
-
+                  {/* ORDER NOW — full-width solid color button */}
                   <button
-                    className="mt-auto w-full py-2 rounded-xl text-[11px] sm:text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all group-hover:gap-2.5"
-                    style={{ background: r.color, boxShadow: `0 4px 12px ${r.color}35` }}
+                    className="w-full py-3 sm:py-3.5 text-white font-bold text-[12px] sm:text-sm flex items-center justify-center gap-2 transition-all group-hover:brightness-110"
+                    style={{ background: r.color }}
                   >
-                    ORDER NOW <ArrowUpRight size={12} />
+                    ORDER NOW
+                    <ArrowUpRight size={14} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </button>
                 </div>
               </motion.a>
