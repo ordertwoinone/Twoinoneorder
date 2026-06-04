@@ -33,94 +33,99 @@ export default function RestaurantCards() {
           {restaurants.map((r, i) => {
             const badge = r.badge ? BADGES[r.badge] : null;
             return (
+              /* motion.div handles entrance animation only — no DOM nesting issues */
               <motion.div
                 key={r.id}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08, duration: 0.4 }}
-                whileHover={{ y: -4 }}
-                className="relative rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer group"
-                style={{
-                  height: "320px",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
-                }}
               >
-                {/* Wrap the whole card in an <a> — no interactive children */}
+                {/* Plain <a> as card — no interactive children nested inside */}
                 <a
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute inset-0 z-20"
-                  aria-label={`Order from ${r.name}`}
-                />
+                  className="relative block rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer group"
+                  style={{
+                    height: "320px",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
+                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-4px)";
+                    e.currentTarget.style.boxShadow = "0 12px 36px rgba(0,0,0,0.18)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.14)";
+                  }}
+                >
+                  {/* Full-bleed food image */}
+                  <Image
+                    src={r.foodImage}
+                    alt={r.name}
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
+                    priority={i < 2}
+                  />
 
-                {/* ── Full-bleed food image ── */}
-                <Image
-                  src={r.foodImage}
-                  alt={r.name}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
-                  priority={i < 2}
-                />
+                  {/* Dark gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
 
-                {/* ── Dark gradient overlay ── */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
-
-                {/* ── Top: logo + badge ── */}
-                <div className="absolute top-3 left-3 right-3 flex items-start justify-between z-10">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white shadow-md p-1.5 overflow-hidden">
-                    <Image
-                      src={r.logo}
-                      alt={`${r.name} logo`}
-                      width={40}
-                      height={40}
-                      className="object-contain w-full h-full"
-                    />
-                  </div>
-                  {badge && (
-                    <span
-                      className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-full text-white shadow-md"
-                      style={{ background: badge.bg }}
-                    >
-                      {badge.label}
-                    </span>
-                  )}
-                </div>
-
-                {/* ── Bottom: info + ORDER NOW ── */}
-                <div className="absolute bottom-0 left-0 right-0 z-10">
-                  {/* Rating + time + name + cuisine */}
-                  <div className="px-3 pt-3 pb-2.5">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="flex items-center gap-0.5 text-amber-400 font-bold text-[11px]">
-                        <Star size={11} className="fill-amber-400" />
-                        {r.rating}
-                      </span>
-                      <span className="text-white/40 text-[10px]">·</span>
-                      <span className="flex items-center gap-1 text-white/70 text-[10px]">
-                        <Clock size={10} />
-                        {r.deliveryTime}
-                      </span>
+                  {/* Top: logo + badge */}
+                  <div className="absolute top-3 left-3 right-3 flex items-start justify-between z-10">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white shadow-md p-1.5 overflow-hidden">
+                      <Image
+                        src={r.logo}
+                        alt={`${r.name} logo`}
+                        width={40}
+                        height={40}
+                        className="object-contain w-full h-full"
+                      />
                     </div>
-                    <h3 className="text-white font-extrabold text-base sm:text-lg leading-tight mb-0.5 drop-shadow">
-                      {r.name}
-                    </h3>
-                    <p className="text-white/55 text-[10px] sm:text-[11px] truncate">
-                      {r.cuisine.join(" · ")}
-                    </p>
+                    {badge && (
+                      <span
+                        className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-full text-white shadow-md"
+                        style={{ background: badge.bg }}
+                      >
+                        {badge.label}
+                      </span>
+                    )}
                   </div>
 
-                  {/* ORDER NOW — full-width, div not button (avoids <button> inside <a>) */}
-                  <div
-                    className="w-full py-3 sm:py-3.5 text-white font-bold text-[12px] sm:text-sm flex items-center justify-center gap-2 transition-all group-hover:brightness-110"
-                    style={{ background: r.color }}
-                  >
-                    ORDER NOW
-                    <ArrowUpRight size={14} />
+                  {/* Bottom: rating + name + cuisine + ORDER NOW */}
+                  <div className="absolute bottom-0 left-0 right-0 z-10">
+                    <div className="px-3 pt-3 pb-2.5">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="flex items-center gap-0.5 text-amber-400 font-bold text-[11px]">
+                          <Star size={11} className="fill-amber-400" />
+                          {r.rating}
+                        </span>
+                        <span className="text-white/40 text-[10px]">·</span>
+                        <span className="flex items-center gap-1 text-white/70 text-[10px]">
+                          <Clock size={10} />
+                          {r.deliveryTime}
+                        </span>
+                      </div>
+                      <h3 className="text-white font-extrabold text-base sm:text-lg leading-tight mb-0.5 drop-shadow">
+                        {r.name}
+                      </h3>
+                      <p className="text-white/55 text-[10px] sm:text-[11px] truncate">
+                        {r.cuisine.join(" · ")}
+                      </p>
+                    </div>
+
+                    {/* ORDER NOW — <div> is valid inside <a>, no nesting issues */}
+                    <div
+                      className="w-full py-3 sm:py-3.5 text-white font-bold text-[12px] sm:text-sm flex items-center justify-center gap-2 transition-all group-hover:brightness-110"
+                      style={{ background: r.color }}
+                    >
+                      ORDER NOW <ArrowUpRight size={14} />
+                    </div>
                   </div>
-                </div>
+                </a>
               </motion.div>
             );
           })}
