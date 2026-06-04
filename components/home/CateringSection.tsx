@@ -1,7 +1,6 @@
-"use client";
+// Server component — no client JS needed
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { ArrowRight, Star, Users, CalendarCheck } from "lucide-react";
 
 const STATS = [
@@ -14,11 +13,7 @@ export default function CateringSection() {
   return (
     <section className="px-4 py-3">
       <div className="max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.45 }}
+        <div
           className="rounded-3xl overflow-hidden flex flex-col sm:flex-row bg-white"
           style={{ boxShadow: "0 4px 32px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)", minHeight: "165px" }}
         >
@@ -74,7 +69,7 @@ export default function CateringSection() {
             />
             <div className="absolute inset-0 hidden sm:block" style={{ background: "linear-gradient(to right, rgba(255,255,255,0.60) 0%, transparent 40%)" }} />
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

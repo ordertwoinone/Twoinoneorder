@@ -1,4 +1,4 @@
-"use client";
+// Server component — no client JS needed
 import Link from "next/link";
 import { Phone, Mail, MapPin, Share2, MessageCircle } from "lucide-react";
 import { restaurants } from "@/data/restaurants";

@@ -36,8 +36,9 @@ export default function LocationBar() {
   const containerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  // Manual selection always wins over GPS
   const displayArea =
-    location.status === "granted" ? location.area : selected || "Select delivery area";
+    selected || (location.status === "granted" ? location.area : "Select delivery area");
 
   const filtered = UAE_AREAS.filter((a) =>
     a.toLowerCase().includes(query.toLowerCase())
@@ -173,7 +174,7 @@ export default function LocationBar() {
               {/* Use my location option */}
               <div className="border-t border-gray-100 p-2">
                 <button
-                  onClick={() => { detect(); setOpen(false); }}
+                  onClick={() => { setSelected(""); detect(); setOpen(false); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-green-600 hover:bg-green-50 transition-colors text-sm font-semibold"
                 >
                   <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center shrink-0">
