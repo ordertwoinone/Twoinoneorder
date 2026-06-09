@@ -3,7 +3,7 @@ import { Mail, Share2 } from "lucide-react";
 
 export default function TopBar() {
   return (
-    <div className="bg-green-700 text-green-100 text-xs py-2 px-4">
+    <div className="bg-orange-600 text-orange-100 text-xs py-2 px-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <a
           href="mailto:hello@twoinoneae.com"

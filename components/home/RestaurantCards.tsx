@@ -1,129 +1,117 @@
 "use client";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { Star, Clock, ArrowUpRight } from "lucide-react";
+import { Star, Clock, ArrowRight } from "lucide-react";
 import { restaurants } from "@/data/restaurants";
 
-const BADGES: Record<string, { label: string; bg: string }> = {
-  "Free Delivery": { label: "Free Delivery", bg: "#ea580c" },
-  "Best Seller":   { label: "Best Seller",   bg: "#16a34a" },
-  "Popular":       { label: "Popular",        bg: "#dc2626" },
+const BADGE_STYLE: Record<string, { label: string; bg: string; text: string }> = {
+  "Free Delivery": { label: "Free Delivery", bg: "#16a34a", text: "#fff" },
+  "Best Seller":   { label: "Best Seller",   bg: "#ea580c", text: "#fff" },
+  "Popular":       { label: "Popular",        bg: "#dc2626", text: "#fff" },
+  "New":           { label: "NEW",            bg: "#7c3aed", text: "#fff" },
 };
 
 export default function RestaurantCards() {
   return (
-    <section id="restaurants" className="py-4 px-4">
+    <section id="restaurants" className="py-4">
       <div className="max-w-7xl mx-auto">
+
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3 px-4">
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Our Restaurants</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">Tap to order · Fast delivery across UAE</p>
           </div>
-          <span
-            className="flex items-center gap-1.5 text-xs text-green-700 font-semibold bg-white px-3 py-1.5 rounded-full"
-            style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+          <a
+            href="#restaurants"
+            className="flex items-center gap-1 text-xs font-bold"
+            style={{ color: "#ea580c" }}
           >
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            All Open
-          </span>
+            View All <ArrowRight size={13} />
+          </a>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Horizontal scroll row */}
+        <div className="flex gap-3 overflow-x-auto scrollbar-none px-4 pb-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0">
           {restaurants.map((r, i) => {
-            const badge = r.badge ? BADGES[r.badge] : null;
+            const badge = r.badge ? BADGE_STYLE[r.badge] : null;
             return (
-              /* motion.div handles entrance animation only — no DOM nesting issues */
               <motion.div
                 key={r.id}
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.08, duration: 0.4 }}
+                transition={{ delay: i * 0.07, duration: 0.35 }}
+                className="flex-shrink-0 sm:flex-shrink"
+                style={{ minWidth: "175px" }}
               >
-                {/* Plain <a> as card — no interactive children nested inside */}
                 <a
                   href={r.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="relative block rounded-2xl sm:rounded-3xl overflow-hidden cursor-pointer group"
-                  style={{
-                    height: "320px",
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.14)",
-                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-4px)";
-                    e.currentTarget.style.boxShadow = "0 12px 36px rgba(0,0,0,0.18)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.14)";
-                  }}
+                  className="block bg-white rounded-2xl overflow-hidden group border border-gray-100 transition-shadow hover:shadow-md"
+                  style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
                 >
-                  {/* Full-bleed food image */}
-                  <Image
-                    src={r.foodImage}
-                    alt={r.name}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
-                    priority={i < 2}
-                  />
+                  {/* Image */}
+                  <div className="relative" style={{ height: "120px" }}>
+                    <Image
+                      src={r.foodImage}
+                      alt={r.name}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 640px) 175px, 25vw"
+                      priority={i < 2}
+                    />
 
-                  {/* Dark gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/92 via-black/40 to-black/10" />
-
-                  {/* Top: logo + badge */}
-                  <div className="absolute top-3 left-3 right-3 flex items-start justify-between z-10">
-                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white shadow-md p-1.5 overflow-hidden">
-                      <Image
-                        src={r.logo}
-                        alt={`${r.name} logo`}
-                        width={40}
-                        height={40}
-                        className="object-contain w-full h-full"
-                      />
-                    </div>
+                    {/* Badge top-left */}
                     {badge && (
                       <span
-                        className="text-[10px] sm:text-[11px] font-bold px-2.5 py-1 rounded-full text-white shadow-md"
-                        style={{ background: badge.bg }}
+                        className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full z-10"
+                        style={{ background: badge.bg, color: badge.text }}
                       >
                         {badge.label}
                       </span>
                     )}
+
+                    {/* Logo top-right */}
+                    <div className="absolute top-2 right-2 w-9 h-9 rounded-xl bg-white shadow-sm overflow-hidden p-1 z-10">
+                      <Image
+                        src={r.logo}
+                        alt={`${r.name} logo`}
+                        width={32}
+                        height={32}
+                        className="object-contain w-full h-full"
+                      />
+                    </div>
                   </div>
 
-                  {/* Bottom: rating + name + cuisine + ORDER NOW */}
-                  <div className="absolute bottom-0 left-0 right-0 z-10">
-                    <div className="px-3 pt-3 pb-2.5">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="flex items-center gap-0.5 text-amber-400 font-bold text-[11px]">
-                          <Star size={11} className="fill-amber-400" />
-                          {r.rating}
-                        </span>
-                        <span className="text-white/40 text-[10px]">·</span>
-                        <span className="flex items-center gap-1 text-white/70 text-[10px]">
-                          <Clock size={10} />
-                          {r.deliveryTime}
-                        </span>
-                      </div>
-                      <h3 className="text-white font-extrabold text-base sm:text-lg leading-tight mb-0.5 drop-shadow">
-                        {r.name}
-                      </h3>
-                      <p className="text-white/55 text-[10px] sm:text-[11px] truncate">
-                        {r.cuisine.join(" · ")}
-                      </p>
+                  {/* Info */}
+                  <div className="px-3 pt-2.5 pb-3">
+                    {/* Rating + time */}
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="flex items-center gap-0.5 text-[11px] font-bold text-amber-500">
+                        <Star size={10} className="fill-amber-400 stroke-amber-400" />
+                        {r.rating}
+                      </span>
+                      <span className="text-gray-300 text-[10px]">·</span>
+                      <span className="flex items-center gap-0.5 text-gray-400 text-[10px]">
+                        <Clock size={9} />
+                        {r.deliveryTime}
+                      </span>
                     </div>
 
-                    {/* ORDER NOW — <div> is valid inside <a>, no nesting issues */}
-                    <div
-                      className="w-full py-3 sm:py-3.5 text-white font-bold text-[12px] sm:text-sm flex items-center justify-center gap-2 transition-all group-hover:brightness-110"
-                      style={{ background: r.color }}
-                    >
-                      ORDER NOW <ArrowUpRight size={14} />
-                    </div>
+                    {/* Name */}
+                    <h3 className="text-gray-900 font-extrabold text-sm leading-tight mb-0.5 truncate">
+                      {r.name}
+                    </h3>
+
+                    {/* Cuisine */}
+                    <p className="text-gray-400 text-[10px] truncate mb-1.5">
+                      {r.cuisine.join(", ")}
+                    </p>
+
+                    {/* Free delivery */}
+                    <p className="text-[11px] font-semibold" style={{ color: "#16a34a" }}>
+                      Free delivery
+                    </p>
                   </div>
                 </a>
               </motion.div>

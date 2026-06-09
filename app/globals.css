@@ -9,21 +9,7 @@
 body {
   color: var(--foreground);
   min-height: 100vh;
-  /*
-    Near-white base with 4 soft color zones — matching the reference:
-    top-left:     soft mint/sage green
-    top-right:    soft cool blue
-    bottom-right: warm cream/peach
-    bottom-left:  soft sage
-    Base is near-white #f3f5f2
-  */
-  background:
-    radial-gradient(circle at 8%  12%,  rgba(180, 225, 195, 0.55) 0%, transparent 42%),
-    radial-gradient(circle at 88% 10%,  rgba(190, 215, 248, 0.45) 0%, transparent 38%),
-    radial-gradient(circle at 92% 88%,  rgba(248, 225, 190, 0.50) 0%, transparent 42%),
-    radial-gradient(circle at 10% 90%,  rgba(200, 235, 208, 0.40) 0%, transparent 38%),
-    #f3f5f2;
-  background-attachment: fixed;
+  background: #f8f8f8;
 }
 
 .scrollbar-none {

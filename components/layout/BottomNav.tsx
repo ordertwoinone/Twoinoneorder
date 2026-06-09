@@ -24,13 +24,13 @@ export default function BottomNav() {
               key={item.label}
               href={item.href}
               className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors ${
-                active ? "text-green-600" : "text-gray-400 hover:text-gray-600"
+                active ? "text-orange-600" : "text-gray-400 hover:text-gray-600"
               }`}
             >
               <item.icon
                 size={22}
                 strokeWidth={active ? 2.5 : 1.8}
-                className={active ? "text-green-600" : ""}
+                className={active ? "text-orange-600" : ""}
               />
               <span className="text-[10px] font-medium">{item.label}</span>
             </Link>

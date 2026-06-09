@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export type LocationState =
   | { status: "idle" }
@@ -51,10 +51,6 @@ export function useLocation() {
       { timeout: 8000 }
     );
   };
-
-  useEffect(() => {
-    detect();
-  }, []);
 
   return { location, detect };
 }
