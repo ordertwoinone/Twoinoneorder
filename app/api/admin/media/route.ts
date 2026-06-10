@@ -1,24 +1,36 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+const FOLDERS = ["banners", "restaurants", "offers", "brand", "logos", "general"];
+
+async function listFolder(folder: string) {
+  const { data } = await supabaseAdmin.storage
+    .from("media")
+    .list(folder, { limit: 500, sortBy: { column: "created_at", order: "desc" } });
+
+  return (data || [])
+    .filter((f) => f.name !== ".emptyFolderPlaceholder" && f.metadata)
+    .map((f) => {
+      const path = `${folder}/${f.name}`;
+      const { data: { publicUrl } } = supabaseAdmin.storage.from("media").getPublicUrl(path);
+      return { name: f.name, path, url: publicUrl, created_at: f.created_at, size: f.metadata?.size };
+    });
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const folder = searchParams.get("folder") || "";
 
-  const { data, error } = await supabaseAdmin.storage
-    .from("media")
-    .list(folder, { limit: 200, sortBy: { column: "created_at", order: "desc" } });
+  if (!folder || folder === "all") {
+    // List all known folders in parallel
+    const results = await Promise.all(FOLDERS.map(listFolder));
+    const files = results
+      .flat()
+      .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime());
+    return NextResponse.json(files);
+  }
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const files = (data || [])
-    .filter((f) => f.name !== ".emptyFolderPlaceholder")
-    .map((f) => {
-      const path = folder ? `${folder}/${f.name}` : f.name;
-      const { data: { publicUrl } } = supabaseAdmin.storage.from("media").getPublicUrl(path);
-      return { name: f.name, path, url: publicUrl, created_at: f.created_at, size: f.metadata?.size };
-    });
-
+  const files = await listFolder(folder);
   return NextResponse.json(files);
 }
 
