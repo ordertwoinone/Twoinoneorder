@@ -94,15 +94,15 @@ export default function BuffetHighlights() {
                 </p>
 
                 {/* Rating + Book Now */}
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1 text-[12px] font-semibold text-gray-700">
-                    <Star size={12} className="fill-green-500 stroke-green-500" />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-700">
+                    <Star size={11} className="fill-green-500 stroke-green-500" />
                     {b.rating}{" "}
                     <span className="text-gray-400 font-normal">({b.reviews}+)</span>
                   </span>
 
                   <button
-                    className="text-[11px] font-bold px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-xl border-2 transition-colors hover:bg-purple-50"
+                    className="text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-colors hover:bg-purple-50 w-full sm:w-auto"
                     style={{ color: "#7c3aed", borderColor: "#7c3aed" }}
                   >
                     Book Now
