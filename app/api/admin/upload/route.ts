@@ -11,16 +11,14 @@ export async function POST(request: Request) {
 
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
-  const bytes = await file.arrayBuffer();
-  let buffer = Buffer.from(bytes);
+  const arrayBuffer: ArrayBuffer = await file.arrayBuffer();
+  let uploadData: Uint8Array = new Uint8Array(arrayBuffer);
   let contentType = file.type;
   let ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
 
-  // Convert to WebP unless it's SVG or GIF (which sharp can't handle well)
   if (!SKIP_TYPES.includes(file.type)) {
-    buffer = await sharp(buffer)
-      .webp({ quality: 90 })
-      .toBuffer();
+    const webp = await sharp(Buffer.from(arrayBuffer)).webp({ quality: 90 }).toBuffer();
+    uploadData = new Uint8Array(webp);
     contentType = "image/webp";
     ext = "webp";
   }
@@ -29,7 +27,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabaseAdmin.storage
     .from("media")
-    .upload(fileName, buffer, { contentType, upsert: true });
+    .upload(fileName, uploadData, { contentType, upsert: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

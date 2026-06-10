@@ -82,14 +82,14 @@ export default function BuffetHighlights() {
               </div>
 
               {/* Info */}
-              <div className="px-4 pt-3 pb-4">
-                <h3 className="text-gray-900 font-extrabold text-[15px] leading-tight mb-1">
+              <div className="px-3 pt-2.5 pb-3 sm:px-4 sm:pt-3 sm:pb-4">
+                <h3 className="text-gray-900 font-extrabold text-[13px] sm:text-[15px] leading-tight mb-1">
                   {b.name}
                 </h3>
-                <p className="text-gray-400 text-[12px] mb-2">{b.cuisine}</p>
+                <p className="text-gray-400 text-[11px] sm:text-[12px] mb-1.5">{b.cuisine}</p>
 
                 {/* Price */}
-                <p className="font-extrabold text-lg mb-3" style={{ color: "#ea580c" }}>
+                <p className="font-extrabold text-base sm:text-lg mb-2 sm:mb-3" style={{ color: "#ea580c" }}>
                   AED {b.price}
                 </p>
 
@@ -102,7 +102,7 @@ export default function BuffetHighlights() {
                   </span>
 
                   <button
-                    className="text-[12px] font-bold px-4 py-1.5 rounded-xl border-2 transition-colors hover:bg-purple-50"
+                    className="text-[11px] font-bold px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-xl border-2 transition-colors hover:bg-purple-50"
                     style={{ color: "#7c3aed", borderColor: "#7c3aed" }}
                   >
                     Book Now
