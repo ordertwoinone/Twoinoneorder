@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings, FolderImage } from "lucide-react";
+import { Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings, Images } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
@@ -10,7 +10,7 @@ const NAV = [
   { label: "Restaurants", href: "/admin/restaurants", icon: Store },
   { label: "Hero Banners", href: "/admin/banners", icon: ImageIcon },
   { label: "Offers", href: "/admin/offers", icon: Tag },
-  { label: "Media Library", href: "/admin/media", icon: FolderImage },
+  { label: "Media Library", href: "/admin/media", icon: Images },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
