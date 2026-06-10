@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { Plus, Pencil, Trash2, X, Search, Star, Clock } from "lucide-react";
 
 interface Restaurant {

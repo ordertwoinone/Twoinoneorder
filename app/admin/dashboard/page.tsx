@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Store, TrendingUp, CheckCircle, XCircle } from "lucide-react";
+import { Store, CheckCircle, XCircle } from "lucide-react";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 });
