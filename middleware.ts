@@ -30,7 +30,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isLoginPage && user) {
-    return NextResponse.redirect(new URL("/admin/restaurants", request.url));
+    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
   }
 
   return response;

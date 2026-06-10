@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
@@ -11,6 +12,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/");
   return NextResponse.json(data);
 }
 
@@ -21,5 +23,6 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     .eq("id", params.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/");
   return NextResponse.json({ success: true });
 }

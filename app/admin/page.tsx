@@ -23,7 +23,7 @@ export default function AdminLogin() {
       setError("Invalid email or password.");
       setLoading(false);
     } else {
-      router.push("/admin/restaurants");
+      router.push("/admin/dashboard");
       router.refresh();
     }
   }
