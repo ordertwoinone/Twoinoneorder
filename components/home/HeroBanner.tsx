@@ -106,21 +106,21 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
               </div>
 
               {/* RIGHT: food image */}
-              <div className="flex-1 relative overflow-visible">
+              <div className="flex-1 relative">
                 <motion.div
                   key={s.id}
                   initial={{ opacity: 0, x: 20, scale: 0.95 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="absolute"
-                  style={{ bottom: "-8px", right: "-8px", width: "115%", height: "115%" }}
+                  className="absolute inset-0"
+                  style={{ top: "-12px", bottom: "-4px" }}
                 >
                   <Image
                     src={s.food_image_url}
                     alt={s.food_alt || s.tag}
                     fill
-                    className="object-contain object-right-bottom drop-shadow-2xl"
+                    className="object-contain object-center drop-shadow-2xl"
                     sizes="(max-width: 640px) 55vw, 45vw"
                     priority={current === 0}
                   />
