@@ -56,15 +56,15 @@ export default async function RestaurantCards() {
         </div>
 
         {/* Cards */}
-        <div className="flex gap-3 overflow-x-auto scrollbar-none px-4 pb-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0">
+        <div className="grid grid-cols-2 gap-3 px-4 lg:grid-cols-4">
           {restaurants.map((r) => {
             const badge = r.badge ? BADGE_STYLE[r.badge] : null;
             return (
               <a
                 key={r.id}
                 href={r.url || "#"}
-                className="flex-shrink-0 sm:flex-shrink block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group"
-                style={{ minWidth: "175px", boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
+                className="block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group"
+                style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
               >
                 {/* Image */}
                 <div className="relative" style={{ height: "120px" }}>
@@ -74,7 +74,7 @@ export default async function RestaurantCards() {
                       alt={r.name}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 640px) 175px, 25vw"
+                      sizes="(max-width: 640px) 50vw, 25vw"
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-100" />

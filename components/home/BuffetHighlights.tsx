@@ -55,13 +55,13 @@ export default function BuffetHighlights() {
         </div>
 
         {/* Cards */}
-        <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible sm:mx-0 sm:px-0">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {BUFFETS.map((b) => (
             <a
               key={b.id}
               href={b.href}
-              className="flex-shrink-0 sm:flex-shrink bg-white rounded-2xl overflow-hidden border border-gray-100 block group transition-shadow hover:shadow-md"
-              style={{ minWidth: "240px", boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
+              className="bg-white rounded-2xl overflow-hidden border border-gray-100 block group transition-shadow hover:shadow-md"
+              style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
             >
               {/* Image */}
               <div className="relative" style={{ height: "180px" }}>
@@ -70,7 +70,7 @@ export default function BuffetHighlights() {
                   alt={b.name}
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 640px) 240px, 33vw"
+                  sizes="(max-width: 640px) 50vw, 33vw"
                 />
                 {/* Badge */}
                 <span
