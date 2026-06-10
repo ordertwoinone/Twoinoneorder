@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Save, Globe, Phone, MapPin, Share2, Image as ImageIcon } from "lucide-react";
+import { Save, Globe, Phone, MapPin, Share2 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface Settings {
@@ -29,7 +29,6 @@ const EMPTY: Omit<Settings, "id"> = {
 };
 
 export default function SettingsAdmin() {
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [form, setForm] = useState<Omit<Settings, "id"> & { id?: string }>({ ...EMPTY });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,7 +38,6 @@ export default function SettingsAdmin() {
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((data) => {
-        setSettings(data);
         setForm(data);
         setLoading(false);
       });

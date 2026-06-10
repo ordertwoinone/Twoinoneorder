@@ -14,7 +14,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   const body = await request.json();
-  const { id, created_at, ...fields } = body;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id, created_at: _created_at, ...fields } = body;
 
   const { data, error } = await supabaseAdmin
     .from("site_settings")
