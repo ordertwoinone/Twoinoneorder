@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Save, Globe, Phone, MapPin, Share2 } from "lucide-react";
+import { Save, Globe, Phone, MapPin, Share2, RefreshCw } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface Settings {
@@ -33,6 +33,8 @@ export default function SettingsAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [cleared, setCleared] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -45,6 +47,14 @@ export default function SettingsAdmin() {
 
   function handleField(key: string, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function handleClearCache() {
+    setClearing(true);
+    await fetch("/api/admin/revalidate", { method: "POST" });
+    setClearing(false);
+    setCleared(true);
+    setTimeout(() => setCleared(false), 3000);
   }
 
   async function handleSave() {
@@ -98,15 +108,30 @@ export default function SettingsAdmin() {
           <h1 className="text-2xl font-semibold text-gray-900">Settings</h1>
           <p className="text-sm text-gray-500 mt-0.5">Manage your site information</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition disabled:opacity-70"
-          style={{ background: saved ? "#16a34a" : "#ea580c" }}
-        >
-          <Save size={15} />
-          {saving ? "Saving..." : saved ? "Saved!" : "Save changes"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleClearCache}
+            disabled={clearing}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-70 border"
+            style={{
+              color: cleared ? "#16a34a" : "#6b7280",
+              borderColor: cleared ? "#16a34a" : "#e5e7eb",
+              background: cleared ? "#f0fdf4" : "#fff",
+            }}
+          >
+            <RefreshCw size={14} className={clearing ? "animate-spin" : ""} />
+            {clearing ? "Clearing..." : cleared ? "Cache Cleared!" : "Clear Cache"}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition disabled:opacity-70"
+            style={{ background: saved ? "#16a34a" : "#ea580c" }}
+          >
+            <Save size={15} />
+            {saving ? "Saving..." : saved ? "Saved!" : "Save changes"}
+          </button>
+        </div>
       </div>
 
       {/* Brand */}
