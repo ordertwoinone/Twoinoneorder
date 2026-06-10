@@ -11,7 +11,7 @@ const BUFFETS = [
     reviews: 120,
     badge: "NEW",
     image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
-    href: "/catering",
+    href: "/restaurant/buffet",
   },
   {
     id: "b2",
@@ -22,7 +22,7 @@ const BUFFETS = [
     reviews: 98,
     badge: "NEW",
     image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80",
-    href: "/catering",
+    href: "/restaurant/buffet",
   },
   {
     id: "b3",
@@ -33,7 +33,7 @@ const BUFFETS = [
     reviews: 76,
     badge: "NEW",
     image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80",
-    href: "/catering",
+    href: "/restaurant/buffet",
   },
 ];
 
