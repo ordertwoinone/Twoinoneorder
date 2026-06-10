@@ -4,7 +4,6 @@ import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import SearchBar from "@/components/home/SearchBar";
 import HeroBanner from "@/components/home/HeroBanner";
-import CategoryRow from "@/components/home/CategoryRow";
 import RestaurantCards from "@/components/home/RestaurantCards";
 import BuffetHighlights from "@/components/home/BuffetHighlights";
 import OffersBanner from "@/components/home/OffersBanner";
@@ -32,7 +31,6 @@ export default async function HomePage() {
           <SearchBar />
         </div>
         <HeroBanner slides={banners} />
-        <CategoryRow />
         <RestaurantCards />
         <BuffetHighlights />
         <OffersBanner />
