@@ -1,120 +1,109 @@
-"use client";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { offers } from "@/data/offers";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
-export default function OffersBanner() {
+interface Offer {
+  id: string;
+  badge_text: string;
+  badge_color: string;
+  title: string;
+  subtitle: string;
+  cta_text: string;
+  cta_href: string;
+  image_url: string;
+  bg_color: string;
+}
+
+async function getOffers(): Promise<Offer[]> {
+  const { data, error } = await supabaseAdmin
+    .from("offers")
+    .select("id, badge_text, badge_color, title, subtitle, cta_text, cta_href, image_url, bg_color")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  if (error || !data?.length) return [];
+  return data;
+}
+
+export default async function OffersBanner() {
+  const offers = await getOffers();
+
+  if (!offers.length) return null;
+
   return (
     <section id="offers" className="py-4 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Today&apos;s Offers</h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">Limited time deals — grab them now</p>
-          </div>
-          <span className="text-xs text-orange-600 font-bold flex items-center gap-1 bg-white px-2.5 py-1.5 rounded-full" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-            🔥 Hot Deals
-          </span>
-        </div>
 
-        {/* Cards — horizontal scroll on mobile, 2-col on tablet, 4-col on desktop */}
-        <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 pb-2 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:mx-0 sm:px-0">
-          {offers.map((offer, i) => (
-            <motion.div
+        {/* Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {offers.map((offer) => (
+            <a
               key={offer.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08, duration: 0.4 }}
-              className="flex-shrink-0 sm:flex-shrink min-w-[270px] sm:min-w-0"
+              href={offer.cta_href || "#"}
+              className="relative flex rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-lg group"
+              style={{
+                background: offer.bg_color || "#ffffff",
+                minHeight: "140px",
+                boxShadow: "0 2px 16px rgba(0,0,0,0.07)",
+              }}
             >
-              <a
-                href={offer.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative flex rounded-2xl overflow-hidden cursor-pointer group"
-                style={{
-                  background: offer.darkBg,
-                  height: "155px",
-                  boxShadow: "0 4px 24px rgba(0,0,0,0.20)",
-                  transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-4px)";
-                  e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.28)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 4px 24px rgba(0,0,0,0.20)";
-                }}
-              >
-                {/* ── RIGHT: food image bleeding to edge ── */}
-                <div className="absolute right-0 top-0 bottom-0 w-[44%]">
+              {/* LEFT: text */}
+              <div className="flex flex-col justify-between p-5 flex-1 z-10 pr-2">
+                {/* Badge pill */}
+                {offer.badge_text && (
+                  <span
+                    className="inline-block text-white text-[11px] font-bold px-3 py-1 rounded-full mb-2 w-fit"
+                    style={{ background: offer.badge_color || "#ea580c" }}
+                  >
+                    {offer.badge_text}
+                  </span>
+                )}
+
+                {/* Title */}
+                <h3 className="text-gray-900 font-extrabold text-base leading-tight mb-1">
+                  {offer.title}
+                </h3>
+
+                {/* Subtitle */}
+                {offer.subtitle && (
+                  <p className="text-gray-400 text-[11px] leading-relaxed mb-3 line-clamp-2">
+                    {offer.subtitle}
+                  </p>
+                )}
+
+                {/* CTA */}
+                <div
+                  className="inline-flex items-center gap-1.5 self-start px-4 py-1.5 rounded-full text-white text-[12px] font-bold transition-all group-hover:gap-2.5"
+                  style={{ background: "#ea580c" }}
+                >
+                  {offer.cta_text || "Order Now"}
+                  <ArrowRight size={12} />
+                </div>
+              </div>
+
+              {/* RIGHT: image */}
+              {offer.image_url && (
+                <div className="relative w-[42%] shrink-0">
                   <Image
-                    src={offer.image}
+                    src={offer.image_url}
                     alt={offer.title}
                     fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 120px, 25vw"
-                    loading="lazy"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 45vw, 15vw"
                   />
-                  {/* Gradient: dark bg colour → transparent, blends image into card */}
+                  {/* Gradient blend */}
                   <div
                     className="absolute inset-0"
                     style={{
-                      background: `linear-gradient(to right, ${offer.darkBg} 0%, ${offer.darkBg}cc 20%, transparent 60%)`,
+                      background: `linear-gradient(to right, ${offer.bg_color || "#fff"} 0%, ${offer.bg_color || "#fff"}88 15%, transparent 50%)`,
                     }}
                   />
                 </div>
-
-                {/* ── LEFT: text content ── */}
-                <div className="relative z-10 flex flex-col justify-between p-4 sm:p-5 w-[62%]">
-                  {/* Top section */}
-                  <div>
-                    {/* Tag */}
-                    <p className="text-white/50 text-[10px] font-semibold mb-1 tracking-wide">
-                      {offer.tag}
-                    </p>
-
-                    {/* Big discount / headline */}
-                    <h3 className="text-white font-black text-xl sm:text-2xl leading-tight mb-1">
-                      {offer.discount}
-                    </h3>
-
-                    {/* Subtitle */}
-                    <p className="text-white/55 text-[10px] sm:text-[11px] leading-relaxed line-clamp-2">
-                      {offer.subtitle}
-                    </p>
-                  </div>
-
-                  {/* CTA button */}
-                  <div
-                    className="inline-flex items-center gap-1.5 self-start px-4 py-2 rounded-full text-white text-[11px] font-bold mt-3 transition-all group-hover:gap-2.5"
-                    style={{
-                      background: offer.btnColor,
-                      boxShadow: `0 4px 14px ${offer.btnColor}55`,
-                    }}
-                  >
-                    {offer.ctaLabel}
-                    <ArrowRight size={11} className="transition-transform group-hover:translate-x-0.5" />
-                  </div>
-                </div>
-
-                {/* Badge top-right */}
-                {offer.badge && (
-                  <span
-                    className="absolute top-3 right-3 z-20 text-[9px] font-bold px-2 py-0.5 rounded-full text-white"
-                    style={{ background: offer.btnColor }}
-                  >
-                    {offer.badge}
-                  </span>
-                )}
-              </a>
-            </motion.div>
+              )}
+            </a>
           ))}
         </div>
+
       </div>
     </section>
   );

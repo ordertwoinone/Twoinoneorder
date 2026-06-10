@@ -2,13 +2,14 @@
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Store, LogOut, LayoutDashboard, Image as ImageIcon } from "lucide-react";
+import { Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Restaurants", href: "/admin/restaurants", icon: Store },
   { label: "Hero Banners", href: "/admin/banners", icon: ImageIcon },
+  { label: "Offers", href: "/admin/offers", icon: Tag },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
