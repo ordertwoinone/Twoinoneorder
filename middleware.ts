@@ -1,27 +1,39 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const session = request.cookies.get("admin_session")?.value;
-  const validToken = process.env.ADMIN_SESSION_TOKEN;
+export async function middleware(request: NextRequest) {
+  let response = NextResponse.next({ request });
 
-  const isLoginPage = pathname === "/admin";
-  const isAdminRoute = pathname.startsWith("/admin");
-
-  if (isAdminRoute && !isLoginPage) {
-    if (session !== validToken) {
-      return NextResponse.redirect(new URL("/admin", request.url));
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
     }
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const { pathname } = request.nextUrl;
+  const isLoginPage = pathname === "/admin";
+
+  if (pathname.startsWith("/admin") && !isLoginPage && !user) {
+    return NextResponse.redirect(new URL("/admin", request.url));
   }
 
-  if (isLoginPage && session === validToken) {
+  if (isLoginPage && user) {
     return NextResponse.redirect(new URL("/admin/restaurants", request.url));
   }
 
-  return NextResponse.next();
+  return response;
 }
 
-export const config = {
-  matcher: ["/admin", "/admin/:path*"],
-};
+export const config = { matcher: ["/admin", "/admin/:path*"] };

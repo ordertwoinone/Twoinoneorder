@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -15,24 +16,21 @@ export default function AdminLogin() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/admin/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (res.ok) {
-      router.push("/admin/restaurants");
-    } else {
+    if (authError) {
       setError("Invalid email or password.");
       setLoading(false);
+    } else {
+      router.push("/admin/restaurants");
+      router.refresh();
     }
   }
 
   return (
     <div className="min-h-screen bg-[#f6f6f7] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-sm flex items-center justify-center">
             <Image src="/logos/two-in-one.png" alt="Two In One" width={52} height={52} className="object-contain" />
@@ -46,9 +44,7 @@ export default function AdminLogin() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
                 value={email}
@@ -60,9 +56,7 @@ export default function AdminLogin() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <input
                 type="password"
                 value={password}
@@ -80,8 +74,8 @@ export default function AdminLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition"
-              style={{ background: loading ? "#f97316" : "#ea580c" }}
+              className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition disabled:opacity-70"
+              style={{ background: "#ea580c" }}
             >
               {loading ? "Signing in..." : "Sign in"}
             </button>

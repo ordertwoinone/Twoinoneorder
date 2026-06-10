@@ -1,30 +1,31 @@
 "use client";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Store, LogOut, LayoutDashboard } from "lucide-react";
+import { Store, LogOut, LayoutDashboard, Image as ImageIcon } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Restaurants", href: "/admin/restaurants", icon: Store },
+  { label: "Hero Banners", href: "/admin/banners", icon: ImageIcon },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   if (pathname === "/admin") return <>{children}</>;
 
   async function handleLogout() {
-    await fetch("/api/admin/auth/logout", { method: "POST" });
-    router.push("/admin");
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/admin";
   }
 
   return (
     <div className="min-h-screen bg-[#f6f6f7] flex">
       {/* Sidebar */}
       <aside className="w-[240px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
-        {/* Logo */}
         <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
             <Image src="/logos/two-in-one.png" alt="Two In One" width={32} height={32} className="object-contain" />
@@ -35,7 +36,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV.map(({ label, href, icon: Icon }) => {
             const active = pathname.startsWith(href);
@@ -56,7 +56,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Logout */}
         <div className="px-3 py-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
@@ -68,10 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 min-w-0">
-        {children}
-      </main>
+      <main className="flex-1 min-w-0">{children}</main>
     </div>
   );
 }
