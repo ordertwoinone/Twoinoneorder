@@ -116,14 +116,20 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                   className="absolute inset-0"
                   style={{ top: "-12px", bottom: "-4px" }}
                 >
-                  <Image
-                    src={s.food_image_url}
-                    alt={s.food_alt || s.tag}
-                    fill
-                    className="object-contain object-center drop-shadow-2xl"
-                    sizes="(max-width: 640px) 55vw, 45vw"
-                    priority={current === 0}
-                  />
+                  <motion.div
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    className="w-full h-full"
+                  >
+                    <Image
+                      src={s.food_image_url}
+                      alt={s.food_alt || s.tag}
+                      fill
+                      className="object-contain object-center drop-shadow-2xl"
+                      sizes="(max-width: 640px) 55vw, 45vw"
+                      priority={current === 0}
+                    />
+                  </motion.div>
                 </motion.div>
               </div>
             </motion.div>
