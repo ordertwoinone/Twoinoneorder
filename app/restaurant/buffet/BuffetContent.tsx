@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import {
   ArrowLeft, Heart, Share2, Star, Clock, ShoppingCart, Search,
   ChevronRight, Check, MapPin, Globe, Flame, Smile, Car, Calendar,
-  Sun, Moon, Users, LayoutGrid, Utensils, Leaf, ChefHat,
+  Sun, Moon, Users, Utensils, Leaf, ChefHat,
   MoreHorizontal, UtensilsCrossed, Award, Heart as HeartIcon,
   ShieldCheck, Wifi, Music, MapPin as MapPinIcon,
 } from "lucide-react";
@@ -96,7 +96,7 @@ interface Props {
 
 const ICON_MAP: Record<string, React.ElementType> = {
   UtensilsCrossed, Globe, Flame, Smile, Car, Calendar, Sun, Moon,
-  Users, LayoutGrid, Utensils, Leaf, ChefHat, MoreHorizontal,
+  Users, Utensils, Leaf, ChefHat, MoreHorizontal,
   Star, Clock, Award, Heart: HeartIcon, ShieldCheck, Wifi, Music,
   MapPin: MapPinIcon,
 };
@@ -205,13 +205,8 @@ function DishCard({ name, img, veg, special, timingIds, allTimingIds }: {
 // ─── Buffet Menu Tab ──────────────────────────────────────────────────────────
 
 function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; menuSections: MenuSectionDB[] }) {
-  const [activeCategory, setActiveCategory] = useState("all");
   const allTimingIds = timings.map((t) => t.id);
-
-  const visibleSections = activeCategory === "all"
-    ? menuSections
-    : menuSections.filter((s) => s.category_id === activeCategory);
-
+  const visibleSections = menuSections;
   const totalItems = menuSections.reduce((n, s) => n + s.buffet_menu_items.filter((i) => i.is_active).length, 0);
 
   return (
@@ -220,37 +215,6 @@ function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; men
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900">Buffet Menu</h2>
         <p className="text-sm sm:text-base text-gray-400 mt-0.5">{totalItems}+ dishes from around the world</p>
       </div>
-
-      {menuSections.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:gap-3" style={{ scrollbarWidth: "none" }}>
-          {/* All Dishes pill */}
-          <button
-            onClick={() => setActiveCategory("all")}
-            className={`shrink-0 flex flex-col items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border transition-colors min-w-[68px] sm:min-w-[80px] ${
-              activeCategory === "all" ? "text-white border-transparent" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-            }`}
-            style={activeCategory === "all" ? { background: "#A07820" } : {}}
-          >
-            <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6" />
-            <span className="text-[10px] sm:text-xs font-semibold leading-tight text-center">All Dishes</span>
-          </button>
-          {menuSections.map((s) => {
-            const Icon = ICON_MAP[s.icon_name] ?? Utensils;
-            const active = activeCategory === s.category_id;
-            return (
-              <button key={s.id} onClick={() => setActiveCategory(s.category_id)}
-                className={`shrink-0 flex flex-col items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border transition-colors min-w-[68px] sm:min-w-[80px] ${
-                  active ? "text-white border-transparent" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-                style={active ? { background: "#A07820" } : {}}
-              >
-                <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
-                <span className="text-[10px] sm:text-xs font-semibold leading-tight text-center">{s.title}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* Timings — dynamic */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
