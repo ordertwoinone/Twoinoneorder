@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
+  BookOpen, List,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -37,6 +38,15 @@ const NAV: NavItem[] = [
       { label: "Why Choose Us",   href: "/admin/buffet/why-choose-us",   icon: Star       },
       { label: "Buffet Timings",  href: "/admin/buffet/timings",         icon: Clock      },
       { label: "Popular Dishes",  href: "/admin/buffet/popular-dishes",  icon: Utensils   },
+    ],
+  },
+  {
+    label: "Buffet Menu",
+    icon: BookOpen,
+    basePath: "/admin/buffet-menu",
+    children: [
+      { label: "Menu Sections", href: "/admin/buffet-menu/sections", icon: List     },
+      { label: "Menu Items",    href: "/admin/buffet-menu/items",    icon: Utensils },
     ],
   },
   { label: "Media Library", href: "/admin/media",     icon: Images   },

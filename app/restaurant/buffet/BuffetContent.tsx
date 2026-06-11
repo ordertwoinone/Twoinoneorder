@@ -61,12 +61,35 @@ interface BuffetHero {
   cover_image_url: string;
 }
 
+interface MenuItemDB {
+  id: string;
+  section_id: string;
+  name: string;
+  image_url: string;
+  is_veg: boolean;
+  is_special: boolean;
+  sort_order: number;
+  is_active: boolean;
+}
+
+interface MenuSectionDB {
+  id: string;
+  category_id: string;
+  title: string;
+  icon_name: string;
+  count_label: string;
+  sort_order: number;
+  is_active: boolean;
+  buffet_menu_items: MenuItemDB[];
+}
+
 interface Props {
-  hero:     BuffetHero | null;
-  banners:  BuffetBanner[];
-  features: WhyChooseFeature[];
-  timings:  BuffetTiming[];
-  dishes:   PopularDish[];
+  hero:         BuffetHero | null;
+  banners:      BuffetBanner[];
+  features:     WhyChooseFeature[];
+  timings:      BuffetTiming[];
+  dishes:       PopularDish[];
+  menuSections: MenuSectionDB[];
 }
 
 // ─── Icon Map ─────────────────────────────────────────────────────────────────
@@ -86,62 +109,7 @@ const THEME_MAP = {
   pink:   { bg: "bg-pink-50",   border: "border-pink-100",   iconBg: "bg-pink-100",   iconCls: "text-pink-500",   priceCls: "text-pink-500",   Icon: Calendar },
 };
 
-// ─── Static Data (menu sections stay hardcoded) ───────────────────────────────
-
-const CATEGORIES = [
-  { id: "all",      label: "All Dishes",    Icon: LayoutGrid      },
-  { id: "starters", label: "Starters",      Icon: Utensils        },
-  { id: "salads",   label: "Salads",        Icon: Leaf            },
-  { id: "main",     label: "Main Course",   Icon: ChefHat         },
-  { id: "live",     label: "Live Counters", Icon: Flame           },
-  { id: "desserts", label: "Desserts",      Icon: UtensilsCrossed },
-  { id: "more",     label: "More",          Icon: MoreHorizontal  },
-];
-
-const BUFFET_MENU_SECTIONS = [
-  {
-    id: "starters", title: "Starters", count: "12",
-    items: [
-      { name: "Creamy Mushroom Soup", img: "https://images.unsplash.com/photo-1547592180-85f173990554?w=400&q=80", veg: true,  special: false },
-      { name: "Hummus with Pita",     img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80", veg: true,  special: false },
-      { name: "Chicken Spring Rolls", img: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=80", veg: false, special: false },
-      { name: "Bruschetta Tomato",    img: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80", veg: true,  special: false },
-      { name: "Prawn Cocktail",       img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80", veg: false, special: false },
-      { name: "Caprese Salad",        img: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80", veg: true,  special: false },
-    ],
-  },
-  {
-    id: "salads", title: "Salads", count: "10",
-    items: [
-      { name: "Greek Salad",     img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80",  veg: true, special: false },
-      { name: "Caesar Salad",    img: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80", veg: true, special: false },
-      { name: "Kachumber Salad", img: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80", veg: true, special: false },
-      { name: "Coleslaw Salad",  img: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80", veg: true, special: false },
-      { name: "Fattoush Salad",  img: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=80", veg: true, special: false },
-    ],
-  },
-  {
-    id: "main", title: "Main Course", count: "30+",
-    items: [
-      { name: "Grilled Chicken", img: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80", veg: false, special: true  },
-      { name: "Beef Biryani",    img: "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400&q=80", veg: false, special: false },
-      { name: "Pasta Arrabiata", img: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80", veg: true,  special: false },
-      { name: "Grilled Salmon",  img: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&q=80", veg: false, special: false },
-      { name: "Butter Chicken",  img: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80", veg: false, special: false },
-      { name: "Lamb Ouzi",       img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80", veg: false, special: true  },
-    ],
-  },
-  {
-    id: "desserts", title: "Desserts", count: "15",
-    items: [
-      { name: "Choc Fountain", img: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400&q=80", veg: true, special: false },
-      { name: "Baklava",       img: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80", veg: true, special: false },
-      { name: "Umm Ali",       img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80", veg: true, special: false },
-      { name: "Crème Brûlée",  img: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80", veg: true, special: false },
-      { name: "Fresh Fruit",   img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80",  veg: true, special: false },
-    ],
-  },
-];
+// (menu sections are now fully dynamic — loaded from DB via props)
 
 const PHOTO_URLS = [
   "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80",
@@ -206,35 +174,52 @@ function DishCard({ name, img, veg, special }: { name: string; img: string; veg:
 
 // ─── Buffet Menu Tab ──────────────────────────────────────────────────────────
 
-function BuffetMenuTab({ timings }: { timings: BuffetTiming[] }) {
+function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; menuSections: MenuSectionDB[] }) {
   const [activeCategory, setActiveCategory] = useState("all");
+
   const visibleSections = activeCategory === "all"
-    ? BUFFET_MENU_SECTIONS
-    : BUFFET_MENU_SECTIONS.filter((s) => s.id === activeCategory);
+    ? menuSections
+    : menuSections.filter((s) => s.category_id === activeCategory);
+
+  const totalItems = menuSections.reduce((n, s) => n + s.buffet_menu_items.filter((i) => i.is_active).length, 0);
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900">Buffet Menu</h2>
-        <p className="text-sm sm:text-base text-gray-400 mt-0.5">100+ dishes from around the world</p>
+        <p className="text-sm sm:text-base text-gray-400 mt-0.5">{totalItems}+ dishes from around the world</p>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:gap-3" style={{ scrollbarWidth: "none" }}>
-        {CATEGORIES.map(({ id, label, Icon }) => {
-          const active = activeCategory === id;
-          return (
-            <button key={id} onClick={() => setActiveCategory(id)}
-              className={`shrink-0 sm:shrink-0 flex flex-col items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border transition-colors min-w-[68px] sm:min-w-[80px] ${
-                active ? "text-white border-transparent" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-              }`}
-              style={active ? { background: "#A07820" } : {}}
-            >
-              <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
-              <span className="text-[10px] sm:text-xs font-semibold leading-tight text-center">{label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {menuSections.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:gap-3" style={{ scrollbarWidth: "none" }}>
+          {/* All Dishes pill */}
+          <button
+            onClick={() => setActiveCategory("all")}
+            className={`shrink-0 flex flex-col items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border transition-colors min-w-[68px] sm:min-w-[80px] ${
+              activeCategory === "all" ? "text-white border-transparent" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+            }`}
+            style={activeCategory === "all" ? { background: "#A07820" } : {}}
+          >
+            <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6" />
+            <span className="text-[10px] sm:text-xs font-semibold leading-tight text-center">All Dishes</span>
+          </button>
+          {menuSections.map((s) => {
+            const Icon = ICON_MAP[s.icon_name] ?? Utensils;
+            const active = activeCategory === s.category_id;
+            return (
+              <button key={s.id} onClick={() => setActiveCategory(s.category_id)}
+                className={`shrink-0 flex flex-col items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl border transition-colors min-w-[68px] sm:min-w-[80px] ${
+                  active ? "text-white border-transparent" : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+                style={active ? { background: "#A07820" } : {}}
+              >
+                <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                <span className="text-[10px] sm:text-xs font-semibold leading-tight text-center">{s.title}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Timings — dynamic */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
@@ -264,26 +249,30 @@ function BuffetMenuTab({ timings }: { timings: BuffetTiming[] }) {
         </div>
       </div>
 
-      {visibleSections.map((section) => (
-        <div key={section.id}>
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{section.title}</h3>
-            <button className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 hover:border-gray-300 hover:bg-gray-50 transition-colors">
-              {section.count} Items <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 sm:overflow-visible sm:pb-0 sm:gap-4" style={{ scrollbarWidth: "none" }}>
-            {section.items.map((item) => (
-              <DishCard key={item.name} {...item} />
-            ))}
-            <div className="shrink-0 flex items-center pr-1 sm:hidden">
-              <button className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shadow-sm transition-colors">
-                <ChevronRight className="w-5 h-5 text-gray-600" />
+      {visibleSections.map((section) => {
+        const activeItems = section.buffet_menu_items.filter((i) => i.is_active);
+        if (activeItems.length === 0) return null;
+        return (
+          <div key={section.id}>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{section.title}</h3>
+              <button className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                {section.count_label || activeItems.length} Items <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
+            <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 sm:overflow-visible sm:pb-0 sm:gap-4" style={{ scrollbarWidth: "none" }}>
+              {activeItems.map((item) => (
+                <DishCard key={item.id} name={item.name} img={item.image_url} veg={item.is_veg} special={item.is_special} />
+              ))}
+              <div className="shrink-0 flex items-center pr-1 sm:hidden">
+                <button className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shadow-sm transition-colors">
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -596,7 +585,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "photos",   label: "Photos"          },
 ];
 
-export default function BuffetContent({ hero, banners, features, timings, dishes }: Props) {
+export default function BuffetContent({ hero, banners, features, timings, dishes, menuSections }: Props) {
   const h = hero ?? {
     restaurant_name: "Buffet By Two In One",
     cuisine: "Buffet · International",
@@ -693,7 +682,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
         {activeTab === "overview" && (
           <OverviewTab banners={banners} features={features} timings={timings} dishes={dishes} />
         )}
-        {activeTab === "menu"     && <BuffetMenuTab timings={timings} />}
+        {activeTab === "menu"     && <BuffetMenuTab timings={timings} menuSections={menuSections} />}
         {activeTab === "about"    && <AboutTab />}
         {activeTab === "photos"   && <PhotosTab />}
         {activeTab === "reviews"  && <ReviewsTab />}
