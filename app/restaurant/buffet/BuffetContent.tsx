@@ -77,7 +77,6 @@ interface MenuSectionDB {
   category_id: string;
   title: string;
   icon_name: string;
-  count_label: string;
   sort_order: number;
   is_active: boolean;
   buffet_menu_items: MenuItemDB[];
@@ -257,7 +256,7 @@ function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; men
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{section.title}</h3>
               <button className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 hover:border-gray-300 hover:bg-gray-50 transition-colors">
-                {section.count_label || activeItems.length} Items <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                {activeItems.length} Items <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 sm:overflow-visible sm:pb-0 sm:gap-4" style={{ scrollbarWidth: "none" }}>

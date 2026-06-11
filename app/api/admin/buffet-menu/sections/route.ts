@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 export async function GET() {
   const { data, error } = await supabaseAdmin
     .from("buffet_menu_sections")
-    .select("*")
+    .select("*, buffet_menu_items(count)")
     .order("sort_order", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

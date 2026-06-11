@@ -7,16 +7,15 @@ interface MenuSection {
   category_id: string;
   title: string;
   icon_name: string;
-  count_label: string;
   sort_order: number;
   is_active: boolean;
+  buffet_menu_items?: { count: number }[];
 }
 
-const EMPTY: Omit<MenuSection, "id"> = {
+const EMPTY: Omit<MenuSection, "id" | "buffet_menu_items"> = {
   category_id: "",
   title: "",
   icon_name: "Utensils",
-  count_label: "",
   sort_order: 0,
   is_active: true,
 };
@@ -39,7 +38,7 @@ const ICON_OPTIONS = [
 export default function MenuSectionsAdmin() {
   const [items, setItems] = useState<MenuSection[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; data: Omit<MenuSection, "id"> & { id?: string } }>({
+  const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; data: Omit<MenuSection, "id" | "buffet_menu_items"> & { id?: string } }>({
     open: false, mode: "add", data: { ...EMPTY },
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -56,7 +55,11 @@ export default function MenuSectionsAdmin() {
   useEffect(() => { load(); }, []);
 
   function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY } }); }
-  function openEdit(item: MenuSection) { setModal({ open: true, mode: "edit", data: { ...item } }); }
+  function openEdit(item: MenuSection) {
+    const { buffet_menu_items: _, ...rest } = item;
+    void _;
+    setModal({ open: true, mode: "edit", data: { ...rest } });
+  }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) {
     setModal((m) => ({ ...m, data: { ...m.data, [key]: value } }));
@@ -109,7 +112,7 @@ export default function MenuSectionsAdmin() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Icon</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Title</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Category ID</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Count</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               <th className="px-4 py-3"></th>
@@ -129,7 +132,10 @@ export default function MenuSectionsAdmin() {
                 </td>
                 <td className="px-4 py-3 font-semibold text-gray-800">{item.title}</td>
                 <td className="px-4 py-3"><code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">{item.category_id}</code></td>
-                <td className="px-4 py-3 text-sm font-bold text-gray-700">{item.count_label}</td>
+                <td className="px-4 py-3">
+                  <span className="text-sm font-bold text-gray-700">{item.buffet_menu_items?.[0]?.count ?? 0}</span>
+                  <span className="text-xs text-gray-400 ml-1">items</span>
+                </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{item.sort_order}</td>
                 <td className="px-4 py-3">
                   <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
@@ -168,19 +174,12 @@ export default function MenuSectionsAdmin() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" placeholder="starters" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Icon</label>
-                  <select value={modal.data.icon_name} onChange={(e) => handleField("icon_name", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
-                    {ICON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Count Label</label>
-                  <input type="text" value={modal.data.count_label} onChange={(e) => handleField("count_label", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="12 or 30+" />
-                </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Icon</label>
+                <select value={modal.data.icon_name} onChange={(e) => handleField("icon_name", e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+                  {ICON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
