@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Upload, Link } from "lucide-react";
 
 interface Props {
@@ -9,9 +9,33 @@ interface Props {
   folder?: string;
 }
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function ImageUploadField({ value, onChange, label, folder = "general" }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+  const [fileSize, setFileSize] = useState<number | null>(null);
+
+  // Reset info when the image URL changes; try to read the file
+  // size from the server (works for same-origin / Supabase storage)
+  useEffect(() => {
+    setDims(null);
+    setFileSize(null);
+    if (!value) return;
+    let cancelled = false;
+    fetch(value, { method: "HEAD" })
+      .then((res) => {
+        const len = res.headers.get("content-length");
+        if (!cancelled && len) setFileSize(parseInt(len, 10));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [value]);
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -55,7 +79,24 @@ export default function ImageUploadField({ value, onChange, label, folder = "gen
         <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
       </div>
       {value && (
-        <img src={value} alt="preview" className="mt-2 h-14 w-24 rounded-lg object-cover border border-gray-100" />
+        <div className="mt-2 flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt="preview"
+            className="h-14 w-24 rounded-lg object-cover border border-gray-100"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              setDims({ w: img.naturalWidth, h: img.naturalHeight });
+            }}
+          />
+          {dims && (
+            <div className="text-[11px] text-gray-500 leading-relaxed">
+              <p className="font-semibold text-gray-700">{dims.w} × {dims.h} px</p>
+              <p>Width: {dims.w}px · Height: {dims.h}px{fileSize !== null && ` · ${formatBytes(fileSize)}`}</p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
