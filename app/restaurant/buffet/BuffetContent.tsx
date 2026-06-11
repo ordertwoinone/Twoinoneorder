@@ -151,14 +151,10 @@ function DomeLogo({ size = "md" }: { size?: "md" | "lg" }) {
   );
 }
 
-function DishCard({ name, img, veg, special, timingIds, allTimingIds }: {
+function DishCard({ name, img, veg, special, isIncluded, qty, onQtyChange }: {
   name: string; img: string; veg: boolean; special: boolean;
-  timingIds: string[]; allTimingIds: string[];
+  isIncluded: boolean; qty: number; onQtyChange: (qty: number) => void;
 }) {
-  const [qty, setQty] = useState(0);
-  const isIncluded = timingIds.length === 0 || allTimingIds.length === 0 ||
-    allTimingIds.every((id) => timingIds.includes(id));
-
   return (
     <div className="shrink-0 w-[110px] sm:w-full bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className="relative h-[90px] sm:h-[140px] lg:h-[155px] bg-gray-100">
@@ -177,7 +173,7 @@ function DishCard({ name, img, veg, special, timingIds, allTimingIds }: {
           <p className="text-[10px] sm:text-xs font-semibold text-green-600">✓ Included</p>
         ) : qty === 0 ? (
           <button
-            onClick={() => setQty(1)}
+            onClick={() => onQtyChange(1)}
             className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
           >
             <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -186,12 +182,12 @@ function DishCard({ name, img, veg, special, timingIds, allTimingIds }: {
         ) : (
           <div className="flex items-center justify-between">
             <button
-              onClick={() => setQty((q) => Math.max(0, q - 1))}
+              onClick={() => onQtyChange(Math.max(0, qty - 1))}
               className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
             >−</button>
             <span className="text-xs sm:text-sm font-bold text-gray-900">{qty}</span>
             <button
-              onClick={() => setQty((q) => q + 1)}
+              onClick={() => onQtyChange(qty + 1)}
               className="w-6 h-6 sm:w-7 sm:h-7 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
               style={{ background: "#ea580c" }}
             >+</button>
@@ -204,9 +200,16 @@ function DishCard({ name, img, veg, special, timingIds, allTimingIds }: {
 
 // ─── Buffet Menu Tab ──────────────────────────────────────────────────────────
 
-function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; menuSections: MenuSectionDB[] }) {
-  const allTimingIds = timings.map((t) => t.id);
-  const visibleSections = menuSections;
+function BuffetMenuTab({
+  timings, menuSections, selectedTimingId, onTimingSelect, cartQty, onQtyChange,
+}: {
+  timings: BuffetTiming[];
+  menuSections: MenuSectionDB[];
+  selectedTimingId: string | null;
+  onTimingSelect: (id: string | null) => void;
+  cartQty: Record<string, number>;
+  onQtyChange: (itemId: string, qty: number) => void;
+}) {
   const totalItems = menuSections.reduce((n, s) => n + s.buffet_menu_items.filter((i) => i.is_active).length, 0);
 
   return (
@@ -216,24 +219,45 @@ function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; men
         <p className="text-sm sm:text-base text-gray-400 mt-0.5">{totalItems}+ dishes from around the world</p>
       </div>
 
-      {/* Timings — dynamic */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
-        {timings.map((t) => {
-          const cfg = THEME_MAP[t.theme] ?? THEME_MAP.orange;
-          return (
-            <div key={t.id} className={`${cfg.bg} ${cfg.border} border rounded-2xl p-3 sm:p-5 lg:p-6`}>
-              <div className="flex items-center gap-1 sm:gap-2 mb-1.5 sm:mb-2">
-                <cfg.Icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 shrink-0 ${cfg.iconCls}`} />
-                <span className="text-[10px] sm:text-sm lg:text-base font-bold text-gray-800 leading-tight">{t.label}</span>
-              </div>
-              <p className="text-[9px] sm:text-xs lg:text-sm text-gray-500 mb-2 sm:mb-3">{t.time_range}</p>
-              <p className={`text-[11px] sm:text-base lg:text-lg font-extrabold ${cfg.priceCls}`}>
-                {t.price}
-                <span className="text-[9px] sm:text-xs font-normal text-gray-400 ml-1">{t.price_label}</span>
-              </p>
-            </div>
-          );
-        })}
+      {/* Selectable timing cards */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Select your session to see what&apos;s included</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
+          {timings.map((t) => {
+            const cfg = THEME_MAP[t.theme] ?? THEME_MAP.orange;
+            const selected = selectedTimingId === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => onTimingSelect(selected ? null : t.id)}
+                className={`text-left rounded-2xl p-3 sm:p-5 lg:p-6 border-2 transition-all ${
+                  selected
+                    ? "border-orange-500 shadow-md"
+                    : `${cfg.border} ${cfg.bg} hover:border-orange-300`
+                }`}
+                style={selected ? { background: cfg.bg.replace("bg-", "") } : {}}
+              >
+                <div className={`rounded-2xl p-3 sm:p-5 lg:p-6 -m-3 sm:-m-5 lg:-m-6 ${cfg.bg}`}>
+                  <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <cfg.Icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 shrink-0 ${selected ? "text-orange-500" : cfg.iconCls}`} />
+                      <span className={`text-[10px] sm:text-sm lg:text-base font-bold leading-tight ${selected ? "text-orange-700" : "text-gray-800"}`}>{t.label}</span>
+                    </div>
+                    {selected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />}
+                  </div>
+                  <p className="text-[9px] sm:text-xs lg:text-sm text-gray-500 mb-2 sm:mb-3">{t.time_range}</p>
+                  <p className={`text-[11px] sm:text-base lg:text-lg font-extrabold ${selected ? "text-orange-600" : cfg.priceCls}`}>
+                    {t.price}
+                    <span className="text-[9px] sm:text-xs font-normal text-gray-400 ml-1">{t.price_label}</span>
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        {!selectedTimingId && (
+          <p className="text-[11px] text-gray-400 mt-2 text-center">Tap a session above — included dishes will be highlighted automatically</p>
+        )}
       </div>
 
       <div className="flex items-start gap-3 bg-green-50 border border-green-100 rounded-2xl p-3 sm:p-5">
@@ -244,29 +268,35 @@ function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; men
         </div>
       </div>
 
-      {visibleSections.map((section) => {
+      {menuSections.map((section) => {
         const activeItems = section.buffet_menu_items.filter((i) => i.is_active);
         if (activeItems.length === 0) return null;
         return (
           <div key={section.id}>
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{section.title}</h3>
-              <button className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 hover:border-gray-300 hover:bg-gray-50 transition-colors">
-                {activeItems.length} Items <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
+              <span className="text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5">
+                {activeItems.length} Items
+              </span>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 sm:overflow-visible sm:pb-0 sm:gap-4" style={{ scrollbarWidth: "none" }}>
-              {activeItems.map((item) => (
-                <DishCard
-                  key={item.id}
-                  name={item.name}
-                  img={item.image_url}
-                  veg={item.is_veg}
-                  special={item.is_special}
-                  timingIds={item.timing_ids ?? []}
-                  allTimingIds={allTimingIds}
-                />
-              ))}
+              {activeItems.map((item) => {
+                const timingIds = item.timing_ids ?? [];
+                const isIncluded = selectedTimingId !== null &&
+                  (timingIds.length === 0 || timingIds.includes(selectedTimingId));
+                return (
+                  <DishCard
+                    key={item.id}
+                    name={item.name}
+                    img={item.image_url}
+                    veg={item.is_veg}
+                    special={item.is_special}
+                    isIncluded={isIncluded}
+                    qty={cartQty[item.id] ?? 0}
+                    onQtyChange={(q) => onQtyChange(item.id, q)}
+                  />
+                );
+              })}
               <div className="shrink-0 flex items-center pr-1 sm:hidden">
                 <button className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shadow-sm transition-colors">
                   <ChevronRight className="w-5 h-5 text-gray-600" />
@@ -600,8 +630,35 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
     closes_at: "11:30 PM",
     cover_image_url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=700&q=85",
   };
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [liked, setLiked]         = useState(false);
+  const [activeTab, setActiveTab]           = useState<Tab>("overview");
+  const [liked, setLiked]                   = useState(false);
+  const [selectedTimingId, setSelectedTimingId] = useState<string | null>(null);
+  const [cartQty, setCartQty]               = useState<Record<string, number>>({});
+
+  function handleQtyChange(itemId: string, qty: number) {
+    setCartQty((prev) => ({ ...prev, [itemId]: qty }));
+  }
+
+  const selectedTiming = timings.find((t) => t.id === selectedTimingId) ?? null;
+
+  const allActiveItems = menuSections.flatMap((s) => s.buffet_menu_items.filter((i) => i.is_active));
+
+  const includedCount = selectedTimingId
+    ? allActiveItems.filter((i) => {
+        const ids = i.timing_ids ?? [];
+        return ids.length === 0 || ids.includes(selectedTimingId);
+      }).length
+    : 0;
+
+  const extraQty = allActiveItems
+    .filter((i) => {
+      if (!selectedTimingId) return true;
+      const ids = i.timing_ids ?? [];
+      return !(ids.length === 0 || ids.includes(selectedTimingId));
+    })
+    .reduce((sum, i) => sum + (cartQty[i.id] ?? 0), 0);
+
+  const totalCartItems = includedCount + extraQty;
 
   return (
     <>
@@ -685,7 +742,16 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
         {activeTab === "overview" && (
           <OverviewTab banners={banners} features={features} timings={timings} dishes={dishes} />
         )}
-        {activeTab === "menu"     && <BuffetMenuTab timings={timings} menuSections={menuSections} />}
+        {activeTab === "menu"     && (
+          <BuffetMenuTab
+            timings={timings}
+            menuSections={menuSections}
+            selectedTimingId={selectedTimingId}
+            onTimingSelect={setSelectedTimingId}
+            cartQty={cartQty}
+            onQtyChange={handleQtyChange}
+          />
+        )}
         {activeTab === "about"    && <AboutTab />}
         {activeTab === "photos"   && <PhotosTab />}
         {activeTab === "reviews"  && <ReviewsTab />}
@@ -697,24 +763,31 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "#ea580c" }}>
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
-            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">2</span>
+            {totalCartItems > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{totalCartItems}</span>
+            )}
           </div>
           <div>
-            <p className="text-xs text-gray-500 leading-none">2 items</p>
-            <p className="text-sm font-extrabold text-gray-900 leading-tight">KD 13.800</p>
+            <p className="text-xs text-gray-500 leading-none">{totalCartItems} item{totalCartItems !== 1 ? "s" : ""}</p>
+            <p className="text-sm font-extrabold text-gray-900 leading-tight">
+              {selectedTiming ? `${selectedTiming.price} ${selectedTiming.price_label}` : "No session selected"}
+            </p>
           </div>
-          <button className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
-            View Cart <span>→</span>
-          </button>
+          <Link href="/book-table" className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
+            Book Table <span>→</span>
+          </Link>
         </div>
       </div>
 
       <div className="hidden sm:flex fixed bottom-6 right-6 z-40">
-        <button className="flex items-center gap-3 text-white font-bold px-5 py-3.5 rounded-2xl shadow-xl text-sm sm:text-base" style={{ background: "#ea580c" }}>
+        <Link href="/book-table" className="flex items-center gap-3 text-white font-bold px-5 py-3.5 rounded-2xl shadow-xl text-sm sm:text-base" style={{ background: "#ea580c" }}>
           <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span>2 items · KD 13.800</span>
-          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>View Cart</span>
-        </button>
+          <span>
+            {totalCartItems} item{totalCartItems !== 1 ? "s" : ""}
+            {selectedTiming ? ` · ${selectedTiming.price} ${selectedTiming.price_label}` : ""}
+          </span>
+          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>Book Table</span>
+        </Link>
       </div>
 
     </>
