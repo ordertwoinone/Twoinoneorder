@@ -625,18 +625,18 @@ function CartModal({
   onQtyChange: (itemId: string, qty: number) => void;
   onClose: () => void;
 }) {
-  const cartItems = allActiveItems
-    .map((item) => {
-      const timingIds = item.timing_ids ?? [];
-      const included = selectedTimingId !== null && (timingIds.length === 0 || timingIds.includes(selectedTimingId));
-      const qty = cartQty[item.id] ?? 0;
-      return { ...item, included, qty };
-    })
-    .filter((item) => item.qty > 0);
+  const allAnnotated = allActiveItems.map((item) => {
+    const timingIds = item.timing_ids ?? [];
+    const included = selectedTimingId !== null && (timingIds.length === 0 || timingIds.includes(selectedTimingId));
+    const qty = cartQty[item.id] ?? 0;
+    return { ...item, included, qty };
+  });
 
-  const includedInCart = cartItems.filter((i) => i.included);
-  const extrasInCart   = cartItems.filter((i) => !i.included);
-  const totalQty = cartItems.reduce((s, i) => s + i.qty, 0);
+  // All included items are shown (auto part of the session)
+  const includedItems = allAnnotated.filter((i) => i.included);
+  // Extras: non-included items the user manually added
+  const extrasInCart  = allAnnotated.filter((i) => !i.included && i.qty > 0);
+  const totalQty = includedItems.length + extrasInCart.reduce((s, i) => s + i.qty, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -682,19 +682,22 @@ function CartModal({
 
         {/* Item list */}
         <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-4 min-h-0">
-          {cartItems.length === 0 ? (
+          {includedItems.length === 0 && extrasInCart.length === 0 ? (
             <div className="py-8 text-center">
               <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No items added yet</p>
-              <p className="text-[11px] text-gray-300 mt-0.5">Tap Add on dishes to build your order</p>
+              <p className="text-sm text-gray-400">No session selected</p>
+              <p className="text-[11px] text-gray-300 mt-0.5">Select a buffet timing to see included dishes</p>
             </div>
           ) : (
             <>
-              {includedInCart.length > 0 && (
+              {includedItems.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider mb-2">Included in Session</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">Included in Session</p>
+                    <span className="text-[10px] text-gray-400">{includedItems.length} dishes</span>
+                  </div>
                   <div className="space-y-2">
-                    {includedInCart.map((item) => (
+                    {includedItems.map((item) => (
                       <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
                     ))}
                   </div>
@@ -800,7 +803,22 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
 
   const allActiveItems = menuSections.flatMap((s) => s.buffet_menu_items.filter((i) => i.is_active));
 
-  const totalCartItems = Object.values(cartQty).reduce((sum, q) => sum + q, 0);
+  const includedCount = selectedTimingId
+    ? allActiveItems.filter((i) => {
+        const ids = i.timing_ids ?? [];
+        return ids.length === 0 || ids.includes(selectedTimingId);
+      }).length
+    : 0;
+
+  const extraQty = allActiveItems
+    .filter((i) => {
+      if (!selectedTimingId) return true;
+      const ids = i.timing_ids ?? [];
+      return !(ids.length === 0 || ids.includes(selectedTimingId));
+    })
+    .reduce((sum, i) => sum + (cartQty[i.id] ?? 0), 0);
+
+  const totalCartItems = includedCount + extraQty;
 
   return (
     <>
