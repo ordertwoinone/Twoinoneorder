@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -43,3 +45,4 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+

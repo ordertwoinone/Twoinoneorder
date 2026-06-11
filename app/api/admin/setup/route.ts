@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -14,3 +16,4 @@ export async function GET() {
 
   return NextResponse.json({ success: true, email: data.user?.email });
 }
+

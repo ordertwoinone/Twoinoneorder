@@ -1,21 +1,76 @@
 "use client";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings, Images } from "lucide-react";
+import {
+  Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
+  Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import type { LucideIcon } from "lucide-react";
 
-const NAV = [
+type NavChild = { label: string; href: string; icon: LucideIcon };
+type NavItem =
+  | { label: string; href: string; icon: LucideIcon }
+  | { label: string; icon: LucideIcon; basePath: string; children: NavChild[] };
+
+const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-  { label: "Restaurants", href: "/admin/restaurants", icon: Store },
-  { label: "Hero Banners", href: "/admin/banners", icon: ImageIcon },
-  { label: "Offers", href: "/admin/offers", icon: Tag },
-  { label: "Media Library", href: "/admin/media", icon: Images },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
+  {
+    label: "Homepage",
+    icon: Home,
+    basePath: "/admin/homepage-section",
+    children: [
+      { label: "Restaurants",  href: "/admin/restaurants", icon: Store       },
+      { label: "Hero Banners", href: "/admin/banners",     icon: ImageIcon   },
+      { label: "Offers",       href: "/admin/offers",      icon: Tag         },
+    ],
+  },
+  {
+    label: "Buffet Page",
+    icon: UtensilsCrossed,
+    basePath: "/admin/buffet",
+    children: [
+      { label: "Buffet Hero",     href: "/admin/buffet/hero",            icon: LayoutDashboard },
+      { label: "Banners",         href: "/admin/buffet/banners",         icon: ImageIcon  },
+      { label: "Why Choose Us",   href: "/admin/buffet/why-choose-us",   icon: Star       },
+      { label: "Buffet Timings",  href: "/admin/buffet/timings",         icon: Clock      },
+      { label: "Popular Dishes",  href: "/admin/buffet/popular-dishes",  icon: Utensils   },
+    ],
+  },
+  { label: "Media Library", href: "/admin/media",     icon: Images   },
+  { label: "Settings",      href: "/admin/settings",  icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  const isChildActive = (children: { href: string }[]) =>
+    children.some((c) => pathname.startsWith(c.href));
+
+  const [open, setOpen] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    NAV.forEach((item) => {
+      if ("children" in item) {
+        initial[item.label] = isChildActive(item.children);
+      }
+    });
+    return initial;
+  });
+
+  useEffect(() => {
+    setOpen((prev) => {
+      const next = { ...prev };
+      NAV.forEach((item) => {
+        if ("children" in item && isChildActive(item.children)) {
+          next[item.label] = true;
+        }
+      });
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   if (pathname === "/admin") return <>{children}</>;
 
@@ -40,20 +95,66 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV.map(({ label, href, icon: Icon }) => {
-            const active = pathname.startsWith(href);
+          {NAV.map((item) => {
+            if ("children" in item) {
+              const groupActive = isChildActive(item.children);
+              const isOpen = open[item.label] ?? false;
+              return (
+                <div key={item.label}>
+                  <button
+                    onClick={() => setOpen((p) => ({ ...p, [item.label]: !p[item.label] }))}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      groupActive
+                        ? "bg-orange-50 text-orange-700"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    }`}
+                  >
+                    <item.icon size={17} strokeWidth={groupActive ? 2.2 : 1.8} />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="mt-0.5 ml-3 pl-3 border-l border-gray-100 space-y-0.5">
+                      {item.children.map(({ label, href, icon: Icon }) => {
+                        const active = pathname.startsWith(href);
+                        return (
+                          <Link
+                            key={href}
+                            href={href}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                              active
+                                ? "bg-orange-50 text-orange-700"
+                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                            }`}
+                          >
+                            <Icon size={15} strokeWidth={active ? 2.2 : 1.8} />
+                            {label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            const active = pathname.startsWith(item.href);
             return (
               <Link
-                key={href}
-                href={href}
+                key={item.href}
+                href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   active
                     ? "bg-orange-50 text-orange-700"
                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
-                <Icon size={17} strokeWidth={active ? 2.2 : 1.8} />
-                {label}
+                <item.icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+                {item.label}
               </Link>
             );
           })}

@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -29,3 +31,4 @@ export async function PUT(request: Request) {
   revalidatePath("/admin");
   return NextResponse.json(data);
 }
+
