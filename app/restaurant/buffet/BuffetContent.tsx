@@ -624,8 +624,12 @@ function CartModal({
 }) {
   const allAnnotated = allActiveItems.map((item) => {
     const timingIds = item.timing_ids ?? [];
-    const included = selectedTimingId !== null && (timingIds.length === 0 || timingIds.includes(selectedTimingId));
-    const qty = cartQty[item.id] ?? 0;
+    const included =
+      selectedTimingId !== null &&
+      (timingIds.length === 0 || timingIds.includes(selectedTimingId));
+    const qty = included
+      ? Math.max(1, cartQty[item.id] ?? 0)
+      : cartQty[item.id] ?? 0;
     return { ...item, included, qty };
   });
 
@@ -803,7 +807,8 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
       const next: Record<string, number> = {};
       items.forEach((item) => {
         const ids = item.timing_ids ?? [];
-        if (ids.includes(selectedTimingId)) {
+        const isIncluded = ids.length === 0 || ids.includes(selectedTimingId);
+        if (isIncluded) {
           next[item.id] = (item.timing_qty ?? {})[selectedTimingId] ?? 1;
         }
       });
