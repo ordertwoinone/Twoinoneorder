@@ -22,6 +22,7 @@ interface MenuItem {
   is_veg: boolean;
   is_special: boolean;
   timing_ids: string[];
+  timing_qty: Record<string, number>;
   sort_order: number;
   is_active: boolean;
   buffet_menu_sections?: { title: string; category_id: string };
@@ -34,6 +35,7 @@ const EMPTY: Omit<MenuItem, "id" | "buffet_menu_sections"> = {
   is_veg: false,
   is_special: false,
   timing_ids: [],
+  timing_qty: {},
   sort_order: 0,
   is_active: true,
 };
@@ -76,7 +78,7 @@ export default function MenuItemsAdmin() {
   function openEdit(item: MenuItem) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { buffet_menu_sections: _, ...rest } = item;
-    setModal({ open: true, mode: "edit", data: { ...rest, timing_ids: rest.timing_ids ?? [] } });
+    setModal({ open: true, mode: "edit", data: { ...rest, timing_ids: rest.timing_ids ?? [], timing_qty: rest.timing_qty ?? {} } });
   }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) {
@@ -84,10 +86,21 @@ export default function MenuItemsAdmin() {
   }
   function toggleTiming(timingId: string) {
     const current = modal.data.timing_ids ?? [];
-    const next = current.includes(timingId)
-      ? current.filter((id) => id !== timingId)
-      : [...current, timingId];
-    handleField("timing_ids", next);
+    const isChecked = current.includes(timingId);
+    handleField("timing_ids", isChecked ? current.filter((id) => id !== timingId) : [...current, timingId]);
+    if (isChecked) {
+      // Remove qty entry when unchecking
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [timingId]: _removed, ...rest } = modal.data.timing_qty ?? {};
+      handleField("timing_qty", rest);
+    } else {
+      // Default qty = 1 when newly checked
+      handleField("timing_qty", { ...(modal.data.timing_qty ?? {}), [timingId]: 1 });
+    }
+  }
+
+  function handleTimingQty(timingId: string, qty: number) {
+    handleField("timing_qty", { ...(modal.data.timing_qty ?? {}), [timingId]: Math.max(1, qty || 1) });
   }
 
   async function handleSave() {
@@ -123,7 +136,8 @@ export default function MenuItemsAdmin() {
 
   function timingLabel(item: MenuItem) {
     const ids = item.timing_ids ?? [];
-    if (ids.length === 0 || ids.length === timings.length) return { text: "All timings", cls: "bg-green-100 text-green-700" };
+    if (ids.length === 0) return { text: "No timings", cls: "bg-gray-100 text-gray-500" };
+    if (ids.length === timings.length) return { text: "All timings", cls: "bg-green-100 text-green-700" };
     return { text: `${ids.length}/${timings.length} timings`, cls: "bg-yellow-100 text-yellow-700" };
   }
 
@@ -261,29 +275,44 @@ export default function MenuItemsAdmin() {
                     <Clock size={13} className="text-gray-400" />
                     <label className="text-xs font-semibold text-gray-700">Included in Timings</label>
                   </div>
-                  <p className="text-[10px] text-gray-400 mb-2.5">Leave all unchecked = included in all timings (shows &ldquo;Included&rdquo; badge)</p>
-                  <div className="space-y-2">
+                  <p className="text-[10px] text-gray-400 mb-2.5">
+                    Check a timing to mark this item as included. Set the qty (default portions per guest).
+                  </p>
+                  <div className="space-y-2.5">
                     {timings.map((t) => {
                       const checked = (modal.data.timing_ids ?? []).includes(t.id);
+                      const qty = (modal.data.timing_qty ?? {})[t.id] ?? 1;
                       return (
-                        <label key={t.id} className="flex items-center gap-3 cursor-pointer group">
+                        <div key={t.id} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors ${checked ? "border-orange-200 bg-orange-50" : "border-gray-100 bg-gray-50"}`}>
                           <div
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? "border-orange-500 bg-orange-500" : "border-gray-300 group-hover:border-orange-400"}`}
+                            className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 cursor-pointer transition-colors ${checked ? "border-orange-500 bg-orange-500" : "border-gray-300 hover:border-orange-400"}`}
                             onClick={() => toggleTiming(t.id)}
                           >
                             {checked && <svg viewBox="0 0 10 8" className="w-2.5 h-2 fill-none stroke-white stroke-[2]"><polyline points="1,4 4,7 9,1" /></svg>}
                           </div>
-                          <div className="min-w-0">
+                          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => toggleTiming(t.id)}>
                             <p className="text-sm font-medium text-gray-800 leading-tight">{t.label}</p>
                             <p className="text-[10px] text-gray-400">{t.time_range}</p>
                           </div>
-                        </label>
+                          {checked && (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <label className="text-[10px] text-gray-500 font-medium">Qty</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={qty}
+                                onChange={(e) => handleTimingQty(t.id, parseInt(e.target.value))}
+                                className="w-14 px-2 py-1 rounded-lg border border-orange-200 text-xs text-center focus:outline-none focus:ring-1 focus:ring-orange-400 bg-white"
+                              />
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
-                  {(modal.data.timing_ids ?? []).length > 0 && (modal.data.timing_ids ?? []).length < timings.length && (
-                    <p className="text-[10px] text-yellow-600 font-medium mt-2 bg-yellow-50 px-2.5 py-1.5 rounded-lg">
-                      Item will show an &ldquo;Add&rdquo; cart button on the menu (not included in all sessions)
+                  {(modal.data.timing_ids ?? []).length === 0 && (
+                    <p className="text-[10px] text-gray-400 font-medium mt-2 bg-gray-50 px-2.5 py-1.5 rounded-lg">
+                      No timing checked — this item will show an Add to cart button for all sessions.
                     </p>
                   )}
                 </div>

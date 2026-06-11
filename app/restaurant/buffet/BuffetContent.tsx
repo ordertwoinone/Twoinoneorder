@@ -69,6 +69,7 @@ interface MenuItemDB {
   is_veg: boolean;
   is_special: boolean;
   timing_ids: string[];
+  timing_qty: Record<string, number>;
   sort_order: number;
   is_active: boolean;
 }
@@ -800,9 +801,9 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
       let changed = false;
       items.forEach((item) => {
         const ids = item.timing_ids ?? [];
-        const isIncluded = ids.length === 0 || ids.includes(selectedTimingId);
+        const isIncluded = ids.includes(selectedTimingId);
         if (isIncluded && !(prev[item.id] > 0)) {
-          updates[item.id] = 1;
+          updates[item.id] = (item.timing_qty ?? {})[selectedTimingId] ?? 1;
           changed = true;
         }
       });
@@ -821,7 +822,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const includedCount = selectedTimingId
     ? allActiveItems.filter((i) => {
         const ids = i.timing_ids ?? [];
-        return ids.length === 0 || ids.includes(selectedTimingId);
+        return ids.includes(selectedTimingId);
       }).length
     : 0;
 
@@ -829,7 +830,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
     .filter((i) => {
       if (!selectedTimingId) return true;
       const ids = i.timing_ids ?? [];
-      return !(ids.length === 0 || ids.includes(selectedTimingId));
+      return !(ids.includes(selectedTimingId));
     })
     .reduce((sum, i) => sum + (cartQty[i.id] ?? 0), 0);
 
