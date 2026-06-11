@@ -68,6 +68,7 @@ interface MenuItemDB {
   image_url: string;
   is_veg: boolean;
   is_special: boolean;
+  timing_ids: string[];
   sort_order: number;
   is_active: boolean;
 }
@@ -150,7 +151,14 @@ function DomeLogo({ size = "md" }: { size?: "md" | "lg" }) {
   );
 }
 
-function DishCard({ name, img, veg, special }: { name: string; img: string; veg: boolean; special: boolean }) {
+function DishCard({ name, img, veg, special, timingIds, allTimingIds }: {
+  name: string; img: string; veg: boolean; special: boolean;
+  timingIds: string[]; allTimingIds: string[];
+}) {
+  const [qty, setQty] = useState(0);
+  const isIncluded = timingIds.length === 0 || allTimingIds.length === 0 ||
+    allTimingIds.every((id) => timingIds.includes(id));
+
   return (
     <div className="shrink-0 w-[110px] sm:w-full bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className="relative h-[90px] sm:h-[140px] lg:h-[155px] bg-gray-100">
@@ -165,7 +173,30 @@ function DishCard({ name, img, veg, special }: { name: string; img: string; veg:
       <div className="px-2 sm:px-3 pt-1.5 sm:pt-2 pb-2 sm:pb-3">
         <p className="text-[11px] sm:text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px] sm:min-h-[40px]">{name}</p>
         <div className="h-px bg-gray-100 my-1.5" />
-        <p className="text-[11px] sm:text-xs text-green-600 font-medium">Included</p>
+        {isIncluded ? (
+          <p className="text-[10px] sm:text-xs font-semibold text-green-600">✓ Included</p>
+        ) : qty === 0 ? (
+          <button
+            onClick={() => setQty(1)}
+            className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
+          >
+            <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="text-[10px] sm:text-xs font-semibold">Add</span>
+          </button>
+        ) : (
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setQty((q) => Math.max(0, q - 1))}
+              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
+            >−</button>
+            <span className="text-xs sm:text-sm font-bold text-gray-900">{qty}</span>
+            <button
+              onClick={() => setQty((q) => q + 1)}
+              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
+              style={{ background: "#ea580c" }}
+            >+</button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -175,6 +206,7 @@ function DishCard({ name, img, veg, special }: { name: string; img: string; veg:
 
 function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; menuSections: MenuSectionDB[] }) {
   const [activeCategory, setActiveCategory] = useState("all");
+  const allTimingIds = timings.map((t) => t.id);
 
   const visibleSections = activeCategory === "all"
     ? menuSections
@@ -261,7 +293,15 @@ function BuffetMenuTab({ timings, menuSections }: { timings: BuffetTiming[]; men
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 sm:overflow-visible sm:pb-0 sm:gap-4" style={{ scrollbarWidth: "none" }}>
               {activeItems.map((item) => (
-                <DishCard key={item.id} name={item.name} img={item.image_url} veg={item.is_veg} special={item.is_special} />
+                <DishCard
+                  key={item.id}
+                  name={item.name}
+                  img={item.image_url}
+                  veg={item.is_veg}
+                  special={item.is_special}
+                  timingIds={item.timing_ids ?? []}
+                  allTimingIds={allTimingIds}
+                />
               ))}
               <div className="shrink-0 flex items-center pr-1 sm:hidden">
                 <button className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shadow-sm transition-colors">
