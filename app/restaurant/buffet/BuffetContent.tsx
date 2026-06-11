@@ -164,17 +164,24 @@ function DishCard({ name, img, veg, special, isIncluded, qty, onQtyChange }: {
             Chef&apos;s<br />Special
           </span>
         )}
+        {isIncluded && (
+          <span className="absolute bottom-1.5 left-1.5 bg-green-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10 flex items-center gap-0.5">
+            ✓ Included
+          </span>
+        )}
         <span className="absolute top-1.5 right-1.5 z-10"><VegBadge veg={veg} /></span>
       </div>
       <div className="px-2 sm:px-3 pt-1.5 sm:pt-2 pb-2 sm:pb-3">
         <p className="text-[11px] sm:text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px] sm:min-h-[40px]">{name}</p>
         <div className="h-px bg-gray-100 my-1.5" />
-        {isIncluded ? (
-          <p className="text-[10px] sm:text-xs font-semibold text-green-600">✓ Included</p>
-        ) : qty === 0 ? (
+        {qty === 0 ? (
           <button
             onClick={() => onQtyChange(1)}
-            className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
+            className={`w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg transition-colors ${
+              isIncluded
+                ? "bg-green-50 text-green-700 hover:bg-green-100 active:bg-green-200"
+                : "bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200"
+            }`}
           >
             <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span className="text-[10px] sm:text-xs font-semibold">Add</span>
@@ -606,6 +613,155 @@ function ReviewsTab() {
   );
 }
 
+// ─── Cart Modal ───────────────────────────────────────────────────────────────
+
+function CartModal({
+  selectedTiming, allActiveItems, selectedTimingId, cartQty, onQtyChange, onClose,
+}: {
+  selectedTiming: BuffetTiming | null;
+  allActiveItems: MenuItemDB[];
+  selectedTimingId: string | null;
+  cartQty: Record<string, number>;
+  onQtyChange: (itemId: string, qty: number) => void;
+  onClose: () => void;
+}) {
+  const cartItems = allActiveItems
+    .map((item) => {
+      const timingIds = item.timing_ids ?? [];
+      const included = selectedTimingId !== null && (timingIds.length === 0 || timingIds.includes(selectedTimingId));
+      const qty = cartQty[item.id] ?? 0;
+      return { ...item, included, qty };
+    })
+    .filter((item) => item.qty > 0);
+
+  const includedInCart = cartItems.filter((i) => i.included);
+  const extrasInCart   = cartItems.filter((i) => !i.included);
+  const totalQty = cartItems.reduce((s, i) => s + i.qty, 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="w-5 h-5 text-orange-500" />
+            <h2 className="text-base font-extrabold text-gray-900">Your Cart</h2>
+            {totalQty > 0 && (
+              <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{totalQty}</span>
+            )}
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        {/* Session pill */}
+        <div className="px-5 pb-3 shrink-0">
+          {selectedTiming ? (
+            <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+              <div>
+                <p className="text-[11px] text-gray-500">Selected Session</p>
+                <p className="text-sm font-extrabold text-gray-900">{selectedTiming.label}</p>
+                <p className="text-[11px] text-gray-400">{selectedTiming.time_range}</p>
+              </div>
+              <p className="text-lg font-extrabold text-orange-500">
+                {selectedTiming.price}
+                <span className="text-[11px] font-normal text-gray-400 ml-1">{selectedTiming.price_label}</span>
+              </p>
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center">
+              <p className="text-sm text-gray-400">No session selected</p>
+              <p className="text-[11px] text-gray-300 mt-0.5">Go to Buffet Menu tab to choose a timing</p>
+            </div>
+          )}
+        </div>
+
+        {/* Item list */}
+        <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-4 min-h-0">
+          {cartItems.length === 0 ? (
+            <div className="py-8 text-center">
+              <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+              <p className="text-sm text-gray-400">No items added yet</p>
+              <p className="text-[11px] text-gray-300 mt-0.5">Tap Add on dishes to build your order</p>
+            </div>
+          ) : (
+            <>
+              {includedInCart.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider mb-2">Included in Session</p>
+                  <div className="space-y-2">
+                    {includedInCart.map((item) => (
+                      <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {extrasInCart.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider mb-2">Extra Add-ons</p>
+                  <div className="space-y-2">
+                    {extrasInCart.map((item) => (
+                      <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer CTA */}
+        <div className="px-5 py-4 border-t border-gray-100 shrink-0">
+          <Link
+            href="/book-table"
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
+            style={{ background: "#ea580c" }}
+          >
+            Book Table
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CartRow({ item, onQtyChange }: {
+  item: MenuItemDB & { included: boolean; qty: number };
+  onQtyChange: (id: string, qty: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold text-gray-800 leading-tight truncate">{item.name}</p>
+        {item.included && (
+          <p className="text-[10px] text-green-600 font-semibold">✓ Included</p>
+        )}
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          onClick={() => onQtyChange(item.id, Math.max(0, item.qty - 1))}
+          className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
+        >−</button>
+        <span className="text-sm font-bold text-gray-900 w-5 text-center">{item.qty}</span>
+        <button
+          onClick={() => onQtyChange(item.id, item.qty + 1)}
+          className="w-6 h-6 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
+          style={{ background: "#ea580c" }}
+        >+</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 type Tab = "overview" | "menu" | "about" | "photos" | "reviews";
@@ -634,6 +790,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [liked, setLiked]                   = useState(false);
   const [selectedTimingId, setSelectedTimingId] = useState<string | null>(null);
   const [cartQty, setCartQty]               = useState<Record<string, number>>({});
+  const [cartOpen, setCartOpen]             = useState(false);
 
   function handleQtyChange(itemId: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [itemId]: qty }));
@@ -643,22 +800,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
 
   const allActiveItems = menuSections.flatMap((s) => s.buffet_menu_items.filter((i) => i.is_active));
 
-  const includedCount = selectedTimingId
-    ? allActiveItems.filter((i) => {
-        const ids = i.timing_ids ?? [];
-        return ids.length === 0 || ids.includes(selectedTimingId);
-      }).length
-    : 0;
-
-  const extraQty = allActiveItems
-    .filter((i) => {
-      if (!selectedTimingId) return true;
-      const ids = i.timing_ids ?? [];
-      return !(ids.length === 0 || ids.includes(selectedTimingId));
-    })
-    .reduce((sum, i) => sum + (cartQty[i.id] ?? 0), 0);
-
-  const totalCartItems = includedCount + extraQty;
+  const totalCartItems = Object.values(cartQty).reduce((sum, q) => sum + q, 0);
 
   return (
     <>
@@ -757,6 +899,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
         {activeTab === "reviews"  && <ReviewsTab />}
       </div>
 
+      {/* Mobile cart bar */}
       <div className="fixed bottom-16 left-0 right-0 z-40 px-4 sm:hidden">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 flex items-center px-4 py-3 gap-3">
           <div className="relative shrink-0">
@@ -773,22 +916,35 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
               {selectedTiming ? `${selectedTiming.price} ${selectedTiming.price_label}` : "No session selected"}
             </p>
           </div>
-          <Link href="/book-table" className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
-            Book Table <span>→</span>
-          </Link>
+          <button onClick={() => setCartOpen(true)} className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
+            View Cart <span>→</span>
+          </button>
         </div>
       </div>
 
+      {/* Desktop floating cart */}
       <div className="hidden sm:flex fixed bottom-6 right-6 z-40">
-        <Link href="/book-table" className="flex items-center gap-3 text-white font-bold px-5 py-3.5 rounded-2xl shadow-xl text-sm sm:text-base" style={{ background: "#ea580c" }}>
+        <button onClick={() => setCartOpen(true)} className="flex items-center gap-3 text-white font-bold px-5 py-3.5 rounded-2xl shadow-xl text-sm sm:text-base" style={{ background: "#ea580c" }}>
           <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
           <span>
             {totalCartItems} item{totalCartItems !== 1 ? "s" : ""}
             {selectedTiming ? ` · ${selectedTiming.price} ${selectedTiming.price_label}` : ""}
           </span>
-          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>Book Table</span>
-        </Link>
+          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>View Cart</span>
+        </button>
       </div>
+
+      {/* Cart modal */}
+      {cartOpen && (
+        <CartModal
+          selectedTiming={selectedTiming}
+          allActiveItems={allActiveItems}
+          selectedTimingId={selectedTimingId}
+          cartQty={cartQty}
+          onQtyChange={handleQtyChange}
+          onClose={() => setCartOpen(false)}
+        />
+      )}
 
     </>
   );

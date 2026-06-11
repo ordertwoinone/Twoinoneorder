@@ -1,17 +1,12 @@
 'use client'
-// ─────────────────────────────────────────────────────────────
-// TableBookingPage.tsx — Full booking page (Step: Select Area /
-// Choose Table). Layout matches the approved UI reference:
-// navbar → steps → area tabs → 3D floor plan → table card → bottom nav
-// ─────────────────────────────────────────────────────────────
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import { useTableStore } from './useTableStore'
 import { TABLES, AreaKey } from './tableData'
 import type { ViewMode } from './TableScene'
 
-// Three.js can't render on the server — load client-side only
 const TableScene = nextDynamic(() => import('./TableScene'), {
   ssr: false,
   loading: () => (
@@ -21,17 +16,11 @@ const TableScene = nextDynamic(() => import('./TableScene'), {
   ),
 })
 
-// ═══════════════ Inline SVG icons (no external deps) ═════════
+// ══════════════ Icons ══════════════
 
 const I = {
-  Calendar: () => (
-    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-  ),
   Pin: () => (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg>
-  ),
-  Booth: () => (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 11h18M9 19v-4"/></svg>
   ),
   User: () => (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>
@@ -74,13 +63,12 @@ const I = {
   ),
 }
 
-// ═══════════════ Static config ═══════════════════════════════
+// ══════════════ Config ══════════════
 
 const STEPS = [
-  { label: 'Select Area',     icon: I.Pin,   active: true },
-  { label: 'Choose Table',    icon: I.Booth, active: false },
-  { label: 'Your Details',    icon: I.User,  active: false },
-  { label: 'Confirm Booking', icon: I.Check, active: false },
+  { label: 'Select Area',     icon: I.Pin   },
+  { label: 'Your Details',    icon: I.User  },
+  { label: 'Confirm Booking', icon: I.Check },
 ]
 
 const AREA_TABS: { key: AreaKey; label: string; icon: () => JSX.Element }[] = [
@@ -103,170 +91,341 @@ const LEGEND = [
 
 const TABLE_PHOTO = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80'
 
-// ═══════════════ Page component ══════════════════════════════
+interface DetailsForm {
+  name: string
+  phone: string
+  date: string
+  time: string
+  guests: string
+  notes: string
+}
+
+const EMPTY_FORM: DetailsForm = {
+  name: '', phone: '', date: '', time: '', guests: '2', notes: '',
+}
+
+// ══════════════ Page ══════════════
 
 export default function TableBookingPage() {
+  const router = useRouter()
+  const [step, setStep] = useState(1)
   const [viewMode, setViewMode] = useState<ViewMode>('3d')
+  const [form, setForm] = useState<DetailsForm>(EMPTY_FORM)
+  const [submitting, setSubmitting] = useState(false)
+  const [errors, setErrors] = useState<Partial<DetailsForm>>({})
+
   const { selectedTable, activeArea, setArea } = useTableStore()
   const selected = TABLES.find((t) => t.id === selectedTable)
 
+  function handleField(key: keyof DetailsForm, value: string) {
+    setForm((f) => ({ ...f, [key]: value }))
+    setErrors((e) => ({ ...e, [key]: '' }))
+  }
+
+  function validateForm() {
+    const e: Partial<DetailsForm> = {}
+    if (!form.name.trim()) e.name = 'Name is required'
+    if (!form.phone.trim()) e.phone = 'Phone is required'
+    if (!form.date) e.date = 'Date is required'
+    if (!form.time) e.time = 'Time is required'
+    if (!form.guests || parseInt(form.guests) < 1) e.guests = 'Enter number of guests'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
+  function handleSubmit() {
+    if (!selected || !validateForm()) return
+    setSubmitting(true)
+
+    const bookingData = {
+      table_id: selected.id,
+      table_section: selected.section,
+      seats: selected.seats,
+      min_spend: selected.minSpend,
+      guest_name: form.name,
+      phone: form.phone,
+      date: form.date,
+      time: form.time,
+      guests: parseInt(form.guests),
+      notes: form.notes,
+    }
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData))
+    }
+
+    router.push('/confirm-booking')
+  }
+
   return (
     <div className="min-h-screen bg-[#F5F0E8] text-[#1A1A1A]" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-
-      {/* Page heading */}
       <main className="max-w-5xl mx-auto px-3 sm:px-4 pb-6">
+
+        {/* Heading */}
         <div className="pt-4 pb-1 text-center">
           <h1 className="text-xl sm:text-2xl font-extrabold">Book a Table</h1>
-          <p className="text-[12.5px] text-[#6B7280] mt-0.5">Pick your area and table on the 3D floor plan</p>
+          <p className="text-[12.5px] text-[#6B7280] mt-0.5">
+            {step === 1 ? 'Pick your area and table on the 3D floor plan' : 'Fill in your details to complete the booking'}
+          </p>
         </div>
 
-        {/* ═══ 2. BOOKING STEPS ═══ */}
+        {/* Steps */}
         <div className="bg-white rounded-2xl shadow-sm mt-3 px-3 py-3.5 overflow-x-auto">
-          <div className="flex items-center justify-between gap-1 min-w-[560px] sm:min-w-0">
-            {STEPS.map((step, i) => (
-              <div key={step.label} className="flex items-center gap-1 flex-1">
-                <div className={`flex items-center gap-2 px-2 py-1 ${step.active ? 'border-b-2 border-[#E8521A]' : ''}`}>
-                  <span className={step.active ? 'text-[#E8521A]' : 'text-[#9CA3AF]'}><step.icon /></span>
-                  <span className={`text-[12.5px] font-semibold whitespace-nowrap ${step.active ? 'text-[#E8521A]' : 'text-[#6B7280]'}`}>
-                    {step.label}
-                  </span>
-                </div>
-                {i < STEPS.length - 1 && <span className="text-[#C5C8CE] mx-auto"><I.Chevron /></span>}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ═══ 3. AREA TABS ═══ */}
-        <div className="grid grid-cols-3 gap-2.5 mt-3">
-          {AREA_TABS.map(({ key, label, icon: Icon }) => {
-            const active = activeArea === key
-            return (
-              <button
-                key={key}
-                onClick={() => setArea(key)}
-                className={`flex items-center justify-center gap-2 px-2 py-3 rounded-xl bg-white text-[12.5px] sm:text-sm font-semibold transition border ${
-                  active ? 'border-[#E8521A] text-[#E8521A]' : 'border-gray-200 text-[#6B7280] hover:border-gray-300'
-                }`}
-              >
-                <Icon />
-                <span className="truncate">{label}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* ═══ 4. 3D FLOOR PLAN ═══ */}
-        <div className="relative mt-3 rounded-2xl overflow-hidden bg-[#EFE8DA]" style={{ height: 'min(64vh, 620px)' }}>
-          <TableScene viewMode={viewMode} />
-
-          {/* View controls — left */}
-          <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">
-            {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
-              const active = viewMode === key
+          <div className="flex items-center justify-between gap-1 min-w-[360px] sm:min-w-0">
+            {STEPS.map((s, i) => {
+              const active = i + 1 === step
+              const done = i + 1 < step
               return (
-                <button
-                  key={key}
-                  onClick={() => setViewMode(key)}
-                  className={`w-[72px] py-2.5 rounded-xl bg-white shadow-md flex flex-col items-center gap-1 text-[11px] font-semibold transition ${
-                    active ? 'text-[#E8521A] ring-1 ring-[#E8521A]/40' : 'text-[#6B7280] hover:text-[#1A1A1A]'
-                  }`}
-                >
-                  <Icon />
-                  {label}
-                </button>
+                <div key={s.label} className="flex items-center gap-1 flex-1">
+                  <div className={`flex items-center gap-2 px-2 py-1 ${active ? 'border-b-2 border-[#E8521A]' : ''}`}>
+                    <span className={active ? 'text-[#E8521A]' : done ? 'text-green-500' : 'text-[#9CA3AF]'}>
+                      <s.icon />
+                    </span>
+                    <span className={`text-[12.5px] font-semibold whitespace-nowrap ${active ? 'text-[#E8521A]' : done ? 'text-green-600' : 'text-[#6B7280]'}`}>
+                      {s.label}
+                    </span>
+                  </div>
+                  {i < STEPS.length - 1 && <span className="text-[#C5C8CE] mx-auto"><I.Chevron /></span>}
+                </div>
               )
             })}
           </div>
-
-          {/* Legend — right */}
-          <div className="absolute right-3 top-3 bg-white rounded-xl shadow-md px-4 py-3 space-y-2 z-10">
-            {LEGEND.map(({ color, label }) => (
-              <div key={label} className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
-                <span className="text-[12px] font-medium text-[#374151]">{label}</span>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* ═══ 5. SELECTED TABLE CARD ═══ */}
-        <div className="bg-white rounded-2xl shadow-sm mt-3 p-3.5 sm:p-4">
-          {selected ? (
-            <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
-              {/* Photo */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={TABLE_PHOTO}
-                alt={`Table ${selected.id}`}
-                className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0"
-              />
+        {/* ── Step 1: Select Table ── */}
+        {step === 1 && (
+          <>
+            {/* Area tabs */}
+            <div className="grid grid-cols-3 gap-2.5 mt-3">
+              {AREA_TABS.map(({ key, label, icon: Icon }) => {
+                const active = activeArea === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setArea(key)}
+                    className={`flex items-center justify-center gap-2 px-2 py-3 rounded-xl bg-white text-[12.5px] sm:text-sm font-semibold transition border ${
+                      active ? 'border-[#E8521A] text-[#E8521A]' : 'border-gray-200 text-[#6B7280] hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon />
+                    <span className="truncate">{label}</span>
+                  </button>
+                )
+              })}
+            </div>
 
-              {/* Details */}
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-extrabold mb-2">Table {selected.id}</h2>
-                <div className="space-y-1.5 text-[13.5px] text-[#374151]">
-                  <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.Users /></span>{selected.seats} Guests</p>
-                  <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.MapPin /></span>{selected.section}</p>
-                  <p className="flex items-center gap-2"><I.Star />Best for small groups</p>
-                </div>
+            {/* 3D Floor plan */}
+            <div className="relative mt-3 rounded-2xl overflow-hidden bg-[#EFE8DA]" style={{ height: 'min(64vh, 620px)' }}>
+              <TableScene viewMode={viewMode} />
+
+              <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">
+                {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
+                  const active = viewMode === key
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setViewMode(key)}
+                      className={`w-[72px] py-2.5 rounded-xl bg-white shadow-md flex flex-col items-center gap-1 text-[11px] font-semibold transition ${
+                        active ? 'text-[#E8521A] ring-1 ring-[#E8521A]/40' : 'text-[#6B7280] hover:text-[#1A1A1A]'
+                      }`}
+                    >
+                      <Icon />
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
 
-              {/* Min spend + CTA */}
-              <div className="sm:border-l sm:border-gray-100 sm:pl-5 flex sm:flex-col items-center sm:items-stretch justify-between gap-3 shrink-0">
-                <div className="text-center sm:text-left sm:bg-gray-50 sm:rounded-xl sm:px-5 sm:py-3">
-                  <p className="text-[12px] text-[#6B7280]">Min. Spend</p>
-                  <p className="text-lg font-extrabold">AED {selected.minSpend}</p>
-                </div>
-                <button className="px-7 py-3 rounded-full text-white font-bold text-sm bg-[#E8521A] hover:bg-[#F97316] transition shadow-md whitespace-nowrap">
-                  Select Table
-                </button>
+              <div className="absolute right-3 top-3 bg-white rounded-xl shadow-md px-4 py-3 space-y-2 z-10">
+                {LEGEND.map(({ color, label }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
+                    <span className="text-[12px] font-medium text-[#374151]">{label}</span>
+                  </div>
+                ))}
               </div>
             </div>
-          ) : (
-            <div className="py-6 text-center">
-              <p className="text-[15px] font-semibold text-[#6B7280]">Select a table to continue</p>
-              <p className="text-[12.5px] text-[#9CA3AF] mt-1">Tap any green or amber pin on the floor plan</p>
-            </div>
-          )}
-        </div>
 
-        {/* ═══ 6. BOTTOM NAV BAR ═══ */}
-        <div className="flex items-center justify-between gap-3 mt-3">
-          {/* Previous */}
+            {/* Selected table card */}
+            <div className="bg-white rounded-2xl shadow-sm mt-3 p-3.5 sm:p-4">
+              {selected ? (
+                <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={TABLE_PHOTO} alt={`Table ${selected.id}`} className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-xl font-extrabold mb-2">Table {selected.id}</h2>
+                    <div className="space-y-1.5 text-[13.5px] text-[#374151]">
+                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.Users /></span>{selected.seats} Guests</p>
+                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.MapPin /></span>{selected.section}</p>
+                      <p className="flex items-center gap-2"><I.Star />Best for small groups</p>
+                    </div>
+                  </div>
+                  <div className="sm:border-l sm:border-gray-100 sm:pl-5 flex sm:flex-col items-center sm:items-stretch justify-between gap-3 shrink-0">
+                    <div className="text-center sm:text-left sm:bg-gray-50 sm:rounded-xl sm:px-5 sm:py-3">
+                      <p className="text-[12px] text-[#6B7280]">Min. Spend</p>
+                      <p className="text-lg font-extrabold">AED {selected.minSpend}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
+                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                      <span className="text-[12px] font-semibold text-green-700">Selected</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 text-center">
+                  <p className="text-[15px] font-semibold text-[#6B7280]">Select a table to continue</p>
+                  <p className="text-[12.5px] text-[#9CA3AF] mt-1">Tap any green or amber pin on the floor plan</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── Step 2: Your Details ── */}
+        {step === 2 && selected && (
+          <>
+            {/* Table summary */}
+            <div className="bg-white rounded-2xl shadow-sm mt-3 p-4 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={TABLE_PHOTO} alt="table" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1">
+                <p className="font-extrabold text-[#1A1A1A]">Table {selected.id}</p>
+                <p className="text-[13px] text-[#6B7280]">{selected.section} · {selected.seats} seats</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-[11px] text-[#9CA3AF]">Min. Spend</p>
+                <p className="font-extrabold text-[#E8521A]">AED {selected.minSpend}</p>
+              </div>
+            </div>
+
+            {/* Details form */}
+            <div className="bg-white rounded-2xl shadow-sm mt-3 p-4 sm:p-5">
+              <h2 className="text-[15px] font-extrabold mb-4">Your Details</h2>
+              <div className="space-y-4">
+
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Full Name *</label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => handleField('name', e.target.value)}
+                    placeholder="Enter your full name"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 ${errors.name ? 'border-red-400' : 'border-gray-200'}`}
+                  />
+                  {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Phone Number *</label>
+                  <input
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => handleField('phone', e.target.value)}
+                    placeholder="+971 50 000 0000"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 ${errors.phone ? 'border-red-400' : 'border-gray-200'}`}
+                  />
+                  {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Date *</label>
+                    <input
+                      type="date"
+                      value={form.date}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={(e) => handleField('date', e.target.value)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 ${errors.date ? 'border-red-400' : 'border-gray-200'}`}
+                    />
+                    {errors.date && <p className="text-[11px] text-red-500 mt-1">{errors.date}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Time *</label>
+                    <input
+                      type="time"
+                      value={form.time}
+                      onChange={(e) => handleField('time', e.target.value)}
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 ${errors.time ? 'border-red-400' : 'border-gray-200'}`}
+                    />
+                    {errors.time && <p className="text-[11px] text-red-500 mt-1">{errors.time}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Number of Guests *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={form.guests}
+                    onChange={(e) => handleField('guests', e.target.value)}
+                    placeholder="2"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 ${errors.guests ? 'border-red-400' : 'border-gray-200'}`}
+                  />
+                  {errors.guests && <p className="text-[11px] text-red-500 mt-1">{errors.guests}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Special Requests <span className="font-normal text-[#9CA3AF]">(optional)</span></label>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => handleField('notes', e.target.value)}
+                    rows={3}
+                    placeholder="Allergies, birthday decorations, high chair, etc."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 resize-none"
+                  />
+                </div>
+
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ── Bottom Nav: Prev / Next buttons only ── */}
+        <div className="flex items-center justify-between gap-3 mt-4">
           <div className="flex flex-col items-center gap-1">
-            <button className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-[#1A1A1A] hover:bg-gray-50 transition">
+            <button
+              onClick={() => setStep((s) => s - 1)}
+              disabled={step === 1}
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition shadow-sm ${
+                step === 1 ? 'bg-white border border-gray-100 text-[#D1D5DB] cursor-not-allowed' : 'bg-white border border-gray-200 text-[#1A1A1A] hover:bg-gray-50'
+              }`}
+            >
               <I.ChevronL />
             </button>
             <span className="text-[11px] text-[#6B7280] font-medium">Previous</span>
           </div>
 
-          {/* Center status pill */}
-          <div className="flex-1 bg-white rounded-full shadow-sm px-5 py-3 flex items-center justify-center gap-3 max-w-md">
-            <span className="text-[#6B7280]"><I.Calendar /></span>
-            <div className="text-center leading-tight">
-              <p className="text-[13px] font-bold">
-                {selected ? `Table ${selected.id} selected` : 'Select a table to continue'}
-              </p>
-              <p className="text-[11px] text-[#9CA3AF]">
-                {selected ? `${selected.section} · AED ${selected.minSpend} min` : 'No table selected'}
-              </p>
-            </div>
-          </div>
-
-          {/* Next */}
           <div className="flex flex-col items-center gap-1">
-            <button
-              disabled={!selected}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition shadow-sm ${
-                selected
-                  ? 'bg-[#E8521A] text-white hover:bg-[#F97316]'
-                  : 'bg-white border border-gray-100 text-[#C5C8CE] cursor-not-allowed'
-              }`}
-            >
-              <span className="rotate-180 inline-flex"><I.ChevronL /></span>
-            </button>
-            <span className="text-[11px] text-[#6B7280] font-medium">Next</span>
+            {step === 1 ? (
+              <>
+                <button
+                  disabled={!selected}
+                  onClick={() => setStep(2)}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition shadow-sm ${
+                    selected
+                      ? 'bg-[#E8521A] text-white hover:bg-[#F97316]'
+                      : 'bg-white border border-gray-100 text-[#C5C8CE] cursor-not-allowed'
+                  }`}
+                >
+                  <span className="rotate-180 inline-flex"><I.ChevronL /></span>
+                </button>
+                <span className="text-[11px] text-[#6B7280] font-medium">Next</span>
+              </>
+            ) : (
+              <>
+                <button
+                  disabled={submitting}
+                  onClick={handleSubmit}
+                  className="h-12 px-6 rounded-2xl bg-[#E8521A] text-white font-bold text-sm hover:bg-[#F97316] transition shadow-sm disabled:opacity-60"
+                >
+                  {submitting ? 'Please wait…' : 'Review Booking'}
+                </button>
+                <span className="text-[11px] text-[#6B7280] font-medium">Continue</span>
+              </>
+            )}
           </div>
         </div>
 

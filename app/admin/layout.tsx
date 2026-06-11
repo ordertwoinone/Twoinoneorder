@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
-  BookOpen, List,
+  BookOpen, List, CalendarCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -49,6 +49,7 @@ const NAV: NavItem[] = [
       { label: "Menu Items",    href: "/admin/buffet-menu/items",    icon: Utensils },
     ],
   },
+  { label: "Bookings",       href: "/admin/bookings", icon: CalendarCheck },
   { label: "Media Library", href: "/admin/media",     icon: Images   },
   { label: "Settings",      href: "/admin/settings",  icon: Settings },
 ];
