@@ -77,7 +77,8 @@ export default function SettingsAdmin() {
     );
   }
 
-  const Section = ({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) => (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Section = ({ icon: Icon, title, children }: { icon: any; title: string; children: React.ReactNode }) => (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
       <div className="flex items-center gap-2.5 px-6 py-4 border-b border-gray-100 bg-gray-50">
         <Icon size={16} className="text-gray-500" />
