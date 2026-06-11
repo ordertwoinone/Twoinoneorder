@@ -174,14 +174,10 @@ function DishCard({ name, img, veg, special, isIncluded, qty, onQtyChange }: {
       <div className="px-2 sm:px-3 pt-1.5 sm:pt-2 pb-2 sm:pb-3">
         <p className="text-[11px] sm:text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px] sm:min-h-[40px]">{name}</p>
         <div className="h-px bg-gray-100 my-1.5" />
-        {qty === 0 ? (
+        {!isIncluded && qty === 0 ? (
           <button
             onClick={() => onQtyChange(1)}
-            className={`w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg transition-colors ${
-              isIncluded
-                ? "bg-green-50 text-green-700 hover:bg-green-100 active:bg-green-200"
-                : "bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200"
-            }`}
+            className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
           >
             <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             <span className="text-[10px] sm:text-xs font-semibold">Add</span>
@@ -189,12 +185,12 @@ function DishCard({ name, img, veg, special, isIncluded, qty, onQtyChange }: {
         ) : (
           <div className="flex items-center justify-between">
             <button
-              onClick={() => onQtyChange(Math.max(0, qty - 1))}
+              onClick={() => onQtyChange(Math.max(isIncluded ? 1 : 0, qty - 1))}
               className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
             >−</button>
-            <span className="text-xs sm:text-sm font-bold text-gray-900">{qty}</span>
+            <span className="text-xs sm:text-sm font-bold text-gray-900">{qty > 0 ? qty : 1}</span>
             <button
-              onClick={() => onQtyChange(qty + 1)}
+              onClick={() => onQtyChange((qty > 0 ? qty : 1) + 1)}
               className="w-6 h-6 sm:w-7 sm:h-7 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
               style={{ background: "#ea580c" }}
             >+</button>
@@ -794,6 +790,25 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [selectedTimingId, setSelectedTimingId] = useState<string | null>(null);
   const [cartQty, setCartQty]               = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen]             = useState(false);
+
+  // Auto-initialise included items to qty=1 whenever timing changes
+  useEffect(() => {
+    if (!selectedTimingId) return;
+    const items = menuSections.flatMap((s) => s.buffet_menu_items.filter((i) => i.is_active));
+    setCartQty((prev) => {
+      const updates: Record<string, number> = {};
+      let changed = false;
+      items.forEach((item) => {
+        const ids = item.timing_ids ?? [];
+        const isIncluded = ids.length === 0 || ids.includes(selectedTimingId);
+        if (isIncluded && !(prev[item.id] > 0)) {
+          updates[item.id] = 1;
+          changed = true;
+        }
+      });
+      return changed ? { ...prev, ...updates } : prev;
+    });
+  }, [selectedTimingId, menuSections]);
 
   function handleQtyChange(itemId: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [itemId]: qty }));
