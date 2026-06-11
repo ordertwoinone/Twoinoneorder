@@ -196,7 +196,7 @@ export default function OffersAdmin() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
               </div>
-              <ImageUploadField label="Image" value={modal.data.image_url} onChange={(url) => handleField("image_url", url)} folder="offers" />
+              <ImageUploadField label="Image" value={modal.data.image_url} onChange={(url) => handleField("image_url", url)} folder="offers" hint="600×400px · offer card" />
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Status</label>
                 <select value={modal.data.is_active ? "active" : "inactive"} onChange={(e) => handleField("is_active", e.target.value === "active")}

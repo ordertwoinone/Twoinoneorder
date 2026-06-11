@@ -251,6 +251,7 @@ export default function BannersAdmin() {
                 value={modal.data.food_image_url}
                 onChange={(url) => handleField("food_image_url", url)}
                 folder="banners"
+                hint="800×500px · right side of banner"
               />
 
               <div>

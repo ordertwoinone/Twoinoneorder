@@ -242,6 +242,7 @@ export default function BuffetBannersAdmin() {
                 value={modal.data.image_url}
                 onChange={(url) => handleField("image_url", url)}
                 folder="banners"
+                hint="800×500px · right side of banner"
               />
 
               <div className="grid grid-cols-2 gap-3">

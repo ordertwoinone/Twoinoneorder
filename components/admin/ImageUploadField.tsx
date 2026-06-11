@@ -7,6 +7,7 @@ interface Props {
   onChange: (url: string) => void;
   label: string;
   folder?: string;
+  hint?: string;
 }
 
 function formatBytes(bytes: number) {
@@ -15,7 +16,7 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function ImageUploadField({ value, onChange, label, folder = "general" }: Props) {
+export default function ImageUploadField({ value, onChange, label, folder = "general", hint }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
@@ -55,7 +56,10 @@ export default function ImageUploadField({ value, onChange, label, folder = "gen
 
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-700 mb-1.5">{label}</label>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <label className="text-xs font-semibold text-gray-700">{label}</label>
+        {hint && <span className="text-[10px] text-orange-500 font-medium">{hint}</span>}
+      </div>
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Link size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -90,12 +94,16 @@ export default function ImageUploadField({ value, onChange, label, folder = "gen
               setDims({ w: img.naturalWidth, h: img.naturalHeight });
             }}
           />
-          {dims && (
-            <div className="text-[11px] text-gray-500 leading-relaxed">
-              <p className="font-semibold text-gray-700">{dims.w} × {dims.h} px</p>
-              <p>Width: {dims.w}px · Height: {dims.h}px{fileSize !== null && ` · ${formatBytes(fileSize)}`}</p>
-            </div>
-          )}
+          <div className="text-[11px] text-gray-500 leading-relaxed">
+            {dims ? (
+              <>
+                <p className="font-semibold text-gray-700">{dims.w} × {dims.h} px{fileSize !== null ? ` · ${formatBytes(fileSize)}` : ""}</p>
+                {hint && <p className="text-orange-500">Recommended: {hint}</p>}
+              </>
+            ) : hint ? (
+              <p className="text-orange-400">Recommended: {hint}</p>
+            ) : null}
+          </div>
         </div>
       )}
     </div>

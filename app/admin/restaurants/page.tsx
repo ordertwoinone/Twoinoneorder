@@ -204,8 +204,8 @@ export default function RestaurantsAdmin() {
                   placeholder="Arabic, Indian, Continental" />
               </div>
 
-              <ImageUploadField label="Logo" value={modal.data.logo_url} onChange={(url) => handleField("logo_url", url)} folder="logos" />
-              <ImageUploadField label="Food Image" value={modal.data.food_image_url} onChange={(url) => handleField("food_image_url", url)} folder="restaurants" />
+              <ImageUploadField label="Logo" value={modal.data.logo_url} onChange={(url) => handleField("logo_url", url)} folder="logos" hint="200×200px · square" />
+              <ImageUploadField label="Food Image" value={modal.data.food_image_url} onChange={(url) => handleField("food_image_url", url)} folder="restaurants" hint="800×500px · right side of card" />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

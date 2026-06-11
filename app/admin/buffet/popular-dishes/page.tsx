@@ -193,6 +193,7 @@ export default function PopularDishesAdmin() {
                 value={modal.data.image_url}
                 onChange={(url) => handleField("image_url", url)}
                 folder="general"
+                hint="400×400px · square"
               />
 
               <div>

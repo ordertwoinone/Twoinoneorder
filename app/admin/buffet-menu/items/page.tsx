@@ -218,7 +218,10 @@ export default function MenuItemsAdmin() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Image URL</label>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-gray-700">Image URL</label>
+                  <span className="text-[10px] text-orange-500 font-medium">Recommended: 400×400px · square</span>
+                </div>
                 <input type="url" value={modal.data.image_url} onChange={(e) => handleField("image_url", e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="https://..." />
               </div>

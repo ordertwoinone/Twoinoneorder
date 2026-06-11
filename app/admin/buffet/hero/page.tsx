@@ -211,6 +211,7 @@ export default function BuffetHeroAdmin() {
             value={form.cover_image_url}
             onChange={(url) => handleField("cover_image_url", url)}
             folder="general"
+            hint="800×450px · landscape"
           />
         </div>
 
