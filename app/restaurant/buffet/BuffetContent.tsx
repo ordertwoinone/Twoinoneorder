@@ -792,22 +792,22 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [cartQty, setCartQty]               = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen]             = useState(false);
 
-  // Auto-initialise included items to qty=1 whenever timing changes
+  // On timing change: reset cart completely, then set only included items to their default qty
   useEffect(() => {
-    if (!selectedTimingId) return;
     const items = menuSections.flatMap((s) => s.buffet_menu_items.filter((i) => i.is_active));
-    setCartQty((prev) => {
-      const updates: Record<string, number> = {};
-      let changed = false;
+    if (!selectedTimingId) {
+      setCartQty({});
+      return;
+    }
+    setCartQty(() => {
+      const next: Record<string, number> = {};
       items.forEach((item) => {
         const ids = item.timing_ids ?? [];
-        const isIncluded = ids.includes(selectedTimingId);
-        if (isIncluded && !(prev[item.id] > 0)) {
-          updates[item.id] = (item.timing_qty ?? {})[selectedTimingId] ?? 1;
-          changed = true;
+        if (ids.includes(selectedTimingId)) {
+          next[item.id] = (item.timing_qty ?? {})[selectedTimingId] ?? 1;
         }
       });
-      return changed ? { ...prev, ...updates } : prev;
+      return next;
     });
   }, [selectedTimingId, menuSections]);
 

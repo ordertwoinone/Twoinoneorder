@@ -1,43 +1,34 @@
 import Image from "next/image";
 import { Star, ArrowRight } from "lucide-react";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const BUFFETS = [
-  {
-    id: "b1",
-    name: "Two in One Buffet",
-    cuisine: "Arabic, Indian, Continental",
-    price: 39,
-    rating: 4.6,
-    reviews: 120,
-    badge: "NEW",
-    image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
-    href: "/restaurant/buffet",
-  },
-  {
-    id: "b2",
-    name: "Weekend Family Buffet",
-    cuisine: "Multi Cuisine",
-    price: 49,
-    rating: 4.7,
-    reviews: 98,
-    badge: "NEW",
-    image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80",
-    href: "/restaurant/buffet",
-  },
-  {
-    id: "b3",
-    name: "Business Lunch Buffet",
-    cuisine: "Arabic, International",
-    price: 35,
-    rating: 4.5,
-    reviews: 76,
-    badge: "NEW",
-    image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=800&q=80",
-    href: "/restaurant/buffet",
-  },
-];
+interface Highlight {
+  id: string;
+  name: string;
+  cuisine: string;
+  price: number;
+  rating: number;
+  reviews: number;
+  badge: string;
+  badge_color: string;
+  image_url: string;
+  href: string;
+}
 
-export default function BuffetHighlights() {
+async function getHighlights(): Promise<Highlight[]> {
+  const { data } = await supabaseAdmin
+    .from("buffet_highlights")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  return data || [];
+}
+
+export default async function BuffetHighlights() {
+  const highlights = await getHighlights();
+
+  if (highlights.length === 0) return null;
+
   return (
     <section className="py-4 px-4">
       <div className="max-w-7xl mx-auto">
@@ -56,7 +47,7 @@ export default function BuffetHighlights() {
 
         {/* Cards */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {BUFFETS.map((b) => (
+          {highlights.map((b) => (
             <a
               key={b.id}
               href={b.href}
@@ -66,19 +57,20 @@ export default function BuffetHighlights() {
               {/* Image */}
               <div className="relative" style={{ height: "180px" }}>
                 <Image
-                  src={b.image}
+                  src={b.image_url}
                   alt={b.name}
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="(max-width: 640px) 50vw, 33vw"
                 />
-                {/* Badge */}
-                <span
-                  className="absolute top-3 left-3 text-[11px] font-bold px-3 py-1 rounded-full text-white z-10"
-                  style={{ background: "#7c3aed" }}
-                >
-                  {b.badge}
-                </span>
+                {b.badge && (
+                  <span
+                    className="absolute top-3 left-3 text-[11px] font-bold px-3 py-1 rounded-full text-white z-10"
+                    style={{ background: b.badge_color }}
+                  >
+                    {b.badge}
+                  </span>
+                )}
               </div>
 
               {/* Info */}
@@ -103,7 +95,7 @@ export default function BuffetHighlights() {
 
                   <button
                     className="text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-colors hover:bg-purple-50 w-full sm:w-auto"
-                    style={{ color: "#7c3aed", borderColor: "#7c3aed" }}
+                    style={{ color: b.badge_color, borderColor: b.badge_color }}
                   >
                     Book Now
                   </button>
