@@ -24,9 +24,6 @@ const TableScene = nextDynamic(() => import('./TableScene'), {
 // ═══════════════ Inline SVG icons (no external deps) ═════════
 
 const I = {
-  Back: () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-  ),
   Calendar: () => (
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
   ),
@@ -75,9 +72,6 @@ const I = {
   Star: () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B" strokeWidth="1"><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
   ),
-  Mosque: () => (
-    <svg width="34" height="34" viewBox="0 0 48 48" fill="#C9911E"><path d="M24 4c.5 3-1.5 4.5-3 6 1 .6 1.8 1.3 3 1.3s2-.7 3-1.3c-1.5-1.5-3.5-3-3-6z"/><path d="M14 22c0-6 6-9 10-11 4 2 10 5 10 11v2H14v-2z"/><rect x="12" y="26" width="24" height="14" rx="1.5"/><rect x="6" y="18" width="3.4" height="22" rx="1.6"/><rect x="38.6" y="18" width="3.4" height="22" rx="1.6"/><circle cx="7.7" cy="15.5" r="2.2"/><circle cx="40.3" cy="15.5" r="2.2"/><path d="M21 40v-7a3 3 0 0 1 6 0v7h-6z" fill="#F5F0E8"/></svg>
-  ),
 }
 
 // ═══════════════ Static config ═══════════════════════════════
@@ -119,28 +113,12 @@ export default function TableBookingPage() {
   return (
     <div className="min-h-screen bg-[#F5F0E8] text-[#1A1A1A]" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* ═══ 1. TOP NAVBAR ═══ */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button aria-label="Back" className="w-11 h-11 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-[#1A1A1A] hover:bg-gray-50 transition">
-            <I.Back />
-          </button>
-
-          <div className="flex items-center gap-2.5">
-            <I.Mosque />
-            <div className="leading-tight">
-              <p className="font-extrabold tracking-wide text-[17px]" style={{ fontFamily: 'Georgia, serif' }}>TWO IN ONE</p>
-              <p className="text-[10px] tracking-[0.22em] text-[#6B7280] font-semibold">TURKISH RESTAURANT</p>
-            </div>
-          </div>
-
-          <button aria-label="Calendar" className="w-11 h-11 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-[#1A1A1A] hover:bg-gray-50 transition">
-            <I.Calendar />
-          </button>
-        </div>
-      </header>
-
+      {/* Page heading */}
       <main className="max-w-5xl mx-auto px-3 sm:px-4 pb-6">
+        <div className="pt-4 pb-1 text-center">
+          <h1 className="text-xl sm:text-2xl font-extrabold">Book a Table</h1>
+          <p className="text-[12.5px] text-[#6B7280] mt-0.5">Pick your area and table on the 3D floor plan</p>
+        </div>
 
         {/* ═══ 2. BOOKING STEPS ═══ */}
         <div className="bg-white rounded-2xl shadow-sm mt-3 px-3 py-3.5 overflow-x-auto">

@@ -1,3 +1,5 @@
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import TableBookingPage from "@/components/book-table/TableBookingPage";
 
 export const metadata = {
@@ -5,5 +7,11 @@ export const metadata = {
 };
 
 export default function BookTablePage() {
-  return <TableBookingPage />;
+  return (
+    <>
+      <Navbar />
+      <TableBookingPage />
+      <Footer />
+    </>
+  );
 }
