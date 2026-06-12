@@ -46,7 +46,7 @@ export default async function BuffetHighlights() {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {highlights.map((b) => (
             <a
               key={b.id}
@@ -61,7 +61,7 @@ export default async function BuffetHighlights() {
                   alt={b.name}
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 640px) 50vw, 33vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
                 {b.badge && (
                   <span

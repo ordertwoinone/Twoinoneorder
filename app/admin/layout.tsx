@@ -6,7 +6,8 @@ import Link from "next/link";
 import {
   Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
-  BookOpen, List, CalendarCheck, Sparkles,
+  BookOpen, List, CalendarCheck, Sparkles, GraduationCap, Info, Grid3x3,
+  Armchair, CalendarDays, Gift,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -48,6 +49,20 @@ const NAV: NavItem[] = [
     children: [
       { label: "Menu Sections", href: "/admin/buffet-menu/sections", icon: List     },
       { label: "Menu Items",    href: "/admin/buffet-menu/items",    icon: Utensils },
+    ],
+  },
+  {
+    label: "University Kalba",
+    icon: GraduationCap,
+    basePath: "/admin/kalba",
+    children: [
+      { label: "Branch Info",     href: "/admin/kalba/info",       icon: Info         },
+      { label: "Hero Banner",     href: "/admin/kalba/banner",     icon: ImageIcon    },
+      { label: "Categories",      href: "/admin/kalba/categories", icon: Grid3x3      },
+      { label: "Popular Items",   href: "/admin/kalba/popular",    icon: Utensils     },
+      { label: "Study & Chill",   href: "/admin/kalba/study",      icon: Armchair     },
+      { label: "Daily Deals",     href: "/admin/kalba/deals",      icon: CalendarDays },
+      { label: "Specials",        href: "/admin/kalba/specials",   icon: Gift         },
     ],
   },
   { label: "Bookings",       href: "/admin/bookings", icon: CalendarCheck },

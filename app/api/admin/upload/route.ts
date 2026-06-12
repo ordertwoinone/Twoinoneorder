@@ -19,7 +19,11 @@ export async function POST(request: Request) {
   let ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
 
   if (!SKIP_TYPES.includes(file.type)) {
-    const webp = await sharp(Buffer.from(arrayBuffer)).webp({ quality: 90 }).toBuffer();
+    const webp = await sharp(Buffer.from(arrayBuffer))
+      .rotate() // apply EXIF orientation before it gets stripped
+      .resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 85, effort: 3 })
+      .toBuffer();
     uploadData = new Uint8Array(webp);
     contentType = "image/webp";
     ext = "webp";
