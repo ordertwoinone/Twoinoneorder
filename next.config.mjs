@@ -4,7 +4,8 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "nominatim.openstreetmap.org" },
       { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "**" },
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "**.supabase.co" },
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,

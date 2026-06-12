@@ -134,15 +134,22 @@ function BranchLogo() {
   );
 }
 
-function SectionHeader({ title, action, href }: { title: string; action?: string; href?: string }) {
+function SectionHeader({ title, action, href, internal }: { title: string; action?: string; href?: string; internal?: boolean }) {
   return (
     <div className="flex items-center justify-between mb-3">
       <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">{title}</h2>
-      {action && (
-        <a href={href} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-0.5 text-xs font-bold" style={{ color: "#ea580c" }}>
-          {action} <ChevronRight size={14} />
-        </a>
+      {action && href && (
+        internal ? (
+          <Link href={href}
+            className="flex items-center gap-0.5 text-xs font-bold" style={{ color: "#ea580c" }}>
+            {action} <ChevronRight size={14} />
+          </Link>
+        ) : (
+          <a href={href} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-0.5 text-xs font-bold" style={{ color: "#ea580c" }}>
+            {action} <ChevronRight size={14} />
+          </a>
+        )
       )}
     </div>
   );
@@ -432,7 +439,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         {popular.length > 0 && (
           <section className="mt-7">
             <SectionHeader title="Popular Around Campus" action="View All"
-              href={waUrl(`Hi! I'd like to know more about your menu at ${hero.name}.`)} />
+              href="/restaurant/university-kalba/menu" internal />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {popular.map((p) => {
                 const qty = cartQty[p.id] ?? 0;
