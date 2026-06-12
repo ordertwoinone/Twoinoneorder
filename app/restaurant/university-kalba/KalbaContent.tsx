@@ -105,6 +105,19 @@ const STUDY_ICONS: Record<string, LucideIcon> = {
   Clock, Star, GraduationCap, Coffee, BookOpen, Zap, Music,
 };
 
+function parseNumericPrice(text: string): number {
+  const n = parseFloat(text.replace(/[^0-9.]/g, ""));
+  return isNaN(n) ? 0 : n;
+}
+
+interface CartItem {
+  id: string;
+  name: string;
+  image_url: string;
+  priceLabel: string;
+  numericPrice: number;
+}
+
 // ─── Components ─────────────────────────────────────────────────────────────
 
 function BranchLogo() {
@@ -136,7 +149,7 @@ function SectionHeader({ title, action, href }: { title: string; action?: string
 }
 
 function CartRow({ item, qty, onQtyChange }: {
-  item: KalbaPopularItem;
+  item: CartItem;
   qty: number;
   onQtyChange: (id: string, qty: number) => void;
 }) {
@@ -150,7 +163,7 @@ function CartRow({ item, qty, onQtyChange }: {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-gray-800 leading-tight truncate">{item.name}</p>
-        <p className="text-[10px] font-bold" style={{ color: "#ea580c" }}>AED {item.price}</p>
+        <p className="text-[10px] font-bold" style={{ color: "#ea580c" }}>{item.priceLabel}</p>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         <button
@@ -169,7 +182,7 @@ function CartRow({ item, qty, onQtyChange }: {
 }
 
 function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose }: {
-  items: KalbaPopularItem[];
+  items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
   totalPrice: number;
@@ -264,11 +277,26 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
     setCartQty((prev) => ({ ...prev, [id]: qty }));
   }
 
-  const totalQty = popular.reduce((n, i) => n + (cartQty[i.id] ?? 0), 0);
-  const totalPrice = popular.reduce((sum, i) => {
-    const qty = cartQty[i.id] ?? 0;
-    const price = parseFloat(i.price);
-    return sum + (isNaN(price) ? 0 : price * qty);
+  const allCartItems: CartItem[] = [
+    ...popular.map((p) => ({
+      id: p.id,
+      name: p.name,
+      image_url: p.image_url,
+      priceLabel: `AED ${p.price}`,
+      numericPrice: parseFloat(p.price) || 0,
+    })),
+    ...specials.map((s) => ({
+      id: s.id,
+      name: s.name,
+      image_url: s.image_url,
+      priceLabel: s.price_text || "See price",
+      numericPrice: parseNumericPrice(s.price_text),
+    })),
+  ];
+
+  const totalQty = allCartItems.reduce((n, i) => n + (cartQty[i.id] ?? 0), 0);
+  const totalPrice = allCartItems.reduce((sum, i) => {
+    return sum + i.numericPrice * (cartQty[i.id] ?? 0);
   }, 0);
 
   return (
@@ -511,35 +539,55 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             <SectionHeader title="University Specials" action="View All"
               href={waUrl(`Hi! I'd like to know more about your university specials at ${hero.name}.`)} />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {specials.map((s) => (
-                <div key={s.id}
-                  className="bg-white rounded-2xl overflow-hidden border border-gray-100 group transition-shadow hover:shadow-md"
-                  style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-                  <div className="relative h-28 sm:h-32">
-                    {s.image_url && (
-                      <Image src={s.image_url} alt={s.name} fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" />
-                    )}
+              {specials.map((s) => {
+                const qty = cartQty[s.id] ?? 0;
+                return (
+                  <div key={s.id}
+                    className="bg-white rounded-2xl overflow-hidden border border-gray-100 group transition-shadow hover:shadow-md"
+                    style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+                    <div className="relative h-28 sm:h-32">
+                      {s.image_url && (
+                        <Image src={s.image_url} alt={s.name} fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" />
+                      )}
+                    </div>
+                    <div className="px-3 pt-2.5 pb-3">
+                      <h3 className="flex items-center gap-1 text-gray-900 font-extrabold text-[12.5px] leading-tight">
+                        <GraduationCap size={13} className="text-[#ea580c] shrink-0" />
+                        {s.name}
+                      </h3>
+                      <p className="text-gray-400 text-[10.5px] mt-1 mb-1.5 leading-snug">{s.description}</p>
+                      {s.price_text && (
+                        <p className="text-[11px] font-extrabold mb-1.5" style={{ color: "#ea580c" }}>{s.price_text}</p>
+                      )}
+                      <div className="h-px bg-gray-100 my-1.5" />
+                      {qty === 0 ? (
+                        <button
+                          onClick={() => handleQtyChange(s.id, 1)}
+                          className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
+                        >
+                          <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                          <span className="text-[10px] sm:text-xs font-semibold">Add</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => handleQtyChange(s.id, Math.max(0, qty - 1))}
+                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
+                          >−</button>
+                          <span className="text-xs sm:text-sm font-bold text-gray-900">{qty}</span>
+                          <button
+                            onClick={() => handleQtyChange(s.id, qty + 1)}
+                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
+                            style={{ background: "#ea580c" }}
+                          >+</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="px-3 pt-2.5 pb-3">
-                    <h3 className="flex items-center gap-1 text-gray-900 font-extrabold text-[12.5px] leading-tight">
-                      <GraduationCap size={13} className="text-[#ea580c] shrink-0" />
-                      {s.name}
-                    </h3>
-                    <p className="text-gray-400 text-[10.5px] mt-1 mb-2 leading-snug">{s.description}</p>
-                    {s.price_text ? (
-                      <p className="text-[12px] font-extrabold" style={{ color: "#ea580c" }}>{s.price_text}</p>
-                    ) : (
-                      <a href={orderUrl} target="_blank" rel="noopener noreferrer"
-                        className="inline-block text-[10.5px] font-bold px-3 py-1 rounded-lg text-white"
-                        style={{ background: "#ea580c" }}>
-                        Order Now
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
@@ -602,7 +650,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
       {/* Cart modal */}
       {cartOpen && (
         <CartModal
-          items={popular}
+          items={allCartItems}
           cartQty={cartQty}
           totalQty={totalQty}
           totalPrice={totalPrice}
