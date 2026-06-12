@@ -492,9 +492,6 @@ function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
               <span className="absolute bottom-2 right-2 z-10"><VegBadge veg={dish.is_veg} /></span>
             </div>
             <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 text-center leading-tight">{dish.name}</p>
-            <div className="border-t border-gray-100 mt-1.5 pt-1.5">
-              <p className="text-[11px] sm:text-xs text-green-600 font-semibold text-center">Included</p>
-            </div>
           </div>
         ))}
       </div>
