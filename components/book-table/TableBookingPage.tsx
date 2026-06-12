@@ -251,7 +251,7 @@ export default function TableBookingPage() {
               {selected ? (
                 <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={TABLE_PHOTO} alt={`Table ${selected.id}`} className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0" />
+                  <img src={TABLE_PHOTO} alt={`Table ${selected.id}`} loading="lazy" decoding="async" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0" />
                   <div className="flex-1 min-w-0">
                     <h2 className="text-xl font-extrabold mb-2">Table {selected.id}</h2>
                     <div className="space-y-1.5 text-[13.5px] text-[#374151]">
@@ -288,7 +288,7 @@ export default function TableBookingPage() {
             <div className="bg-white rounded-2xl shadow-sm mt-3 p-4 flex items-center gap-4">
               <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={TABLE_PHOTO} alt="table" className="w-full h-full object-cover" />
+                <img src={TABLE_PHOTO} alt="table" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1">
                 <p className="font-extrabold text-[#1A1A1A]">Table {selected.id}</p>

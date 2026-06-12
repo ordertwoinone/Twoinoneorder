@@ -39,6 +39,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="scroll-smooth">
@@ -46,6 +48,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {supabaseOrigin && (
+          <>
+            <link rel="preconnect" href={supabaseOrigin} />
+            <link rel="dns-prefetch" href={supabaseOrigin} />
+          </>
+        )}
       </head>
       <body className={`${inter.className} ${dancing.variable} antialiased`}>
         {children}
