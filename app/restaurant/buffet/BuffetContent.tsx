@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft, Heart, Share2, Star, Clock, ShoppingCart, Search,
   ChevronRight, Check, MapPin, Globe, Flame, Smile, Car, Calendar,
@@ -276,7 +276,7 @@ function BuffetMenuTab({
         const activeItems = section.buffet_menu_items.filter((i) => i.is_active);
         if (activeItems.length === 0) return null;
         return (
-          <div key={section.id}>
+          <div key={section.id} id={`menu-section-${section.id}`} className="scroll-mt-32">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{section.title}</h3>
               <span className="text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5">
@@ -793,6 +793,32 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [selectedTimingId, setSelectedTimingId] = useState<string | null>(null);
   const [cartQty, setCartQty]               = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen]             = useState(false);
+  const [searchQuery, setSearchQuery]       = useState("");
+  const [searchFocused, setSearchFocused]   = useState(false);
+
+  // Live search across active menu items (matches dish name or section/cuisine)
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const results: { item: MenuItemDB; sectionId: string; sectionTitle: string }[] = [];
+    for (const section of menuSections) {
+      for (const item of section.buffet_menu_items) {
+        if (!item.is_active) continue;
+        if (item.name.toLowerCase().includes(q) || section.title.toLowerCase().includes(q)) {
+          results.push({ item, sectionId: section.id, sectionTitle: section.title });
+        }
+      }
+    }
+    return results.slice(0, 8);
+  }, [searchQuery, menuSections]);
+
+  function handleSearchResultClick(sectionId: string) {
+    setActiveTab("menu");
+    setSearchQuery("");
+    setTimeout(() => {
+      document.getElementById(`menu-section-${sectionId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  }
 
   // On timing change: reset cart completely, then set only included items to their default qty
   useEffect(() => {
@@ -892,11 +918,48 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
             )}
           </div>
 
-          <div className="mt-3 sm:mt-4 max-w-xs sm:max-w-sm">
+          <div className="mt-3 sm:mt-4 max-w-xs sm:max-w-sm relative">
             <div className="flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2">
               <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
-              <input type="text" placeholder="Search dishes, cuisines..." className="flex-1 bg-transparent text-xs sm:text-sm text-gray-600 placeholder-gray-400 outline-none" />
+              <input
+                type="text"
+                placeholder="Search dishes, cuisines..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+                className="flex-1 bg-transparent text-xs sm:text-sm text-gray-600 placeholder-gray-400 outline-none"
+              />
             </div>
+            {searchFocused && searchQuery.trim() !== "" && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-50">
+                {searchResults.length === 0 ? (
+                  <p className="px-4 py-4 text-xs sm:text-sm text-gray-400 text-center">No dishes found for &quot;{searchQuery.trim()}&quot;</p>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    {searchResults.map(({ item, sectionId, sectionTitle }) => (
+                      <button
+                        key={item.id}
+                        onMouseDown={() => handleSearchResultClick(sectionId)}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-orange-50 transition-colors text-left"
+                      >
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                          {item.image_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-semibold text-gray-800 truncate">{item.name}</p>
+                          <p className="text-[10px] sm:text-[11px] text-gray-400 truncate">{sectionTitle}</p>
+                        </div>
+                        <VegBadge veg={item.is_veg} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
