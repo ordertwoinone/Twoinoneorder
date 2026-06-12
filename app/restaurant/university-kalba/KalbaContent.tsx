@@ -181,11 +181,13 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersChange, onQtyChange, onClose }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
   totalPrice: number;
+  members: number;
+  onMembersChange: (n: number) => void;
   onQtyChange: (id: string, qty: number) => void;
   onClose: () => void;
 }) {
@@ -231,6 +233,31 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose 
           )}
         </div>
 
+        {/* Party size */}
+        <div className="px-5 pb-3 shrink-0">
+          <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-500" />
+              <div>
+                <p className="text-[11px] text-gray-500 leading-none">Party Size</p>
+                <p className="text-xs font-bold text-gray-800 mt-0.5">{members} member{members !== 1 ? "s" : ""}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onMembersChange(Math.max(1, members - 1))}
+                className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-base font-bold hover:bg-orange-200 transition-colors"
+              >−</button>
+              <span className="text-sm font-extrabold text-gray-900 w-5 text-center">{members}</span>
+              <button
+                onClick={() => onMembersChange(Math.min(20, members + 1))}
+                className="w-7 h-7 rounded-full text-white flex items-center justify-center text-base font-bold hover:opacity-90 transition-opacity"
+                style={{ background: "#ea580c" }}
+              >+</button>
+            </div>
+          </div>
+        </div>
+
         {/* Item list */}
         <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-2 min-h-0">
           {inCart.length === 0 ? (
@@ -249,7 +276,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose 
         {/* Footer CTA */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
           <Link
-            href="/book-table"
+            href={`/book-table?guests=${members}`}
             onClick={onClose}
             className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
             style={{ background: "#ea580c" }}
@@ -268,6 +295,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose 
 export default function KalbaContent({ hero, banner, categories, popular, study, deals, specials }: Props) {
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
+  const [members, setMembers] = useState(1);
 
   const waUrl = (text: string) =>
     `https://wa.me/${hero.whatsapp}?text=${encodeURIComponent(text)}`;
@@ -654,6 +682,8 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           cartQty={cartQty}
           totalQty={totalQty}
           totalPrice={totalPrice}
+          members={members}
+          onMembersChange={setMembers}
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
         />
