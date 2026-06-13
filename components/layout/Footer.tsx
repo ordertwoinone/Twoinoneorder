@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Phone, Mail, MapPin, ArrowUpRight } from "lucide-react";
 import { restaurants } from "@/data/restaurants";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import FadeInSection from "@/components/ui/FadeInSection";
 
 async function getSocialLinks() {
   const { data } = await supabaseAdmin
@@ -77,7 +78,7 @@ export default async function Footer() {
     <footer id="footer" className="bg-white border-t border-gray-100">
 
       {/* ── CTA Banner ───────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-2">
+      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-2">
         <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 px-6 sm:px-10 py-8 sm:py-10">
           {/* Left content */}
           <div className="max-w-xs sm:max-w-sm relative z-10">
@@ -104,32 +105,40 @@ export default async function Footer() {
 
           {/* Right: food emoji bubbles */}
           <div className="absolute right-0 top-0 bottom-0 w-[45%] hidden sm:block pointer-events-none">
-            {/* Concentric rings */}
+            {/* Concentric rings — slowly rotating */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-64 h-64 rounded-full border border-gray-200 absolute opacity-60" />
-              <div className="w-40 h-40 rounded-full border border-gray-200 absolute opacity-80" />
-              {/* Center icon */}
-              <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center z-10 text-xl">
+              <div className="w-64 h-64 rounded-full border border-dashed border-gray-200 absolute opacity-60 orbit-ring-spin" />
+              <div className="w-40 h-40 rounded-full border border-dashed border-gray-200 absolute opacity-80 orbit-ring-spin-rev" />
+              {/* Center icon — soft pulse */}
+              <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center z-10 text-xl center-pulse">
                 🍽️
               </div>
             </div>
 
             {/* Floating food bubbles */}
-            {FOOD_BUBBLES.map(({ emoji, top, left, size }) => (
+            {FOOD_BUBBLES.map(({ emoji, top, left, size }, i) => (
               <div
                 key={emoji}
-                className="absolute flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-md text-lg"
-                style={{ top, left, width: size, height: size }}
+                className={`absolute flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-md text-lg ${
+                  i % 2 === 0 ? "food-bubble" : "food-bubble-alt"
+                }`}
+                style={{
+                  top,
+                  left,
+                  width: size,
+                  height: size,
+                  animationDelay: `${i * 0.45}s`,
+                }}
               >
                 {emoji}
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </FadeInSection>
 
       {/* ── Footer Body ──────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
 
           {/* Brand */}
@@ -252,7 +261,7 @@ export default async function Footer() {
           </div>
 
         </div>
-      </div>
+      </FadeInSection>
 
       {/* ── Bottom bar ───────────────────────────────────────── */}
       <div className="border-t border-gray-100 bg-white">

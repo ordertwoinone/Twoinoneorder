@@ -65,3 +65,62 @@ body {
   animation: fadeInUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: auto;
 }
+
+/* ── Floating food bubbles (footer CTA) ───────────────────────────────────── */
+
+@keyframes floatBubble {
+  0%   { transform: translateY(0)      rotate(0deg); }
+  50%  { transform: translateY(-14px)  rotate(6deg); }
+  100% { transform: translateY(0)      rotate(0deg); }
+}
+
+@keyframes floatBubbleAlt {
+  0%   { transform: translateY(0)      rotate(0deg); }
+  50%  { transform: translateY(12px)   rotate(-5deg); }
+  100% { transform: translateY(0)      rotate(0deg); }
+}
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes spinSlowReverse {
+  from { transform: rotate(360deg); }
+  to   { transform: rotate(0deg); }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { transform: scale(1);    box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+  50%      { transform: scale(1.08); box-shadow: 0 8px 22px rgba(234,88,12,0.18); }
+}
+
+.food-bubble {
+  animation: floatBubble 4s ease-in-out infinite;
+  will-change: transform;
+}
+.food-bubble-alt {
+  animation: floatBubbleAlt 5s ease-in-out infinite;
+  will-change: transform;
+}
+
+.orbit-ring-spin {
+  animation: spinSlow 28s linear infinite;
+}
+.orbit-ring-spin-rev {
+  animation: spinSlowReverse 22s linear infinite;
+}
+
+.center-pulse {
+  animation: pulseSoft 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .food-bubble,
+  .food-bubble-alt,
+  .orbit-ring-spin,
+  .orbit-ring-spin-rev,
+  .center-pulse {
+    animation: none;
+  }
+}

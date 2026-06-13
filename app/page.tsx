@@ -40,7 +40,7 @@ export default async function HomePage() {
         <FadeInSection><BuffetHighlights /></FadeInSection>
         <FadeInSection><OffersBanner /></FadeInSection>
         <FadeInSection><TrustBadges /></FadeInSection>
-        <FadeInSection><Footer /></FadeInSection>
+        <Footer />
       </main>
       <BottomNav />
       <WhatsAppButton />
