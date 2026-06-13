@@ -7,6 +7,7 @@ interface Category {
   name: string;
   emoji: string;
   image_url: string;
+  href: string;
   sort_order: number;
   is_active: boolean;
 }
@@ -15,6 +16,7 @@ const EMPTY: Omit<Category, "id"> = {
   name: "",
   emoji: "🍽️",
   image_url: "",
+  href: "",
   sort_order: 0,
   is_active: true,
 };
@@ -164,6 +166,9 @@ export default function HomeCategoriesAdmin() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Category
               </th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide hidden sm:table-cell">
+                Redirect URL
+              </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 Order
               </th>
@@ -202,6 +207,15 @@ export default function HomeCategoriesAdmin() {
                       </span>
                       <span className="font-semibold text-gray-800">{item.name}</span>
                     </div>
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    {item.href ? (
+                      <span className="text-[11px] font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded truncate max-w-[160px] block">
+                        {item.href}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">{item.sort_order}</td>
                   <td className="px-4 py-3">
@@ -301,6 +315,23 @@ export default function HomeCategoriesAdmin() {
                     className="mt-2 w-16 h-16 rounded-xl object-cover border border-gray-200"
                   />
                 )}
+              </div>
+
+              {/* Redirect URL */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Redirect URL <span className="font-normal text-gray-400">(where clicking takes the user)</span>
+                </label>
+                <input
+                  type="text"
+                  value={modal.data.href}
+                  onChange={(e) => handleField("href", e.target.value)}
+                  className={inputCls}
+                  placeholder="e.g. /restaurant/university-kalba or https://..."
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Use a path like <code className="bg-gray-100 px-1 rounded">/restaurant/buffet</code> for internal pages, or a full URL for external links.
+                </p>
               </div>
 
               {/* Quick pick */}

@@ -8,8 +8,9 @@ create table if not exists home_categories (
   is_active  boolean not null default true
 );
 
--- Add image_url if upgrading from older version
+-- Add columns if upgrading from older version
 alter table home_categories add column if not exists image_url text not null default '';
+alter table home_categories add column if not exists href text not null default '';
 
 -- Default seed rows
 insert into home_categories (name, emoji, image_url, sort_order) values
