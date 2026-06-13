@@ -10,6 +10,7 @@ import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
 import OffersBanner from "@/components/home/OffersBanner";
 import TrustBadges from "@/components/home/TrustBadges";
+import FadeInSection from "@/components/ui/FadeInSection";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { BannerSlide } from "@/components/home/HeroBanner";
 
@@ -33,13 +34,13 @@ export default async function HomePage() {
           <SearchBar />
         </div>
         <HeroBanner slides={banners} />
-        <HomeCategories />
-        <RestaurantCards />
-        <HomepageCards />
-        <BuffetHighlights />
-        <OffersBanner />
-        <TrustBadges />
-        <Footer />
+        <FadeInSection><HomeCategories /></FadeInSection>
+        <FadeInSection><RestaurantCards /></FadeInSection>
+        <FadeInSection><HomepageCards /></FadeInSection>
+        <FadeInSection><BuffetHighlights /></FadeInSection>
+        <FadeInSection><OffersBanner /></FadeInSection>
+        <FadeInSection><TrustBadges /></FadeInSection>
+        <FadeInSection><Footer /></FadeInSection>
       </main>
       <BottomNav />
       <WhatsAppButton />
