@@ -19,9 +19,9 @@ export interface BookTable {
 }
 
 // Floor-plan image plane dimensions in world units.
-// New render: ~1270×1110 px → aspect ≈ 1.144
+// New render: 1448×1086 px → aspect ≈ 1.333 → PLANE_H = 17.8/1.333
 export const PLANE_W = 17.8
-export const PLANE_H = 15.5
+export const PLANE_H = 13.35
 
 // Maps the section display name to its area tab key
 export const SECTION_TO_AREA: Record<string, AreaKey> = {
@@ -30,24 +30,24 @@ export const SECTION_TO_AREA: Record<string, AreaKey> = {
   'VIP Majlis Area': 'vip',
 }
 
-// Positions measured from the new render image (normalized px
-// coords converted to plane units: x=(nx-0.5)*W, z=(ny-0.5)*H)
+// Positions measured from the 1448×1086 render.
+// Formula: x=(px/1448-0.5)*17.8, z=(py/1086-0.5)*13.35
 export const TABLES: BookTable[] = [
   // ── Indoor main dining — left column ──
-  { id: 'T1', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.5, 0, -6.5], status: 'available' },
-  { id: 'T2', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.5, 0, -4.7], status: 'available' },
-  { id: 'T3', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.7, 0, -2.8], status: 'limited'   },
-  { id: 'T4', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.8, 0, -1.0], status: 'available' },
-  { id: 'T5', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-3.4, 0, -0.3], status: 'available' },
+  { id: 'T1', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.1, 0, -5.0], status: 'available' },
+  { id: 'T2', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.1, 0, -3.3], status: 'available' },
+  { id: 'T3', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.1, 0, -1.8], status: 'limited'   },
+  { id: 'T4', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-6.0, 0, -0.5], status: 'available' },
+  { id: 'T5', seats: '4',    section: 'Main Dining Hall', minSpend: 120, position: [-2.6, 0, -0.5], status: 'available' },
   // ── VIP oval dining — right wing ──
-  { id: 'R1', seats: '8–10', section: 'VIP Majlis Area',  minSpend: 300, position: [ 3.5, 0, -6.3], status: 'available' },
-  { id: 'R2', seats: '8–10', section: 'VIP Majlis Area',  minSpend: 300, position: [ 3.5, 0, -3.9], status: 'limited'   },
+  { id: 'R1', seats: '8–10', section: 'VIP Majlis Area',  minSpend: 300, position: [ 2.2, 0, -4.4], status: 'available' },
+  { id: 'R2', seats: '8–10', section: 'VIP Majlis Area',  minSpend: 300, position: [ 2.2, 0, -2.3], status: 'limited'   },
   // ── Outdoor terrace ──
-  { id: 'O1', seats: '4',    section: 'Outdoor Terrace',  minSpend: 100, position: [-5.5, 0,  2.7], status: 'available' },
-  { id: 'O2', seats: '4',    section: 'Outdoor Terrace',  minSpend: 100, position: [-3.4, 0,  3.5], status: 'available' },
-  { id: 'O3', seats: '6',    section: 'Outdoor Terrace',  minSpend: 150, position: [ 0.3, 0,  3.6], status: 'available' },
-  { id: 'O4', seats: '4',    section: 'Outdoor Terrace',  minSpend: 100, position: [ 3.7, 0,  3.2], status: 'booked'    },
-  { id: 'O5', seats: '6',    section: 'Outdoor Terrace',  minSpend: 150, position: [ 5.6, 0,  4.0], status: 'available' },
+  { id: 'O1', seats: '4',    section: 'Outdoor Terrace',  minSpend: 100, position: [-6.6, 0,  2.0], status: 'available' },
+  { id: 'O2', seats: '4',    section: 'Outdoor Terrace',  minSpend: 100, position: [-3.8, 0,  2.8], status: 'available' },
+  { id: 'O3', seats: '6',    section: 'Outdoor Terrace',  minSpend: 150, position: [-0.5, 0,  2.8], status: 'available' },
+  { id: 'O4', seats: '4',    section: 'Outdoor Terrace',  minSpend: 100, position: [ 2.3, 0,  2.4], status: 'booked'    },
+  { id: 'O5', seats: '6',    section: 'Outdoor Terrace',  minSpend: 150, position: [ 4.9, 0,  2.0], status: 'available' },
 ]
 
 // Pin colors per status (Selected overrides with orange)
