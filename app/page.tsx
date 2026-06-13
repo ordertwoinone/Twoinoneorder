@@ -6,7 +6,7 @@ import SearchBar from "@/components/home/SearchBar";
 import HeroBanner from "@/components/home/HeroBanner";
 import RestaurantCards from "@/components/home/RestaurantCards";
 import BuffetHighlights from "@/components/home/BuffetHighlights";
-import KalbaPromo from "@/components/home/KalbaPromo";
+import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
 import OffersBanner from "@/components/home/OffersBanner";
 import TrustBadges from "@/components/home/TrustBadges";
@@ -35,7 +35,7 @@ export default async function HomePage() {
         <HeroBanner slides={banners} />
         <HomeCategories />
         <RestaurantCards />
-        <KalbaPromo />
+        <HomepageCards />
         <BuffetHighlights />
         <OffersBanner />
         <TrustBadges />

@@ -30,6 +30,7 @@ const NAV: NavItem[] = [
       { label: "Offers",            href: "/admin/offers",            icon: Tag         },
       { label: "Buffet Highlights", href: "/admin/buffet-highlights", icon: Sparkles    },
       { label: "Campus Promo",     href: "/admin/campus-promo",     icon: MapPin      },
+      { label: "Quick Link Cards", href: "/admin/homepage-cards",   icon: LayoutGrid  },
     ],
   },
   {
