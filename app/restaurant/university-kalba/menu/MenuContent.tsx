@@ -15,6 +15,13 @@ import {
 } from "lucide-react";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
 
+const DIETARY_TAGS: Record<string, string> = {
+  veg: "🥗 Veg",
+  non_veg: "🍗 Non-Veg",
+  spicy: "🌶️ Spicy",
+  contains_cheese: "🧀 Cheese",
+};
+
 interface CartItem {
   id: string;
   name: string;
@@ -667,9 +674,19 @@ export default function MenuContent({
                     </span>
                   </div>
                   <div className="px-3 pt-2.5 pb-3">
-                    <h3 className="text-gray-900 font-extrabold text-[13px] leading-tight mb-1.5 min-h-[2.2em]">
+                    <h3 className="text-gray-900 font-extrabold text-[13px] leading-tight mb-1 min-h-[2.2em]">
                       {p.name}
                     </h3>
+                    {(p.tags ?? []).length > 0 && (
+                      <div className="flex flex-wrap gap-0.5 mb-1.5">
+                        {(p.tags ?? []).map((t) => {
+                          const dt = DIETARY_TAGS[t];
+                          return dt ? (
+                            <span key={t} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-[10.5px] mb-2">
                       <span className="flex items-center gap-0.5 font-semibold text-gray-700">
                         <Star

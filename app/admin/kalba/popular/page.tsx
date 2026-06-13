@@ -19,7 +19,15 @@ interface PopularItem {
   sort_order: number;
   is_active: boolean;
   category_id: string | null;
+  tags: string[];
 }
+
+const DIETARY_TAGS = [
+  { key: "veg",             label: "Veg",             emoji: "🥗" },
+  { key: "non_veg",         label: "Non-Veg",         emoji: "🍗" },
+  { key: "spicy",           label: "Spicy",           emoji: "🌶️" },
+  { key: "contains_cheese", label: "Contains Cheese", emoji: "🧀" },
+] as const;
 
 const EMPTY: Omit<PopularItem, "id"> = {
   name: "",
@@ -30,6 +38,7 @@ const EMPTY: Omit<PopularItem, "id"> = {
   sort_order: 0,
   is_active: true,
   category_id: null,
+  tags: [],
 };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -63,6 +72,13 @@ export default function KalbaPopularAdmin() {
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) {
     setModal((m) => ({ ...m, data: { ...m.data, [key]: value } }));
+  }
+
+  function toggleTag(key: string) {
+    setModal((m) => {
+      const tags = m.data.tags ?? [];
+      return { ...m, data: { ...m.data, tags: tags.includes(key) ? tags.filter((t) => t !== key) : [...tags, key] } };
+    });
   }
 
   async function handleSave() {
@@ -146,6 +162,16 @@ export default function KalbaPopularAdmin() {
                   {categoryLabel(item) && (
                     <span className="text-[11px] text-orange-500 font-medium">{categoryLabel(item)}</span>
                   )}
+                  {(item.tags ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(item.tags ?? []).map((t) => {
+                        const dt = DIETARY_TAGS.find((d) => d.key === t);
+                        return dt ? (
+                          <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-medium">{dt.emoji} {dt.label}</span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-md text-white" style={{ background: "#ea580c" }}>AED {item.price}</span>
@@ -200,6 +226,21 @@ export default function KalbaPopularAdmin() {
                     <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Dietary Tags</label>
+                <div className="flex flex-wrap gap-2">
+                  {DIETARY_TAGS.map((tag) => {
+                    const selected = (modal.data.tags ?? []).includes(tag.key);
+                    return (
+                      <button key={tag.key} type="button" onClick={() => toggleTag(tag.key)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all ${selected ? "border-orange-400 bg-orange-50 text-orange-700" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"}`}>
+                        <span>{tag.emoji}</span>{tag.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">

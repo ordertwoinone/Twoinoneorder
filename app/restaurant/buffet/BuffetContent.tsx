@@ -10,6 +10,13 @@ import {
   ShieldCheck, Wifi, Music, MapPin as MapPinIcon,
 } from "lucide-react";
 
+const DIETARY_TAGS: Record<string, string> = {
+  veg: "🥗 Veg",
+  non_veg: "🍗 Non-Veg",
+  spicy: "🌶️ Spicy",
+  contains_cheese: "🧀 Cheese",
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface BuffetBanner {
@@ -69,6 +76,7 @@ interface MenuItemDB {
   image_url: string;
   is_veg: boolean;
   is_special: boolean;
+  tags?: string[] | null;
   timing_ids: string[];
   timing_qty: Record<string, number>;
   sort_order: number;
@@ -160,8 +168,8 @@ function DomeLogo({ size = "md", logoUrl }: { size?: "md" | "lg"; logoUrl?: stri
   );
 }
 
-function DishCard({ name, img, veg, special, isIncluded, qty, onQtyChange }: {
-  name: string; img: string; veg: boolean; special: boolean;
+function DishCard({ name, img, veg, special, tags, isIncluded, qty, onQtyChange }: {
+  name: string; img: string; veg: boolean; special: boolean; tags?: string[] | null;
   isIncluded: boolean; qty: number; onQtyChange: (qty: number) => void;
 }) {
   return (
@@ -182,6 +190,16 @@ function DishCard({ name, img, veg, special, isIncluded, qty, onQtyChange }: {
       </div>
       <div className="px-2 sm:px-3 pt-1.5 sm:pt-2 pb-2 sm:pb-3">
         <p className="text-[11px] sm:text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px] sm:min-h-[40px]">{name}</p>
+        {(tags ?? []).filter((t) => t !== "veg" && t !== "non_veg").length > 0 && (
+          <div className="flex flex-wrap gap-0.5 mt-1">
+            {(tags ?? []).filter((t) => t !== "veg" && t !== "non_veg").map((t) => {
+              const dt = DIETARY_TAGS[t];
+              return dt ? (
+                <span key={t} className="text-[8px] sm:text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
+              ) : null;
+            })}
+          </div>
+        )}
         <div className="h-px bg-gray-100 my-1.5" />
         {!isIncluded && qty === 0 ? (
           <button
@@ -303,6 +321,7 @@ function BuffetMenuTab({
                     img={item.image_url}
                     veg={item.is_veg}
                     special={item.is_special}
+                    tags={item.tags}
                     isIncluded={isIncluded}
                     qty={cartQty[item.id] ?? 0}
                     onQtyChange={(q) => onQtyChange(item.id, q)}

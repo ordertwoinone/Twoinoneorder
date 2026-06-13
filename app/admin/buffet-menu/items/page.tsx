@@ -21,6 +21,7 @@ interface MenuItem {
   image_url: string;
   is_veg: boolean;
   is_special: boolean;
+  tags: string[];
   timing_ids: string[];
   timing_qty: Record<string, number>;
   sort_order: number;
@@ -34,11 +35,19 @@ const EMPTY: Omit<MenuItem, "id" | "buffet_menu_sections"> = {
   image_url: "",
   is_veg: false,
   is_special: false,
+  tags: [],
   timing_ids: [],
   timing_qty: {},
   sort_order: 0,
   is_active: true,
 };
+
+const DIETARY_TAGS = [
+  { key: "veg",             label: "Veg",             emoji: "🥗" },
+  { key: "non_veg",         label: "Non-Veg",         emoji: "🍗" },
+  { key: "spicy",           label: "Spicy",           emoji: "🌶️" },
+  { key: "contains_cheese", label: "Contains Cheese", emoji: "🧀" },
+] as const;
 
 export default function MenuItemsAdmin() {
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -84,6 +93,13 @@ export default function MenuItemsAdmin() {
   function handleField(key: string, value: unknown) {
     setModal((m) => ({ ...m, data: { ...m.data, [key]: value } }));
   }
+  function toggleTag(key: string) {
+    setModal((m) => {
+      const tags = m.data.tags ?? [];
+      return { ...m, data: { ...m.data, tags: tags.includes(key) ? tags.filter((t) => t !== key) : [...tags, key] } };
+    });
+  }
+
   function toggleTiming(timingId: string) {
     const current = modal.data.timing_ids ?? [];
     const isChecked = current.includes(timingId);
@@ -106,7 +122,8 @@ export default function MenuItemsAdmin() {
   async function handleSave() {
     setSaving(true);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { buffet_menu_sections: _, ...payload } = modal.data as MenuItem;
+    const { buffet_menu_sections: _, ...raw } = modal.data as MenuItem;
+    const payload = { ...raw, is_veg: (raw.tags ?? []).includes("veg") };
     if (modal.mode === "add") {
       await fetch("/api/admin/buffet-menu/items", {
         method: "POST",
@@ -205,12 +222,13 @@ export default function MenuItemsAdmin() {
                   <td className="px-4 py-3 font-semibold text-gray-800">{item.name}</td>
                   <td className="px-4 py-3 text-xs text-gray-500">{item.buffet_menu_sections?.title ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {item.is_veg && (
-                        <span className="flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-                          <Leaf size={10} /> Veg
-                        </span>
-                      )}
+                    <div className="flex flex-wrap gap-1">
+                      {(item.tags ?? []).map((t) => {
+                        const dt = DIETARY_TAGS.find((d) => d.key === t);
+                        return dt ? (
+                          <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-medium">{dt.emoji} {dt.label}</span>
+                        ) : null;
+                      })}
                       {item.is_special && (
                         <span className="flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">
                           <Star size={10} /> Special
@@ -333,14 +351,24 @@ export default function MenuItemsAdmin() {
                   </select>
                 </div>
               </div>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={modal.data.is_veg} onChange={(e) => handleField("is_veg", e.target.checked)} className="w-4 h-4 rounded accent-green-600" />
-                  <span className="text-sm font-medium text-gray-700">Vegetarian</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Dietary Tags</label>
+                <div className="flex flex-wrap gap-2">
+                  {DIETARY_TAGS.map((tag) => {
+                    const selected = (modal.data.tags ?? []).includes(tag.key);
+                    return (
+                      <button key={tag.key} type="button" onClick={() => toggleTag(tag.key)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-all ${selected ? "border-orange-400 bg-orange-50 text-orange-700" : "border-gray-200 bg-white text-gray-500 hover:border-gray-300"}`}>
+                        <span>{tag.emoji}</span>{tag.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer w-fit">
                   <input type="checkbox" checked={modal.data.is_special} onChange={(e) => handleField("is_special", e.target.checked)} className="w-4 h-4 rounded accent-yellow-500" />
-                  <span className="text-sm font-medium text-gray-700">Special dish</span>
+                  <span className="text-sm font-medium text-gray-700">⭐ Special dish</span>
                 </label>
               </div>
             </div>

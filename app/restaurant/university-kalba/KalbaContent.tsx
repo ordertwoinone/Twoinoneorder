@@ -64,6 +64,7 @@ export interface KalbaPopularItem {
   time_text: string;
   image_url: string;
   category_id?: string | null;
+  tags?: string[] | null;
 }
 
 export interface KalbaStudy {
@@ -91,7 +92,15 @@ export interface KalbaSpecial {
   price_text: string;
   image_url: string;
   category_id?: string | null;
+  tags?: string[] | null;
 }
+
+const DIETARY_TAGS: Record<string, string> = {
+  veg: "🥗",
+  non_veg: "🍗",
+  spicy: "🌶️",
+  contains_cheese: "🧀",
+};
 
 interface Props {
   hero: KalbaHero;
@@ -435,7 +444,6 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
 
   const waUrl = (text: string) =>
     `https://wa.me/${hero.whatsapp}?text=${encodeURIComponent(text)}`;
-  const orderUrl = waUrl(`Hi! I'd like to place an order at ${hero.name}.`);
 
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
@@ -629,9 +637,19 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                       </span>
                     </div>
                     <div className="px-3 pt-2.5 pb-3">
-                      <h3 className="text-gray-900 font-extrabold text-[12.5px] leading-tight mb-1.5 min-h-[2em]">
+                      <h3 className="text-gray-900 font-extrabold text-[12.5px] leading-tight mb-1 min-h-[2em]">
                         {p.name}
                       </h3>
+                      {(p.tags ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 mb-1.5">
+                          {(p.tags ?? []).map((t) => {
+                            const dt = DIETARY_TAGS[t];
+                            return dt ? (
+                              <span key={t} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
                       <div className="flex items-center justify-between text-[10.5px]">
                         <span className="flex items-center gap-0.5 font-semibold text-gray-700">
                           <Star size={10} className="fill-amber-400 stroke-amber-400" />
@@ -762,6 +780,16 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                         <GraduationCap size={13} className="text-[#ea580c] shrink-0" />
                         {s.name}
                       </h3>
+                      {(s.tags ?? []).length > 0 && (
+                        <div className="flex flex-wrap gap-0.5 mt-1">
+                          {(s.tags ?? []).map((t) => {
+                            const dt = DIETARY_TAGS[t];
+                            return dt ? (
+                              <span key={t} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
+                            ) : null;
+                          })}
+                        </div>
+                      )}
                       <p className="text-gray-400 text-[10.5px] mt-1 mb-1.5 leading-snug">{s.description}</p>
                       {s.price_text && (
                         <p className="text-[11px] font-extrabold mb-1.5" style={{ color: "#ea580c" }}>{s.price_text}</p>
