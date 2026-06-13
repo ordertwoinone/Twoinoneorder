@@ -152,7 +152,7 @@ export default function TableBookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F0E8] text-[#1A1A1A]" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div className="min-h-screen bg-white text-[#1A1A1A]" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <main className="max-w-5xl mx-auto px-3 sm:px-4 pb-6">
 
         {/* Heading */}
