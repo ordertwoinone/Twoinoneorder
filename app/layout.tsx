@@ -11,6 +11,8 @@ const dancing = Dancing_Script({
   display: "swap",
 });
 
+const SITE_URL = "https://www.twoinoneorder.com";
+
 export async function generateMetadata(): Promise<Metadata> {
   const { data } = await supabaseAdmin
     .from("site_settings")
@@ -23,9 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
   const favicon = data?.favicon_url || "/two-in-one.ico";
 
   return {
+    metadataBase: new URL(SITE_URL),
     title: `${siteName} — Food Delivery Platform`,
     description: `Order from UAE's top restaurants. ${tagline}`,
     keywords: "food delivery UAE, karak Dubai, falafel Dubai, catering UAE",
+    alternates: {
+      canonical: SITE_URL,
+    },
     icons: {
       icon: favicon,
       shortcut: favicon,
@@ -34,7 +40,15 @@ export async function generateMetadata(): Promise<Metadata> {
       title: siteName,
       description: tagline,
       type: "website",
+      url: SITE_URL,
+      siteName,
       ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630 }] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: siteName,
+      description: tagline,
+      ...(ogImage && { images: [ogImage] }),
     },
   };
 }
