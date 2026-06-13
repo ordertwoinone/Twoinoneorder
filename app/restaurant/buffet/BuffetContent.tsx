@@ -619,7 +619,7 @@ function ReviewsTab() {
 // ─── Cart Modal ───────────────────────────────────────────────────────────────
 
 function CartModal({
-  selectedTiming, allActiveItems, selectedTimingId, cartQty, onQtyChange, onClose,
+  selectedTiming, allActiveItems, selectedTimingId, cartQty, onQtyChange, onClose, members, onMembersChange,
 }: {
   selectedTiming: BuffetTiming | null;
   allActiveItems: MenuItemDB[];
@@ -627,6 +627,8 @@ function CartModal({
   cartQty: Record<string, number>;
   onQtyChange: (itemId: string, qty: number) => void;
   onClose: () => void;
+  members: number;
+  onMembersChange: (n: number) => void;
 }) {
   const allAnnotated = allActiveItems.map((item) => {
     const timingIds = item.timing_ids ?? [];
@@ -685,6 +687,31 @@ function CartModal({
               <p className="text-[11px] text-gray-300 mt-0.5">Go to Buffet Menu tab to choose a timing</p>
             </div>
           )}
+        </div>
+
+        {/* Party size */}
+        <div className="px-5 pb-3 shrink-0">
+          <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gray-500" />
+              <div>
+                <p className="text-[11px] text-gray-500 leading-none">Party Size</p>
+                <p className="text-xs font-bold text-gray-800 mt-0.5">{members} member{members !== 1 ? "s" : ""}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onMembersChange(Math.max(1, members - 1))}
+                className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-base font-bold hover:bg-orange-200 transition-colors"
+              >−</button>
+              <span className="text-sm font-extrabold text-gray-900 w-5 text-center">{members}</span>
+              <button
+                onClick={() => onMembersChange(Math.min(20, members + 1))}
+                className="w-7 h-7 rounded-full text-white flex items-center justify-center text-base font-bold hover:opacity-90 transition-opacity"
+                style={{ background: "#ea580c" }}
+              >+</button>
+            </div>
+          </div>
         </div>
 
         {/* Item list */}
@@ -801,6 +828,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [selectedTimingId, setSelectedTimingId] = useState<string | null>(null);
   const [cartQty, setCartQty]               = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen]             = useState(false);
+  const [members, setMembers]               = useState(1);
   const [searchQuery, setSearchQuery]       = useState("");
   const [searchFocused, setSearchFocused]   = useState(false);
 
@@ -1051,6 +1079,8 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
           cartQty={cartQty}
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
+          members={members}
+          onMembersChange={setMembers}
         />
       )}
 
