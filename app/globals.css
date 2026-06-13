@@ -62,6 +62,6 @@ body {
 
 /* Visible state — fires the keyframe on the compositor thread */
 .fade-section.is-visible {
-  animation: fadeInDown 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: fadeInUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
   will-change: auto;
 }
