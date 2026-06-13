@@ -24,10 +24,10 @@ const FALLBACK: HomepageCard[] = [
   {
     id: "1", sort_order: 1, is_active: true,
     title: "Book a Table",
-    subtitle: "Reserve Your Spot",
-    description: "Dine in comfort. Reserve your table online in seconds and skip the wait.",
+    subtitle: "Dine In",
+    description: "Reserve your table online in seconds and skip the wait.",
     emoji: "🪑", image_url: "",
-    badge: "🍽️ Dine In",
+    badge: "🍽️ Available Now",
     button_text: "Book Now",
     href: "/book-table",
     accent_color: "#16a34a",
@@ -37,10 +37,10 @@ const FALLBACK: HomepageCard[] = [
   {
     id: "2", sort_order: 2, is_active: true,
     title: "Catering Services",
-    subtitle: "Events & Gatherings",
-    description: "From corporate lunches to family celebrations — we handle the food.",
+    subtitle: "Events",
+    description: "Corporate lunches to family celebrations — we handle the food.",
     emoji: "🥘", image_url: "",
-    badge: "🎪 Catering",
+    badge: "🎪 Custom Menu",
     button_text: "Get a Quote",
     href: "/catering",
     accent_color: "#7c3aed",
@@ -50,10 +50,10 @@ const FALLBACK: HomepageCard[] = [
   {
     id: "3", sort_order: 3, is_active: true,
     title: "University Kalba",
-    subtitle: "Made for Students",
-    description: "Student-friendly prices, free WiFi, open late and daily campus deals.",
+    subtitle: "On Campus",
+    description: "Student prices, free WiFi, open late and daily campus deals.",
     emoji: "🎓", image_url: "",
-    badge: "🎓 On Campus",
+    badge: "🎓 Students",
     button_text: "View Menu",
     href: "/restaurant/university-kalba",
     accent_color: "#ea580c",
@@ -89,95 +89,91 @@ export default async function HomepageCards() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {cards.map((card) => {
             const isExternal = card.href?.startsWith("http");
-            const cardContent = (
-              <div
-                className="group relative rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 flex flex-col h-full"
-                style={{ background: "#fff" }}
-              >
-                {/* Top gradient area */}
-                <div
-                  className="relative flex flex-col items-center justify-center px-6 pt-7 pb-5"
-                  style={{
-                    background: `linear-gradient(135deg, ${card.bg_from} 0%, ${card.bg_to} 100%)`,
-                  }}
-                >
-                  {/* Badge */}
-                  {card.badge && (
-                    <span
-                      className="absolute top-3 left-3 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full text-white"
-                      style={{ background: card.accent_color }}
-                    >
-                      {card.badge}
-                    </span>
-                  )}
 
-                  {/* Image or Emoji */}
-                  {card.image_url ? (
-                    <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden shadow-md">
+            const cardEl = (
+              <div className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full">
+
+                {/* Image / Emoji — sits inside with margin, its own rounded corners */}
+                <div className="mx-3 mt-3 rounded-2xl overflow-hidden flex-shrink-0">
+                  <div
+                    className="relative w-full flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${card.bg_from} 0%, ${card.bg_to} 100%)`,
+                      minHeight: "160px",
+                    }}
+                  >
+                    {card.image_url ? (
                       <Image
                         src={card.image_url}
                         alt={card.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 640px) 96px, 112px"
+                        sizes="(max-width: 640px) 90vw, 30vw"
                       />
-                    </div>
-                  ) : (
-                    <div
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center text-5xl sm:text-6xl shadow-sm border-4 border-white"
-                      style={{ background: `${card.accent_color}15` }}
-                    >
-                      {card.emoji}
-                    </div>
-                  )}
+                    ) : (
+                      <span className="text-7xl select-none py-6 drop-shadow-sm group-hover:scale-110 transition-transform duration-300">
+                        {card.emoji}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Content */}
-                <div className="flex flex-col flex-1 px-5 py-4">
-                  {/* Subtitle */}
-                  {card.subtitle && (
-                    <p
-                      className="text-[11px] font-extrabold uppercase tracking-wider mb-1"
-                      style={{ color: card.accent_color }}
-                    >
-                      {card.subtitle}
-                    </p>
-                  )}
+                <div className="px-4 pt-3 pb-4 flex flex-col flex-1 gap-1.5">
 
-                  {/* Title */}
-                  <h3 className="text-gray-900 font-extrabold text-base sm:text-lg leading-tight mb-2">
-                    {card.title}
-                  </h3>
+                  {/* Title + badge chip */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-extrabold text-gray-900 text-base leading-tight">
+                      {card.title}
+                    </h3>
+                    {card.badge && (
+                      <span
+                        className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full text-white leading-none"
+                        style={{ background: card.accent_color }}
+                      >
+                        {card.badge}
+                      </span>
+                    )}
+                  </div>
 
                   {/* Description */}
                   {card.description && (
-                    <p className="text-gray-500 text-[12px] sm:text-[13px] leading-relaxed flex-1 mb-4">
+                    <p className="text-gray-400 text-[12px] sm:text-[13px] leading-relaxed">
                       {card.description}
                     </p>
                   )}
 
-                  {/* CTA */}
-                  <div
-                    className="mt-auto flex items-center justify-between px-4 py-2.5 rounded-xl text-white text-sm font-bold transition-opacity hover:opacity-90"
-                    style={{ background: card.accent_color }}
-                  >
-                    <span>{card.button_text}</span>
-                    <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+                  {/* Bottom row — subtitle chip + CTA */}
+                  <div className="flex items-center gap-2 mt-auto pt-3">
+                    {card.subtitle && (
+                      <span className="flex items-center gap-1 text-[12px] text-gray-500 font-medium bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-full">
+                        {card.subtitle}
+                      </span>
+                    )}
+
+                    <div
+                      className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-bold transition-all duration-200 group-hover:gap-2.5"
+                      style={{
+                        background: `${card.accent_color}15`,
+                        color: card.accent_color,
+                      }}
+                    >
+                      {card.button_text}
+                      <ArrowRight size={13} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
+                    </div>
                   </div>
+
                 </div>
               </div>
             );
 
-            if (isExternal) {
-              return (
-                <a key={card.id} href={card.href} target="_blank" rel="noopener noreferrer" className="flex flex-col">
-                  {cardContent}
-                </a>
-              );
-            }
-            return (
+            return isExternal ? (
+              <a key={card.id} href={card.href} target="_blank" rel="noopener noreferrer" className="flex flex-col">
+                {cardEl}
+              </a>
+            ) : (
               <Link key={card.id} href={card.href} className="flex flex-col">
-                {cardContent}
+                {cardEl}
               </Link>
             );
           })}
