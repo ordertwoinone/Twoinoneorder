@@ -31,8 +31,8 @@ export default async function OffersBanner() {
   if (!offers.length) return null;
 
   return (
-    <section id="offers" className="py-4 px-4">
-      <div className="max-w-7xl mx-auto">
+    <section id="offers" className="py-4">
+      <div className="max-w-7xl mx-auto px-4">
 
         {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

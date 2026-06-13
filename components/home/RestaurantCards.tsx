@@ -39,9 +39,9 @@ export default async function RestaurantCards() {
 
   return (
     <section id="restaurants" className="py-4">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3 px-4">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Our Restaurants</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">Tap to order · Fast delivery across UAE</p>
@@ -56,7 +56,7 @@ export default async function RestaurantCards() {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-2 gap-3 px-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {restaurants.map((r) => {
             const badge = r.badge ? BADGE_STYLE[r.badge] : null;
             return (

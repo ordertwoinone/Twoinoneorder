@@ -8,8 +8,8 @@ const BADGES = [
 
 export default function TrustBadges() {
   return (
-    <section className="px-4 py-5">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-5">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-4 gap-3">
           {BADGES.map((b) => (
             <div

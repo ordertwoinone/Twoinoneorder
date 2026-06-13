@@ -43,8 +43,8 @@ export default async function HomeCategories() {
   if (categories.length === 0) return null;
 
   return (
-    <section className="py-5 px-4">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-5">
+      <div className="max-w-7xl mx-auto px-4">
 
         <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 mb-4">
           What are you craving?

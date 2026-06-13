@@ -77,8 +77,8 @@ export default async function HomepageCards() {
   if (cards.length === 0) return null;
 
   return (
-    <section className="py-4 px-4">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-4">
+      <div className="max-w-7xl mx-auto px-4">
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">
