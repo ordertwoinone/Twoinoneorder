@@ -2,19 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import nextDynamic from 'next/dynamic'
 import { useTableStore } from './useTableStore'
-import { TABLES, AreaKey } from './tableData'
-import type { ViewMode } from './TableScene'
-
-const TableScene = nextDynamic(() => import('./TableScene'), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-      Loading 3D floor plan…
-    </div>
-  ),
-})
+import { TABLES } from './tableData'
+import TableMap from './TableMap'
 
 // ══════════════ Icons ══════════════
 
@@ -71,24 +61,6 @@ const STEPS = [
   { label: 'Confirm Booking', icon: I.Check },
 ]
 
-const AREA_TABS: { key: AreaKey; label: string; icon: () => JSX.Element }[] = [
-  { key: 'outdoor', label: 'Outdoor Terrace', icon: I.Umbrella },
-  { key: 'indoor',  label: 'Main Dining Hall', icon: I.Dining },
-  { key: 'vip',     label: 'VIP Majlis Area',  icon: I.Crown },
-]
-
-const VIEW_BUTTONS: { key: ViewMode; label: string; icon: () => JSX.Element }[] = [
-  { key: '3d',  label: '3D View',   icon: I.Cube },
-  { key: 'top', label: 'Top View',  icon: I.Square },
-  { key: '360', label: '360° View', icon: I.Rotate },
-]
-
-const LEGEND = [
-  { color: '#22C55E', label: 'Available' },
-  { color: '#F59E0B', label: 'Limited' },
-  { color: '#EF4444', label: 'Booked' },
-]
-
 const TABLE_PHOTO = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80'
 
 interface DetailsForm {
@@ -109,12 +81,11 @@ const EMPTY_FORM: DetailsForm = {
 export default function TableBookingPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
-  const [viewMode, setViewMode] = useState<ViewMode>('3d')
   const [form, setForm] = useState<DetailsForm>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Partial<DetailsForm>>({})
 
-  const { selectedTable, activeArea, setArea } = useTableStore()
+  const { selectedTable } = useTableStore()
   const selected = TABLES.find((t) => t.id === selectedTable)
 
   function handleField(key: keyof DetailsForm, value: string) {
@@ -165,7 +136,7 @@ export default function TableBookingPage() {
         <div className="pt-4 pb-1 text-center">
           <h1 className="text-xl sm:text-2xl font-extrabold">Book a Table</h1>
           <p className="text-[12.5px] text-[#6B7280] mt-0.5">
-            {step === 1 ? 'Pick your area and table on the 3D floor plan' : 'Fill in your details to complete the booking'}
+            {step === 1 ? 'Tap a table on the map below to select it' : 'Fill in your details to complete the booking'}
           </p>
         </div>
 
@@ -195,55 +166,9 @@ export default function TableBookingPage() {
         {/* ── Step 1: Select Table ── */}
         {step === 1 && (
           <>
-            {/* Area tabs */}
-            <div className="grid grid-cols-3 gap-2.5 mt-3">
-              {AREA_TABS.map(({ key, label, icon: Icon }) => {
-                const active = activeArea === key
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setArea(key)}
-                    className={`flex items-center justify-center gap-2 px-2 py-3 rounded-xl bg-white text-[12.5px] sm:text-sm font-semibold transition border ${
-                      active ? 'border-[#E8521A] text-[#E8521A]' : 'border-gray-200 text-[#6B7280] hover:border-gray-300'
-                    }`}
-                  >
-                    <Icon />
-                    <span className="truncate">{label}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* 3D Floor plan */}
-            <div className="relative mt-3 rounded-2xl overflow-hidden bg-[#EFE8DA]" style={{ height: 'min(64vh, 620px)' }}>
-              <TableScene viewMode={viewMode} />
-
-              <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">
-                {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
-                  const active = viewMode === key
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setViewMode(key)}
-                      className={`w-[72px] py-2.5 rounded-xl bg-white shadow-md flex flex-col items-center gap-1 text-[11px] font-semibold transition ${
-                        active ? 'text-[#E8521A] ring-1 ring-[#E8521A]/40' : 'text-[#6B7280] hover:text-[#1A1A1A]'
-                      }`}
-                    >
-                      <Icon />
-                      {label}
-                    </button>
-                  )
-                })}
-              </div>
-
-              <div className="absolute right-3 top-3 bg-white rounded-xl shadow-md px-4 py-3 space-y-2 z-10">
-                {LEGEND.map(({ color, label }) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
-                    <span className="text-[12px] font-medium text-[#374151]">{label}</span>
-                  </div>
-                ))}
-              </div>
+            {/* 2D Table Map */}
+            <div className="mt-3">
+              <TableMap />
             </div>
 
             {/* Selected table card */}
@@ -274,7 +199,7 @@ export default function TableBookingPage() {
               ) : (
                 <div className="py-6 text-center">
                   <p className="text-[15px] font-semibold text-[#6B7280]">Select a table to continue</p>
-                  <p className="text-[12.5px] text-[#9CA3AF] mt-1">Tap any green or amber pin on the floor plan</p>
+                  <p className="text-[12.5px] text-[#9CA3AF] mt-1">Tap any available table on the map above</p>
                 </div>
               )}
             </div>
