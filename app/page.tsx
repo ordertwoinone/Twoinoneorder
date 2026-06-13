@@ -6,6 +6,7 @@ import SearchBar from "@/components/home/SearchBar";
 import HeroBanner from "@/components/home/HeroBanner";
 import RestaurantCards from "@/components/home/RestaurantCards";
 import BuffetHighlights from "@/components/home/BuffetHighlights";
+import KalbaPromo from "@/components/home/KalbaPromo";
 import OffersBanner from "@/components/home/OffersBanner";
 import TrustBadges from "@/components/home/TrustBadges";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -32,6 +33,7 @@ export default async function HomePage() {
         </div>
         <HeroBanner slides={banners} />
         <RestaurantCards />
+        <KalbaPromo />
         <BuffetHighlights />
         <OffersBanner />
         <TrustBadges />
