@@ -6,6 +6,7 @@ interface Category {
   id: string;
   name: string;
   emoji: string;
+  image_url: string;
   sort_order: number;
   is_active: boolean;
 }
@@ -13,6 +14,7 @@ interface Category {
 const EMPTY: Omit<Category, "id"> = {
   name: "",
   emoji: "🍽️",
+  image_url: "",
   sort_order: 0,
   is_active: true,
 };
@@ -277,6 +279,28 @@ export default function HomeCategoriesAdmin() {
                     placeholder="e.g. Arabic"
                   />
                 </div>
+              </div>
+
+              {/* Image URL */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Image URL <span className="font-normal text-gray-400">(Unsplash or upload link)</span>
+                </label>
+                <input
+                  type="text"
+                  value={modal.data.image_url}
+                  onChange={(e) => handleField("image_url", e.target.value)}
+                  className={inputCls}
+                  placeholder="https://images.unsplash.com/photo-..."
+                />
+                {modal.data.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={modal.data.image_url}
+                    alt="preview"
+                    className="mt-2 w-16 h-16 rounded-xl object-cover border border-gray-200"
+                  />
+                )}
               </div>
 
               {/* Quick pick */}
