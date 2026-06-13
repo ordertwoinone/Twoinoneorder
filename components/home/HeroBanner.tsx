@@ -53,10 +53,10 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
               className="flex items-stretch"
-              style={{ background: s.bg_color, minHeight: "210px" }}
+              style={{ background: s.bg_color, minHeight: "240px" }}
             >
               {/* LEFT: text */}
-              <div className="flex flex-col justify-center px-5 sm:px-8 py-6 w-[56%] sm:w-[52%] z-10">
+              <div className="flex flex-col justify-center px-5 sm:px-8 py-6 w-[55%] sm:w-[50%] z-10">
                 <motion.span
                   initial={{ opacity: 0, y: -6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -106,7 +106,7 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
               </div>
 
               {/* RIGHT: food image */}
-              <div className="flex-1 relative">
+              <div className="flex-1 relative overflow-hidden">
                 <motion.div
                   key={s.id}
                   initial={{ opacity: 0, x: 20, scale: 0.95 }}
@@ -114,10 +114,9 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.45, ease: "easeOut" }}
                   className="absolute inset-0"
-                  style={{ top: "-12px", bottom: "-4px" }}
                 >
                   <motion.div
-                    animate={{ y: [0, -10, 0] }}
+                    animate={{ y: [0, -8, 0] }}
                     transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                     className="w-full h-full"
                   >
@@ -125,8 +124,8 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                       src={s.food_image_url}
                       alt={s.food_alt || s.tag}
                       fill
-                      className="object-contain object-center drop-shadow-2xl"
-                      sizes="(max-width: 640px) 55vw, 45vw"
+                      className="object-contain object-bottom sm:object-center drop-shadow-2xl"
+                      sizes="(max-width: 640px) 50vw, 45vw"
                       priority={current === 0}
                     />
                   </motion.div>
