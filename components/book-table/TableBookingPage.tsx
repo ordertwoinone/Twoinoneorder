@@ -2,9 +2,19 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import nextDynamic from 'next/dynamic'
 import { useTableStore } from './useTableStore'
 import { TABLES } from './tableData'
-import TableMap from './TableMap'
+import type { ViewMode } from './TableScene'
+
+const TableScene = nextDynamic(() => import('./TableScene'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+      Loading 3D floor plan…
+    </div>
+  ),
+})
 
 // ══════════════ Icons ══════════════
 
@@ -61,6 +71,18 @@ const STEPS = [
   { label: 'Confirm Booking', icon: I.Check },
 ]
 
+const VIEW_BUTTONS: { key: ViewMode; label: string; icon: () => JSX.Element }[] = [
+  { key: '3d',  label: '3D View',   icon: I.Cube   },
+  { key: 'top', label: 'Top View',  icon: I.Square },
+  { key: '360', label: '360°',      icon: I.Rotate },
+]
+
+const LEGEND = [
+  { color: '#22C55E', label: 'Available' },
+  { color: '#F59E0B', label: 'Limited'   },
+  { color: '#EF4444', label: 'Booked'    },
+]
+
 const TABLE_PHOTO = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80'
 
 interface DetailsForm {
@@ -81,6 +103,7 @@ const EMPTY_FORM: DetailsForm = {
 export default function TableBookingPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
+  const [viewMode, setViewMode] = useState<ViewMode>('3d')
   const [form, setForm] = useState<DetailsForm>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Partial<DetailsForm>>({})
@@ -166,9 +189,43 @@ export default function TableBookingPage() {
         {/* ── Step 1: Select Table ── */}
         {step === 1 && (
           <>
-            {/* 2D Table Map */}
-            <div className="mt-3">
-              <TableMap />
+            {/* 3D Floor Plan */}
+            <div className="relative mt-3 rounded-2xl overflow-hidden bg-[#EDE5D8]" style={{ height: 'min(62vh, 580px)' }}>
+              <TableScene viewMode={viewMode} />
+
+              {/* View mode buttons */}
+              <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">
+                {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
+                  const active = viewMode === key
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setViewMode(key)}
+                      className={`w-[68px] py-2 rounded-xl bg-white shadow-md flex flex-col items-center gap-1 text-[11px] font-semibold transition ${
+                        active ? 'text-[#E8521A] ring-1 ring-[#E8521A]/40' : 'text-[#6B7280] hover:text-[#1A1A1A]'
+                      }`}
+                    >
+                      <Icon />
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="absolute right-3 top-3 bg-white rounded-xl shadow-md px-3 py-2.5 space-y-1.5 z-10">
+                {LEGEND.map(({ color, label }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+                    <span className="text-[11px] font-medium text-[#374151]">{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Hint */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[11px] font-medium px-3 py-1 rounded-full z-10 whitespace-nowrap pointer-events-none">
+                Drag to rotate · Scroll to zoom · Tap a table to select
+              </div>
             </div>
 
             {/* Selected table card */}
