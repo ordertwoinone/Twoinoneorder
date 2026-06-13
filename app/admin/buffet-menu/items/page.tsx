@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Leaf, Star, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Star, Clock } from "lucide-react";
 
 interface MenuSection {
   id: string;
