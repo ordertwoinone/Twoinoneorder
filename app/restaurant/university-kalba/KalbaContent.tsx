@@ -196,7 +196,7 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersChange, onQtyChange, onClose }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersChange, onQtyChange, onClose, whatsapp, restaurantName }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
@@ -205,8 +205,28 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
   onMembersChange: (n: number) => void;
   onQtyChange: (id: string, qty: number) => void;
   onClose: () => void;
+  whatsapp: string;
+  restaurantName: string;
 }) {
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
+
+  function buildWaUrl(type: "pickup" | "delivery") {
+    const orderLines = inCart
+      .map((i) => `• ${i.name} x${cartQty[i.id]} (${i.priceLabel})`)
+      .join("\n");
+    const typeLabel = type === "pickup" ? "Pickup 🏃" : "Delivery 🛵";
+    const msg = [
+      `Hi! I'd like to place a ${type === "pickup" ? "PICKUP" : "DELIVERY"} order at ${restaurantName}.`,
+      "",
+      orderLines || "• (no items selected)",
+      "",
+      `Party Size: ${members} member${members !== 1 ? "s" : ""}`,
+      `Total: AED ${totalPrice}`,
+      "",
+      `Order Type: ${typeLabel}`,
+    ].join("\n");
+    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`;
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -290,15 +310,28 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
 
         {/* Footer CTA */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-          <Link
-            href={`/book-table?guests=${members}`}
-            onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
-            style={{ background: "#ea580c" }}
-          >
-            Book Table
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </Link>
+          <div className="grid grid-cols-2 gap-3">
+            <a
+              href={buildWaUrl("pickup")}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl font-extrabold text-sm border-2 hover:bg-orange-50 transition-colors"
+              style={{ borderColor: "#ea580c", color: "#ea580c" }}
+            >
+              🏃 Pickup
+            </a>
+            <a
+              href={buildWaUrl("delivery")}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
+              style={{ background: "#ea580c" }}
+            >
+              🛵 Delivery
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -701,6 +734,8 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           onMembersChange={setMembers}
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
+          whatsapp={hero.whatsapp}
+          restaurantName={hero.name}
         />
       )}
     </>
