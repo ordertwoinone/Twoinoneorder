@@ -24,7 +24,7 @@ export type ViewMode = '3d' | 'top' | '360'
 type AssetMode = 'detecting' | 'model' | 'image' | 'missing'
 
 const MODEL_URL = '/models/restaurant.glb'
-const FLOOR_PLAN_URL = '/floor-plan.jpg'
+const FLOOR_PLAN_URL = '/floor-plan.png'
 
 // ─────────────── 1. Real 3D model (GLB) ──────────────────────
 
