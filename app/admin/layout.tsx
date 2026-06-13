@@ -7,7 +7,7 @@ import {
   Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, CalendarCheck, Sparkles, GraduationCap, Info, Grid3x3,
-  Armchair, CalendarDays, Gift, Percent, MapPin,
+  Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -26,6 +26,7 @@ const NAV: NavItem[] = [
     children: [
       { label: "Restaurants",       href: "/admin/restaurants",       icon: Store       },
       { label: "Hero Banners",      href: "/admin/banners",           icon: ImageIcon   },
+      { label: "Categories",       href: "/admin/home-categories",   icon: LayoutGrid  },
       { label: "Offers",            href: "/admin/offers",            icon: Tag         },
       { label: "Buffet Highlights", href: "/admin/buffet-highlights", icon: Sparkles    },
       { label: "Campus Promo",     href: "/admin/campus-promo",     icon: MapPin      },
