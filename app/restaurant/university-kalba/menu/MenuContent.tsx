@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -20,6 +21,15 @@ interface CartItem {
   image_url: string;
   priceLabel: string;
   numericPrice: number;
+}
+
+interface CouponData {
+  id: string;
+  code: string;
+  description: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  applicable_item_ids: string[];
 }
 
 function CartRow({
@@ -83,6 +93,15 @@ function CartModal({
   onMembersChange,
   onQtyChange,
   onClose,
+  whatsapp,
+  restaurantName,
+  appliedCoupon,
+  onApplyCoupon,
+  onRemoveCoupon,
+  couponError,
+  couponLoading,
+  discountAmount,
+  finalPrice,
 }: {
   items: CartItem[];
   cartQty: Record<string, number>;
@@ -93,8 +112,38 @@ function CartModal({
   onQtyChange: (id: string, qty: number) => void;
   onClose: () => void;
   whatsapp: string;
+  restaurantName: string;
+  appliedCoupon: CouponData | null;
+  onApplyCoupon: (code: string) => Promise<void>;
+  onRemoveCoupon: () => void;
+  couponError: string;
+  couponLoading: boolean;
+  discountAmount: number;
+  finalPrice: number;
 }) {
+  const [couponInput, setCouponInput] = useState("");
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
+
+  function buildWaUrl(type: "pickup" | "delivery") {
+    const orderLines = inCart
+      .map((i) => `• ${i.name} x${cartQty[i.id]} (${i.priceLabel})`)
+      .join("\n");
+    const lines = [
+      `Hi! I'd like to place a ${type === "pickup" ? "PICKUP" : "DELIVERY"} order at ${restaurantName}.`,
+      "",
+      orderLines || "• (no items selected)",
+      "",
+      `Party Size: ${members} member${members !== 1 ? "s" : ""}`,
+    ];
+    if (appliedCoupon && discountAmount > 0) {
+      lines.push(`Coupon: ${appliedCoupon.code} (−AED ${discountAmount})`);
+      lines.push(`Total: AED ${finalPrice}`);
+    } else {
+      lines.push(`Total: AED ${totalPrice}`);
+    }
+    lines.push("", `Order Type: ${type === "pickup" ? "Pickup 🏃" : "Delivery 🛵"}`);
+    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
+  }
 
   return (
     <div
@@ -105,6 +154,7 @@ function CartModal({
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[85vh] flex flex-col mb-16 sm:mb-0"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-orange-500" />
@@ -135,18 +185,47 @@ function CartModal({
           </button>
         </div>
 
+        {/* Total pill */}
         <div className="px-5 pb-3 shrink-0">
           {totalQty > 0 ? (
-            <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
-              <div>
-                <p className="text-[11px] text-gray-500">Order Total</p>
-                <p className="text-sm font-extrabold text-gray-900">
-                  {totalQty} item{totalQty !== 1 ? "s" : ""}
-                </p>
+            <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-gray-500">Order Total</p>
+                  <p className="text-sm font-extrabold text-gray-900">
+                    {totalQty} item{totalQty !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <div className="text-right">
+                  {discountAmount > 0 ? (
+                    <>
+                      <p className="text-xs text-gray-400 line-through">
+                        AED {totalPrice}
+                      </p>
+                      <p className="text-lg font-extrabold text-orange-500">
+                        AED {finalPrice}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-lg font-extrabold text-orange-500">
+                      AED {totalPrice}
+                    </p>
+                  )}
+                </div>
               </div>
-              <p className="text-lg font-extrabold text-orange-500">
-                AED {totalPrice}
-              </p>
+              {discountAmount > 0 && appliedCoupon && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
+                  <span className="text-[11px] text-green-600 font-semibold">
+                    ✓ {appliedCoupon.code} —{" "}
+                    {appliedCoupon.discount_type === "percentage"
+                      ? `${appliedCoupon.discount_value}% off`
+                      : `AED ${appliedCoupon.discount_value} off`}
+                  </span>
+                  <span className="text-[11px] text-green-600 font-bold">
+                    −AED {discountAmount}
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center">
@@ -158,6 +237,7 @@ function CartModal({
           )}
         </div>
 
+        {/* Party size */}
         <div className="px-5 pb-3 shrink-0">
           <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
             <div className="flex items-center gap-2">
@@ -192,6 +272,62 @@ function CartModal({
           </div>
         </div>
 
+        {/* Coupon */}
+        <div className="px-5 pb-3 shrink-0">
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-green-600 font-bold text-sm">✓</span>
+                <div>
+                  <p className="text-xs font-bold text-green-700">
+                    {appliedCoupon.code}
+                  </p>
+                  {appliedCoupon.description && (
+                    <p className="text-[10px] text-green-600">
+                      {appliedCoupon.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={onRemoveCoupon}
+                className="text-[11px] font-bold text-red-400 hover:text-red-600 transition-colors"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && couponInput.trim()) {
+                    onApplyCoupon(couponInput.trim());
+                  }
+                }}
+                placeholder="Coupon code"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold placeholder-gray-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all uppercase"
+              />
+              <button
+                onClick={() => couponInput.trim() && onApplyCoupon(couponInput.trim())}
+                disabled={couponLoading || !couponInput.trim()}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-50 transition-opacity shrink-0"
+                style={{ background: "#ea580c" }}
+              >
+                {couponLoading ? "..." : "Apply"}
+              </button>
+            </div>
+          )}
+          {couponError && (
+            <p className="mt-1.5 text-[11px] text-red-500 font-medium">
+              {couponError}
+            </p>
+          )}
+        </div>
+
+        {/* Items list */}
         <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-2 min-h-0">
           {inCart.length === 0 ? (
             <div className="py-8 text-center">
@@ -213,27 +349,30 @@ function CartModal({
           )}
         </div>
 
+        {/* Footer: Pickup + Delivery */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-          <Link
-            href={`/book-table?guests=${members}`}
-            onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
-            style={{ background: "#ea580c" }}
-          >
-            Book Table
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex gap-3">
+            <a
+              href={buildWaUrl("pickup")}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm border-2 transition-colors"
+              style={{ borderColor: "#ea580c", color: "#ea580c" }}
             >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </Link>
+              🏃 Pickup
+            </a>
+            <a
+              href={buildWaUrl("delivery")}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
+              style={{ background: "#ea580c" }}
+            >
+              🛵 Delivery
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -251,11 +390,17 @@ export default function MenuContent({
   whatsapp: string;
   restaurantName: string;
 }) {
+  const searchParams = useSearchParams();
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [members, setMembers] = useState(1);
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<string>(
+    searchParams.get("category") ?? "all"
+  );
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
@@ -275,18 +420,72 @@ export default function MenuContent({
     0
   );
 
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    const inCartItems = cartItems.filter((i) => (cartQty[i.id] ?? 0) > 0);
+    const applicableItems =
+      appliedCoupon.applicable_item_ids.length === 0
+        ? inCartItems
+        : inCartItems.filter((i) =>
+            appliedCoupon.applicable_item_ids.includes(i.id)
+          );
+    const base = applicableItems.reduce(
+      (s, i) => s + i.numericPrice * (cartQty[i.id] ?? 0),
+      0
+    );
+    if (appliedCoupon.discount_type === "percentage") {
+      return Math.round((base * appliedCoupon.discount_value) / 100 * 100) / 100;
+    }
+    return Math.min(appliedCoupon.discount_value, base);
+  }, [appliedCoupon, cartItems, cartQty]);
+
+  const finalPrice = Math.max(0, totalPrice - discountAmount);
+
+  const handleApplyCoupon = useCallback(
+    async (code: string) => {
+      setCouponLoading(true);
+      setCouponError("");
+      try {
+        const res = await fetch("/api/kalba/validate-coupon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code, cartTotal: totalPrice }),
+        });
+        const data = await res.json();
+        if (data.valid) {
+          setAppliedCoupon(data.coupon);
+          setCouponError("");
+        } else {
+          setCouponError(data.error ?? "Invalid coupon");
+        }
+      } catch {
+        setCouponError("Failed to validate coupon");
+      } finally {
+        setCouponLoading(false);
+      }
+    },
+    [totalPrice]
+  );
+
   const filtered = useMemo(() => {
     return popular.filter((p) => {
       const matchesSearch =
         search.trim() === "" ||
         p.name.toLowerCase().includes(search.toLowerCase());
-      return matchesSearch;
+      const matchesCategory =
+        activeCategory === "all" || p.category_id === activeCategory;
+      return matchesSearch && matchesCategory;
     });
-  }, [popular, search]);
+  }, [popular, search, activeCategory]);
 
   const orderUrl = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
     `Hi! I'd like to place an order at ${restaurantName}.`
   )}`;
+
+  const activeCategoryLabel =
+    activeCategory === "all"
+      ? null
+      : categories.find((c) => c.id === activeCategory);
 
   return (
     <>
@@ -404,6 +603,7 @@ export default function MenuContent({
         {/* Results count */}
         <p className="mt-5 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
           {filtered.length} item{filtered.length !== 1 ? "s" : ""}
+          {activeCategoryLabel && ` · ${activeCategoryLabel.emoji} ${activeCategoryLabel.label}`}
           {search && ` for "${search}"`}
         </p>
 
@@ -414,13 +614,26 @@ export default function MenuContent({
             <p className="text-sm font-semibold text-gray-500">
               No items found
             </p>
-            <button
-              onClick={() => setSearch("")}
-              className="mt-3 text-xs font-bold underline"
-              style={{ color: "#ea580c" }}
-            >
-              Clear search
-            </button>
+            <div className="flex items-center justify-center gap-4 mt-3">
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="text-xs font-bold underline"
+                  style={{ color: "#ea580c" }}
+                >
+                  Clear search
+                </button>
+              )}
+              {activeCategory !== "all" && (
+                <button
+                  onClick={() => setActiveCategory("all")}
+                  className="text-xs font-bold underline"
+                  style={{ color: "#ea580c" }}
+                >
+                  Show all items
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -576,6 +789,17 @@ export default function MenuContent({
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
           whatsapp={whatsapp}
+          restaurantName={restaurantName}
+          appliedCoupon={appliedCoupon}
+          onApplyCoupon={handleApplyCoupon}
+          onRemoveCoupon={() => {
+            setAppliedCoupon(null);
+            setCouponError("");
+          }}
+          couponError={couponError}
+          couponLoading={couponLoading}
+          discountAmount={discountAmount}
+          finalPrice={finalPrice}
         />
       )}
     </>

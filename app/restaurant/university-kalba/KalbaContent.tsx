@@ -63,6 +63,7 @@ export interface KalbaPopularItem {
   rating: string;
   time_text: string;
   image_url: string;
+  category_id?: string | null;
 }
 
 export interface KalbaStudy {
@@ -89,6 +90,7 @@ export interface KalbaSpecial {
   description: string;
   price_text: string;
   image_url: string;
+  category_id?: string | null;
 }
 
 interface Props {
@@ -589,7 +591,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
             <div className="flex gap-4 sm:gap-2 overflow-x-auto sm:overflow-visible sm:justify-between [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {categories.map((c) => (
-                <a key={c.id} href={orderUrl} target="_blank" rel="noopener noreferrer"
+                <Link key={c.id} href={`/restaurant/university-kalba/menu?category=${c.id}`}
                   className="flex flex-col items-center gap-1.5 shrink-0 group">
                   <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-2xl sm:text-3xl bg-orange-50 group-hover:bg-orange-100 transition-colors">
                     {c.emoji}
@@ -597,7 +599,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                   <span className="text-[10.5px] sm:text-[11.5px] font-semibold text-gray-700 text-center leading-tight w-16">
                     {c.label}
                   </span>
-                </a>
+                </Link>
               ))}
             </div>
           </div>

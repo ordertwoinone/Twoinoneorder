@@ -3,6 +3,12 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
+interface Category {
+  id: string;
+  emoji: string;
+  label: string;
+}
+
 interface PopularItem {
   id: string;
   name: string;
@@ -12,6 +18,7 @@ interface PopularItem {
   image_url: string;
   sort_order: number;
   is_active: boolean;
+  category_id: string | null;
 }
 
 const EMPTY: Omit<PopularItem, "id"> = {
@@ -22,12 +29,14 @@ const EMPTY: Omit<PopularItem, "id"> = {
   image_url: "",
   sort_order: 0,
   is_active: true,
+  category_id: null,
 };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 export default function KalbaPopularAdmin() {
   const [items, setItems] = useState<PopularItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; data: Omit<PopularItem, "id"> & { id?: string } }>({
     open: false, mode: "add", data: { ...EMPTY },
@@ -37,9 +46,13 @@ export default function KalbaPopularAdmin() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/admin/kalba/popular");
-    const data = await res.json();
-    setItems(Array.isArray(data) ? data : []);
+    const [itemsRes, catsRes] = await Promise.all([
+      fetch("/api/admin/kalba/popular"),
+      fetch("/api/admin/kalba/categories"),
+    ]);
+    const [itemsData, catsData] = await Promise.all([itemsRes.json(), catsRes.json()]);
+    setItems(Array.isArray(itemsData) ? itemsData : []);
+    setCategories(Array.isArray(catsData) ? catsData : []);
     setLoading(false);
   }
 
@@ -77,6 +90,12 @@ export default function KalbaPopularAdmin() {
     await fetch(`/api/admin/kalba/popular/${deleteId}`, { method: "DELETE" });
     setDeleteId(null);
     load();
+  }
+
+  function categoryLabel(item: PopularItem) {
+    if (!item.category_id) return null;
+    const cat = categories.find((c) => c.id === item.category_id);
+    return cat ? `${cat.emoji} ${cat.label}` : null;
   }
 
   return (
@@ -122,7 +141,12 @@ export default function KalbaPopularAdmin() {
                     }
                   </div>
                 </td>
-                <td className="px-4 py-3 font-semibold text-gray-800">{item.name}</td>
+                <td className="px-4 py-3">
+                  <p className="font-semibold text-gray-800">{item.name}</p>
+                  {categoryLabel(item) && (
+                    <span className="text-[11px] text-orange-500 font-medium">{categoryLabel(item)}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-md text-white" style={{ background: "#ea580c" }}>AED {item.price}</span>
                 </td>
@@ -162,6 +186,20 @@ export default function KalbaPopularAdmin() {
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Item Name</label>
                 <input type="text" value={modal.data.name} onChange={(e) => handleField("name", e.target.value)} className={inputCls} placeholder="Student Breakfast Box" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category</label>
+                <select
+                  value={modal.data.category_id ?? ""}
+                  onChange={(e) => handleField("category_id", e.target.value || null)}
+                  className={`${inputCls} bg-white`}
+                >
+                  <option value="">— No category —</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-3 gap-3">

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -49,12 +50,14 @@ export default async function KalbaMenuPage() {
     <>
       <Navbar />
       <main className="bg-white min-h-screen pb-24 sm:pb-0">
-        <MenuContent
-          popular={popular}
-          categories={categories}
-          whatsapp={hero.whatsapp}
-          restaurantName={hero.name}
-        />
+        <Suspense fallback={<div className="min-h-screen" />}>
+          <MenuContent
+            popular={popular}
+            categories={categories}
+            whatsapp={hero.whatsapp}
+            restaurantName={hero.name}
+          />
+        </Suspense>
       </main>
       <Footer />
       <BottomNav />

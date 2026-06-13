@@ -3,6 +3,12 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
+interface Category {
+  id: string;
+  emoji: string;
+  label: string;
+}
+
 interface Special {
   id: string;
   name: string;
@@ -11,6 +17,7 @@ interface Special {
   image_url: string;
   sort_order: number;
   is_active: boolean;
+  category_id: string | null;
 }
 
 const EMPTY: Omit<Special, "id"> = {
@@ -20,12 +27,14 @@ const EMPTY: Omit<Special, "id"> = {
   image_url: "",
   sort_order: 0,
   is_active: true,
+  category_id: null,
 };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 export default function KalbaSpecialsAdmin() {
   const [items, setItems] = useState<Special[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; data: Omit<Special, "id"> & { id?: string } }>({
     open: false, mode: "add", data: { ...EMPTY },
@@ -35,9 +44,13 @@ export default function KalbaSpecialsAdmin() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/admin/kalba/specials");
-    const data = await res.json();
-    setItems(Array.isArray(data) ? data : []);
+    const [itemsRes, catsRes] = await Promise.all([
+      fetch("/api/admin/kalba/specials"),
+      fetch("/api/admin/kalba/categories"),
+    ]);
+    const [itemsData, catsData] = await Promise.all([itemsRes.json(), catsRes.json()]);
+    setItems(Array.isArray(itemsData) ? itemsData : []);
+    setCategories(Array.isArray(catsData) ? catsData : []);
     setLoading(false);
   }
 
@@ -75,6 +88,12 @@ export default function KalbaSpecialsAdmin() {
     await fetch(`/api/admin/kalba/specials/${deleteId}`, { method: "DELETE" });
     setDeleteId(null);
     load();
+  }
+
+  function categoryLabel(item: Special) {
+    if (!item.category_id) return null;
+    const cat = categories.find((c) => c.id === item.category_id);
+    return cat ? `${cat.emoji} ${cat.label}` : null;
   }
 
   return (
@@ -119,7 +138,12 @@ export default function KalbaSpecialsAdmin() {
                     }
                   </div>
                 </td>
-                <td className="px-4 py-3 font-semibold text-gray-800">{item.name}</td>
+                <td className="px-4 py-3">
+                  <p className="font-semibold text-gray-800">{item.name}</p>
+                  {categoryLabel(item) && (
+                    <span className="text-[11px] text-orange-500 font-medium">{categoryLabel(item)}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{item.description}</td>
                 <td className="px-4 py-3 text-xs">
                   {item.price_text
@@ -161,6 +185,20 @@ export default function KalbaSpecialsAdmin() {
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name</label>
                 <input type="text" value={modal.data.name} onChange={(e) => handleField("name", e.target.value)} className={inputCls} placeholder="Exam Week Combo" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category</label>
+                <select
+                  value={modal.data.category_id ?? ""}
+                  onChange={(e) => handleField("category_id", e.target.value || null)}
+                  className={`${inputCls} bg-white`}
+                >
+                  <option value="">— No category —</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.emoji} {c.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
