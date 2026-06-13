@@ -14,6 +14,7 @@ interface BuffetHero {
   is_open: boolean;
   closes_at: string;
   cover_image_url: string;
+  logo_url: string;
 }
 
 const DEFAULTS: BuffetHero = {
@@ -26,6 +27,7 @@ const DEFAULTS: BuffetHero = {
   is_open: true,
   closes_at: "11:30 PM",
   cover_image_url: "",
+  logo_url: "",
 };
 
 export default function BuffetHeroAdmin() {
@@ -201,6 +203,18 @@ export default function BuffetHeroAdmin() {
               />
             </div>
           </div>
+        </div>
+
+        {/* Logo */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Branch Logo</h2>
+          <ImageUploadField
+            label="Logo (circular badge shown in branch header)"
+            value={form.logo_url}
+            onChange={(url) => handleField("logo_url", url)}
+            folder="general"
+            hint="Recommended: square image, min 200×200px"
+          />
         </div>
 
         {/* Cover Image */}

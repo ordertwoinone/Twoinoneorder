@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
+import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface KalbaHero {
   id?: string;
@@ -17,6 +18,7 @@ interface KalbaHero {
   student_title: string;
   student_subtitle: string;
   student_button: string;
+  logo_url: string;
 }
 
 const DEFAULTS: KalbaHero = {
@@ -33,6 +35,7 @@ const DEFAULTS: KalbaHero = {
   student_title: "Are you a student?",
   student_subtitle: "Unlock exclusive student deals & discounts",
   student_button: "Verify Student",
+  logo_url: "",
 };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -97,6 +100,18 @@ export default function KalbaInfoAdmin() {
       </div>
 
       <div className="space-y-6">
+        {/* Logo */}
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Branch Logo</h2>
+          <ImageUploadField
+            label="Logo (circular badge shown in branch header)"
+            value={form.logo_url}
+            onChange={(url) => handleField("logo_url", url)}
+            folder="general"
+            hint="Recommended: square image, min 200×200px"
+          />
+        </div>
+
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-700">Branch Info</h2>
           <div>

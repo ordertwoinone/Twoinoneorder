@@ -39,6 +39,7 @@ export interface KalbaHero {
   student_title: string;
   student_subtitle: string;
   student_button: string;
+  logo_url?: string;
 }
 
 export interface KalbaBanner {
@@ -120,16 +121,23 @@ interface CartItem {
 
 // ─── Components ─────────────────────────────────────────────────────────────
 
-function BranchLogo() {
+function BranchLogo({ logoUrl }: { logoUrl?: string }) {
   return (
-    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-gray-900 flex flex-col items-center justify-center shrink-0 border-2 border-yellow-400 shadow-md">
-      <svg viewBox="0 0 28 16" className="w-7 h-4 mb-0.5" fill="none">
-        <path d="M14 2C8 2 2 6.5 2 13L26 13C26 6.5 20 2 14 2Z" fill="#f59e0b" />
-        <rect x="2" y="13" width="24" height="2.5" rx="1.25" fill="#f59e0b" />
-        <rect x="12.5" y="15.5" width="3" height="3" fill="#f59e0b" />
-      </svg>
-      <p className="text-white font-bold text-center leading-none" style={{ fontSize: "4.5px" }}>TWO IN ONE</p>
-      <p className="text-yellow-400 font-bold text-center leading-none" style={{ fontSize: "4.5px" }}>UNIVERSITY KALBA</p>
+    <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-gray-900 flex flex-col items-center justify-center shrink-0 border-2 border-yellow-400 shadow-md overflow-hidden">
+      {logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoUrl} alt="Branch logo" className="w-full h-full object-cover" />
+      ) : (
+        <>
+          <svg viewBox="0 0 28 16" className="w-7 h-4 mb-0.5" fill="none">
+            <path d="M14 2C8 2 2 6.5 2 13L26 13C26 6.5 20 2 14 2Z" fill="#f59e0b" />
+            <rect x="2" y="13" width="24" height="2.5" rx="1.25" fill="#f59e0b" />
+            <rect x="12.5" y="15.5" width="3" height="3" fill="#f59e0b" />
+          </svg>
+          <p className="text-white font-bold text-center leading-none" style={{ fontSize: "4.5px" }}>TWO IN ONE</p>
+          <p className="text-yellow-400 font-bold text-center leading-none" style={{ fontSize: "4.5px" }}>UNIVERSITY KALBA</p>
+        </>
+      )}
     </div>
   );
 }
@@ -339,7 +347,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
       {/* Branch header */}
       <div className="border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 py-4 sm:py-5 flex items-center gap-3 sm:gap-4">
-          <BranchLogo />
+          <BranchLogo logoUrl={hero.logo_url} />
           <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <h1 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight truncate">
