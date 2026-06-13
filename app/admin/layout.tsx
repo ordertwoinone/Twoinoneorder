@@ -7,7 +7,7 @@ import {
   Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, CalendarCheck, Sparkles, GraduationCap, Info, Grid3x3,
-  Armchair, CalendarDays, Gift,
+  Armchair, CalendarDays, Gift, Percent,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -63,6 +63,7 @@ const NAV: NavItem[] = [
       { label: "Study & Chill",   href: "/admin/kalba/study",      icon: Armchair     },
       { label: "Daily Deals",     href: "/admin/kalba/deals",      icon: CalendarDays },
       { label: "Specials",        href: "/admin/kalba/specials",   icon: Gift         },
+      { label: "Coupons",         href: "/admin/kalba/coupons",    icon: Percent      },
     ],
   },
   { label: "Bookings",       href: "/admin/bookings", icon: CalendarCheck },

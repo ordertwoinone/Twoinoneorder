@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -119,6 +119,15 @@ interface CartItem {
   numericPrice: number;
 }
 
+interface CouponData {
+  id: string;
+  code: string;
+  description: string;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+  applicable_item_ids: string[];
+}
+
 // ─── Components ─────────────────────────────────────────────────────────────
 
 function BranchLogo({ logoUrl }: { logoUrl?: string }) {
@@ -196,7 +205,7 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersChange, onQtyChange, onClose, whatsapp, restaurantName }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersChange, onQtyChange, onClose, whatsapp, restaurantName, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
@@ -207,7 +216,15 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
   onClose: () => void;
   whatsapp: string;
   restaurantName: string;
+  appliedCoupon: CouponData | null;
+  onApplyCoupon: (code: string) => Promise<void>;
+  onRemoveCoupon: () => void;
+  couponError: string;
+  couponLoading: boolean;
+  discountAmount: number;
+  finalPrice: number;
 }) {
+  const [couponInput, setCouponInput] = useState("");
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
 
   function buildWaUrl(type: "pickup" | "delivery") {
@@ -215,17 +232,21 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
       .map((i) => `• ${i.name} x${cartQty[i.id]} (${i.priceLabel})`)
       .join("\n");
     const typeLabel = type === "pickup" ? "Pickup 🏃" : "Delivery 🛵";
-    const msg = [
+    const lines = [
       `Hi! I'd like to place a ${type === "pickup" ? "PICKUP" : "DELIVERY"} order at ${restaurantName}.`,
       "",
       orderLines || "• (no items selected)",
       "",
       `Party Size: ${members} member${members !== 1 ? "s" : ""}`,
-      `Total: AED ${totalPrice}`,
-      "",
-      `Order Type: ${typeLabel}`,
-    ].join("\n");
-    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`;
+    ];
+    if (appliedCoupon && discountAmount > 0) {
+      lines.push(`Coupon: ${appliedCoupon.code} (−AED ${discountAmount})`);
+      lines.push(`Total: AED ${finalPrice}`);
+    } else {
+      lines.push(`Total: AED ${totalPrice}`);
+    }
+    lines.push("", `Order Type: ${typeLabel}`);
+    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
   }
 
   return (
@@ -251,14 +272,31 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
         {/* Total pill */}
         <div className="px-5 pb-3 shrink-0">
           {totalQty > 0 ? (
-            <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
-              <div>
-                <p className="text-[11px] text-gray-500">Order Total</p>
-                <p className="text-sm font-extrabold text-gray-900">{totalQty} item{totalQty !== 1 ? "s" : ""}</p>
+            <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] text-gray-500">Order Total</p>
+                  <p className="text-sm font-extrabold text-gray-900">{totalQty} item{totalQty !== 1 ? "s" : ""}</p>
+                </div>
+                <div className="text-right">
+                  {discountAmount > 0 ? (
+                    <>
+                      <p className="text-xs text-gray-400 line-through">AED {totalPrice}</p>
+                      <p className="text-lg font-extrabold text-orange-500">AED {finalPrice}</p>
+                    </>
+                  ) : (
+                    <p className="text-lg font-extrabold text-orange-500">AED {totalPrice}</p>
+                  )}
+                </div>
               </div>
-              <p className="text-lg font-extrabold text-orange-500">
-                AED {totalPrice}
-              </p>
+              {discountAmount > 0 && appliedCoupon && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
+                  <span className="text-[11px] text-green-600 font-semibold">
+                    ✓ {appliedCoupon.code} — {appliedCoupon.discount_type === "percentage" ? `${appliedCoupon.discount_value}% off` : `AED ${appliedCoupon.discount_value} off`}
+                  </span>
+                  <span className="text-[11px] text-green-600 font-bold">−AED {discountAmount}</span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center">
@@ -291,6 +329,51 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
               >+</button>
             </div>
           </div>
+        </div>
+
+        {/* Coupon */}
+        <div className="px-5 pb-3 shrink-0">
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between bg-green-50 border border-green-100 rounded-xl px-4 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-green-500 text-base">✓</span>
+                <div>
+                  <p className="text-xs font-extrabold text-green-700">{appliedCoupon.code}</p>
+                  <p className="text-[10px] text-green-600 leading-tight">{appliedCoupon.description || "Discount applied"}</p>
+                </div>
+              </div>
+              <button
+                onClick={onRemoveCoupon}
+                className="text-[11px] text-gray-400 hover:text-red-500 font-semibold transition-colors ml-2 shrink-0"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === "Enter" && couponInput.trim() && onApplyCoupon(couponInput.trim())}
+                  placeholder="Coupon code"
+                  className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+                <button
+                  onClick={() => couponInput.trim() && onApplyCoupon(couponInput.trim())}
+                  disabled={!couponInput.trim() || couponLoading}
+                  className="px-4 py-2.5 rounded-xl text-white text-sm font-bold disabled:opacity-40 transition-opacity shrink-0"
+                  style={{ background: "#ea580c" }}
+                >
+                  {couponLoading ? "..." : "Apply"}
+                </button>
+              </div>
+              {couponError && (
+                <p className="text-[11px] text-red-500 mt-1.5 px-1">{couponError}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Item list */}
@@ -344,6 +427,9 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [members, setMembers] = useState(1);
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const waUrl = (text: string) =>
     `https://wa.me/${hero.whatsapp}?text=${encodeURIComponent(text)}`;
@@ -374,6 +460,47 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
   const totalPrice = allCartItems.reduce((sum, i) => {
     return sum + i.numericPrice * (cartQty[i.id] ?? 0);
   }, 0);
+
+  // Discount calculation
+  let discountAmount = 0;
+  if (appliedCoupon && totalPrice > 0) {
+    const { discount_type, discount_value, applicable_item_ids } = appliedCoupon;
+    let base = totalPrice;
+    if (applicable_item_ids.length > 0) {
+      base = allCartItems.reduce((sum, i) => {
+        if (!applicable_item_ids.includes(i.id)) return sum;
+        return sum + i.numericPrice * (cartQty[i.id] ?? 0);
+      }, 0);
+    }
+    discountAmount = discount_type === "percentage"
+      ? parseFloat((base * discount_value / 100).toFixed(2))
+      : parseFloat(Math.min(discount_value, base).toFixed(2));
+  }
+  const finalPrice = parseFloat((totalPrice - discountAmount).toFixed(2));
+
+  const handleApplyCoupon = useCallback(async (code: string) => {
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const res = await fetch("/api/kalba/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, cartTotal: totalPrice }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setAppliedCoupon(data.coupon);
+        setCouponError("");
+      } else {
+        setCouponError(data.error || "Invalid coupon code");
+        setAppliedCoupon(null);
+      }
+    } catch {
+      setCouponError("Could not validate coupon. Try again.");
+    } finally {
+      setCouponLoading(false);
+    }
+  }, [totalPrice]);
 
   return (
     <>
@@ -736,6 +863,13 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}
           restaurantName={hero.name}
+          appliedCoupon={appliedCoupon}
+          onApplyCoupon={handleApplyCoupon}
+          onRemoveCoupon={() => { setAppliedCoupon(null); setCouponError(""); }}
+          couponError={couponError}
+          couponLoading={couponLoading}
+          discountAmount={discountAmount}
+          finalPrice={finalPrice}
         />
       )}
     </>
