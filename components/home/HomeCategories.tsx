@@ -8,13 +8,27 @@ interface HomeCategory {
   is_active: boolean;
 }
 
+const FALLBACK: HomeCategory[] = [
+  { id: "1",  name: "Arabic",   emoji: "🫓", sort_order: 1,  is_active: true },
+  { id: "2",  name: "Indian",   emoji: "🍛", sort_order: 2,  is_active: true },
+  { id: "3",  name: "Chinese",  emoji: "🥡", sort_order: 3,  is_active: true },
+  { id: "4",  name: "Egyptian", emoji: "🧆", sort_order: 4,  is_active: true },
+  { id: "5",  name: "Grilled",  emoji: "🥩", sort_order: 5,  is_active: true },
+  { id: "6",  name: "Sandwich", emoji: "🥪", sort_order: 6,  is_active: true },
+  { id: "7",  name: "Pizza",    emoji: "🍕", sort_order: 7,  is_active: true },
+  { id: "8",  name: "Salads",   emoji: "🥗", sort_order: 8,  is_active: true },
+  { id: "9",  name: "Drinks",   emoji: "☕", sort_order: 9,  is_active: true },
+  { id: "10", name: "Desserts", emoji: "🍰", sort_order: 10, is_active: true },
+];
+
 async function getCategories(): Promise<HomeCategory[]> {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("home_categories")
     .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
-  return data ?? [];
+  if (error || !data || data.length === 0) return FALLBACK;
+  return data;
 }
 
 // Rotating gradient backgrounds for visual variety
