@@ -78,29 +78,20 @@ export default async function KalbaPromo() {
           </Link>
         </div>
 
-        {/* Creative card */}
+        {/* Card */}
         <div
           className="relative rounded-3xl overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #0f0c29 0%, #1a0a00 50%, #2d1200 100%)",
-            boxShadow: "0 8px 40px rgba(234,88,12,0.18)",
+            background: "linear-gradient(120deg, #fff8f2 0%, #fdeede 50%, #fde3c8 100%)",
+            boxShadow: "0 4px 24px rgba(234,88,12,0.10)",
+            border: "1px solid #fcd9b6",
           }}
         >
-          {/* Background glow blobs */}
+          {/* Subtle dot grid */}
           <div
-            className="absolute top-0 right-0 w-72 h-72 rounded-full opacity-20 blur-3xl pointer-events-none"
-            style={{ background: "#ea580c", transform: "translate(30%, -30%)" }}
-          />
-          <div
-            className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10 blur-2xl pointer-events-none"
-            style={{ background: "#f59e0b", transform: "translate(-20%, 20%)" }}
-          />
-
-          {/* Dot grid decoration */}
-          <div
-            className="absolute inset-0 opacity-[0.04] pointer-events-none"
+            className="absolute inset-0 opacity-[0.06] pointer-events-none"
             style={{
-              backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)",
+              backgroundImage: "radial-gradient(circle, #ea580c 1px, transparent 1px)",
               backgroundSize: "24px 24px",
             }}
           />
@@ -109,21 +100,21 @@ export default async function KalbaPromo() {
             {/* LEFT — content */}
             <div className="flex-1 px-6 py-7 sm:px-8 sm:py-8 flex flex-col justify-between">
 
-              {/* Top row: badge + open pill */}
+              {/* Badge + open pill */}
               <div className="flex items-center gap-2 flex-wrap mb-4">
                 {promo.badge && (
                   <span
-                    className="text-[11px] font-extrabold px-3 py-1 rounded-full"
-                    style={{ background: "rgba(234,88,12,0.9)", color: "#fff" }}
+                    className="text-[11px] font-extrabold px-3 py-1 rounded-full text-white"
+                    style={{ background: "#ea580c" }}
                   >
                     {promo.badge}
                   </span>
                 )}
                 <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                     isOpen
-                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                      : "bg-red-500/20 text-red-400 border border-red-500/30"
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : "bg-red-50 text-red-600 border-red-200"
                   }`}
                 >
                   {isOpen ? "● Open Now" : "● Closed"}
@@ -132,7 +123,7 @@ export default async function KalbaPromo() {
 
               {/* Title */}
               <div className="mb-3">
-                <h3 className="text-white font-extrabold leading-tight"
+                <h3 className="text-gray-900 font-extrabold leading-tight"
                   style={{ fontSize: "clamp(20px, 4vw, 30px)" }}>
                   {promo.title}
                 </h3>
@@ -149,7 +140,7 @@ export default async function KalbaPromo() {
               {/* Location */}
               <div className="flex items-center gap-1.5 mb-4">
                 <MapPin size={12} className="text-orange-400 shrink-0" />
-                <p className="text-white/50 text-[11px]">{location}</p>
+                <p className="text-gray-500 text-[11px]">{location}</p>
               </div>
 
               {/* Perk chips */}
@@ -158,8 +149,8 @@ export default async function KalbaPromo() {
                   {perks.map((p) => (
                     <span
                       key={p}
-                      className="text-[11px] font-semibold px-3 py-1 rounded-full border"
-                      style={{ color: "rgba(255,255,255,0.8)", borderColor: "rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)" }}
+                      className="text-[11px] font-semibold px-3 py-1 rounded-full bg-white border border-orange-200 text-gray-700"
+                      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
                     >
                       {p}
                     </span>
@@ -169,20 +160,20 @@ export default async function KalbaPromo() {
 
               {/* Stats row */}
               <div className="flex items-center gap-3 mb-6 flex-wrap">
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-white/80">
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-700">
                   <Star size={11} className="fill-yellow-400 stroke-yellow-400" />
                   {rating}
-                  <span className="text-white/40 font-normal">({ratingCount})</span>
+                  <span className="text-gray-400 font-normal">({ratingCount})</span>
                 </span>
-                <span className="text-white/20">·</span>
-                <span className="flex items-center gap-1 text-[11px] text-white/60">
+                <span className="text-gray-300">·</span>
+                <span className="flex items-center gap-1 text-[11px] text-gray-500">
                   <Clock size={10} />
                   {deliveryTime}
                 </span>
                 {promo.description && (
                   <>
-                    <span className="text-white/20 hidden sm:block">·</span>
-                    <span className="text-[11px] text-white/50 hidden sm:block">{promo.description}</span>
+                    <span className="text-gray-300 hidden sm:block">·</span>
+                    <span className="text-[11px] text-gray-500 hidden sm:block">{promo.description}</span>
                   </>
                 )}
               </div>
@@ -190,11 +181,10 @@ export default async function KalbaPromo() {
               {/* CTA */}
               <Link
                 href="/restaurant/university-kalba"
-                className="self-start inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-extrabold text-sm transition-all hover:opacity-90 active:scale-95"
+                className="self-start inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-extrabold text-sm text-white transition-all hover:opacity-90 active:scale-95"
                 style={{
                   background: "#ea580c",
-                  color: "#fff",
-                  boxShadow: "0 4px 20px rgba(234,88,12,0.45)",
+                  boxShadow: "0 4px 16px rgba(234,88,12,0.35)",
                 }}
               >
                 {promo.button_text || "View Menu"}
@@ -206,12 +196,9 @@ export default async function KalbaPromo() {
             <div className="relative sm:w-[42%] lg:w-[38%] h-56 sm:h-auto shrink-0">
               {promo.image_url ? (
                 <>
-                  {/* Gradient fade on left edge so image blends into card */}
                   <div
                     className="absolute inset-y-0 left-0 w-16 z-10 pointer-events-none"
-                    style={{
-                      background: "linear-gradient(to right, #1a0a00, transparent)",
-                    }}
+                    style={{ background: "linear-gradient(to right, #fde3c8, transparent)" }}
                   />
                   <Image
                     src={promo.image_url}
@@ -222,12 +209,11 @@ export default async function KalbaPromo() {
                   />
                 </>
               ) : (
-                /* Placeholder when no image set */
                 <div className="w-full h-full flex flex-col items-center justify-center gap-3 px-4">
                   <span className="text-7xl sm:text-8xl select-none">🎓</span>
                   <div className="text-center">
-                    <p className="text-white/30 text-xs font-semibold">Add an image</p>
-                    <p className="text-white/20 text-[10px]">via Admin → Campus Promo</p>
+                    <p className="text-gray-400 text-xs font-semibold">Add an image</p>
+                    <p className="text-gray-300 text-[10px]">via Admin → Campus Promo</p>
                   </div>
                 </div>
               )}
