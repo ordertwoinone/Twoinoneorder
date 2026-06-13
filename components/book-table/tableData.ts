@@ -37,19 +37,19 @@ export const TABLES: BookTable[] = [
   { id: 'T3', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-6.1, 0, -1.7], status: 'limited'   },
   { id: 'T4', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-5.9, 0, -0.4], status: 'available' },
   // ── Indoor center area (T5–T8, 2×2 around coffee counter) ──
-  { id: 'T5', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-3.0, 0, -0.5], status: 'available' },
-  { id: 'T6', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-1.8, 0, -0.5], status: 'available' },
-  { id: 'T7', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-3.0, 0, -1.8], status: 'available' },
-  { id: 'T8', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-1.8, 0, -1.8], status: 'available' },
+  { id: 'T5', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-3.5, 0, -0.5], status: 'available' },
+  { id: 'T6', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-2.2, 0, -0.5], status: 'available' },
+  { id: 'T7', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-3.5, 0, -1.8], status: 'available' },
+  { id: 'T8', seats: '4', section: 'Main Dining Hall', minSpend: 120, position: [-2.2, 0, -1.8], status: 'available' },
   // ── VIP oval dining — right wing ──
   { id: 'R1', seats: '8–10', section: 'VIP Majlis Area', minSpend: 300, position: [ 2.1, 0, -4.3], status: 'available' },
   { id: 'R2', seats: '8–10', section: 'VIP Majlis Area', minSpend: 300, position: [ 2.0, 0, -2.4], status: 'limited'   },
-  // ── Outdoor terrace (O1–O5) ──
-  { id: 'O1', seats: '4', section: 'Outdoor Terrace', minSpend: 100, position: [-6.6, 0, 2.4], status: 'available' },
-  { id: 'O2', seats: '4', section: 'Outdoor Terrace', minSpend: 100, position: [-3.6, 0, 3.1], status: 'available' },
-  { id: 'O3', seats: '6', section: 'Outdoor Terrace', minSpend: 150, position: [-0.7, 0, 3.2], status: 'available' },
-  { id: 'O4', seats: '4', section: 'Outdoor Terrace', minSpend: 100, position: [ 2.3, 0, 2.8], status: 'booked'    },
-  { id: 'O5', seats: '6', section: 'Outdoor Terrace', minSpend: 150, position: [ 4.8, 0, 2.5], status: 'available' },
+  // ── Outdoor terrace (O1–O5) — z boosted to account for 3D perspective compression ──
+  { id: 'O1', seats: '4', section: 'Outdoor Terrace', minSpend: 100, position: [-6.5, 0, 3.8], status: 'available' },
+  { id: 'O2', seats: '4', section: 'Outdoor Terrace', minSpend: 100, position: [-3.6, 0, 4.3], status: 'available' },
+  { id: 'O3', seats: '6', section: 'Outdoor Terrace', minSpend: 150, position: [-0.7, 0, 4.4], status: 'available' },
+  { id: 'O4', seats: '4', section: 'Outdoor Terrace', minSpend: 100, position: [ 2.3, 0, 4.0], status: 'booked'    },
+  { id: 'O5', seats: '6', section: 'Outdoor Terrace', minSpend: 150, position: [ 4.8, 0, 3.8], status: 'available' },
 ]
 
 // Pin colors per status (Selected overrides with orange)
