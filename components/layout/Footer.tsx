@@ -78,7 +78,7 @@ export default async function Footer() {
 
       {/* ── CTA Banner ───────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-2">
-        <div className="relative overflow-hidden rounded-3xl bg-gray-50 border border-gray-200 px-6 sm:px-10 py-8 sm:py-10">
+        <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 px-6 sm:px-10 py-8 sm:py-10">
           {/* Left content */}
           <div className="max-w-xs sm:max-w-sm relative z-10">
             <p className="text-[11px] font-bold uppercase tracking-widest text-orange-500 mb-2">
@@ -255,7 +255,7 @@ export default async function Footer() {
       </div>
 
       {/* ── Bottom bar ───────────────────────────────────────── */}
-      <div className="border-t border-gray-100 bg-gray-50">
+      <div className="border-t border-gray-100 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-gray-400">
           <p>© {new Date().getFullYear()} Two In One UAE · All rights reserved</p>
           <div className="flex items-center gap-4">
