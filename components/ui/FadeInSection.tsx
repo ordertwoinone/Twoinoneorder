@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 interface FadeInSectionProps {
   children: React.ReactNode;
   className?: string;
-  delay?: number; // ms
+  /** Stagger delay in ms before the animation starts */
+  delay?: number;
 }
 
 export default function FadeInSection({ children, className = "", delay = 0 }: FadeInSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -18,16 +18,24 @@ export default function FadeInSection({ children, className = "", delay = 0 }: F
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
-          observer.unobserve(el);
+        if (!entry.isIntersecting) return;
+        observer.unobserve(el);
+
+        const run = () => {
           if (delay) {
-            setTimeout(() => setVisible(true), delay);
-          } else {
-            setVisible(true);
+            el.style.animationDelay = `${delay}ms`;
           }
-        }
+          el.classList.add("is-visible");
+        };
+
+        // rAF ensures the hidden state is painted before we trigger the animation,
+        // avoiding the "already visible on mount" flash.
+        requestAnimationFrame(() => requestAnimationFrame(run));
       },
-      { threshold: 0.08 }
+      {
+        threshold: 0,
+        rootMargin: "0px 0px -40px 0px", // trigger 40px before bottom of viewport
+      }
     );
 
     observer.observe(el);
@@ -35,16 +43,7 @@ export default function FadeInSection({ children, className = "", delay = 0 }: F
   }, [delay]);
 
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(-24px)",
-        transition: `opacity 0.55s ease, transform 0.55s ease`,
-        transitionDelay: visible ? `${delay}ms` : "0ms",
-      }}
-    >
+    <div ref={ref} className={`fade-section ${className}`}>
       {children}
     </div>
   );
