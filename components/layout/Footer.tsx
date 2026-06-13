@@ -74,7 +74,7 @@ export default async function Footer() {
   ].filter(Boolean) as { href: string; icon: React.ReactNode; label: string }[];
 
   return (
-    <footer id="footer" className="bg-[#f8f8f8] border-t border-gray-100">
+    <footer id="footer" className="bg-white border-t border-gray-100">
 
       {/* ── CTA Banner ───────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-2">
@@ -255,7 +255,7 @@ export default async function Footer() {
       </div>
 
       {/* ── Bottom bar ───────────────────────────────────────── */}
-      <div className="border-t border-gray-100 bg-[#f8f8f8]">
+      <div className="border-t border-gray-100 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-gray-400">
           <p>© {new Date().getFullYear()} Two In One UAE · All rights reserved</p>
           <div className="flex items-center gap-4">

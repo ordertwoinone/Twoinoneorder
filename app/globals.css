@@ -13,7 +13,7 @@ html {
 body {
   color: var(--foreground);
   min-height: 100vh;
-  background: #f8f8f8;
+  background: #ffffff;
 }
 
 .scrollbar-none {
