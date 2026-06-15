@@ -651,13 +651,31 @@ function ReviewsTab() {
 
 // ─── Cart Modal ───────────────────────────────────────────────────────────────
 
-// Pull the numeric per-person price out of a free-text price like "AED 850"
+// Pull the numeric package amount out of a free-text price like "AED 600"
 function parsePrice(price: string): { currency: string; amount: number } | null {
   if (!price) return null;
   const amount = parseFloat(price.replace(/[^0-9.]/g, ""));
   if (isNaN(amount)) return null;
   const currency = (price.match(/[A-Za-z]{2,3}/) || ["AED"])[0];
   return { currency, amount };
+}
+
+// Pull the person count out of a label like "/ 20 person" or "30/ person"
+function parsePersons(label: string): number | null {
+  if (!label) return null;
+  const m = label.match(/\d+/);
+  const n = m ? parseInt(m[0], 10) : NaN;
+  return !isNaN(n) && n > 0 ? n : null;
+}
+
+// Derive pricing for a session: package amount, base persons, per-person rate
+function sessionPricing(timing: BuffetTiming | null) {
+  if (!timing) return null;
+  const price = parsePrice(timing.price);
+  if (!price) return null;
+  const persons = parsePersons(timing.price_label) ?? 1; // fallback: amount is per-person
+  const perPerson = price.amount / persons;
+  return { currency: price.currency, amount: price.amount, persons, perPerson };
 }
 
 function CartModal({
@@ -689,9 +707,9 @@ function CartModal({
   const extrasInCart  = allAnnotated.filter((i) => !i.included && i.qty > 0);
   const totalQty = includedItems.length + extrasInCart.reduce((s, i) => s + i.qty, 0);
 
-  // Per-person price × party size = live total
-  const perPerson = selectedTiming ? parsePrice(selectedTiming.price) : null;
-  const total = perPerson ? perPerson.amount * members : null;
+  // Per-person rate (package amount ÷ base persons) × party size = live total
+  const pricing = sessionPricing(selectedTiming);
+  const total = pricing ? Math.round(pricing.perPerson * members) : null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -752,7 +770,7 @@ function CartModal({
               >−</button>
               <span className="text-sm font-extrabold text-gray-900 w-5 text-center">{members}</span>
               <button
-                onClick={() => onMembersChange(Math.min(20, members + 1))}
+                onClick={() => onMembersChange(Math.min(500, members + 1))}
                 className="w-7 h-7 rounded-full text-white flex items-center justify-center text-base font-bold hover:opacity-90 transition-opacity"
                 style={{ background: "#ea580c" }}
               >+</button>
@@ -799,17 +817,17 @@ function CartModal({
 
         {/* Footer CTA */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-          {/* Live total — per-person price × party size */}
-          {total !== null && perPerson && (
+          {/* Live total — per-person rate × party size */}
+          {total !== null && pricing && (
             <div className="flex items-end justify-between mb-3">
               <div>
                 <p className="text-[11px] text-gray-400">
-                  {perPerson.currency} {perPerson.amount} / person × {members} {members === 1 ? "person" : "people"}
+                  {pricing.currency} {Math.round(pricing.perPerson)} / person × {members} {members === 1 ? "person" : "people"}
                 </p>
                 <p className="text-[11px] text-gray-500 font-semibold">Estimated Total</p>
               </div>
               <p className="text-xl font-extrabold text-orange-500 leading-none">
-                {perPerson.currency} {total.toLocaleString()}
+                {pricing.currency} {total.toLocaleString()}
               </p>
             </div>
           )}
@@ -893,6 +911,14 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [searchQuery, setSearchQuery]       = useState("");
   const [searchFocused, setSearchFocused]   = useState(false);
 
+  // When a session is selected, start Party Size at that package's base person count
+  useEffect(() => {
+    if (!selectedTimingId) return;
+    const t = timings.find((x) => x.id === selectedTimingId) ?? null;
+    const p = sessionPricing(t);
+    if (p) setMembers(p.persons);
+  }, [selectedTimingId, timings]);
+
   // Live search across active menu items (matches dish name or section/cuisine)
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -962,11 +988,11 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
 
   const totalCartItems = includedCount + extraQty;
 
-  // Live total for the cart bars: per-person price × party size
-  const barPerPerson = selectedTiming ? parsePrice(selectedTiming.price) : null;
+  // Live total for the cart bars: per-person rate × party size
+  const barPricing = sessionPricing(selectedTiming);
   const barPriceText = selectedTiming
-    ? barPerPerson
-      ? `${barPerPerson.currency} ${(barPerPerson.amount * members).toLocaleString()} · ${members} ${members === 1 ? "person" : "people"}`
+    ? barPricing
+      ? `${barPricing.currency} ${Math.round(barPricing.perPerson * members).toLocaleString()} · ${members} ${members === 1 ? "person" : "people"}`
       : `${selectedTiming.price} ${selectedTiming.price_label}`
     : "No session selected";
 
