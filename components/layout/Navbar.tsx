@@ -31,6 +31,8 @@ export default function Navbar({ className = "" }: { className?: string }) {
   const [locOpen, setLocOpen] = useState(false);
   const [selected, setSelected] = useState("");
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<string[]>([]);
+  const [searching, setSearching] = useState(false);
   const { location, detect } = useLocation();
   const locRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -38,9 +40,12 @@ export default function Navbar({ className = "" }: { className?: string }) {
   const displayArea =
     selected || (location.status === "granted" ? location.area : "Select area");
 
-  const filtered = UAE_AREAS.filter((a) =>
-    a.toLowerCase().includes(query.toLowerCase())
-  );
+  const trimmed = query.trim();
+  // Show the popular list as default; live suggestions once the user types.
+  const suggestions =
+    trimmed.length < 2
+      ? UAE_AREAS.filter((a) => a.toLowerCase().includes(trimmed.toLowerCase()))
+      : results;
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -53,8 +58,60 @@ export default function Navbar({ className = "" }: { className?: string }) {
 
   useEffect(() => {
     if (locOpen) setTimeout(() => searchRef.current?.focus(), 80);
-    else setQuery("");
+    else { setQuery(""); setResults([]); }
   }, [locOpen]);
+
+  // Live place autocomplete (Photon / OpenStreetMap — free, UAE-biased)
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { setResults([]); setSearching(false); return; }
+
+    const controller = new AbortController();
+    setSearching(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const url =
+          `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}` +
+          `&limit=7&lang=en&bbox=51,22.5,56.5,26.5`; // UAE bounding box
+        const res = await fetch(url, { signal: controller.signal });
+        const data = await res.json();
+
+        const seen = new Set<string>();
+        const places: string[] = [];
+        for (const f of data.features || []) {
+          const p = f.properties || {};
+          if (p.countrycode && p.countrycode !== "AE") continue;
+          const name = p.name || p.street;
+          if (!name) continue;
+          const locality = p.city || p.district || p.county || p.state;
+          const label =
+            locality && locality !== name ? `${name}, ${locality}` : name;
+          if (!seen.has(label)) { seen.add(label); places.push(label); }
+        }
+
+        // Fall back to the static list if the API returns nothing useful
+        if (places.length === 0) {
+          const local = UAE_AREAS.filter((a) =>
+            a.toLowerCase().includes(q.toLowerCase())
+          );
+          setResults(local);
+        } else {
+          setResults(places);
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setResults(
+            UAE_AREAS.filter((a) => a.toLowerCase().includes(q.toLowerCase()))
+          );
+        }
+      } finally {
+        setSearching(false);
+      }
+    }, 280); // debounce
+
+    return () => { controller.abort(); clearTimeout(timer); };
+  }, [query]);
 
   return (
     <>
@@ -141,7 +198,13 @@ export default function Navbar({ className = "" }: { className?: string }) {
                     </div>
                   </div>
                   <div className="overflow-y-auto max-h-52">
-                    {filtered.length > 0 ? filtered.map((area) => (
+                    {trimmed.length < 2 && (
+                      <p className="px-4 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                        Popular areas
+                      </p>
+                    )}
+
+                    {suggestions.length > 0 ? suggestions.map((area) => (
                       <button
                         key={area}
                         onClick={() => { setSelected(area); setLocOpen(false); }}
@@ -152,11 +215,24 @@ export default function Navbar({ className = "" }: { className?: string }) {
                         }`}
                       >
                         <MapPin size={13} className="text-gray-300 shrink-0" />
-                        {area}
+                        <span className="truncate">{area}</span>
                       </button>
-                    )) : (
+                    )) : searching ? (
+                      <div className="px-4 py-6 flex items-center justify-center gap-2 text-gray-400">
+                        <Loader2 size={15} className="animate-spin" />
+                        <span className="text-sm">Searching…</span>
+                      </div>
+                    ) : (
                       <div className="px-4 py-5 text-center">
-                        <p className="text-sm text-gray-400">No areas found for &quot;{query}&quot;</p>
+                        <p className="text-sm text-gray-400">No places found for &quot;{query}&quot;</p>
+                        <p className="text-[12px] text-gray-300 mt-1">Try a different spelling or nearby area</p>
+                      </div>
+                    )}
+
+                    {searching && suggestions.length > 0 && (
+                      <div className="px-4 py-2 flex items-center gap-2 text-gray-300">
+                        <Loader2 size={12} className="animate-spin" />
+                        <span className="text-[12px]">Updating…</span>
                       </div>
                     )}
                   </div>
