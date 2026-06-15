@@ -834,7 +834,22 @@ function CartModal({
 
           <Link
             href="/book-table"
-            onClick={onClose}
+            onClick={() => {
+              // Carry the buffet session into the table-booking flow so the
+              // saved booking gets labelled "buffet"
+              try {
+                if (selectedTiming) {
+                  sessionStorage.setItem("buffetContext", JSON.stringify({
+                    label: selectedTiming.label,
+                    time_range: selectedTiming.time_range,
+                    members,
+                    total: total ?? null,
+                    ts: Date.now(),
+                  }));
+                }
+              } catch { /* ignore */ }
+              onClose();
+            }}
             className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
             style={{ background: "#ea580c" }}
           >

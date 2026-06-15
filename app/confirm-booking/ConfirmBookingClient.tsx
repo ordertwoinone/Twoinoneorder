@@ -71,12 +71,28 @@ export default function ConfirmBookingClient() {
     if (!booking || saving) return
     setSaving(true)
 
+    // If the customer came from the buffet cart, label this booking "buffet"
+    let type = 'table'
+    let notes = booking.notes || ''
+    try {
+      const raw = sessionStorage.getItem('buffetContext')
+      if (raw) {
+        const c = JSON.parse(raw)
+        // only apply if recent (< 1 hour) to avoid mislabelling later bookings
+        if (c?.ts && Date.now() - c.ts < 3600_000) {
+          type = 'buffet'
+          notes = `Buffet: ${c.label} (${c.time_range}) · ${c.members} people${c.total ? ` · Est. AED ${c.total}` : ''}${notes ? ` · ${notes}` : ''}`
+        }
+        sessionStorage.removeItem('buffetContext')
+      }
+    } catch { /* ignore */ }
+
     // Persist the booking (links to the user's account if logged in)
     try {
       await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...booking, type: 'table', status: 'pending' }),
+        body: JSON.stringify({ ...booking, notes, type, status: 'pending' }),
       })
     } catch {
       /* even if saving fails, still let the user reach WhatsApp */

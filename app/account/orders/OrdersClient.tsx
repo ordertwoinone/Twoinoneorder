@@ -28,6 +28,13 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-blue-100 text-blue-700",
 };
 
+const TYPE_META: Record<string, { label: string; chip: string }> = {
+  table:    { label: "Table Booking", chip: "bg-orange-100 text-orange-700" },
+  buffet:   { label: "Buffet Booking", chip: "bg-amber-100 text-amber-700" },
+  catering: { label: "Catering",       chip: "bg-purple-100 text-purple-700" },
+  kalba:    { label: "Kalba Order",     chip: "bg-green-100 text-green-700" },
+};
+
 function fmtDate(d: string) {
   if (!d) return "";
   return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -99,10 +106,15 @@ export default function OrdersClient() {
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-extrabold text-gray-900">
-                      {b.table_id ? `Table ${b.table_id}` : "Booking"}
-                    </p>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-500"}`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="text-sm font-extrabold text-gray-900 truncate">
+                        {b.table_id ? `Table ${b.table_id}` : (TYPE_META[b.type]?.label ?? "Booking")}
+                      </p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${TYPE_META[b.type]?.chip ?? "bg-gray-100 text-gray-500"}`}>
+                        {TYPE_META[b.type]?.label ?? b.type}
+                      </span>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize shrink-0 ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-500"}`}>
                       {b.status}
                     </span>
                   </div>

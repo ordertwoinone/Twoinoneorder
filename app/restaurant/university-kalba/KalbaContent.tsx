@@ -261,6 +261,23 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
   }
 
+  // Save the Kalba order as a booking (labelled "kalba"); links to account if logged in
+  function saveKalbaOrder(type: "pickup" | "delivery") {
+    const itemsText = inCart.map((i) => `${i.name} x${cartQty[i.id]}`).join(", ");
+    const total = appliedCoupon && discountAmount > 0 ? finalPrice : totalPrice;
+    fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "kalba",
+        table_section: restaurantName,
+        guests: members,
+        notes: `${type === "pickup" ? "Pickup" : "Delivery"} order · ${itemsText || "(no items)"} · Total: AED ${total}`,
+        status: "pending",
+      }),
+    }).catch(() => {});
+  }
+
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div
@@ -410,7 +427,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
               href={buildWaUrl("pickup")}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={onClose}
+              onClick={() => { saveKalbaOrder("pickup"); onClose(); }}
               className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl font-extrabold text-sm border-2 hover:bg-orange-50 transition-colors"
               style={{ borderColor: "#ea580c", color: "#ea580c" }}
             >
@@ -420,7 +437,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
               href={buildWaUrl("delivery")}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={onClose}
+              onClick={() => { saveKalbaOrder("delivery"); onClose(); }}
               className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
               style={{ background: "#ea580c" }}
             >

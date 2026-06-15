@@ -4,6 +4,7 @@ import { Trash2, RefreshCw } from "lucide-react";
 
 interface Booking {
   id: string;
+  type: string;
   table_id: string;
   table_section: string;
   seats: string;
@@ -17,6 +18,13 @@ interface Booking {
   status: string;
   created_at: string;
 }
+
+const TYPE_META: Record<string, { label: string; chip: string }> = {
+  table:    { label: "Table",    chip: "bg-orange-100 text-orange-700" },
+  buffet:   { label: "Buffet",   chip: "bg-amber-100 text-amber-700" },
+  catering: { label: "Catering", chip: "bg-purple-100 text-purple-700" },
+  kalba:    { label: "Kalba",    chip: "bg-green-100 text-green-700" },
+};
 
 const STATUS_OPTIONS = ["pending", "confirmed", "cancelled", "completed"];
 
@@ -101,8 +109,9 @@ export default function BookingsAdmin() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Guest</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Table</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Details</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date & Time</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Guests</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Notes</th>
@@ -112,19 +121,31 @@ export default function BookingsAdmin() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading…</td></tr>
+              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading…</td></tr>
             ) : bookings.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No bookings yet.</td></tr>
-            ) : bookings.map((b) => (
+              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">No bookings yet.</td></tr>
+            ) : bookings.map((b) => {
+              const t = b.type || "table";
+              return (
               <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
-                  <p className="font-semibold text-gray-900">{b.guest_name}</p>
-                  <p className="text-xs text-gray-400">{b.phone}</p>
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${TYPE_META[t]?.chip ?? "bg-gray-100 text-gray-500"}`}>
+                    {TYPE_META[t]?.label ?? t}
+                  </span>
                 </td>
                 <td className="px-4 py-3">
-                  <p className="font-semibold text-gray-900">Table {b.table_id}</p>
-                  <p className="text-xs text-gray-400">{b.table_section} · {b.seats} seats</p>
-                  <p className="text-xs text-orange-600 font-semibold">AED {b.min_spend} min</p>
+                  <p className="font-semibold text-gray-900">{b.guest_name || "—"}</p>
+                  <p className="text-xs text-gray-400">{b.phone || ""}</p>
+                </td>
+                <td className="px-4 py-3">
+                  {b.table_id ? (
+                    <>
+                      <p className="font-semibold text-gray-900">Table {b.table_id}</p>
+                      <p className="text-xs text-gray-400">{b.table_section}{b.seats ? ` · ${b.seats} seats` : ""}</p>
+                    </>
+                  ) : (
+                    <p className="font-semibold text-gray-900">{b.table_section || TYPE_META[t]?.label || "—"}</p>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <p className="font-medium text-gray-900">{formatDate(b.date)}</p>
@@ -149,7 +170,8 @@ export default function BookingsAdmin() {
                   </button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
