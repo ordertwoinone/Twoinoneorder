@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Star, Clock } from "lucide-react";
 
@@ -159,7 +159,7 @@ export default function MenuItemsAdmin() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">Buffet Menu</p>

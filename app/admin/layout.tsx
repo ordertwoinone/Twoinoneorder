@@ -7,7 +7,7 @@ import {
   Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, CalendarCheck, Sparkles, GraduationCap, Info, Grid3x3,
-  Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid,
+  Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -80,6 +80,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isChildActive = (children: { href: string }[]) =>
     children.some((c) => pathname.startsWith(c.href));
 
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     NAV.forEach((item) => {
@@ -89,6 +91,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     });
     return initial;
   });
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => { setSidebarOpen(false); }, [pathname]);
 
   useEffect(() => {
     setOpen((prev) => {
@@ -112,17 +117,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f6f7] flex">
-      {/* Sidebar */}
-      <aside className="w-[240px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen sticky top-0">
+    <div className="min-h-screen bg-[#f6f6f7] lg:flex">
+      {/* Mobile top bar */}
+      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 flex items-center gap-3 px-4 h-14">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu size={20} className="text-gray-700" />
+        </button>
+        <div className="flex items-center gap-2">
+          <Image src="/logos/two-in-one.png" alt="Two In One" width={24} height={24} className="object-contain" />
+          <span className="text-sm font-semibold text-gray-900">Admin Panel</span>
+        </div>
+      </div>
+
+      {/* Mobile drawer backdrop */}
+      {sidebarOpen && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar — slide-in drawer on mobile, static on desktop */}
+      <aside
+        className={`w-[260px] lg:w-[240px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen fixed lg:sticky top-0 z-50 transition-transform duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
+      >
         <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
             <Image src="/logos/two-in-one.png" alt="Two In One" width={32} height={32} className="object-contain" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-semibold text-gray-900 leading-tight">Two In One</p>
             <p className="text-[11px] text-gray-400 leading-tight">Admin Panel</p>
           </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500"
+            aria-label="Close menu"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">

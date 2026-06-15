@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 import { Trash2, RefreshCw } from "lucide-react";
 
@@ -84,7 +84,7 @@ export default function BookingsAdmin() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Bookings</h1>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { Trash2, Copy, Check, Upload, FolderOpen, X } from "lucide-react";
@@ -72,7 +72,7 @@ export default function MediaLibrary() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
