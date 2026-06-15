@@ -22,6 +22,7 @@ import {
   Music,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -635,6 +636,14 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                         style={{ background: "#ea580c" }}>
                         AED {p.price}
                       </span>
+                      <FavoriteButton
+                        itemKey={`menu:${p.id}`}
+                        name={p.name}
+                        imageUrl={p.image_url}
+                        href="/restaurant/university-kalba/menu"
+                        subtitle={`AED ${p.price}`}
+                        className="absolute top-2 right-2 w-7 h-7 z-10"
+                      />
                     </div>
                     <div className="px-3 pt-2.5 pb-3">
                       <h3 className="text-gray-900 font-extrabold text-[12.5px] leading-tight mb-1 min-h-[2em]">

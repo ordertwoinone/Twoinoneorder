@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { Star, Clock } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import FavoriteButton from "@/components/ui/FavoriteButton";
 
 const BADGE_STYLE: Record<string, { bg: string; text: string }> = {
   "Free Delivery": { bg: "#16a34a", text: "#fff" },
@@ -94,15 +93,6 @@ export default async function RestaurantCards() {
                       />
                     </div>
                   )}
-
-                  <FavoriteButton
-                    itemKey={`restaurant:${r.id}`}
-                    name={r.name}
-                    imageUrl={r.food_image_url}
-                    href={r.url}
-                    subtitle={r.cuisine?.join(", ") || ""}
-                    className="absolute bottom-2 right-2 w-8 h-8 z-10"
-                  />
                 </div>
 
                 {/* Info */}

@@ -9,6 +9,7 @@ import {
   MoreHorizontal, UtensilsCrossed, Award, Heart as HeartIcon,
   ShieldCheck, Wifi, Music, MapPin as MapPinIcon,
 } from "lucide-react";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 
 const DIETARY_TAGS: Record<string, string> = {
   veg: "🥗 Veg",
@@ -168,8 +169,8 @@ function DomeLogo({ size = "md", logoUrl }: { size?: "md" | "lg"; logoUrl?: stri
   );
 }
 
-function DishCard({ name, img, veg, special, tags, isIncluded, qty, onQtyChange }: {
-  name: string; img: string; veg: boolean; special: boolean; tags?: string[] | null;
+function DishCard({ id, name, img, veg, special, tags, isIncluded, qty, onQtyChange }: {
+  id: string; name: string; img: string; veg: boolean; special: boolean; tags?: string[] | null;
   isIncluded: boolean; qty: number; onQtyChange: (qty: number) => void;
 }) {
   return (
@@ -187,6 +188,15 @@ function DishCard({ name, img, veg, special, tags, isIncluded, qty, onQtyChange 
           </span>
         )}
         <span className="absolute top-1.5 right-1.5 z-10"><VegBadge veg={veg} /></span>
+        <FavoriteButton
+          itemKey={`buffetdish:${id}`}
+          name={name}
+          imageUrl={img}
+          href="/restaurant/buffet"
+          subtitle="Buffet dish"
+          size={13}
+          className="absolute bottom-1.5 right-1.5 w-7 h-7 z-10"
+        />
       </div>
       <div className="px-2 sm:px-3 pt-1.5 sm:pt-2 pb-2 sm:pb-3">
         <p className="text-[11px] sm:text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px] sm:min-h-[40px]">{name}</p>
@@ -317,6 +327,7 @@ function BuffetMenuTab({
                 return (
                   <DishCard
                     key={item.id}
+                    id={item.id}
                     name={item.name}
                     img={item.image_url}
                     veg={item.is_veg}
