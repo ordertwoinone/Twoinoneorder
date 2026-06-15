@@ -39,7 +39,6 @@ function buildWaUrl(b: PendingBooking) {
     '',
     `🪑 *Table:* ${b.table_id} — ${b.table_section}`,
     `👥 *Seats:* ${b.seats}`,
-    `💰 *Min. Spend:* AED ${b.min_spend}`,
     '',
     `👤 *Name:* ${b.guest_name}`,
     `📞 *Phone:* ${b.phone}`,
@@ -123,7 +122,6 @@ export default function ConfirmBookingClient() {
           <div className="p-5 space-y-3">
             <Row label="Location" value={booking.table_section} />
             <Row label="Table Capacity" value={`${booking.seats} seats`} />
-            <Row label="Min. Spend" value={`AED ${booking.min_spend}`} accent />
             <div className="border-t border-gray-100 pt-3 space-y-3">
               <Row label="Guest Name" value={booking.guest_name} />
               <Row label="Phone" value={booking.phone} />

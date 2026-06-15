@@ -243,11 +243,7 @@ export default function TableBookingPage() {
                       <p className="flex items-center gap-2"><I.Star />Best for small groups</p>
                     </div>
                   </div>
-                  <div className="sm:border-l sm:border-gray-100 sm:pl-5 flex sm:flex-col items-center sm:items-stretch justify-between gap-3 shrink-0">
-                    <div className="text-center sm:text-left sm:bg-gray-50 sm:rounded-xl sm:px-5 sm:py-3">
-                      <p className="text-[12px] text-[#6B7280]">Min. Spend</p>
-                      <p className="text-lg font-extrabold">AED {selected.minSpend}</p>
-                    </div>
+                  <div className="sm:border-l sm:border-gray-100 sm:pl-5 flex items-center sm:items-stretch justify-end shrink-0">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
                       <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
                       <span className="text-[12px] font-semibold text-green-700">Selected</span>
@@ -277,9 +273,9 @@ export default function TableBookingPage() {
                 <p className="font-extrabold text-[#1A1A1A]">Table {selected.id}</p>
                 <p className="text-[13px] text-[#6B7280]">{selected.section} · {selected.seats} seats</p>
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-[11px] text-[#9CA3AF]">Min. Spend</p>
-                <p className="font-extrabold text-[#E8521A]">AED {selected.minSpend}</p>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full shrink-0">
+                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                <span className="text-[12px] font-semibold text-green-700">Selected</span>
               </div>
             </div>
 
