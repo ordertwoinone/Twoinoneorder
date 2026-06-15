@@ -825,24 +825,6 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           </section>
         )}
 
-        {/* Student verify banner */}
-        <section className="mt-7 mb-8 rounded-3xl px-5 py-5 sm:px-8 flex flex-col sm:flex-row sm:items-center gap-4"
-          style={{ background: "linear-gradient(100deg, #fdf0e3, #fbe3cb)" }}>
-          <div className="flex items-center gap-3 flex-1">
-            <span className="text-3xl">🎓</span>
-            <div>
-              <p className="text-[14px] font-extrabold text-gray-900">{hero.student_title}</p>
-              <p className="text-[12px] text-gray-600">{hero.student_subtitle}</p>
-            </div>
-          </div>
-          <a href={waUrl(`Hi! I'm a student and I'd like to verify for student discounts at ${hero.name}.`)}
-            target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1 px-6 py-3 rounded-2xl text-white text-sm font-bold transition hover:opacity-90 shrink-0"
-            style={{ background: "#ea580c" }}>
-            {hero.student_button} <ChevronRight size={15} />
-          </a>
-        </section>
-
       </div>
 
       {/* Mobile cart bar */}
