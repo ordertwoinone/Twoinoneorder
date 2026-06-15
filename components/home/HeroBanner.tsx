@@ -92,8 +92,6 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
                   <a
                     href={s.cta_href}
-                    target={s.cta_href?.startsWith("http") ? "_blank" : undefined}
-                    rel={s.cta_href?.startsWith("http") ? "noopener noreferrer" : undefined}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-bold transition-all hover:gap-3 active:scale-95"
                     style={{ background: s.accent_color, boxShadow: `0 4px 18px ${s.accent_color}50`, fontSize: "clamp(11px, 2vw, 14px)" }}
                   >
