@@ -8,7 +8,6 @@ import RestaurantCards from "@/components/home/RestaurantCards";
 import BuffetHighlights from "@/components/home/BuffetHighlights";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
-import OffersBanner from "@/components/home/OffersBanner";
 import TrustBadges from "@/components/home/TrustBadges";
 import FadeInSection from "@/components/ui/FadeInSection";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -38,7 +37,6 @@ export default async function HomePage() {
         <FadeInSection><RestaurantCards /></FadeInSection>
         <FadeInSection><HomepageCards /></FadeInSection>
         <FadeInSection><BuffetHighlights /></FadeInSection>
-        <FadeInSection><OffersBanner /></FadeInSection>
         <FadeInSection><TrustBadges /></FadeInSection>
         <Footer />
       </main>
