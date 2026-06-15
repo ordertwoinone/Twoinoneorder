@@ -52,16 +52,6 @@ function WhatsAppIcon() {
   );
 }
 
-// Food emoji bubbles for the CTA visual
-const FOOD_BUBBLES = [
-  { emoji: "🥘", top: "8%",  left: "52%",  size: 44 },
-  { emoji: "🫓", top: "30%", left: "72%",  size: 40 },
-  { emoji: "🍕", top: "55%", left: "58%",  size: 48 },
-  { emoji: "🥗", top: "20%", left: "88%",  size: 38 },
-  { emoji: "🍛", top: "70%", left: "80%",  size: 40 },
-  { emoji: "🧆", top: "78%", left: "47%",  size: 36 },
-];
-
 export default async function Footer() {
   const social = await getSocialLinks();
   const waNumber = (social?.whatsapp_number || "971522305216").replace(/\D/g, "");
@@ -76,66 +66,6 @@ export default async function Footer() {
 
   return (
     <footer id="footer" className="bg-white border-t border-gray-100">
-
-      {/* ── CTA Banner ───────────────────────────────────────── */}
-      <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-2">
-        <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 px-6 sm:px-10 py-8 sm:py-10">
-          {/* Left content */}
-          <div className="max-w-xs sm:max-w-sm relative z-10">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-orange-500 mb-2">
-              Order Now
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight mb-3">
-              Fresh food,<br className="hidden sm:block" /> delivered fast
-            </h2>
-            <p className="text-gray-500 text-[13px] sm:text-sm leading-relaxed mb-5">
-              Explore our menu, book a table, or request catering for your next event.
-              UAE&apos;s favourite multi-cuisine destination.
-            </p>
-            <a
-              href={`https://wa.me/${waNumber}?text=Hello! I'd like to place an order.`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors"
-            >
-              Order via WhatsApp
-              <ArrowUpRight size={14} />
-            </a>
-          </div>
-
-          {/* Right: food emoji bubbles */}
-          <div className="absolute right-0 top-0 bottom-0 w-[45%] hidden sm:block pointer-events-none">
-            {/* Concentric rings — slowly rotating */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-64 h-64 rounded-full border border-dashed border-gray-200 absolute opacity-60 orbit-ring-spin" />
-              <div className="w-40 h-40 rounded-full border border-dashed border-gray-200 absolute opacity-80 orbit-ring-spin-rev" />
-              {/* Center icon — soft pulse */}
-              <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 shadow-sm flex items-center justify-center z-10 text-xl center-pulse">
-                🍽️
-              </div>
-            </div>
-
-            {/* Floating food bubbles */}
-            {FOOD_BUBBLES.map(({ emoji, top, left, size }, i) => (
-              <div
-                key={emoji}
-                className={`absolute flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-md text-lg ${
-                  i % 2 === 0 ? "food-bubble" : "food-bubble-alt"
-                }`}
-                style={{
-                  top,
-                  left,
-                  width: size,
-                  height: size,
-                  animationDelay: `${i * 0.45}s`,
-                }}
-              >
-                {emoji}
-              </div>
-            ))}
-          </div>
-        </div>
-      </FadeInSection>
 
       {/* ── Footer Body ──────────────────────────────────────── */}
       <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
