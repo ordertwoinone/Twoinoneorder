@@ -4,10 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Menu, X, ChevronRight, MapPin, ChevronDown,
-  Bell, Navigation, Search, Loader2,
+  Heart, Navigation, Search, Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "@/hooks/useLocation";
+import { useFavorites } from "@/lib/favorites/FavoritesContext";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -38,6 +39,8 @@ export default function Navbar({ className = "" }: { className?: string }) {
   const [results, setResults] = useState<string[]>([]);
   const [searching, setSearching] = useState(false);
   const { location, detect } = useLocation();
+  const { keys: favKeys } = useFavorites();
+  const favCount = favKeys.size;
   const locRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -257,16 +260,22 @@ export default function Navbar({ className = "" }: { className?: string }) {
             </AnimatePresence>
           </div>
 
-          {/* Bell */}
-          <button className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors shrink-0">
-            <Bell size={20} className="text-gray-700" />
-            <span
-              className="absolute top-1 right-1 w-4 h-4 text-[9px] font-bold text-white flex items-center justify-center rounded-full"
-              style={{ background: "#ea580c" }}
-            >
-              3
-            </span>
-          </button>
+          {/* Favourites */}
+          <Link
+            href="/account/favourites"
+            aria-label="Favourites"
+            className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors shrink-0"
+          >
+            <Heart size={20} className={favCount > 0 ? "fill-red-500 stroke-red-500" : "text-gray-700"} />
+            {favCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 text-[9px] font-bold text-white flex items-center justify-center rounded-full"
+                style={{ background: "#ea580c" }}
+              >
+                {favCount}
+              </span>
+            )}
+          </Link>
         </div>
       </nav>
 
