@@ -740,7 +740,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         {deals.length > 0 && (
           <section className="mt-7">
             <SectionHeader title="Daily Deals" />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {deals.map((d) => (
                 <div key={d.id} className="rounded-2xl p-4 flex flex-col items-center text-center"
                   style={{ background: d.bg_color }}>
