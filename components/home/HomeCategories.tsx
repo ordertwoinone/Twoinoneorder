@@ -50,27 +50,28 @@ export default async function HomeCategories() {
           What are you craving?
         </h2>
 
-        {/* 5 per row on mobile → 10 per row on md+ — always fills full width */}
-        <div className="grid grid-cols-5 md:grid-cols-10 gap-2 sm:gap-3">
+        {/* Single scrollable row on mobile → full 10-per-row grid on md+ */}
+        <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-10 md:gap-3 md:overflow-visible">
           {categories.map((cat) => {
             const imgSrc = cat.image_url
               || FALLBACK.find((f) => f.name === cat.name)?.image_url
               || FALLBACK[0].image_url;
 
             const isExternal = cat.href?.startsWith("http");
+            const itemClass = "flex flex-col items-center gap-2 group w-[68px] shrink-0 md:w-auto";
             const Wrapper = cat.href
               ? ({ children }: { children: React.ReactNode }) =>
                   isExternal ? (
-                    <a href={cat.href} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 group">
+                    <a href={cat.href} target="_blank" rel="noopener noreferrer" className={itemClass}>
                       {children}
                     </a>
                   ) : (
-                    <Link href={cat.href} className="flex flex-col items-center gap-2 group">
+                    <Link href={cat.href} className={itemClass}>
                       {children}
                     </Link>
                   )
               : ({ children }: { children: React.ReactNode }) => (
-                  <div className="flex flex-col items-center gap-2 group cursor-default">
+                  <div className={`${itemClass} cursor-default`}>
                     {children}
                   </div>
                 );
