@@ -124,7 +124,7 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                       src={s.food_image_url}
                       alt={s.food_alt || s.tag}
                       fill
-                      className="object-contain object-bottom sm:object-center drop-shadow-2xl"
+                      className="object-contain object-bottom sm:object-center"
                       sizes="(max-width: 640px) 50vw, 45vw"
                       priority={current === 0}
                     />
