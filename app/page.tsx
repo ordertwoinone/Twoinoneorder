@@ -12,6 +12,10 @@ import FadeInSection from "@/components/ui/FadeInSection";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { BannerSlide } from "@/components/home/HeroBanner";
 
+// ISR: serve a cached page, refresh data at most once per minute (admin
+// edits also bust this cache via revalidatePath). Big speed win.
+export const revalidate = 60;
+
 async function getBanners(): Promise<BannerSlide[]> {
   const { data } = await supabaseAdmin
     .from("hero_banners")

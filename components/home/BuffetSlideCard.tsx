@@ -47,18 +47,18 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
         >
 
           {/* Slideshow image */}
-          <div className="mx-3 mt-3 rounded-2xl overflow-hidden flex-shrink-0 relative" style={{ minHeight: "160px" }}>
-            <div key={b.id} className="hc-fade relative w-full h-full" style={{ minHeight: "160px" }}>
+          <div className="mx-2 mt-2 sm:mx-3 sm:mt-3 rounded-2xl overflow-hidden flex-shrink-0 relative min-h-[112px] sm:min-h-[160px]">
+            <div key={b.id} className="hc-fade relative w-full h-full min-h-[112px] sm:min-h-[160px]">
               {b.image_url ? (
                 <Image
                   src={b.image_url}
                   alt={b.name}
                   fill
                   className="object-cover"
-                  sizes="(max-width: 640px) 90vw, 25vw"
+                  sizes="(max-width: 640px) 45vw, 25vw"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-6xl bg-orange-50" style={{ minHeight: "160px" }}>🍽️</div>
+                <div className="w-full h-full flex items-center justify-center text-5xl sm:text-6xl bg-orange-50 min-h-[112px] sm:min-h-[160px]">🍽️</div>
               )}
             </div>
 
@@ -93,25 +93,25 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
           </div>
 
           {/* Content */}
-          <div className="px-4 pt-3 pb-4 flex flex-col flex-1 gap-1.5">
-            <div key={`${b.id}-info`} className="hc-fade flex flex-col gap-1.5 flex-1">
-              <h3 className="font-extrabold text-white text-base leading-tight truncate">{b.name}</h3>
-              <p className="text-orange-100 text-[12px] sm:text-[13px] leading-relaxed truncate">{b.cuisine}</p>
+          <div className="px-3 pt-2.5 pb-3 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
+            <div key={`${b.id}-info`} className="hc-fade flex flex-col gap-1 sm:gap-1.5 flex-1">
+              <h3 className="font-extrabold text-white text-[13px] sm:text-base leading-tight truncate">{b.name}</h3>
+              <p className="text-orange-100 text-[11px] sm:text-[13px] leading-relaxed truncate">{b.cuisine}</p>
 
-              <div className="flex items-center gap-3 mt-0.5">
-                <span className="flex items-center gap-1 text-[12px] text-orange-50 font-medium">
+              <div className="flex items-center gap-2 sm:gap-3 mt-0.5">
+                <span className="flex items-center gap-1 text-[11px] sm:text-[12px] text-orange-50 font-medium">
                   <Tag size={11} className="text-orange-200" />
                   from <strong className="text-white">AED {b.price}</strong>
                 </span>
-                <span className="flex items-center gap-1 text-[12px] text-orange-50 font-medium">
+                <span className="flex items-center gap-1 text-[11px] sm:text-[12px] text-orange-50 font-medium">
                   <Star size={11} className="fill-yellow-300 stroke-yellow-300" />
                   <strong className="text-white">{b.rating}</strong>
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center mt-auto pt-3">
-              <div className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm">
+            <div className="flex items-center mt-auto pt-2.5 sm:pt-3">
+              <div className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 rounded-full text-[12px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm">
                 Book Now
                 <ArrowRight size={13} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
               </div>
@@ -127,7 +127,7 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
             type="button"
             aria-label="Previous"
             onClick={() => go(-1)}
-            className="absolute left-5 top-[92px] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute left-4 sm:left-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
             <ChevronLeft size={17} strokeWidth={2.5} />
           </button>
@@ -135,7 +135,7 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
             type="button"
             aria-label="Next"
             onClick={() => go(1)}
-            className="absolute right-5 top-[92px] -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute right-4 sm:right-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
             <ChevronRight size={17} strokeWidth={2.5} />
           </button>

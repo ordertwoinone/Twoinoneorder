@@ -7,6 +7,8 @@ import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "Offers & Deals — Two In One UAE",
   description:
