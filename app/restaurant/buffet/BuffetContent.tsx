@@ -474,19 +474,19 @@ function OverviewTab({
             </div>
             <button className="text-xs sm:text-sm font-semibold hover:opacity-80" style={{ color: "#ea580c" }}>View all</button>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:gap-4" style={{ scrollbarWidth: "none" }}>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {timings.map((t) => {
               const cfg = THEME_MAP[t.theme] ?? THEME_MAP.orange;
               return (
-                <div key={t.id} className={`${cfg.bg} border ${cfg.border} rounded-2xl px-4 py-3 sm:py-4 flex items-center gap-3 shrink-0 w-48 sm:w-auto`}>
-                  <div className={`${cfg.iconBg} w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0`}>
+                <div key={t.id} className={`${cfg.bg} border ${cfg.border} rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3`}>
+                  <div className={`${cfg.iconBg} w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0`}>
                     <cfg.Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${cfg.iconCls}`} />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-gray-900 text-sm sm:text-base leading-tight">{t.label}</p>
-                    <p className="text-gray-500 text-[11px] sm:text-xs mt-0.5 leading-tight">{t.time_range}</p>
-                    <p className={`font-bold text-sm sm:text-base mt-1 leading-tight ${cfg.priceCls}`}>
-                      {t.price} <span className="font-normal text-gray-400 text-[10px] sm:text-xs">{t.price_label}</span>
+                    <p className="font-bold text-gray-900 text-[11px] sm:text-base leading-tight">{t.label}</p>
+                    <p className="text-gray-500 text-[9px] sm:text-xs mt-0.5 leading-tight">{t.time_range}</p>
+                    <p className={`font-bold text-[11px] sm:text-base mt-1 leading-tight ${cfg.priceCls}`}>
+                      {t.price} <span className="font-normal text-gray-400 text-[9px] sm:text-xs">{t.price_label}</span>
                     </p>
                   </div>
                 </div>
