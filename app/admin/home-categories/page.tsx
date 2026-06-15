@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, X, GripVertical, ExternalLink } from "lucide-react";
 
 interface Category {
   id: string;
@@ -144,16 +144,38 @@ export default function HomeCategoriesAdmin() {
             {items
               .filter((i) => i.is_active)
               .map((cat) => (
-                <div key={cat.id} className="shrink-0 flex flex-col items-center gap-1.5">
-                  <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center text-2xl border-2 border-white shadow-sm">
-                    {cat.emoji}
+                <div key={cat.id} className="shrink-0 flex flex-col items-center gap-2 w-[68px]">
+                  {/* Square image — matches the live site */}
+                  <div className="relative w-[68px] h-[68px] rounded-2xl overflow-hidden shadow-sm bg-orange-50">
+                    {cat.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cat.image_url}
+                        alt={cat.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="absolute inset-0 flex items-center justify-center text-2xl">
+                        {cat.emoji}
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/40 to-transparent" />
+                    {cat.href && (
+                      <span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-orange-500 flex items-center justify-center" title={cat.href}>
+                        <ExternalLink size={8} className="text-white" />
+                      </span>
+                    )}
                   </div>
-                  <p className="text-[10px] font-bold text-gray-700 text-center w-14 leading-tight">
+                  <p className={`text-[10px] font-bold text-center w-full leading-tight truncate ${cat.href ? "text-gray-800" : "text-gray-400"}`}>
                     {cat.name}
                   </p>
                 </div>
               ))}
           </div>
+          <p className="text-[11px] text-gray-400 mt-2">
+            Categories with a redirect URL show an{" "}
+            <ExternalLink size={10} className="inline -mt-0.5 text-orange-500" /> badge and are clickable on the live site.
+          </p>
         </div>
       )}
 
