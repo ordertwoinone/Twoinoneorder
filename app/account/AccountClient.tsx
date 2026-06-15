@@ -102,9 +102,9 @@ export default function AccountClient() {
       : "";
 
     const rows = [
-      { icon: ShoppingBag, label: "My Orders", sub: "Track & reorder", href: "/offers" },
-      { icon: Heart, label: "Favourites", sub: "Saved restaurants & dishes", href: "/" },
-      { icon: MapPin, label: "Saved Addresses", sub: "Manage delivery locations", href: "/" },
+      { icon: ShoppingBag, label: "My Orders", sub: "Track & reorder", href: "/account/orders" },
+      { icon: Heart, label: "Favourites", sub: "Saved restaurants & dishes", href: "/account/favourites" },
+      { icon: MapPin, label: "Saved Addresses", sub: "Manage delivery locations", href: "/account/addresses" },
     ];
 
     return (

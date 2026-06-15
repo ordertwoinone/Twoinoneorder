@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Tag, Heart } from "lucide-react";
+import { Star, Tag } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import FavoriteButton from "@/components/ui/FavoriteButton";
 
 interface Highlight {
   id: string;
@@ -102,12 +103,15 @@ export default async function BuffetHighlights() {
                   >
                     Book Now
                   </Link>
-                  <button
-                    aria-label="Save"
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors duration-200 flex-shrink-0 group/heart"
-                  >
-                    <Heart size={14} className="text-gray-300 group-hover/heart:text-red-400 transition-colors duration-200" />
-                  </button>
+                  <FavoriteButton
+                    itemKey={`buffet:${b.id}`}
+                    name={b.name}
+                    imageUrl={b.image_url}
+                    href={b.href}
+                    subtitle={b.cuisine}
+                    size={15}
+                    className="w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 !border-gray-200"
+                  />
                 </div>
 
               </div>

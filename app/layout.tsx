@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const dancing = Dancing_Script({
@@ -70,7 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
       </head>
       <body className={`${inter.className} ${dancing.variable} antialiased`}>
-        {children}
+        <FavoritesProvider>{children}</FavoritesProvider>
       </body>
     </html>
   );
