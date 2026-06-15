@@ -189,12 +189,41 @@ export default function TableBookingPage() {
         {/* ── Step 1: Select Table ── */}
         {step === 1 && (
           <>
+            {/* Mobile controls — placed ABOVE the canvas so they never cover the tables */}
+            <div className="sm:hidden mt-3 flex flex-col gap-2">
+              <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
+                {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
+                  const active = viewMode === key
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setViewMode(key)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[12px] font-semibold transition ${
+                        active ? 'bg-white text-[#E8521A] shadow-sm' : 'text-gray-500'
+                      }`}
+                    >
+                      <Icon />
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex items-center justify-center gap-4">
+                {LEGEND.map(({ color, label }) => (
+                  <span key={label} className="flex items-center gap-1.5 text-[11px] font-medium text-[#374151]">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
             {/* 3D Floor Plan */}
             <div className="relative mt-3 rounded-2xl overflow-hidden bg-[#EDE5D8]" style={{ height: 'min(62vh, 580px)' }}>
               <TableScene viewMode={viewMode} />
 
-              {/* View mode buttons */}
-              <div className="absolute left-3 top-3 flex flex-col gap-2 z-10">
+              {/* View mode buttons — desktop overlay only */}
+              <div className="hidden sm:flex absolute left-3 top-3 flex-col gap-2 z-10">
                 {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
                   const active = viewMode === key
                   return (
@@ -212,8 +241,8 @@ export default function TableBookingPage() {
                 })}
               </div>
 
-              {/* Legend */}
-              <div className="absolute right-3 top-3 bg-white rounded-xl shadow-md px-3 py-2.5 space-y-1.5 z-10">
+              {/* Legend — desktop overlay only */}
+              <div className="hidden sm:block absolute right-3 top-3 bg-white rounded-xl shadow-md px-3 py-2.5 space-y-1.5 z-10">
                 {LEGEND.map(({ color, label }) => (
                   <div key={label} className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
