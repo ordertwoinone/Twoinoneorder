@@ -198,6 +198,7 @@ export default async function Footer() {
             <ul className="space-y-2.5">
               {[
                 { label: "Home",          href: "/"                          },
+                { label: "Offers",        href: "/offers"                    },
                 { label: "Book a Table",  href: "/book-table"                },
                 { label: "Catering",      href: "/catering"                  },
                 { label: "University Kalba", href: "/restaurant/university-kalba" },

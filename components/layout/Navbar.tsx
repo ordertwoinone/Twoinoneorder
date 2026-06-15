@@ -11,8 +11,8 @@ import { useLocation } from "@/hooks/useLocation";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
-  { label: "Restaurants", href: "#restaurants" },
-  { label: "Offers", href: "#offers" },
+  { label: "Restaurants", href: "/#restaurants" },
+  { label: "Offers", href: "/offers" },
   { label: "Catering", href: "/catering" },
 ];
 

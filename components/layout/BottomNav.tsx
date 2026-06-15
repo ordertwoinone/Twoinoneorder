@@ -5,7 +5,7 @@ import { Home, Tag, CalendarCheck, Heart, User } from "lucide-react";
 
 const ITEMS = [
   { icon: Home, label: "Home", href: "/" },
-  { icon: Tag, label: "Offers", href: "#offers" },
+  { icon: Tag, label: "Offers", href: "/offers" },
   { icon: CalendarCheck, label: "Book Table", href: "/book-table", primary: true },
   { icon: Heart, label: "Favourites", href: "#" },
   { icon: User, label: "Account", href: "#" },
