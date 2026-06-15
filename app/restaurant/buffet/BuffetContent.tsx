@@ -692,6 +692,10 @@ function CartModal({
   onMembersChange: (n: number) => void;
   whatsapp: string;
 }) {
+  const [step, setStep] = useState<"cart" | "details">("cart");
+  const [form, setForm] = useState({ name: "", phone: "", date: "", notes: "" });
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; date?: string }>({});
+
   const allAnnotated = allActiveItems.map((item) => {
     const timingIds = item.timing_ids ?? [];
     const included =
@@ -713,18 +717,39 @@ function CartModal({
   const pricing = sessionPricing(selectedTiming);
   const total = pricing ? Math.round(pricing.perPerson * members) : null;
 
-  // Send the buffet reservation straight to WhatsApp + save it as a booking
+  function goToDetails() {
+    if (!selectedTiming) return;
+    setStep("details");
+  }
+
+  function validate() {
+    const e: typeof errors = {};
+    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.phone.trim()) e.phone = "Phone is required";
+    if (!form.date) e.date = "Date is required";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  // Send the buffet reservation to WhatsApp + save it as a booking (with the
+  // customer's details collected in the form step)
   function reserveBuffet() {
+    if (!validate()) return;
+
     const included = includedItems.map((i) => `• ${i.name}`).join("\n");
     const extras = extrasInCart.map((i) => `• ${i.name} x${i.qty}`).join("\n");
     const lines = [
       "🍽️ *Buffet Reservation — Buffet By Two In One*",
       "",
+      `👤 *Name:* ${form.name}`,
+      `📞 *Phone:* ${form.phone}`,
+      `📅 *Date:* ${form.date}`,
       selectedTiming ? `📋 *Session:* ${selectedTiming.label} (${selectedTiming.time_range})` : "",
       `👥 *Party Size:* ${members} ${members === 1 ? "person" : "people"}`,
       total !== null && pricing ? `💰 *Est. Total:* ${pricing.currency} ${total.toLocaleString()} (${pricing.currency} ${Math.round(pricing.perPerson)}/person)` : "",
       included ? `\n*Included dishes:*\n${included}` : "",
       extras ? `\n*Extra add-ons:*\n${extras}` : "",
+      form.notes ? `\n📝 *Special Requests:* ${form.notes}` : "",
       "",
       "Please confirm my buffet reservation. Thank you!",
     ].filter(Boolean);
@@ -736,9 +761,12 @@ function CartModal({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "buffet",
+        guest_name: form.name,
+        phone: form.phone,
+        date: form.date,
         table_section: selectedTiming ? selectedTiming.label : "Buffet",
         guests: members,
-        notes: `${selectedTiming ? `${selectedTiming.label} (${selectedTiming.time_range}) · ` : ""}${members} people${total !== null && pricing ? ` · Est. ${pricing.currency} ${total}` : ""}`,
+        notes: `${selectedTiming ? `${selectedTiming.label} (${selectedTiming.time_range}) · ` : ""}${members} people${total !== null && pricing ? ` · Est. ${pricing.currency} ${total}` : ""}${form.notes ? ` · ${form.notes}` : ""}`,
         status: "pending",
       }),
     }).catch(() => {});
@@ -756,9 +784,15 @@ function CartModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5 text-orange-500" />
-            <h2 className="text-base font-extrabold text-gray-900">Your Cart</h2>
-            {totalQty > 0 && (
+            {step === "details" ? (
+              <button onClick={() => setStep("cart")} className="w-8 h-8 -ml-1 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600" aria-label="Back">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            ) : (
+              <ShoppingCart className="w-5 h-5 text-orange-500" />
+            )}
+            <h2 className="text-base font-extrabold text-gray-900">{step === "details" ? "Your Details" : "Your Cart"}</h2>
+            {step === "cart" && totalQty > 0 && (
               <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{totalQty}</span>
             )}
           </div>
@@ -789,67 +823,117 @@ function CartModal({
           )}
         </div>
 
-        {/* Party size */}
-        <div className="px-5 pb-3 shrink-0">
-          <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-[11px] text-gray-500 leading-none">Party Size</p>
-                <p className="text-xs font-bold text-gray-800 mt-0.5">{members} member{members !== 1 ? "s" : ""}</p>
+        {step === "cart" ? (
+          <>
+            {/* Party size */}
+            <div className="px-5 pb-3 shrink-0">
+              <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <div>
+                    <p className="text-[11px] text-gray-500 leading-none">Party Size</p>
+                    <p className="text-xs font-bold text-gray-800 mt-0.5">{members} member{members !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onMembersChange(Math.max(1, members - 1))}
+                    className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-base font-bold hover:bg-orange-200 transition-colors"
+                  >−</button>
+                  <span className="text-sm font-extrabold text-gray-900 w-5 text-center">{members}</span>
+                  <button
+                    onClick={() => onMembersChange(Math.min(500, members + 1))}
+                    className="w-7 h-7 rounded-full text-white flex items-center justify-center text-base font-bold hover:opacity-90 transition-opacity"
+                    style={{ background: "#ea580c" }}
+                  >+</button>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onMembersChange(Math.max(1, members - 1))}
-                className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-base font-bold hover:bg-orange-200 transition-colors"
-              >−</button>
-              <span className="text-sm font-extrabold text-gray-900 w-5 text-center">{members}</span>
-              <button
-                onClick={() => onMembersChange(Math.min(500, members + 1))}
-                className="w-7 h-7 rounded-full text-white flex items-center justify-center text-base font-bold hover:opacity-90 transition-opacity"
-                style={{ background: "#ea580c" }}
-              >+</button>
+
+            {/* Item list */}
+            <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-4 min-h-0">
+              {includedItems.length === 0 && extrasInCart.length === 0 ? (
+                <div className="py-8 text-center">
+                  <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                  <p className="text-sm text-gray-400">No session selected</p>
+                  <p className="text-[11px] text-gray-300 mt-0.5">Select a buffet timing to see included dishes</p>
+                </div>
+              ) : (
+                <>
+                  {includedItems.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">Included in Session</p>
+                        <span className="text-[10px] text-gray-400">{includedItems.length} dishes</span>
+                      </div>
+                      <div className="space-y-2">
+                        {includedItems.map((item) => (
+                          <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {extrasInCart.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider mb-2">Extra Add-ons</p>
+                      <div className="space-y-2">
+                        {extrasInCart.map((item) => (
+                          <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          /* Details form */
+          <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-3 min-h-0">
+            <div>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Full Name *</label>
+              <input
+                value={form.name}
+                onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
+                placeholder="Enter your name"
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${errors.name ? "border-red-400" : "border-gray-200"}`}
+              />
+              {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Phone Number *</label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }}
+                placeholder="+971 50 000 0000"
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${errors.phone ? "border-red-400" : "border-gray-200"}`}
+              />
+              {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Date *</label>
+              <input
+                type="date"
+                value={form.date}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) => { setForm({ ...form, date: e.target.value }); setErrors({ ...errors, date: undefined }); }}
+                className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${errors.date ? "border-red-400" : "border-gray-200"}`}
+              />
+              {errors.date && <p className="text-[11px] text-red-500 mt-1">{errors.date}</p>}
+            </div>
+            <div>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Special Requests <span className="font-normal text-gray-400">(optional)</span></label>
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                rows={2}
+                placeholder="Allergies, occasion, seating preference…"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+              />
             </div>
           </div>
-        </div>
-
-        {/* Item list */}
-        <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-4 min-h-0">
-          {includedItems.length === 0 && extrasInCart.length === 0 ? (
-            <div className="py-8 text-center">
-              <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No session selected</p>
-              <p className="text-[11px] text-gray-300 mt-0.5">Select a buffet timing to see included dishes</p>
-            </div>
-          ) : (
-            <>
-              {includedItems.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">Included in Session</p>
-                    <span className="text-[10px] text-gray-400">{includedItems.length} dishes</span>
-                  </div>
-                  <div className="space-y-2">
-                    {includedItems.map((item) => (
-                      <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
-                    ))}
-                  </div>
-                </div>
-              )}
-              {extrasInCart.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider mb-2">Extra Add-ons</p>
-                  <div className="space-y-2">
-                    {extrasInCart.map((item) => (
-                      <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        )}
 
         {/* Footer CTA */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
@@ -868,18 +952,29 @@ function CartModal({
             </div>
           )}
 
-          <button
-            onClick={reserveBuffet}
-            disabled={!selectedTiming}
-            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: "#25D366" }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
-            {selectedTiming ? "Reserve on WhatsApp" : "Select a session first"}
-          </button>
-          {selectedTiming && (
-            <p className="text-[11px] text-gray-400 text-center mt-2">We&apos;ll confirm your buffet reservation on WhatsApp</p>
+          {step === "cart" ? (
+            <button
+              onClick={goToDetails}
+              disabled={!selectedTiming}
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "#ea580c" }}
+            >
+              {selectedTiming ? "Continue Booking" : "Select a session first"}
+              {selectedTiming && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
+            </button>
+          ) : (
+            <button
+              onClick={reserveBuffet}
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
+              style={{ background: "#25D366" }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+              Reserve on WhatsApp
+            </button>
           )}
+          <p className="text-[11px] text-gray-400 text-center mt-2">
+            {step === "cart" ? "Next: add your contact details" : "We'll confirm your reservation on WhatsApp"}
+          </p>
         </div>
       </div>
     </div>
