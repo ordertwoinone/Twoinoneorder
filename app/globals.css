@@ -144,3 +144,12 @@ canvas {
 .hc-fade {
   animation: hcFade 0.5s ease;
 }
+
+/* Text fade only — no scale, so titles never clip inside the card */
+@keyframes hcFadeSoft {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.hc-fade-soft {
+  animation: hcFadeSoft 0.4s ease;
+}

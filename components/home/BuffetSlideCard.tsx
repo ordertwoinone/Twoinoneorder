@@ -94,7 +94,7 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
 
           {/* Content */}
           <div className="px-3 pt-2.5 pb-3 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
-            <div key={`${b.id}-info`} className="hc-fade flex flex-col gap-1 sm:gap-1.5 flex-1">
+            <div key={`${b.id}-info`} className="hc-fade-soft flex flex-col gap-1 sm:gap-1.5 flex-1">
               <h3 className="font-extrabold text-white text-[13px] sm:text-base leading-tight truncate">{b.name}</h3>
               <p className="text-orange-100 text-[11px] sm:text-[13px] leading-relaxed truncate">{b.cuisine}</p>
 

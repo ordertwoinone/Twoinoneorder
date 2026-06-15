@@ -83,10 +83,10 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.18 }}
-                  className="text-gray-500 leading-relaxed whitespace-pre-line mb-5"
+                  className="text-gray-500 leading-relaxed whitespace-pre-line mb-5 line-clamp-3"
                   style={{ fontSize: "clamp(10px, 2vw, 13px)" }}
                 >
-                  {s.subtitle}
+                  {s.subtitle?.replace(/\\n/g, "\n")}
                 </motion.p>
 
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
@@ -122,7 +122,7 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                       src={s.food_image_url}
                       alt={s.food_alt || s.tag}
                       fill
-                      className="object-contain object-bottom sm:object-center"
+                      className="object-cover object-center sm:object-contain"
                       sizes="(max-width: 640px) 50vw, 45vw"
                       priority={current === 0}
                     />
