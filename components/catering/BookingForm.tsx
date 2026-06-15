@@ -116,7 +116,7 @@ export default function BookingForm() {
     setValue("eventType", v, { shouldValidate: true });
   };
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = (data: FormValues) => {
     if (!selectedDate) return;
 
     const enquiry: CateringEnquiry = {
@@ -129,26 +129,25 @@ export default function BookingForm() {
       notes: data.notes,
     };
 
-    // Save the catering enquiry as a booking (links to account if logged in)
-    try {
-      await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "catering",
-          guest_name: data.name,
-          phone: data.phone,
-          table_section: data.eventType,
-          date: format(selectedDate, "yyyy-MM-dd"),
-          guests: data.guests,
-          notes: `Event: ${data.eventType} · Preferred time: ${data.timeSlot}${data.notes ? ` · ${data.notes}` : ""}`,
-          status: "pending",
-        }),
-      });
-    } catch { /* still continue to WhatsApp */ }
+    // Save the catering enquiry as a booking (fire-and-forget — must NOT await
+    // before window.open or the browser blocks the WhatsApp popup)
+    fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "catering",
+        guest_name: data.name,
+        phone: data.phone,
+        table_section: data.eventType,
+        date: format(selectedDate, "yyyy-MM-dd"),
+        guests: data.guests,
+        notes: `Event: ${data.eventType} · Preferred time: ${data.timeSlot}${data.notes ? ` · ${data.notes}` : ""}`,
+        status: "pending",
+      }),
+    }).catch(() => { /* ignore — still continue to WhatsApp */ });
 
-    const url = buildWhatsAppUrl(enquiry);
-    window.open(url, "_blank");
+    // Open WhatsApp synchronously (inside the click gesture)
+    window.open(buildWhatsAppUrl(enquiry), "_blank");
     setSubmitted(true);
   };
 

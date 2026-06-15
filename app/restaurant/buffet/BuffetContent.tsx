@@ -101,6 +101,7 @@ interface Props {
   timings:      BuffetTiming[];
   dishes:       PopularDish[];
   menuSections: MenuSectionDB[];
+  whatsapp:     string;
 }
 
 // ─── Icon Map ─────────────────────────────────────────────────────────────────
@@ -679,7 +680,7 @@ function sessionPricing(timing: BuffetTiming | null) {
 }
 
 function CartModal({
-  selectedTiming, allActiveItems, selectedTimingId, cartQty, onQtyChange, onClose, members, onMembersChange,
+  selectedTiming, allActiveItems, selectedTimingId, cartQty, onQtyChange, onClose, members, onMembersChange, whatsapp,
 }: {
   selectedTiming: BuffetTiming | null;
   allActiveItems: MenuItemDB[];
@@ -689,6 +690,7 @@ function CartModal({
   onClose: () => void;
   members: number;
   onMembersChange: (n: number) => void;
+  whatsapp: string;
 }) {
   const allAnnotated = allActiveItems.map((item) => {
     const timingIds = item.timing_ids ?? [];
@@ -710,6 +712,40 @@ function CartModal({
   // Per-person rate (package amount ÷ base persons) × party size = live total
   const pricing = sessionPricing(selectedTiming);
   const total = pricing ? Math.round(pricing.perPerson * members) : null;
+
+  // Send the buffet reservation straight to WhatsApp + save it as a booking
+  function reserveBuffet() {
+    const included = includedItems.map((i) => `• ${i.name}`).join("\n");
+    const extras = extrasInCart.map((i) => `• ${i.name} x${i.qty}`).join("\n");
+    const lines = [
+      "🍽️ *Buffet Reservation — Buffet By Two In One*",
+      "",
+      selectedTiming ? `📋 *Session:* ${selectedTiming.label} (${selectedTiming.time_range})` : "",
+      `👥 *Party Size:* ${members} ${members === 1 ? "person" : "people"}`,
+      total !== null && pricing ? `💰 *Est. Total:* ${pricing.currency} ${total.toLocaleString()} (${pricing.currency} ${Math.round(pricing.perPerson)}/person)` : "",
+      included ? `\n*Included dishes:*\n${included}` : "",
+      extras ? `\n*Extra add-ons:*\n${extras}` : "",
+      "",
+      "Please confirm my buffet reservation. Thank you!",
+    ].filter(Boolean);
+    const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
+
+    // Save the booking (fire-and-forget — never await before window.open)
+    fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "buffet",
+        table_section: selectedTiming ? selectedTiming.label : "Buffet",
+        guests: members,
+        notes: `${selectedTiming ? `${selectedTiming.label} (${selectedTiming.time_range}) · ` : ""}${members} people${total !== null && pricing ? ` · Est. ${pricing.currency} ${total}` : ""}`,
+        status: "pending",
+      }),
+    }).catch(() => {});
+
+    window.open(url, "_blank");
+    onClose();
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -832,30 +868,18 @@ function CartModal({
             </div>
           )}
 
-          <Link
-            href="/book-table"
-            onClick={() => {
-              // Carry the buffet session into the table-booking flow so the
-              // saved booking gets labelled "buffet"
-              try {
-                if (selectedTiming) {
-                  sessionStorage.setItem("buffetContext", JSON.stringify({
-                    label: selectedTiming.label,
-                    time_range: selectedTiming.time_range,
-                    members,
-                    total: total ?? null,
-                    ts: Date.now(),
-                  }));
-                }
-              } catch { /* ignore */ }
-              onClose();
-            }}
-            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
-            style={{ background: "#ea580c" }}
+          <button
+            onClick={reserveBuffet}
+            disabled={!selectedTiming}
+            className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "#25D366" }}
           >
-            Book Table
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </Link>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+            {selectedTiming ? "Reserve on WhatsApp" : "Select a session first"}
+          </button>
+          {selectedTiming && (
+            <p className="text-[11px] text-gray-400 text-center mt-2">We&apos;ll confirm your buffet reservation on WhatsApp</p>
+          )}
         </div>
       </div>
     </div>
@@ -905,7 +929,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "photos",   label: "Photos"          },
 ];
 
-export default function BuffetContent({ hero, banners, features, timings, dishes, menuSections }: Props) {
+export default function BuffetContent({ hero, banners, features, timings, dishes, menuSections, whatsapp }: Props) {
   const h = hero ?? {
     restaurant_name: "Buffet By Two In One",
     cuisine: "Buffet · International",
@@ -1191,6 +1215,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
           onClose={() => setCartOpen(false)}
           members={members}
           onMembersChange={setMembers}
+          whatsapp={whatsapp}
         />
       )}
 

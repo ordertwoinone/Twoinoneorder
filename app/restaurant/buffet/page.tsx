@@ -29,6 +29,11 @@ async function getBuffetData() {
       : [],
   }));
 
+  const settingsRes = await supabaseAdmin
+    .from("site_settings")
+    .select("whatsapp_number")
+    .single();
+
   return {
     hero:         heroRes.data    ?? null,
     banners:      bannersRes.data ?? [],
@@ -36,6 +41,7 @@ async function getBuffetData() {
     timings:      timingsRes.data  ?? [],
     dishes:       dishesRes.data   ?? [],
     menuSections,
+    whatsapp:     (settingsRes.data?.whatsapp_number || "971522305216").replace(/\D/g, ""),
   };
 }
 
@@ -53,6 +59,7 @@ export default async function BuffetPage() {
           timings={data.timings}
           dishes={data.dishes}
           menuSections={data.menuSections}
+          whatsapp={data.whatsapp}
         />
       </main>
       <Footer />
