@@ -135,3 +135,12 @@ canvas {
     animation: none;
   }
 }
+
+/* Slideshow crossfade (homepage buffet slide card) */
+@keyframes hcFade {
+  from { opacity: 0; transform: scale(1.03); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.hc-fade {
+  animation: hcFade 0.5s ease;
+}

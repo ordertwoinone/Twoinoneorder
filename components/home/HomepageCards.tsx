@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import BuffetSlideCard, { BuffetItem } from "./BuffetSlideCard";
 
 interface HomepageCard {
   id: string;
@@ -72,9 +73,20 @@ async function getCards(): Promise<HomepageCard[]> {
   return data;
 }
 
+async function getBuffetItems(): Promise<BuffetItem[]> {
+  const { data } = await supabaseAdmin
+    .from("buffet_highlights")
+    .select("id, name, cuisine, price, rating, image_url, href")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  return data || [];
+}
+
 export default async function HomepageCards() {
-  const cards = await getCards();
+  const [cards, buffet] = await Promise.all([getCards(), getBuffetItems()]);
   if (cards.length === 0) return null;
+
+  const hasBuffet = buffet.length > 0;
 
   return (
     <section className="py-4">
@@ -86,7 +98,7 @@ export default async function HomepageCards() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 ${hasBuffet ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
           {cards.map((card) => {
             const isExternal = card.href?.startsWith("http");
 
@@ -177,6 +189,9 @@ export default async function HomepageCards() {
               </Link>
             );
           })}
+
+          {/* 4th position — rotating Buffet Highlights slideshow */}
+          {hasBuffet && <BuffetSlideCard items={buffet} />}
         </div>
 
       </div>

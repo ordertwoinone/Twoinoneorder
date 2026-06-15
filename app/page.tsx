@@ -5,7 +5,6 @@ import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import SearchBar from "@/components/home/SearchBar";
 import HeroBanner from "@/components/home/HeroBanner";
 import RestaurantCards from "@/components/home/RestaurantCards";
-import BuffetHighlights from "@/components/home/BuffetHighlights";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
 import TrustBadges from "@/components/home/TrustBadges";
@@ -36,7 +35,6 @@ export default async function HomePage() {
         <FadeInSection><HomeCategories /></FadeInSection>
         <FadeInSection><RestaurantCards /></FadeInSection>
         <FadeInSection><HomepageCards /></FadeInSection>
-        <FadeInSection><BuffetHighlights /></FadeInSection>
         <FadeInSection><TrustBadges /></FadeInSection>
         <Footer />
       </main>
