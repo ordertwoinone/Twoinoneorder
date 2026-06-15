@@ -158,13 +158,13 @@ export default async function HomepageCards() {
                   {/* Bottom row — subtitle chip + CTA */}
                   <div className="flex items-center gap-2 mt-auto pt-3">
                     {card.subtitle && (
-                      <span className="flex items-center gap-1 text-[12px] text-gray-500 font-medium bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-full">
+                      <span className="hidden xl:flex items-center gap-1 text-[12px] text-gray-500 font-medium bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap truncate min-w-0">
                         {card.subtitle}
                       </span>
                     )}
 
                     <div
-                      className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-bold transition-all duration-200 group-hover:gap-2.5"
+                      className="ml-auto shrink-0 flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-bold whitespace-nowrap transition-all duration-200 group-hover:gap-2.5"
                       style={{
                         background: `${card.accent_color}15`,
                         color: card.accent_color,
