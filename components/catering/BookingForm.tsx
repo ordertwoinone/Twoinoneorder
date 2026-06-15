@@ -53,7 +53,7 @@ function EventTypeDropdown({
         type="button"
         onClick={() => setOpen(!open)}
         className={`w-full flex items-center gap-3 pl-10 pr-4 py-3 border-2 rounded-xl text-sm text-left transition-colors ${
-          open ? "border-amber-400 bg-white" : "border-neutral-200 bg-white hover:border-amber-300"
+          open ? "border-orange-400 bg-white" : "border-neutral-200 bg-white hover:border-orange-300"
         } ${error ? "border-red-300" : ""}`}
       >
         <Utensils size={16} className="absolute left-3.5 text-neutral-400 shrink-0" />
@@ -80,10 +80,10 @@ function EventTypeDropdown({
                 key={type}
                 type="button"
                 onClick={() => { onChange(type); setOpen(false); }}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm text-left text-neutral-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 text-sm text-left text-neutral-700 hover:bg-orange-50 hover:text-orange-700 transition-colors"
               >
                 {type}
-                {value === type && <Check size={14} className="text-amber-500 shrink-0" />}
+                {value === type && <Check size={14} className="text-orange-500 shrink-0" />}
               </button>
             ))}
           </motion.div>
@@ -171,7 +171,7 @@ export default function BookingForm() {
               {...register("name", { required: "Full name is required" })}
               type="text"
               placeholder="John Doe"
-              className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-amber-400 focus:outline-none text-sm transition-colors"
+              className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
             />
           </div>
           {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
@@ -193,7 +193,7 @@ export default function BookingForm() {
               })}
               type="tel"
               placeholder="+971 50 123 4567"
-              className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-amber-400 focus:outline-none text-sm transition-colors"
+              className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
             />
           </div>
           {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
@@ -232,7 +232,7 @@ export default function BookingForm() {
             })}
             type="number"
             placeholder="e.g. 150"
-            className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-amber-400 focus:outline-none text-sm transition-colors"
+            className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
           />
         </div>
         {errors.guests && <p className="text-red-500 text-xs mt-1">{errors.guests.message}</p>}
@@ -246,7 +246,7 @@ export default function BookingForm() {
         <button
           type="button"
           onClick={() => setShowCalendar(!showCalendar)}
-          className="w-full flex items-center gap-3 px-4 py-3 border-2 border-neutral-200 rounded-xl text-sm text-left hover:border-amber-400 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 border-2 border-neutral-200 rounded-xl text-sm text-left hover:border-orange-400 transition-colors"
         >
           <CalendarIcon size={16} className="text-neutral-400" />
           <span className={selectedDate ? "text-neutral-900" : "text-neutral-400"}>
@@ -261,7 +261,7 @@ export default function BookingForm() {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden"
             >
-              <div className="mt-2 bg-white border-2 border-amber-200 rounded-2xl p-4 shadow-lg">
+              <div className="mt-2 bg-white border-2 border-orange-200 rounded-2xl p-4 shadow-lg">
                 <DayPicker
                   mode="single"
                   selected={selectedDate}
@@ -271,8 +271,8 @@ export default function BookingForm() {
                   }}
                   disabled={{ before: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) }}
                   modifiersClassNames={{
-                    selected: "bg-amber-500 text-white rounded-full",
-                    today: "font-bold text-amber-600",
+                    selected: "bg-orange-500 text-white rounded-full",
+                    today: "font-bold text-orange-600",
                   }}
                 />
               </div>
@@ -295,8 +295,8 @@ export default function BookingForm() {
               key={slot.value}
               className={`relative flex flex-col items-center text-center p-3 sm:p-4 rounded-xl border-2 cursor-pointer transition-all ${
                 watchedTime === slot.value
-                  ? "border-amber-400 bg-amber-50"
-                  : "border-neutral-200 hover:border-amber-200"
+                  ? "border-orange-400 bg-orange-50"
+                  : "border-neutral-200 hover:border-orange-200"
               }`}
             >
               <input
@@ -307,7 +307,7 @@ export default function BookingForm() {
               />
               <Clock
                 size={18}
-                className={watchedTime === slot.value ? "text-amber-500" : "text-neutral-400"}
+                className={watchedTime === slot.value ? "text-orange-500" : "text-neutral-400"}
               />
               <span className="text-sm font-semibold mt-2 text-neutral-800">{slot.label}</span>
               <span className="text-xs text-neutral-500 mt-0.5">{slot.sub}</span>
@@ -328,7 +328,7 @@ export default function BookingForm() {
             {...register("notes")}
             rows={4}
             placeholder="Dietary requirements, special arrangements, allergies..."
-            className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-amber-400 focus:outline-none text-sm transition-colors resize-none"
+            className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors resize-none"
           />
         </div>
       </div>
@@ -337,7 +337,7 @@ export default function BookingForm() {
       <button
         type="submit"
         disabled={!selectedDate}
-        className="w-full flex items-center justify-center gap-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-neutral-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] text-sm"
+        className="w-full flex items-center justify-center gap-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-neutral-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] text-sm"
       >
         <Send size={16} />
         Send Enquiry via WhatsApp
