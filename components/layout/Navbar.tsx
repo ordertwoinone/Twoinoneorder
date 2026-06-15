@@ -13,7 +13,11 @@ const NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "Restaurants", href: "/#restaurants" },
   { label: "Offers", href: "/offers" },
+  { label: "Book a Table", href: "/book-table" },
   { label: "Catering", href: "/catering" },
+  { label: "University Kalba", href: "/restaurant/university-kalba" },
+  { label: "Buffet Menu", href: "/restaurant/buffet" },
+  { label: "My Account", href: "/account" },
 ];
 
 const UAE_AREAS = [
