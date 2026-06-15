@@ -14,6 +14,17 @@ body {
   color: var(--foreground);
   min-height: 100vh;
   background: #ffffff;
+  /* Kill stray horizontal scroll on small devices.
+     `clip` (not `hidden`) does NOT break the sticky navbar/search bar. */
+  overflow-x: clip;
+}
+
+/* Safety net: media never forces the viewport wider than the screen */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 .scrollbar-none {

@@ -429,7 +429,10 @@ function OverviewTab({
       {features.length > 0 && (
         <div>
           <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 mb-4 sm:mb-6">Why Choose Us</h3>
-          <div className="grid gap-3 sm:gap-6 lg:gap-8" style={{ gridTemplateColumns: `repeat(${features.length}, 1fr)` }}>
+          <div
+            className="grid gap-3 sm:gap-6 lg:gap-8 [grid-template-columns:repeat(auto-fit,minmax(68px,1fr))] sm:[grid-template-columns:var(--feat-cols)]"
+            style={{ ["--feat-cols" as string]: `repeat(${features.length}, minmax(0,1fr))` }}
+          >
             {features.map((f) => {
               const Icon = ICON_MAP[f.icon_name] ?? Star;
               return (

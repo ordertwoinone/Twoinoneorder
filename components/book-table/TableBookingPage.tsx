@@ -223,8 +223,9 @@ export default function TableBookingPage() {
               </div>
 
               {/* Hint */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[11px] font-medium px-3 py-1 rounded-full z-10 whitespace-nowrap pointer-events-none">
-                Drag to rotate · Scroll to zoom · Tap a table to select
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[10px] sm:text-[11px] font-medium px-3 py-1 rounded-full z-10 whitespace-nowrap pointer-events-none max-w-[92%] text-center">
+                <span className="sm:hidden">Drag · Pinch zoom · Tap a table</span>
+                <span className="hidden sm:inline">Drag to rotate · Scroll to zoom · Tap a table to select</span>
               </div>
             </div>
 

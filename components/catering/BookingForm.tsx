@@ -289,11 +289,11 @@ export default function BookingForm() {
         <label className="block text-sm font-medium text-neutral-700 mb-2">
           Preferred Time *
         </label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {TIME_SLOTS.map((slot) => (
             <label
               key={slot.value}
-              className={`relative flex flex-col items-center text-center p-4 rounded-xl border-2 cursor-pointer transition-all ${
+              className={`relative flex flex-col items-center text-center p-3 sm:p-4 rounded-xl border-2 cursor-pointer transition-all ${
                 watchedTime === slot.value
                   ? "border-amber-400 bg-amber-50"
                   : "border-neutral-200 hover:border-amber-200"

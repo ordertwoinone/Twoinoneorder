@@ -45,7 +45,7 @@ export default function CateringPage() {
             Back to Home
           </Link>
 
-          <div className="bg-white rounded-3xl shadow-sm border border-neutral-100 p-8">
+          <div className="bg-white rounded-3xl shadow-sm border border-neutral-100 p-5 sm:p-8">
             <h2 className="text-xl font-bold text-neutral-900 mb-2">
               Catering Enquiry
             </h2>
