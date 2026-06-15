@@ -41,7 +41,10 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
       onMouseLeave={() => setPaused(false)}
     >
       <Link href={b.href} className="flex flex-col h-full">
-        <div className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full">
+        <div
+          className="group rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full"
+          style={{ background: "linear-gradient(150deg,#f97316 0%,#ea580c 60%,#c2410c 100%)" }}
+        >
 
           {/* Slideshow image */}
           <div className="mx-3 mt-3 rounded-2xl overflow-hidden flex-shrink-0 relative" style={{ minHeight: "160px" }}>
@@ -60,7 +63,7 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
             </div>
 
             {/* Label */}
-            <span className="absolute top-3 left-3 text-[10px] font-extrabold px-2.5 py-1 rounded-full text-white leading-none z-10" style={{ background: "#ea580c" }}>
+            <span className="absolute top-3 left-3 text-[10px] font-extrabold px-2.5 py-1 rounded-full leading-none z-10 bg-white text-orange-600 shadow-sm">
               🔥 Buffet Highlights
             </span>
 
@@ -92,26 +95,23 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
           {/* Content */}
           <div className="px-4 pt-3 pb-4 flex flex-col flex-1 gap-1.5">
             <div key={`${b.id}-info`} className="hc-fade flex flex-col gap-1.5 flex-1">
-              <h3 className="font-extrabold text-gray-900 text-base leading-tight truncate">{b.name}</h3>
-              <p className="text-gray-400 text-[12px] sm:text-[13px] leading-relaxed truncate">{b.cuisine}</p>
+              <h3 className="font-extrabold text-white text-base leading-tight truncate">{b.name}</h3>
+              <p className="text-orange-100 text-[12px] sm:text-[13px] leading-relaxed truncate">{b.cuisine}</p>
 
               <div className="flex items-center gap-3 mt-0.5">
-                <span className="flex items-center gap-1 text-[12px] text-gray-600 font-medium">
-                  <Tag size={11} className="text-gray-400" />
-                  from <strong className="text-gray-900">AED {b.price}</strong>
+                <span className="flex items-center gap-1 text-[12px] text-orange-50 font-medium">
+                  <Tag size={11} className="text-orange-200" />
+                  from <strong className="text-white">AED {b.price}</strong>
                 </span>
-                <span className="flex items-center gap-1 text-[12px] text-gray-600 font-medium">
-                  <Star size={11} className="fill-amber-400 stroke-amber-400" />
-                  <strong className="text-gray-900">{b.rating}</strong>
+                <span className="flex items-center gap-1 text-[12px] text-orange-50 font-medium">
+                  <Star size={11} className="fill-yellow-300 stroke-yellow-300" />
+                  <strong className="text-white">{b.rating}</strong>
                 </span>
               </div>
             </div>
 
             <div className="flex items-center mt-auto pt-3">
-              <div
-                className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-bold transition-all duration-200 group-hover:gap-2.5"
-                style={{ background: "#ea580c15", color: "#ea580c" }}
-              >
+              <div className="ml-auto flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm">
                 Book Now
                 <ArrowRight size={13} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
               </div>
