@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-const WHATSAPP = '971501234567'
-
 interface PendingBooking {
   table_id: string
   table_section: string
@@ -33,7 +31,7 @@ function formatTime(timeStr: string) {
   return `${hour}:${String(m).padStart(2, '0')} ${ampm}`
 }
 
-function buildWaUrl(b: PendingBooking) {
+function buildWaUrl(b: PendingBooking, whatsapp: string) {
   const lines = [
     '🍽️ *Table Booking — Two In One UAE*',
     '',
@@ -49,10 +47,10 @@ function buildWaUrl(b: PendingBooking) {
     '',
     'Please confirm my reservation. Thank you!',
   ].filter(Boolean).join('\n')
-  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(lines)}`
+  return `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines)}`
 }
 
-export default function ConfirmBookingClient() {
+export default function ConfirmBookingClient({ whatsapp }: { whatsapp: string }) {
   const router = useRouter()
   const [booking, setBooking] = useState<PendingBooking | null>(null)
 
@@ -99,7 +97,7 @@ export default function ConfirmBookingClient() {
     }
 
     sessionStorage.removeItem('pendingBooking')
-    window.open(buildWaUrl(booking), '_blank')
+    window.open(buildWaUrl(booking, whatsapp), '_blank')
     setSaving(false)
   }
 

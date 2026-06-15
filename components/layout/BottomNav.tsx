@@ -7,7 +7,7 @@ const ITEMS = [
   { icon: Home, label: "Home", href: "/" },
   { icon: Tag, label: "Offers", href: "/offers" },
   { icon: CalendarCheck, label: "Book Table", href: "/book-table", primary: true },
-  { icon: Heart, label: "Favourites", href: "#" },
+  { icon: Heart, label: "Favourites", href: "/account/favourites" },
   { icon: User, label: "Account", href: "/account" },
 ];
 
