@@ -75,6 +75,7 @@ interface MenuItemDB {
   section_id: string;
   name: string;
   image_url: string;
+  price: number;
   is_veg: boolean;
   is_special: boolean;
   tags?: string[] | null;
@@ -170,8 +171,8 @@ function DomeLogo({ size = "md", logoUrl }: { size?: "md" | "lg"; logoUrl?: stri
   );
 }
 
-function DishCard({ id, name, img, veg, special, tags, isIncluded, qty, onQtyChange }: {
-  id: string; name: string; img: string; veg: boolean; special: boolean; tags?: string[] | null;
+function DishCard({ id, name, img, price, veg, special, tags, isIncluded, qty, onQtyChange }: {
+  id: string; name: string; img: string; price: number; veg: boolean; special: boolean; tags?: string[] | null;
   isIncluded: boolean; qty: number; onQtyChange: (qty: number) => void;
 }) {
   return (
@@ -201,6 +202,9 @@ function DishCard({ id, name, img, veg, special, tags, isIncluded, qty, onQtyCha
       </div>
       <div className="px-2 sm:px-3 pt-1.5 sm:pt-2 pb-2 sm:pb-3">
         <p className="text-[11px] sm:text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px] sm:min-h-[40px]">{name}</p>
+        {price > 0 && (
+          <p className="text-[12px] sm:text-sm font-extrabold text-orange-600 mt-0.5">AED {price}</p>
+        )}
         {(tags ?? []).filter((t) => t !== "veg" && t !== "non_veg").length > 0 && (
           <div className="flex flex-wrap gap-0.5 mt-1">
             {(tags ?? []).filter((t) => t !== "veg" && t !== "non_veg").map((t) => {
@@ -331,6 +335,7 @@ function BuffetMenuTab({
                     id={item.id}
                     name={item.name}
                     img={item.image_url}
+                    price={item.price}
                     veg={item.is_veg}
                     special={item.is_special}
                     tags={item.tags}
