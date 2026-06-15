@@ -651,6 +651,15 @@ function ReviewsTab() {
 
 // ─── Cart Modal ───────────────────────────────────────────────────────────────
 
+// Pull the numeric per-person price out of a free-text price like "AED 850"
+function parsePrice(price: string): { currency: string; amount: number } | null {
+  if (!price) return null;
+  const amount = parseFloat(price.replace(/[^0-9.]/g, ""));
+  if (isNaN(amount)) return null;
+  const currency = (price.match(/[A-Za-z]{2,3}/) || ["AED"])[0];
+  return { currency, amount };
+}
+
 function CartModal({
   selectedTiming, allActiveItems, selectedTimingId, cartQty, onQtyChange, onClose, members, onMembersChange,
 }: {
@@ -679,6 +688,10 @@ function CartModal({
   // Extras: non-included items the user manually added
   const extrasInCart  = allAnnotated.filter((i) => !i.included && i.qty > 0);
   const totalQty = includedItems.length + extrasInCart.reduce((s, i) => s + i.qty, 0);
+
+  // Per-person price × party size = live total
+  const perPerson = selectedTiming ? parsePrice(selectedTiming.price) : null;
+  const total = perPerson ? perPerson.amount * members : null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
@@ -786,6 +799,21 @@ function CartModal({
 
         {/* Footer CTA */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
+          {/* Live total — per-person price × party size */}
+          {total !== null && perPerson && (
+            <div className="flex items-end justify-between mb-3">
+              <div>
+                <p className="text-[11px] text-gray-400">
+                  {perPerson.currency} {perPerson.amount} / person × {members} {members === 1 ? "person" : "people"}
+                </p>
+                <p className="text-[11px] text-gray-500 font-semibold">Estimated Total</p>
+              </div>
+              <p className="text-xl font-extrabold text-orange-500 leading-none">
+                {perPerson.currency} {total.toLocaleString()}
+              </p>
+            </div>
+          )}
+
           <Link
             href="/book-table"
             onClick={onClose}
@@ -933,6 +961,14 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
     .reduce((sum, i) => sum + (cartQty[i.id] ?? 0), 0);
 
   const totalCartItems = includedCount + extraQty;
+
+  // Live total for the cart bars: per-person price × party size
+  const barPerPerson = selectedTiming ? parsePrice(selectedTiming.price) : null;
+  const barPriceText = selectedTiming
+    ? barPerPerson
+      ? `${barPerPerson.currency} ${(barPerPerson.amount * members).toLocaleString()} · ${members} ${members === 1 ? "person" : "people"}`
+      : `${selectedTiming.price} ${selectedTiming.price_label}`
+    : "No session selected";
 
   return (
     <>
@@ -1082,7 +1118,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
           <div>
             <p className="text-xs text-gray-500 leading-none">{totalCartItems} item{totalCartItems !== 1 ? "s" : ""}</p>
             <p className="text-sm font-extrabold text-gray-900 leading-tight">
-              {selectedTiming ? `${selectedTiming.price} ${selectedTiming.price_label}` : "No session selected"}
+              {barPriceText}
             </p>
           </div>
           <button onClick={() => setCartOpen(true)} className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
@@ -1097,7 +1133,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
           <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
           <span>
             {totalCartItems} item{totalCartItems !== 1 ? "s" : ""}
-            {selectedTiming ? ` · ${selectedTiming.price} ${selectedTiming.price_label}` : ""}
+            {selectedTiming ? ` · ${barPriceText}` : ""}
           </span>
           <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>View Cart</span>
         </button>
