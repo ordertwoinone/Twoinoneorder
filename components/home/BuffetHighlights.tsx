@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Tag, Heart, ArrowRight } from "lucide-react";
+import { Star, Tag, Heart } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 interface Highlight {
@@ -35,13 +35,6 @@ export default async function BuffetHighlights() {
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Buffet Highlights</h2>
-          <Link
-            href="/restaurant/buffet"
-            className="flex items-center gap-1 text-xs font-bold"
-            style={{ color: "#ea580c" }}
-          >
-            View All <ArrowRight size={13} />
-          </Link>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

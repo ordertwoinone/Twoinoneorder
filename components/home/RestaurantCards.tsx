@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Star, Clock, ArrowRight } from "lucide-react";
+import { Star, Clock } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 const BADGE_STYLE: Record<string, { bg: string; text: string }> = {
@@ -46,13 +46,6 @@ export default async function RestaurantCards() {
             <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Our Restaurants</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">Tap to order · Fast delivery across UAE</p>
           </div>
-          <a
-            href="#restaurants"
-            className="flex items-center gap-1 text-xs font-bold"
-            style={{ color: "#ea580c" }}
-          >
-            View All <ArrowRight size={13} />
-          </a>
         </div>
 
         {/* Cards */}
