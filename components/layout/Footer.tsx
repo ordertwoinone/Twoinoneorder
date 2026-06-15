@@ -139,7 +139,7 @@ export default async function Footer() {
 
       {/* ── Footer Body ──────────────────────────────────────── */}
       <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8 lg:gap-10">
 
           {/* Brand */}
           <div className="col-span-2 sm:col-span-2 lg:col-span-1">
@@ -216,7 +216,7 @@ export default async function Footer() {
           </div>
 
           {/* Contact */}
-          <div>
+          <div className="col-span-2 sm:col-span-2 lg:col-span-1 border-t border-gray-100 pt-6 lg:border-t-0 lg:pt-0">
             <h4 className="text-gray-900 font-bold text-sm mb-4">Contact</h4>
             <ul className="space-y-3">
               <li className="flex items-start gap-2.5 text-[13px] text-gray-500">
@@ -246,7 +246,7 @@ export default async function Footer() {
             </ul>
 
             {/* Newsletter mini */}
-            <div className="mt-5">
+            <div className="mt-5 max-w-sm">
               <p className="text-[12px] text-gray-400 mb-2">Get updates &amp; offers</p>
               <a
                 href={`mailto:${social?.email || "hello@twoinoneae.com"}?subject=Subscribe me to updates`}
