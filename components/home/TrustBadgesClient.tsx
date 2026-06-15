@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface Badge {
@@ -44,7 +45,10 @@ const BADGES: Badge[] = [
 
 export default function TrustBadgesClient({ phone }: { phone: string }) {
   const [active, setActive] = useState<Badge | null>(null);
+  const [mounted, setMounted] = useState(false);
   const telHref = `tel:${phone.replace(/\s+/g, "")}`;
+
+  useEffect(() => setMounted(true), []);
 
   return (
     <section className="py-5">
@@ -78,10 +82,10 @@ export default function TrustBadgesClient({ phone }: { phone: string }) {
         </div>
       </div>
 
-      {/* Detail popup */}
-      {active && (
+      {/* Detail popup — portaled to body so it escapes the section's transform */}
+      {active && mounted && createPortal(
         <div
-          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4"
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4"
           onClick={() => setActive(null)}
         >
           <div
@@ -111,7 +115,8 @@ export default function TrustBadgesClient({ phone }: { phone: string }) {
               Got it
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </section>
   );
