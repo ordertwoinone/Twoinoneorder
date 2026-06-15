@@ -82,7 +82,7 @@ export default async function HomepageCards() {
 
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">
-            Now Open on Campus
+            More Ways to Enjoy
           </h2>
         </div>
 
