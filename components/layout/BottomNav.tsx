@@ -8,7 +8,7 @@ const ITEMS = [
   { icon: Tag, label: "Offers", href: "/offers" },
   { icon: CalendarCheck, label: "Book Table", href: "/book-table", primary: true },
   { icon: Heart, label: "Favourites", href: "#" },
-  { icon: User, label: "Account", href: "#" },
+  { icon: User, label: "Account", href: "/account" },
 ];
 
 export default function BottomNav() {
