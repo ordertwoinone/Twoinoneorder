@@ -69,10 +69,10 @@ export default async function Footer() {
 
       {/* ── Footer Body ──────────────────────────────────────── */}
       <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex flex-col items-center text-center">
+        <div className="flex flex-col items-center text-left">
 
           {/* Brand */}
-          <div className="flex flex-col items-center w-full max-w-xs pb-7 mb-7 border-b border-gray-100">
+          <div className="flex flex-col items-start w-full max-w-xs pb-7 mb-7 border-b border-gray-100">
             <Image
               src="/logos/two-in-one.png"
               alt="Two In One"
@@ -84,7 +84,7 @@ export default async function Footer() {
               Your one-stop platform for the best food delivery across UAE.
               4 restaurants, one destination.
             </p>
-            <div className="flex gap-2 flex-wrap justify-center">
+            <div className="flex gap-2 flex-wrap">
               {socialLinks.map(({ href, icon, label }) => (
                 <a
                   key={label}
@@ -124,7 +124,7 @@ export default async function Footer() {
             <div>
               <h4 className="text-gray-900 font-bold text-sm mb-4">Contact</h4>
               <ul className="space-y-3">
-                <li className="flex items-start justify-center gap-2 text-[13px] text-gray-500">
+                <li className="flex items-start gap-2 text-[13px] text-gray-500">
                   <MapPin size={13} className="text-orange-400 mt-0.5 shrink-0" />
                   {social?.address
                     ? `${social.address}${social.city ? `, ${social.city}` : ""}`
@@ -133,7 +133,7 @@ export default async function Footer() {
                 <li>
                   <a
                     href={`tel:${social?.phone || "+971522305216"}`}
-                    className="flex items-center justify-center gap-2 text-[13px] text-gray-500 hover:text-orange-500 transition-colors"
+                    className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-orange-500 transition-colors"
                   >
                     <Phone size={13} className="text-orange-400 shrink-0" />
                     {social?.phone || "+971 52 230 5216"}
@@ -142,7 +142,7 @@ export default async function Footer() {
                 <li>
                   <a
                     href={`mailto:${social?.email || "hello@twoinoneae.com"}`}
-                    className="flex items-center justify-center gap-2 text-[13px] text-gray-500 hover:text-orange-500 transition-colors break-all"
+                    className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-orange-500 transition-colors break-all"
                   >
                     <Mail size={13} className="text-orange-400 shrink-0" />
                     {social?.email || "hello@twoinoneae.com"}
