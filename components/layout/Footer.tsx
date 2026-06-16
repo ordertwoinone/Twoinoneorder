@@ -69,7 +69,9 @@ export default async function Footer() {
 
       {/* ── Footer Body ──────────────────────────────────────── */}
       <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex flex-col items-center text-left">
+
+        {/* ░░ Mobile (< sm): centered block, text left-aligned, no Quick Links ░░ */}
+        <div className="flex flex-col items-center text-left sm:hidden">
 
           {/* Brand */}
           <div className="flex flex-col items-start w-full max-w-xs pb-7 mb-7 border-b border-gray-100">
@@ -101,7 +103,7 @@ export default async function Footer() {
           </div>
 
           {/* Restaurants + Contact — one centered row */}
-          <div className="grid grid-cols-2 gap-10 sm:gap-20 w-full max-w-md">
+          <div className="grid grid-cols-2 gap-10 w-full max-w-md">
 
             {/* Restaurants */}
             <div>
@@ -165,6 +167,128 @@ export default async function Footer() {
                 <ArrowUpRight size={12} className="text-white" />
               </span>
             </a>
+          </div>
+
+        </div>
+
+        {/* ░░ Tablet & desktop (≥ sm): classic 4-column layout with Quick Links ░░ */}
+        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8 lg:gap-10">
+
+          {/* Brand */}
+          <div className="col-span-2 lg:col-span-1">
+            <div className="mb-3">
+              <Image
+                src="/logos/two-in-one.png"
+                alt="Two In One"
+                width={100}
+                height={40}
+                className="object-contain"
+              />
+            </div>
+            <p className="text-gray-500 text-[13px] leading-relaxed mb-5">
+              Your one-stop platform for the best food delivery across UAE.
+              4 restaurants, one destination.
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {socialLinks.map(({ href, icon, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-500 transition-colors"
+                >
+                  {icon}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* Restaurants */}
+          <div>
+            <h4 className="text-gray-900 font-bold text-sm mb-4">Restaurants</h4>
+            <ul className="space-y-2.5">
+              {restaurants.map((r) => (
+                <li key={r.id}>
+                  <a
+                    href={r.url}
+                    className="text-[13px] text-gray-500 hover:text-orange-500 transition-colors"
+                  >
+                    {r.name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h4 className="text-gray-900 font-bold text-sm mb-4">Quick Links</h4>
+            <ul className="space-y-2.5">
+              {[
+                { label: "Home",            href: "/"                            },
+                { label: "Offers",          href: "/offers"                      },
+                { label: "Book a Table",    href: "/book-table"                  },
+                { label: "Catering",        href: "/catering"                    },
+                { label: "University Kalba", href: "/restaurant/university-kalba" },
+                { label: "Buffet Menu",     href: "/restaurant/buffet"           },
+              ].map((l) => (
+                <li key={l.label}>
+                  <Link
+                    href={l.href}
+                    className="text-[13px] text-gray-500 hover:text-orange-500 transition-colors"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div className="col-span-2 lg:col-span-1 border-t border-gray-100 pt-6 lg:border-t-0 lg:pt-0">
+            <h4 className="text-gray-900 font-bold text-sm mb-4">Contact</h4>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-2.5 text-[13px] text-gray-500">
+                <MapPin size={13} className="text-orange-400 mt-0.5 shrink-0" />
+                {social?.address
+                  ? `${social.address}${social.city ? `, ${social.city}` : ""}`
+                  : "Dubai, United Arab Emirates"}
+              </li>
+              <li>
+                <a
+                  href={`tel:${social?.phone || "+971522305216"}`}
+                  className="flex items-center gap-2.5 text-[13px] text-gray-500 hover:text-orange-500 transition-colors"
+                >
+                  <Phone size={13} className="text-orange-400 shrink-0" />
+                  {social?.phone || "+971 52 230 5216"}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`mailto:${social?.email || "hello@twoinoneae.com"}`}
+                  className="flex items-center gap-2.5 text-[13px] text-gray-500 hover:text-orange-500 transition-colors"
+                >
+                  <Mail size={13} className="text-orange-400 shrink-0" />
+                  {social?.email || "hello@twoinoneae.com"}
+                </a>
+              </li>
+            </ul>
+
+            {/* Newsletter mini */}
+            <div className="mt-5 max-w-sm">
+              <p className="text-[12px] text-gray-400 mb-2">Get updates &amp; offers</p>
+              <a
+                href={`mailto:${social?.email || "hello@twoinoneae.com"}?subject=Subscribe me to updates`}
+                className="flex items-center justify-between gap-2 border border-gray-200 rounded-full px-3 py-2 hover:border-orange-300 transition-colors group"
+              >
+                <span className="text-[12px] text-gray-400">Enter your email…</span>
+                <span className="w-7 h-7 rounded-full bg-gray-900 group-hover:bg-orange-500 flex items-center justify-center transition-colors">
+                  <ArrowUpRight size={12} className="text-white" />
+                </span>
+              </a>
+            </div>
           </div>
 
         </div>
