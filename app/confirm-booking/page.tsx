@@ -1,7 +1,13 @@
+import type { Metadata } from 'next'
 import ConfirmBookingClient from './ConfirmBookingClient'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Confirm Booking',
+  robots: { index: false, follow: false },
+}
 
 async function getWhatsApp(): Promise<string> {
   const { data } = await supabaseAdmin

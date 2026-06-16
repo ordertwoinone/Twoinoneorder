@@ -1,10 +1,41 @@
+import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import BuffetContent from "./BuffetContent";
+import JsonLd from "@/components/seo/JsonLd";
+import { SITE_URL, restaurantSchema, breadcrumbSchema } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export const revalidate = 60;
+
+export const metadata: Metadata = {
+  title: "Buffet Restaurant — All-You-Can-Eat in Kalba",
+  description:
+    "Enjoy the Two In One buffet near University City, Kalba — fresh dishes, great variety and value for money. See timings, popular dishes and the full buffet menu.",
+  alternates: { canonical: "/restaurant/buffet" },
+  openGraph: {
+    title: "Two In One Buffet — All-You-Can-Eat in Kalba",
+    description:
+      "Fresh dishes, great variety and value for money at the Two In One buffet near University City, Kalba.",
+    url: `${SITE_URL}/restaurant/buffet`,
+    type: "website",
+  },
+};
+
+const buffetSchema = restaurantSchema({
+  name: "Two In One Buffet",
+  description:
+    "All-you-can-eat buffet near University City, Kalba — fresh dishes, great variety and value for money.",
+  url: `${SITE_URL}/restaurant/buffet`,
+  servesCuisine: ["Buffet", "Arabic", "Indian", "International"],
+  menuUrl: `${SITE_URL}/restaurant/buffet`,
+});
+
+const buffetBreadcrumb = breadcrumbSchema([
+  { name: "Home", path: "/" },
+  { name: "Buffet", path: "/restaurant/buffet" },
+]);
 
 async function getBuffetData() {
   const [heroRes, bannersRes, featuresRes, timingsRes, dishesRes, sectionsRes] = await Promise.all([
@@ -50,6 +81,7 @@ export default async function BuffetPage() {
 
   return (
     <>
+      <JsonLd data={[buffetSchema, buffetBreadcrumb]} />
       <Navbar className="hidden sm:block" />
       <main className="bg-white pb-24 sm:pb-0">
         <BuffetContent

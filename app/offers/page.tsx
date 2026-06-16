@@ -10,9 +10,10 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: "Offers & Deals — Two In One UAE",
+  title: "Offers & Deals",
   description:
     "Discover the latest offers, discounts and deals across all four Two In One restaurants in the UAE.",
+  alternates: { canonical: "/offers" },
 };
 
 interface Offer {

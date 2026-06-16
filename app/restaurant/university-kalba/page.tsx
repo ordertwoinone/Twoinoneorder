@@ -4,6 +4,8 @@ import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import JsonLd from "@/components/seo/JsonLd";
+import { SITE_URL, restaurantSchema, breadcrumbSchema } from "@/lib/seo";
 import KalbaContent from "./KalbaContent";
 import type {
   KalbaHero,
@@ -90,16 +92,44 @@ async function getKalbaData() {
 }
 
 export const metadata: Metadata = {
-  title: "Two in One University Kalba — Made for Students, Loved by Everyone",
+  title: "University Kalba — Made for Students, Loved by Everyone",
   description:
     "Two in One near University of Kalba. Student-friendly prices, breakfast from AED 5, lunch combos, free WiFi and daily deals. Open 7 AM – 12 AM.",
+  alternates: { canonical: "/restaurant/university-kalba" },
+  openGraph: {
+    title: "Two in One University Kalba — Made for Students, Loved by Everyone",
+    description:
+      "Student-friendly prices, breakfast from AED 5, lunch combos, free WiFi and daily deals near University of Kalba.",
+    url: `${SITE_URL}/restaurant/university-kalba`,
+    type: "website",
+  },
 };
 
 export default async function UniversityKalbaPage() {
   const data = await getKalbaData();
 
+  const kalbaSchema = restaurantSchema({
+    name: data.hero.name || "Two in One University Kalba",
+    description:
+      "Student-friendly café & restaurant near University of Kalba — breakfast from AED 5, lunch combos, free WiFi and daily deals.",
+    url: `${SITE_URL}/restaurant/university-kalba`,
+    servesCuisine: ["Karak", "Breakfast", "Burgers", "Beverages", "Snacks"],
+    openingHours: "Mo-Su 07:00-00:00",
+    acceptsReservations: true,
+    menuUrl: `${SITE_URL}/restaurant/university-kalba/menu`,
+    ...(data.hero.rating
+      ? { rating: { value: data.hero.rating, count: data.hero.rating_count || "0" } }
+      : {}),
+  });
+
+  const kalbaBreadcrumb = breadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: "University Kalba", path: "/restaurant/university-kalba" },
+  ]);
+
   return (
     <>
+      <JsonLd data={[kalbaSchema, kalbaBreadcrumb]} />
       <Navbar />
       <main className="bg-white pb-24 sm:pb-0">
         <KalbaContent {...data} />

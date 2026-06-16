@@ -5,6 +5,8 @@ import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import JsonLd from "@/components/seo/JsonLd";
+import { breadcrumbSchema } from "@/lib/seo";
 import MenuContent from "./MenuContent";
 import type { KalbaPopularItem, KalbaCategory, KalbaHero } from "../KalbaContent";
 
@@ -38,16 +40,24 @@ async function getMenuData() {
 }
 
 export const metadata: Metadata = {
-  title: "Full Menu — Two in One University Kalba",
+  title: "University Kalba — Full Menu",
   description:
     "Browse the full menu at Two in One University Kalba. Student-friendly prices, fresh food made to order.",
+  alternates: { canonical: "/restaurant/university-kalba/menu" },
 };
+
+const menuBreadcrumb = breadcrumbSchema([
+  { name: "Home", path: "/" },
+  { name: "University Kalba", path: "/restaurant/university-kalba" },
+  { name: "Menu", path: "/restaurant/university-kalba/menu" },
+]);
 
 export default async function KalbaMenuPage() {
   const { hero, categories, popular } = await getMenuData();
 
   return (
     <>
+      <JsonLd data={menuBreadcrumb} />
       <Navbar />
       <main className="bg-white min-h-screen pb-24 sm:pb-0">
         <Suspense fallback={<div className="min-h-screen" />}>

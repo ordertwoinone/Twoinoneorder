@@ -6,8 +6,9 @@ import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import AccountClient from "./AccountClient";
 
 export const metadata: Metadata = {
-  title: "My Account — Two In One UAE",
+  title: "My Account",
   description: "Sign in to manage your Two In One account, orders and favourites.",
+  robots: { index: false, follow: false },
 };
 
 export default function AccountPage() {

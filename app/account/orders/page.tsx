@@ -5,7 +5,10 @@ import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import OrdersClient from "./OrdersClient";
 
-export const metadata: Metadata = { title: "My Orders — Two In One UAE" };
+export const metadata: Metadata = {
+  title: "My Orders",
+  robots: { index: false, follow: false },
+};
 
 export default function OrdersPage() {
   return (

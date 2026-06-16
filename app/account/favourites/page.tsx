@@ -5,7 +5,10 @@ import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import FavouritesClient from "./FavouritesClient";
 
-export const metadata: Metadata = { title: "Favourites — Two In One UAE" };
+export const metadata: Metadata = {
+  title: "Favourites",
+  robots: { index: false, follow: false },
+};
 
 export default function FavouritesPage() {
   return (

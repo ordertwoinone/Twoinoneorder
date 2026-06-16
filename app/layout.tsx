@@ -3,6 +3,8 @@ import { Inter, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
+import JsonLd from "@/components/seo/JsonLd";
+import { SITE_URL, organizationSchema, webSiteSchema } from "@/lib/seo";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const dancing = Dancing_Script({
@@ -11,8 +13,6 @@ const dancing = Dancing_Script({
   weight: ["700"],
   display: "swap",
 });
-
-const SITE_URL = "https://www.twoinoneorder.com";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { data } = await supabaseAdmin
@@ -25,30 +25,56 @@ export async function generateMetadata(): Promise<Metadata> {
   const ogImage = data?.og_image_url || undefined;
   const favicon = data?.favicon_url || "/two-in-one.ico";
 
+  const defaultTitle = `${siteName} — Order Food, Buffet, Catering & Table Booking in Kalba`;
+  const description = `Order karak, falafel, snacks & bakery, enjoy the buffet, book a table or arrange catering near University City, Kalba. ${tagline}`;
+
   return {
     metadataBase: new URL(SITE_URL),
-    title: `${siteName} — Food Delivery Platform`,
-    description: `Order from UAE's top restaurants. ${tagline}`,
-    keywords: "food delivery UAE, karak Dubai, falafel Dubai, catering UAE",
-    alternates: {
-      canonical: SITE_URL,
+    title: {
+      default: defaultTitle,
+      template: `%s | ${siteName}`,
     },
-    icons: {
-      icon: favicon,
-      shortcut: favicon,
+    description,
+    applicationName: siteName,
+    keywords: [
+      "Two In One",
+      "Two In One Kalba",
+      "restaurants University City Kalba",
+      "food delivery Kalba",
+      "buffet Kalba Sharjah",
+      "karak near me",
+      "falafel Kalba",
+      "catering Sharjah UAE",
+      "book a table Kalba",
+      "student deals Kalba",
+    ],
+    alternates: { canonical: "/" },
+    icons: { icon: favicon, shortcut: favicon, apple: favicon },
+    formatDetection: { telephone: true, email: true, address: true },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
     openGraph: {
-      title: siteName,
-      description: tagline,
+      title: defaultTitle,
+      description,
       type: "website",
       url: SITE_URL,
       siteName,
-      ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630 }] }),
+      locale: "en_AE",
+      ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630, alt: siteName }] }),
     },
     twitter: {
       card: "summary_large_image",
-      title: siteName,
-      description: tagline,
+      title: defaultTitle,
+      description,
       ...(ogImage && { images: [ogImage] }),
     },
   };
@@ -56,7 +82,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+async function getSameAs(): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("facebook_url, instagram_url, twitter_url, tiktok_url")
+    .single();
+  return [data?.facebook_url, data?.instagram_url, data?.twitter_url, data?.tiktok_url].filter(
+    Boolean,
+  ) as string[];
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const sameAs = await getSameAs();
+
   return (
     <html lang="en" className="scroll-smooth">
       <head>
@@ -69,6 +107,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <link rel="dns-prefetch" href={supabaseOrigin} />
           </>
         )}
+        <JsonLd data={[organizationSchema(sameAs), webSiteSchema()]} />
       </head>
       <body className={`${inter.className} ${dancing.variable} antialiased`}>
         <FavoritesProvider>{children}</FavoritesProvider>

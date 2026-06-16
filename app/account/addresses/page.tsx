@@ -5,7 +5,10 @@ import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import AddressesClient from "./AddressesClient";
 
-export const metadata: Metadata = { title: "Saved Addresses — Two In One UAE" };
+export const metadata: Metadata = {
+  title: "Saved Addresses",
+  robots: { index: false, follow: false },
+};
 
 export default function AddressesPage() {
   return (

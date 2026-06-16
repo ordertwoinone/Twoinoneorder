@@ -8,9 +8,10 @@ import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import BookingForm from "@/components/catering/BookingForm";
 
 export const metadata: Metadata = {
-  title: "Catering Booking — Two In One UAE",
+  title: "Catering Booking",
   description:
     "Book catering for weddings, corporate events, birthdays and more. Authentic food from four restaurants delivered to your event.",
+  alternates: { canonical: "/catering" },
 };
 
 const HIGHLIGHTS = [
