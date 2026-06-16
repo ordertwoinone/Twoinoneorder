@@ -16,7 +16,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] sm:hidden">
-      <div className="flex items-end justify-around h-16 max-w-sm mx-auto px-2">
+      <div className="flex items-end h-16 max-w-md mx-auto px-1">
         {ITEMS.map((item) => {
           const active = pathname === item.href;
 
@@ -26,7 +26,7 @@ export default function BottomNav() {
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex flex-col items-center gap-1 -mt-5"
+                className="flex-1 flex flex-col items-center gap-1 -mt-5"
               >
                 <span
                   className="w-12 h-12 rounded-full flex items-center justify-center text-white border-4 border-white"
@@ -43,7 +43,7 @@ export default function BottomNav() {
             <Link
               key={item.label}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 pb-2 rounded-xl transition-colors ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-1 pb-2 transition-colors ${
                 active ? "text-orange-600" : "text-gray-400 hover:text-gray-600"
               }`}
             >
@@ -52,7 +52,7 @@ export default function BottomNav() {
                 strokeWidth={active ? 2.5 : 1.8}
                 className={active ? "text-orange-600" : ""}
               />
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[10px] font-medium whitespace-nowrap">{item.label}</span>
             </Link>
           );
         })}

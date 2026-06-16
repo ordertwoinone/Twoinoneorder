@@ -72,7 +72,7 @@ export default async function Footer() {
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8 lg:gap-10">
 
           {/* Brand */}
-          <div className="col-span-2 sm:col-span-2 lg:col-span-1">
+          <div className="col-span-2 sm:col-span-2 lg:col-span-1 pb-7 border-b border-gray-100 lg:border-0 lg:pb-0">
             <div className="mb-3">
               <Image
                 src="/logos/two-in-one.png"
@@ -196,25 +196,13 @@ export default async function Footer() {
 
       {/* ── Bottom bar ───────────────────────────────────────── */}
       <div className="border-t border-gray-100 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] text-gray-400">
-          <p>© {new Date().getFullYear()} Two In One UAE · All rights reserved</p>
-          <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col-reverse sm:flex-row items-center justify-between gap-2 text-[12px] text-gray-400">
+          <p className="text-center sm:text-left">
+            © {new Date().getFullYear()} Two In One UAE · All rights reserved
+          </p>
+          <div className="flex items-center gap-5">
             <Link href="/" className="hover:text-gray-600 transition-colors">Privacy</Link>
             <Link href="/" className="hover:text-gray-600 transition-colors">Terms</Link>
-            <div className="flex items-center gap-2 ml-2">
-              {socialLinks.slice(0, 4).map(({ href, icon, label }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className="text-gray-400 hover:text-gray-700 transition-colors"
-                >
-                  {icon}
-                </a>
-              ))}
-            </div>
           </div>
         </div>
       </div>
