@@ -1181,11 +1181,6 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
                 <span className="text-[10px] sm:text-xs text-gray-400">· Closes {h.closes_at}</span>
               </div>
             </div>
-            {h.cover_image_url && (
-              <div className="shrink-0 relative rounded-xl overflow-hidden" style={{ width: "clamp(88px, 22vw, 280px)", height: "clamp(68px, 14vw, 148px)" }}>
-                <img src={h.cover_image_url} alt="Buffet food" className="absolute inset-0 w-full h-full object-cover" />
-              </div>
-            )}
           </div>
 
           <div className="mt-3 sm:mt-4 max-w-xs sm:max-w-sm relative">
