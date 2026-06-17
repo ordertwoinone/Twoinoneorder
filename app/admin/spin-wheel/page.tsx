@@ -427,25 +427,40 @@ export default function SpinWheelAdmin() {
                     )}
                   </div>
                   <p className="text-[10.5px] text-gray-400 mt-0.5">
-                    weight {s.weight} · ~{odds}% chance
+                    ~{odds}% chance to land here
                     {s.is_winning && (
                       <> · won {s.times_won}{s.usage_limit > 0 ? `/${s.usage_limit}` : ""}</>
                     )}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2.5 shrink-0">
+                  {/* Win chance (relative weight) — applies to every slice */}
+                  <label className="flex flex-col items-center" title="Win chance — a higher weight lands more often. Set 0 so it never lands here.">
+                    <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">Chance</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={s.weight}
+                      onChange={(e) => setSegmentLocal(s.id, { weight: Math.max(0, parseInt(e.target.value) || 0) })}
+                      onBlur={(e) => patchSegment(s.id, { weight: Math.max(0, parseInt(e.target.value) || 0) })}
+                      className="w-14 px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                  </label>
+
                   {/* Per-slice win limit (winning slices only) */}
                   {s.is_winning && (
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        value={s.usage_limit}
-                        title="Win limit (0 = unlimited)"
-                        onChange={(e) => setSegmentLocal(s.id, { usage_limit: Math.max(0, parseInt(e.target.value) || 0) })}
-                        onBlur={(e) => patchSegment(s.id, { usage_limit: Math.max(0, parseInt(e.target.value) || 0) })}
-                        className="w-16 px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
-                      />
+                    <div className="flex items-end gap-1.5">
+                      <label className="flex flex-col items-center" title="Win limit (0 = unlimited)">
+                        <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide leading-none mb-1">Limit</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={s.usage_limit}
+                          onChange={(e) => setSegmentLocal(s.id, { usage_limit: Math.max(0, parseInt(e.target.value) || 0) })}
+                          onBlur={(e) => patchSegment(s.id, { usage_limit: Math.max(0, parseInt(e.target.value) || 0) })}
+                          className="w-14 px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                      </label>
                       {s.times_won > 0 && (
                         <button onClick={() => { if (confirm("Reset the won count for this slice?")) patchSegment(s.id, { times_won: 0 }); }} className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center" title="Reset won count">
                           <RefreshCw size={13} className="text-gray-400" />
