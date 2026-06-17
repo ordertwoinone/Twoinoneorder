@@ -2,6 +2,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import WhatsAppButton from "@/components/layout/WhatsAppButton";
+import SpinWheel from "@/components/home/SpinWheel";
 import SearchBar from "@/components/home/SearchBar";
 import HeroBanner from "@/components/home/HeroBanner";
 import RestaurantCards from "@/components/home/RestaurantCards";
@@ -61,6 +62,7 @@ export default async function HomePage() {
       </main>
       <BottomNav />
       <WhatsAppButton />
+      <SpinWheel />
     </>
   );
 }
