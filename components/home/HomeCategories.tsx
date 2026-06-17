@@ -56,8 +56,13 @@ export default async function HomeCategories() {
           What are you craving?
         </h2>
 
-        {/* Single scrollable row on mobile → full 10-per-row grid on md+ */}
-        <div className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-10 md:gap-3 md:overflow-visible">
+        {/* Mobile: horizontal scroll. md+: columns adapt to the number of
+            active categories so the cards always fill the full width with no
+            blank gaps after items are removed. */}
+        <div
+          className="flex gap-3 overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:grid md:[grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] md:gap-3 md:overflow-visible"
+          style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
+        >
           {categories.map((cat) => {
             const imgSrc = cat.image_url
               || FALLBACK.find((f) => f.name === cat.name)?.image_url

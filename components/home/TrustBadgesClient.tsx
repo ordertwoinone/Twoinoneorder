@@ -4,46 +4,15 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
-interface Badge {
+export interface Badge {
   emoji: string;
   title: string;
-  desc: string;
+  subtitle: string;
   detail: string;
-  call?: boolean;
+  is_call?: boolean;
 }
 
-const BADGES: Badge[] = [
-  {
-    emoji: "🛵",
-    title: "Fast Delivery",
-    desc: "15–40 min",
-    detail:
-      "Your food arrives hot and fresh in 15–40 minutes across the UAE. We work with reliable riders so your order reaches you quickly, every time.",
-  },
-  {
-    emoji: "🛡️",
-    title: "Safe & Secure",
-    desc: "Payments",
-    detail:
-      "Every payment is processed through secure, encrypted channels. Your personal and payment details are protected and never shared with third parties.",
-  },
-  {
-    emoji: "🌿",
-    title: "Fresh",
-    desc: "Ingredients",
-    detail:
-      "We cook with fresh, high-quality ingredients prepared daily by our chefs across all four restaurants — no shortcuts, just great food.",
-  },
-  {
-    emoji: "🎧",
-    title: "Live Support",
-    desc: "24/7",
-    detail: "Need help? Our team is available around the clock. Tap to call us now.",
-    call: true,
-  },
-];
-
-export default function TrustBadgesClient({ phone }: { phone: string }) {
+export default function TrustBadgesClient({ phone, badges }: { phone: string; badges: Badge[] }) {
   const [active, setActive] = useState<Badge | null>(null);
   const [mounted, setMounted] = useState(false);
   const telHref = `tel:${phone.replace(/\s+/g, "")}`;
@@ -53,9 +22,9 @@ export default function TrustBadgesClient({ phone }: { phone: string }) {
   return (
     <section className="py-5">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-4 gap-3">
-          {BADGES.map((b) =>
-            b.call ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {badges.map((b) =>
+            b.is_call ? (
               <a
                 key={b.title}
                 href={telHref}
@@ -64,7 +33,7 @@ export default function TrustBadgesClient({ phone }: { phone: string }) {
               >
                 <span className="text-2xl sm:text-3xl mb-2">{b.emoji}</span>
                 <p className="text-[11px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
-                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.desc}</p>
+                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.subtitle}</p>
               </a>
             ) : (
               <button
@@ -75,7 +44,7 @@ export default function TrustBadgesClient({ phone }: { phone: string }) {
               >
                 <span className="text-2xl sm:text-3xl mb-2">{b.emoji}</span>
                 <p className="text-[11px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
-                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.desc}</p>
+                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.subtitle}</p>
               </button>
             )
           )}
@@ -104,7 +73,7 @@ export default function TrustBadgesClient({ phone }: { phone: string }) {
               {active.emoji}
             </div>
             <h3 className="text-lg font-extrabold text-gray-900 mb-1">{active.title}</h3>
-            <p className="text-[12px] font-semibold text-orange-500 uppercase tracking-wide mb-3">{active.desc}</p>
+            <p className="text-[12px] font-semibold text-orange-500 uppercase tracking-wide mb-3">{active.subtitle}</p>
             <p className="text-[13px] text-gray-500 leading-relaxed">{active.detail}</p>
 
             <button
