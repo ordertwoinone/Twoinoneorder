@@ -119,7 +119,7 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
       onMouseLeave={() => setPaused(false)}
     >
       {external ? (
-        <a href={href} target="_blank" rel="noopener noreferrer" className="flex flex-col h-full">
+        <a href={href} className="flex flex-col h-full">
           {inner}
         </a>
       ) : (
