@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   Store, LogOut, LayoutDashboard, Image as ImageIcon, Tag, Settings,
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
-  BookOpen, List, CalendarCheck, Sparkles, GraduationCap, Info, Grid3x3,
+  BookOpen, List, CalendarCheck, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
   Disc3,
 } from "lucide-react";
@@ -29,7 +29,6 @@ const NAV: NavItem[] = [
       { label: "Hero Banners",      href: "/admin/banners",           icon: ImageIcon   },
       { label: "Categories",       href: "/admin/home-categories",   icon: LayoutGrid  },
       { label: "Offers",            href: "/admin/offers",            icon: Tag         },
-      { label: "Buffet Highlights", href: "/admin/buffet-highlights", icon: Sparkles    },
       { label: "Campus Promo",     href: "/admin/campus-promo",     icon: MapPin      },
       { label: "Quick Link Cards", href: "/admin/homepage-cards",   icon: LayoutGrid  },
     ],

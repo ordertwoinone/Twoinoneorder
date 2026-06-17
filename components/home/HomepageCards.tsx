@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import BuffetSlideCard, { BuffetItem } from "./BuffetSlideCard";
+import OfferSlideCard, { OfferItem } from "./OfferSlideCard";
 
 interface HomepageCard {
   id: string;
@@ -73,20 +73,20 @@ async function getCards(): Promise<HomepageCard[]> {
   return data;
 }
 
-async function getBuffetItems(): Promise<BuffetItem[]> {
+async function getOffers(): Promise<OfferItem[]> {
   const { data } = await supabaseAdmin
-    .from("buffet_highlights")
-    .select("id, name, cuisine, price, rating, image_url, href")
+    .from("offers")
+    .select("id, badge_text, badge_color, title, subtitle, cta_text, cta_href, image_url")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   return data || [];
 }
 
 export default async function HomepageCards() {
-  const [cards, buffet] = await Promise.all([getCards(), getBuffetItems()]);
+  const [cards, offers] = await Promise.all([getCards(), getOffers()]);
   if (cards.length === 0) return null;
 
-  const hasBuffet = buffet.length > 0;
+  const hasOffers = offers.length > 0;
 
   return (
     <section className="py-4">
@@ -98,7 +98,7 @@ export default async function HomepageCards() {
           </h2>
         </div>
 
-        <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${hasBuffet ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+        <div className={`grid grid-cols-2 gap-3 sm:gap-4 items-start ${hasOffers ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
           {cards.map((card) => {
             const isExternal = card.href?.startsWith("http");
 
@@ -189,8 +189,8 @@ export default async function HomepageCards() {
             );
           })}
 
-          {/* 4th position — rotating Buffet Highlights slideshow */}
-          {hasBuffet && <BuffetSlideCard items={buffet} />}
+          {/* 4th position — rotating Special Offers slideshow */}
+          {hasOffers && <OfferSlideCard items={offers} />}
         </div>
 
       </div>

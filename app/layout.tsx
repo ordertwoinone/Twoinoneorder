@@ -4,6 +4,7 @@ import "./globals.css";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
 import JsonLd from "@/components/seo/JsonLd";
+import TrackingScripts from "@/components/seo/TrackingScripts";
 import { SITE_URL, organizationSchema, webSiteSchema } from "@/lib/seo";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
@@ -92,8 +93,16 @@ async function getSameAs(): Promise<string[]> {
   ) as string[];
 }
 
+async function getTracking() {
+  const { data } = await supabaseAdmin
+    .from("site_settings")
+    .select("meta_pixel_id, ga_measurement_id, gtm_id, head_scripts")
+    .single();
+  return data;
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const sameAs = await getSameAs();
+  const [sameAs, tracking] = await Promise.all([getSameAs(), getTracking()]);
 
   return (
     <html lang="en" className="scroll-smooth">
@@ -110,6 +119,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <JsonLd data={[organizationSchema(sameAs), webSiteSchema()]} />
       </head>
       <body className={`${inter.className} ${dancing.variable} antialiased`}>
+        <TrackingScripts
+          metaPixelId={tracking?.meta_pixel_id}
+          gaMeasurementId={tracking?.ga_measurement_id}
+          gtmId={tracking?.gtm_id}
+          headScripts={tracking?.head_scripts}
+        />
         <FavoritesProvider>{children}</FavoritesProvider>
       </body>
     </html>

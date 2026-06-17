@@ -34,6 +34,10 @@ export default async function OffersBanner() {
     <section id="offers" className="py-4">
       <div className="max-w-7xl mx-auto px-4">
 
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Special Offers</h2>
+        </div>
+
         {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {offers.map((offer) => (

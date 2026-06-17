@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Save, Globe, Phone, MapPin, Share2, RefreshCw } from "lucide-react";
+import { Save, Globe, Phone, MapPin, Share2, RefreshCw, BarChart3 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface Settings {
@@ -20,12 +20,17 @@ interface Settings {
   country: string;
   email: string;
   phone: string;
+  meta_pixel_id: string;
+  ga_measurement_id: string;
+  gtm_id: string;
+  head_scripts: string;
 }
 
 const EMPTY: Omit<Settings, "id"> = {
   site_name: "", tagline: "", logo_url: "", favicon_url: "", og_image_url: "",
   facebook_url: "", instagram_url: "", twitter_url: "", tiktok_url: "",
   whatsapp_number: "", address: "", city: "", country: "UAE", email: "", phone: "",
+  meta_pixel_id: "", ga_measurement_id: "", gtm_id: "", head_scripts: "",
 };
 
 export default function SettingsAdmin() {
@@ -171,6 +176,31 @@ export default function SettingsAdmin() {
         <div className="grid grid-cols-2 gap-4">
           <Field label="City" value={form.city} onChange={(v) => handleField("city", v)} placeholder="Dubai" />
           <Field label="Country" value={form.country} onChange={(v) => handleField("country", v)} placeholder="UAE" />
+        </div>
+      </Section>
+
+      {/* Tracking & Analytics */}
+      <Section icon={BarChart3} title="Tracking & Analytics">
+        <p className="text-xs text-gray-400 -mt-1">
+          Paste the IDs from each platform. Tracking activates automatically once an ID is saved — leave blank to disable.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Meta (Facebook) Pixel ID" value={form.meta_pixel_id} onChange={(v) => handleField("meta_pixel_id", v)} placeholder="e.g. 123456789012345" />
+          <Field label="Google Analytics ID (GA4)" value={form.ga_measurement_id} onChange={(v) => handleField("ga_measurement_id", v)} placeholder="e.g. G-XXXXXXXXXX" />
+        </div>
+        <Field label="Google Tag Manager ID" value={form.gtm_id} onChange={(v) => handleField("gtm_id", v)} placeholder="e.g. GTM-XXXXXXX" />
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Other Tags / Custom Head Code</label>
+          <textarea
+            value={form.head_scripts || ""}
+            onChange={(e) => handleField("head_scripts", e.target.value)}
+            rows={5}
+            placeholder={"Paste any extra <script> or <meta> tags here (TikTok Pixel, Snap Pixel, site verification, etc.)"}
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 font-mono focus:outline-none focus:ring-2 focus:ring-orange-400 transition resize-y"
+          />
+          <p className="text-[11px] text-gray-400 mt-1.5">
+            Added to every page&apos;s &lt;head&gt;. Scripts run on load. Only paste code from sources you trust.
+          </p>
         </div>
       </Section>
     </div>
