@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Save, Disc3, GripVertical, Mail, Download, Settings2, RefreshCw } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Save, Disc3, GripVertical, Mail, Download, Settings2, RefreshCw, Info } from "lucide-react";
 
 interface Settings {
   id: string;
@@ -333,6 +333,25 @@ export default function SpinWheelAdmin() {
           <Plus size={15} />
           Add Slice
         </button>
+      </div>
+
+      {/* How chance & weight work */}
+      <div className="mb-4 rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Info size={15} className="text-blue-500" />
+          <h3 className="text-xs font-bold text-blue-900 uppercase tracking-wide">How chance &amp; weight work</h3>
+        </div>
+        <ul className="space-y-1.5 text-[12px] text-gray-600 leading-relaxed list-disc pl-5">
+          <li><strong>Chance</strong> is a relative weight, not a percentage. A slice&apos;s real odds = its weight ÷ the total weight of all active slices.</li>
+          <li><strong>Higher weight = lands more often.</strong> Equal weights mean equal odds.</li>
+          <li><strong>Weight 0</strong> means the wheel never lands on that slice.</li>
+          <li><strong>&ldquo;No Win&rdquo; slices use weight too</strong> — give them more weight to make winning rarer.</li>
+          <li>The <strong>~% under each slice</strong> updates live and is the true chance.</li>
+          <li>When a prize hits its <strong>Limit</strong>, it leaves the draw and the remaining odds re-balance automatically.</li>
+        </ul>
+        <p className="mt-2.5 text-[11px] text-gray-500">
+          Example: weights <strong>3, 3, 4</strong> → total 10 → odds <strong>30%, 30%, 40%</strong>.
+        </p>
       </div>
 
       {showForm && (
