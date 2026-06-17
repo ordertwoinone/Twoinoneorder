@@ -60,19 +60,26 @@ async function getBuffetData() {
       : [],
   }));
 
-  const settingsRes = await supabaseAdmin
-    .from("site_settings")
-    .select("whatsapp_number")
-    .single();
+  const [settingsRes, aboutRes, photosRes, reviewSummaryRes, reviewsRes] = await Promise.all([
+    supabaseAdmin.from("site_settings").select("whatsapp_number").single(),
+    supabaseAdmin.from("buffet_about").select("*").limit(1).single(),
+    supabaseAdmin.from("buffet_photos").select("*").eq("is_active", true).order("sort_order"),
+    supabaseAdmin.from("buffet_review_summary").select("*").limit(1).single(),
+    supabaseAdmin.from("buffet_reviews").select("*").eq("is_active", true).order("sort_order"),
+  ]);
 
   return {
-    hero:         heroRes.data    ?? null,
-    banners:      bannersRes.data ?? [],
-    features:     featuresRes.data ?? [],
-    timings:      timingsRes.data  ?? [],
-    dishes:       dishesRes.data   ?? [],
+    hero:          heroRes.data    ?? null,
+    banners:       bannersRes.data ?? [],
+    features:      featuresRes.data ?? [],
+    timings:       timingsRes.data  ?? [],
+    dishes:        dishesRes.data   ?? [],
     menuSections,
-    whatsapp:     (settingsRes.data?.whatsapp_number || "971522305216").replace(/\D/g, ""),
+    about:         aboutRes.data ?? null,
+    photos:        photosRes.data ?? [],
+    reviewSummary: reviewSummaryRes.data ?? null,
+    reviews:       reviewsRes.data ?? [],
+    whatsapp:      (settingsRes.data?.whatsapp_number || "971522305216").replace(/\D/g, ""),
   };
 }
 
@@ -91,6 +98,10 @@ export default async function BuffetPage() {
           timings={data.timings}
           dishes={data.dishes}
           menuSections={data.menuSections}
+          about={data.about}
+          photos={data.photos}
+          reviewSummary={data.reviewSummary}
+          reviews={data.reviews}
           whatsapp={data.whatsapp}
         />
       </main>

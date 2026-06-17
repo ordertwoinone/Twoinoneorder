@@ -95,14 +95,50 @@ interface MenuSectionDB {
   buffet_menu_items: MenuItemDB[];
 }
 
+interface BuffetAbout {
+  about_title: string;
+  about_text: string;
+  location: string;
+  hours: { label: string; time: string }[];
+  cuisines: string[];
+}
+
+interface BuffetPhoto {
+  id: string;
+  image_url: string;
+}
+
+interface BuffetReview {
+  id: string;
+  name: string;
+  rating: number;
+  text: string;
+  date_text: string;
+}
+
+interface BuffetReviewSummary {
+  rating: string;
+  rating_count: string;
+  tab_count: string;
+  bar5: number;
+  bar4: number;
+  bar3: number;
+  bar2: number;
+  bar1: number;
+}
+
 interface Props {
-  hero:         BuffetHero | null;
-  banners:      BuffetBanner[];
-  features:     WhyChooseFeature[];
-  timings:      BuffetTiming[];
-  dishes:       PopularDish[];
-  menuSections: MenuSectionDB[];
-  whatsapp:     string;
+  hero:          BuffetHero | null;
+  banners:       BuffetBanner[];
+  features:      WhyChooseFeature[];
+  timings:       BuffetTiming[];
+  dishes:        PopularDish[];
+  menuSections:  MenuSectionDB[];
+  about:         BuffetAbout | null;
+  photos:        BuffetPhoto[];
+  reviewSummary: BuffetReviewSummary | null;
+  reviews:       BuffetReview[];
+  whatsapp:      string;
 }
 
 // ─── Icon Map ─────────────────────────────────────────────────────────────────
@@ -123,21 +159,6 @@ const THEME_MAP = {
 };
 
 // (menu sections are now fully dynamic — loaded from DB via props)
-
-const PHOTO_URLS = [
-  "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80",
-  "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80",
-  "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&q=80",
-  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80",
-  "https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400&q=80",
-  "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&q=80",
-  "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=400&q=80",
-  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80",
-  "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=400&q=80",
-  "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80",
-  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80",
-  "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=400&q=80",
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -549,50 +570,60 @@ function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
 
 // ─── About Tab ────────────────────────────────────────────────────────────────
 
-function AboutTab() {
+function AboutTab({ about }: { about: BuffetAbout | null }) {
+  if (!about) return null;
+  const hours = Array.isArray(about.hours) ? about.hours : [];
+  const cuisines = Array.isArray(about.cuisines) ? about.cuisines : [];
   return (
     <div className="grid sm:grid-cols-2 gap-5 sm:gap-6">
       <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8">
-        <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3">About Buffet By Two In One</h3>
-        <p className="text-sm sm:text-base text-gray-500 leading-relaxed">
-          Experience the finest all-you-can-eat buffet in Kuwait. We bring together over 100 dishes
-          from around the world, freshly prepared every hour by our award-winning chefs.
+        <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3">{about.about_title}</h3>
+        <p className="text-sm sm:text-base text-gray-500 leading-relaxed whitespace-pre-line">
+          {about.about_text}
         </p>
       </div>
       <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8 space-y-3 sm:space-y-4">
         <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900">Location & Hours</h3>
-        <div className="flex items-start gap-2.5">
-          <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0 mt-0.5" />
-          <p className="text-sm sm:text-base text-gray-600">Block 7, Salmiya, Kuwait City, Kuwait</p>
-        </div>
-        <div className="flex items-start gap-2.5">
-          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0 mt-0.5" />
-          <div className="text-sm sm:text-base text-gray-600 space-y-0.5">
-            <p>Sat – Thu: 12:00 PM – 11:30 PM</p>
-            <p>Fri: 11:00 AM – 11:30 PM</p>
+        {about.location && (
+          <div className="flex items-start gap-2.5">
+            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0 mt-0.5" />
+            <p className="text-sm sm:text-base text-gray-600">{about.location}</p>
+          </div>
+        )}
+        {hours.length > 0 && (
+          <div className="flex items-start gap-2.5">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0 mt-0.5" />
+            <div className="text-sm sm:text-base text-gray-600 space-y-0.5">
+              {hours.map((h, i) => (
+                <p key={i}>{h.label}{h.label && h.time ? ": " : ""}{h.time}</p>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {cuisines.length > 0 && (
+        <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8 sm:col-span-2">
+          <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3 sm:mb-4">Cuisine Types</h3>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            {cuisines.map((c) => (
+              <span key={c} className="bg-orange-50 text-orange-600 text-xs sm:text-sm lg:text-base font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full">{c}</span>
+            ))}
           </div>
         </div>
-      </div>
-      <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8 sm:col-span-2">
-        <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3 sm:mb-4">Cuisine Types</h3>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          {["Arabic", "International", "Asian", "Mediterranean", "Indian", "Continental"].map((c) => (
-            <span key={c} className="bg-orange-50 text-orange-600 text-xs sm:text-sm lg:text-base font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full">{c}</span>
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
 // ─── Photos Tab ───────────────────────────────────────────────────────────────
 
-function PhotosTab() {
+function PhotosTab({ photos }: { photos: BuffetPhoto[] }) {
+  if (!photos.length) return <p className="text-sm text-gray-400 text-center py-10">No photos yet.</p>;
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
-      {PHOTO_URLS.map((src, i) => (
-        <div key={i} className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity">
-          <img src={src} alt={`Photo ${i + 1}`} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
+      {photos.map((p, i) => (
+        <div key={p.id} className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity">
+          <img src={p.image_url} alt={`Photo ${i + 1}`} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
         </div>
       ))}
     </div>
@@ -601,56 +632,55 @@ function PhotosTab() {
 
 // ─── Reviews Tab ─────────────────────────────────────────────────────────────
 
-function ReviewsTab() {
-  const reviews = [
-    { name: "Ahmed Al-Rashidi", rating: 5, text: "Amazing variety! The grilled salmon was outstanding.", date: "2 days ago" },
-    { name: "Sara M.",          rating: 5, text: "Best buffet in Kuwait! The dessert section alone is worth the price.", date: "5 days ago" },
-    { name: "James T.",         rating: 4, text: "Great ambience and food quality. Slightly long wait during peak hours.", date: "1 week ago" },
-    { name: "Fatima Al-K.",     rating: 5, text: "Kids loved it! The chocolate fountain is a must-try.", date: "2 weeks ago" },
-  ];
-  const bars = [72, 18, 6, 2, 2];
+function ReviewsTab({ summary, reviews }: { summary: BuffetReviewSummary | null; reviews: BuffetReview[] }) {
+  const bars = summary ? [summary.bar5, summary.bar4, summary.bar3, summary.bar2, summary.bar1] : [0, 0, 0, 0, 0];
+  const ratingNum = summary ? Math.round(parseFloat(summary.rating) || 0) : 0;
   return (
     <div className="space-y-5 sm:space-y-6">
-      <div className="flex items-center gap-8 sm:gap-12 p-5 sm:p-6 lg:p-8 rounded-2xl border border-gray-100">
-        <div className="text-center shrink-0">
-          <p className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-gray-900">4.6</p>
-          <div className="flex gap-0.5 justify-center mt-2">
-            {[1,2,3,4,5].map((i) => <Star key={i} className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${i<=4?"fill-yellow-400 text-yellow-400":"fill-gray-200 text-gray-200"}`} />)}
+      {summary && (
+        <div className="flex items-center gap-8 sm:gap-12 p-5 sm:p-6 lg:p-8 rounded-2xl border border-gray-100">
+          <div className="text-center shrink-0">
+            <p className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-gray-900">{summary.rating}</p>
+            <div className="flex gap-0.5 justify-center mt-2">
+              {[1,2,3,4,5].map((i) => <Star key={i} className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${i<=ratingNum?"fill-yellow-400 text-yellow-400":"fill-gray-200 text-gray-200"}`} />)}
+            </div>
+            <p className="text-xs sm:text-sm lg:text-base text-gray-400 mt-1.5">{summary.rating_count} ratings</p>
           </div>
-          <p className="text-xs sm:text-sm lg:text-base text-gray-400 mt-1.5">2,100+ ratings</p>
-        </div>
-        <div className="flex-1 space-y-2 sm:space-y-3">
-          {[5,4,3,2,1].map((n) => (
-            <div key={n} className="flex items-center gap-3">
-              <span className="text-xs sm:text-sm lg:text-base text-gray-400 w-3">{n}</span>
-              <div className="flex-1 h-2 sm:h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${bars[5-n]}%` }} />
+          <div className="flex-1 space-y-2 sm:space-y-3">
+            {[5,4,3,2,1].map((n) => (
+              <div key={n} className="flex items-center gap-3">
+                <span className="text-xs sm:text-sm lg:text-base text-gray-400 w-3">{n}</span>
+                <div className="flex-1 h-2 sm:h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${bars[5-n]}%` }} />
+                </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {reviews.length > 0 && (
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
+          {reviews.map((r) => (
+            <div key={r.id} className="rounded-2xl border border-gray-100 p-4 sm:p-5 lg:p-6">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                    <span className="font-extrabold text-sm sm:text-base" style={{ color: "#ea580c" }}>{r.name.charAt(0)}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">{r.name}</p>
+                    <p className="text-xs sm:text-sm text-gray-400">{r.date_text}</p>
+                  </div>
+                </div>
+                <div className="flex gap-0.5">
+                  {[1,2,3,4,5].map((i) => <Star key={i} className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i<=r.rating?"fill-yellow-400 text-yellow-400":"fill-gray-200 text-gray-200"}`} />)}
+                </div>
+              </div>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{r.text}</p>
             </div>
           ))}
         </div>
-      </div>
-      <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
-        {reviews.map((r) => (
-          <div key={r.name} className="rounded-2xl border border-gray-100 p-4 sm:p-5 lg:p-6">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                  <span className="font-extrabold text-sm sm:text-base" style={{ color: "#ea580c" }}>{r.name[0]}</span>
-                </div>
-                <div>
-                  <p className="text-sm sm:text-base font-semibold text-gray-900">{r.name}</p>
-                  <p className="text-xs sm:text-sm text-gray-400">{r.date}</p>
-                </div>
-              </div>
-              <div className="flex gap-0.5">
-                {[1,2,3,4,5].map((i) => <Star key={i} className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i<=r.rating?"fill-yellow-400 text-yellow-400":"fill-gray-200 text-gray-200"}`} />)}
-              </div>
-            </div>
-            <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{r.text}</p>
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   );
 }
@@ -1022,14 +1052,14 @@ function CartRow({ item, onQtyChange }: {
 type Tab = "overview" | "menu" | "about" | "photos" | "reviews";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview"        },
-  { id: "menu",     label: "Buffet Menu"     },
-  { id: "about",    label: "About"           },
-  { id: "reviews",  label: "Reviews (2.1K+)" },
-  { id: "photos",   label: "Photos"          },
+  { id: "overview", label: "Overview"    },
+  { id: "menu",     label: "Buffet Menu" },
+  { id: "about",    label: "About"       },
+  { id: "reviews",  label: "Reviews"     },
+  { id: "photos",   label: "Photos"      },
 ];
 
-export default function BuffetContent({ hero, banners, features, timings, dishes, menuSections, whatsapp }: Props) {
+export default function BuffetContent({ hero, banners, features, timings, dishes, menuSections, about, photos, reviewSummary, reviews, whatsapp }: Props) {
   const h = hero ?? {
     restaurant_name: "Buffet By Two In One",
     cuisine: "Buffet · International",
@@ -1238,7 +1268,9 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
                   activeTab === tab.id ? "border-orange-500 text-orange-500" : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                {tab.label}
+                {tab.id === "reviews" && reviewSummary?.tab_count
+                  ? `Reviews (${reviewSummary.tab_count})`
+                  : tab.label}
               </button>
             ))}
           </div>
@@ -1259,9 +1291,9 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
             onQtyChange={handleQtyChange}
           />
         )}
-        {activeTab === "about"    && <AboutTab />}
-        {activeTab === "photos"   && <PhotosTab />}
-        {activeTab === "reviews"  && <ReviewsTab />}
+        {activeTab === "about"    && <AboutTab about={about} />}
+        {activeTab === "photos"   && <PhotosTab photos={photos} />}
+        {activeTab === "reviews"  && <ReviewsTab summary={reviewSummary} reviews={reviews} />}
       </div>
 
       {/* Mobile cart bar */}

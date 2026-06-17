@@ -44,6 +44,9 @@ const NAV: NavItem[] = [
       { label: "Why Choose Us",   href: "/admin/buffet/why-choose-us",   icon: Star       },
       { label: "Buffet Timings",  href: "/admin/buffet/timings",         icon: Clock      },
       { label: "Popular Dishes",  href: "/admin/buffet/popular-dishes",  icon: Utensils   },
+      { label: "About Tab",       href: "/admin/buffet/about",           icon: Info       },
+      { label: "Photos Tab",      href: "/admin/buffet/photos",          icon: Images     },
+      { label: "Reviews Tab",     href: "/admin/buffet/reviews",         icon: Star       },
     ],
   },
   {
