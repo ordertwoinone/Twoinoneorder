@@ -8,7 +8,7 @@ import {
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, CalendarCheck, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
-  Disc3, ShieldCheck,
+  Disc3, ShieldCheck, Phone,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -71,6 +71,15 @@ const NAV: NavItem[] = [
       { label: "Daily Deals",     href: "/admin/kalba/deals",      icon: CalendarDays },
       { label: "Specials",        href: "/admin/kalba/specials",   icon: Gift         },
       { label: "Coupons",         href: "/admin/kalba/coupons",    icon: Percent      },
+    ],
+  },
+  {
+    label: "Contact Page",
+    icon: Phone,
+    basePath: "/admin/contact",
+    children: [
+      { label: "Banner & Details", href: "/admin/contact-details",   icon: Info   },
+      { label: "Map Locations",    href: "/admin/contact-locations", icon: MapPin },
     ],
   },
   { label: "Bookings",       href: "/admin/bookings", icon: CalendarCheck },
