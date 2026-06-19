@@ -171,7 +171,7 @@ export default function TableScene({ viewMode }: { viewMode: ViewMode }) {
         gl={{ antialias: true }}
         style={{ width: '100%', height: '100%' }}
       >
-        <color attach="background" args={['#EFE8DA']} />
+        <color attach="background" args={['#ffffff']} />
 
         <ambientLight intensity={1.1} color="#FFF6E8" />
         <directionalLight position={[10, 18, 12]} intensity={1.6} />

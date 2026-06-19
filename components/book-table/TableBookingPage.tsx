@@ -219,7 +219,7 @@ export default function TableBookingPage() {
             </div>
 
             {/* 3D Floor Plan */}
-            <div className="relative mt-3 rounded-2xl overflow-hidden bg-[#EDE5D8]" style={{ height: 'min(62vh, 580px)' }}>
+            <div className="relative mt-3 rounded-2xl overflow-hidden bg-white border border-gray-100 h-[clamp(300px,42vh,440px)] sm:h-[min(62vh,580px)]">
               <TableScene viewMode={viewMode} />
 
               {/* View mode buttons — desktop overlay only */}

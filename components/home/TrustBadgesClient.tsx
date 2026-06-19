@@ -22,13 +22,13 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
   return (
     <section className="py-5">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           {badges.map((b) =>
             b.is_call ? (
               <a
                 key={b.title}
                 href={telHref}
-                className="flex flex-col items-center text-center rounded-2xl py-4 px-2 bg-white transition-transform hover:-translate-y-0.5 active:scale-95"
+                className="flex flex-col items-center text-center rounded-2xl py-4 px-2 bg-white transition-transform hover:-translate-y-0.5 active:scale-95 w-[calc(50%-0.375rem)] sm:w-44"
                 style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}
               >
                 <span className="text-2xl sm:text-3xl mb-2">{b.emoji}</span>
@@ -39,7 +39,7 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
               <button
                 key={b.title}
                 onClick={() => setActive(b)}
-                className="flex flex-col items-center text-center rounded-2xl py-4 px-2 bg-white transition-transform hover:-translate-y-0.5 active:scale-95"
+                className="flex flex-col items-center text-center rounded-2xl py-4 px-2 bg-white transition-transform hover:-translate-y-0.5 active:scale-95 w-[calc(50%-0.375rem)] sm:w-44"
                 style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}
               >
                 <span className="text-2xl sm:text-3xl mb-2">{b.emoji}</span>
