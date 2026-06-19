@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Save, Globe, Phone, MapPin, Share2, RefreshCw, BarChart3 } from "lucide-react";
+import { Save, Globe, Phone, MapPin, Share2, RefreshCw, BarChart3, MessageSquare } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface Settings {
@@ -24,6 +24,10 @@ interface Settings {
   ga_measurement_id: string;
   gtm_id: string;
   head_scripts: string;
+  contact_heading: string;
+  contact_heading_highlight: string;
+  contact_subheading: string;
+  contact_hours: string;
 }
 
 const EMPTY: Omit<Settings, "id"> = {
@@ -31,6 +35,7 @@ const EMPTY: Omit<Settings, "id"> = {
   facebook_url: "", instagram_url: "", twitter_url: "", tiktok_url: "",
   whatsapp_number: "", address: "", city: "", country: "UAE", email: "", phone: "",
   meta_pixel_id: "", ga_measurement_id: "", gtm_id: "", head_scripts: "",
+  contact_heading: "", contact_heading_highlight: "", contact_subheading: "", contact_hours: "",
 };
 
 export default function SettingsAdmin() {
@@ -177,6 +182,29 @@ export default function SettingsAdmin() {
           <Field label="City" value={form.city} onChange={(v) => handleField("city", v)} placeholder="Dubai" />
           <Field label="Country" value={form.country} onChange={(v) => handleField("country", v)} placeholder="UAE" />
         </div>
+      </Section>
+
+      {/* Contact Page */}
+      <Section icon={MessageSquare} title="Contact Page">
+        <p className="text-xs text-gray-400 -mt-1">
+          Controls the headline and opening hours shown on the public Contact page. The call, WhatsApp,
+          email and location cards use the details from the sections above.
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Heading" value={form.contact_heading} onChange={(v) => handleField("contact_heading", v)} placeholder="We'd Love to" />
+          <Field label="Heading Highlight (orange)" value={form.contact_heading_highlight} onChange={(v) => handleField("contact_heading_highlight", v)} placeholder="Hear From You" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subheading</label>
+          <textarea
+            value={form.contact_subheading || ""}
+            onChange={(e) => handleField("contact_subheading", e.target.value)}
+            rows={3}
+            placeholder="Questions about an order, catering, or a table booking?..."
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-400 transition resize-y"
+          />
+        </div>
+        <Field label="Opening Hours" value={form.contact_hours} onChange={(v) => handleField("contact_hours", v)} placeholder="Every day · 9:00 AM – 11:00 PM" />
       </Section>
 
       {/* Tracking & Analytics */}

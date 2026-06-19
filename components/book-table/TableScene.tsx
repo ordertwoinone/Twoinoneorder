@@ -115,19 +115,34 @@ function TablePin({ table }: { table: BookTable }) {
 // ─── Camera rig ───────────────────────────────────────────────────
 
 function CameraRig({ viewMode }: { viewMode: ViewMode }) {
-  const { camera } = useThree()
+  const { camera, size } = useThree()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const controls = useRef<any>(null)
 
   useEffect(() => {
+    const persp = camera as THREE.PerspectiveCamera
+    const aspect = size.width / Math.max(size.height, 1)
+    const tanV = Math.tan((persp.fov * Math.PI) / 180 / 2)
+    const tanH = tanV * aspect
+
+    // Distance needed so the full floor plan fits both axes (smaller screens
+    // / portrait have a narrower horizontal FOV, so push the camera back).
+    const margin = 1.12
+    const distForWidth = (PLANE_W / 2) * margin / tanH
+    const distForHeight = (PLANE_H / 2) * margin / tanV
+    const dist = Math.max(distForWidth, distForHeight)
+
     if (viewMode === 'top') {
-      camera.position.set(0, 22, 0.01)
+      camera.position.set(0, dist, 0.01)
     } else {
-      camera.position.set(0, 13, 11)
+      // Keep the original angled-view direction, scaled to the fit distance.
+      const dir = new THREE.Vector3(0, 13, 11).normalize()
+      camera.position.copy(dir.multiplyScalar(dist))
     }
+    persp.updateProjectionMatrix()
     controls.current?.target.set(0, 0, 0)
     controls.current?.update()
-  }, [viewMode, camera])
+  }, [viewMode, camera, size.width, size.height])
 
   return (
     <OrbitControls
@@ -138,7 +153,7 @@ function CameraRig({ viewMode }: { viewMode: ViewMode }) {
       minPolarAngle={0}
       maxPolarAngle={Math.PI / 3.4}
       minDistance={6}
-      maxDistance={30}
+      maxDistance={70}
       enablePan={false}
       enableDamping
       dampingFactor={0.08}

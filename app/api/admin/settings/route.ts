@@ -29,6 +29,7 @@ export async function PUT(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/contact");
   return NextResponse.json(data);
 }
 

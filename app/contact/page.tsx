@@ -15,7 +15,9 @@ export const metadata: Metadata = {
 async function getSettings() {
   const { data } = await supabaseAdmin
     .from("site_settings")
-    .select("facebook_url, instagram_url, twitter_url, tiktok_url, whatsapp_number, phone, email, address, city")
+    .select(
+      "whatsapp_number, phone, email, address, city, contact_heading, contact_heading_highlight, contact_subheading, contact_hours"
+    )
     .single();
   return data;
 }
@@ -29,6 +31,13 @@ export default async function ContactPage() {
   const address = settings?.address
     ? `${settings.address}${settings.city ? `, ${settings.city}` : ""}`
     : "Dubai, United Arab Emirates";
+
+  const heading = settings?.contact_heading || "We'd Love to";
+  const headingHighlight = settings?.contact_heading_highlight || "Hear From You";
+  const subheading =
+    settings?.contact_subheading ||
+    "Questions about an order, catering, or a table booking? Our team is here to help — reach us any way you like and we'll reply fast.";
+  const hours = settings?.contact_hours || "Every day · 9:00 AM – 11:00 PM";
 
   const methods = [
     {
@@ -77,12 +86,11 @@ export default async function ContactPage() {
                 </span>
 
                 <h1 className="text-2xl sm:text-4xl font-black leading-tight text-gray-900 mb-3">
-                  We&apos;d Love to{" "}
-                  <span style={{ color: "#ea580c" }}>Hear From You</span>
+                  {heading}{" "}
+                  <span style={{ color: "#ea580c" }}>{headingHighlight}</span>
                 </h1>
                 <p className="text-gray-600 text-[13px] sm:text-[15px] leading-relaxed max-w-md">
-                  Questions about an order, catering, or a table booking? Our team
-                  is here to help — reach us any way you like and we&apos;ll reply fast.
+                  {subheading}
                 </p>
               </div>
             </div>
@@ -144,7 +152,7 @@ export default async function ContactPage() {
                 </span>
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Opening Hours</p>
-                  <p className="text-sm font-semibold text-gray-900">Every day · 9:00 AM – 11:00 PM</p>
+                  <p className="text-sm font-semibold text-gray-900">{hours}</p>
                 </div>
               </div>
             </div>
