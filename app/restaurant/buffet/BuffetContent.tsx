@@ -409,7 +409,7 @@ function OverviewTab({
           className="rounded-2xl overflow-hidden border border-orange-100 relative h-[178px] sm:h-[205px] lg:h-[228px]"
           style={{ background: banner.bg_color }}
         >
-          <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-5 sm:px-8 lg:px-10" style={{ width: "57%" }}>
+          <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-4 sm:px-8 lg:px-10 w-[66%] sm:w-[57%]">
             <p className="font-bold text-gray-900 leading-tight text-[1rem] sm:text-[1.3rem] lg:text-[1.5rem]">{banner.title}</p>
             <p className="font-extrabold leading-tight text-[1rem] sm:text-[1.3rem] lg:text-[1.5rem] mt-0.5 mb-2" style={{ color: banner.accent_color }}>
               {banner.title_highlight}
@@ -452,11 +452,10 @@ function OverviewTab({
             <>
               <img src={banner.image_url} alt="Buffet spread"
                 loading="lazy" decoding="async"
-                className="absolute top-0 right-0 h-full object-cover"
-                style={{ width: "46%" }}
+                className="absolute top-0 right-0 h-full object-cover w-[40%] sm:w-[46%]"
               />
-              <div className="absolute top-0 right-0 h-full pointer-events-none"
-                style={{ width: "46%", background: `linear-gradient(to right, ${banner.bg_color} 0%, ${banner.bg_color}72 22%, transparent 50%)` }}
+              <div className="absolute top-0 right-0 h-full pointer-events-none w-[40%] sm:w-[46%]"
+                style={{ background: `linear-gradient(to right, ${banner.bg_color} 0%, ${banner.bg_color}72 22%, transparent 50%)` }}
               />
             </>
           )}

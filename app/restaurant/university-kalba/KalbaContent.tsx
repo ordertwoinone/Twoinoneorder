@@ -574,8 +574,8 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         {/* Hero banner */}
         <div className="mt-4 rounded-3xl overflow-hidden flex flex-col sm:flex-row"
           style={{ background: "linear-gradient(110deg, #fdf3ea 0%, #fae3d1 55%, #f5d2b8 100%)" }}>
-          <div className="flex-1 p-6 sm:p-10 flex flex-col justify-center">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight text-gray-900">
+          <div className="flex-1 px-5 pt-6 pb-5 sm:p-10 flex flex-col justify-center">
+            <h2 className="text-[1.6rem] sm:text-3xl lg:text-4xl font-extrabold leading-[1.15] text-gray-900">
               {banner.title}
               <br />
               <span style={{ color: "#ea580c" }}>{banner.title_highlight}</span>
@@ -599,7 +599,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             )}
           </div>
           {banner.image_url && (
-            <div className="relative h-52 overflow-hidden [border-radius:5rem_1.5rem_0_0] sm:h-auto sm:w-[45%] lg:w-[40%] sm:[border-radius:10rem_0_0_2.5rem]">
+            <div className="relative w-full h-44 mt-1 sm:mt-0 sm:h-auto sm:w-[45%] lg:w-[40%] sm:[border-radius:10rem_0_0_2.5rem] sm:overflow-hidden">
               <Image
                 src={banner.image_url}
                 alt={hero.name}
@@ -607,6 +607,9 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                 className="object-cover"
                 sizes="(max-width: 640px) 100vw, 45vw"
               />
+              {/* Mobile: soften the top edge so the photo blends into the banner */}
+              <div className="absolute inset-x-0 top-0 h-14 pointer-events-none sm:hidden"
+                style={{ background: "linear-gradient(to bottom, #fae3d1 0%, rgba(250,227,209,0) 100%)" }} />
             </div>
           )}
         </div>
