@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbSchema } from "@/lib/seo";
@@ -71,7 +70,6 @@ export default async function KalbaMenuPage() {
       </main>
       <Footer />
       <BottomNav />
-      <WhatsAppButton />
     </>
   );
 }

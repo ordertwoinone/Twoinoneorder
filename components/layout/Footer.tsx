@@ -64,7 +64,7 @@ export default async function Footer() {
   ].filter(Boolean) as { href: string; icon: React.ReactNode; label: string }[];
 
   return (
-    <footer id="footer" className="bg-white border-t border-gray-100">
+    <footer id="footer" className="hidden sm:block bg-white border-t border-gray-100">
 
       {/* ── Footer Body ──────────────────────────────────────── */}
       <FadeInSection className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-14">

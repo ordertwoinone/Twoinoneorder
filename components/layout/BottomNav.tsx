@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Tag, CalendarCheck, Heart, User } from "lucide-react";
+import { Home, Tag, CalendarCheck, Phone, User } from "lucide-react";
 
 const ITEMS = [
   { icon: Home, label: "Home", href: "/" },
   { icon: Tag, label: "Offers", href: "/offers" },
   { icon: CalendarCheck, label: "Book Table", href: "/book-table", primary: true },
-  { icon: Heart, label: "Favourites", href: "/account/favourites" },
+  { icon: Phone, label: "Contact", href: "/contact" },
   { icon: User, label: "Account", href: "/account" },
 ];
 

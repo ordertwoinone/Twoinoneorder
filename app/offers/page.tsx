@@ -4,7 +4,6 @@ import { Tag, ArrowRight, Sparkles } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export const revalidate = 60;
@@ -195,7 +194,6 @@ export default async function OffersPage() {
       </main>
 
       <BottomNav />
-      <WhatsAppButton />
     </>
   );
 }

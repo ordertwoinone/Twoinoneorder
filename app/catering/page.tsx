@@ -4,7 +4,6 @@ import { ChevronLeft, UtensilsCrossed, Users, CalendarCheck, Star } from "lucide
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import BookingForm from "@/components/catering/BookingForm";
 
 export const metadata: Metadata = {
@@ -126,7 +125,6 @@ export default function CateringPage() {
       </main>
 
       <BottomNav />
-      <WhatsAppButton />
     </>
   );
 }

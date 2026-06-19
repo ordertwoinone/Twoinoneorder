@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
 import AddressesClient from "./AddressesClient";
 
 export const metadata: Metadata = {
@@ -19,7 +18,6 @@ export default function AddressesPage() {
       </main>
       <Footer />
       <BottomNav />
-      <WhatsAppButton />
     </>
   );
 }
