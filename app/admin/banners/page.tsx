@@ -17,6 +17,7 @@ interface Banner {
   food_alt: string;
   sort_order: number;
   is_active: boolean;
+  platform: "mobile" | "web";
 }
 
 const EMPTY: Omit<Banner, "id"> = {
@@ -32,6 +33,7 @@ const EMPTY: Omit<Banner, "id"> = {
   food_alt: "",
   sort_order: 0,
   is_active: true,
+  platform: "mobile",
 };
 
 export default function BannersAdmin() {
@@ -42,6 +44,9 @@ export default function BannersAdmin() {
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<"mobile" | "web">("mobile");
+
+  const shown = banners.filter((b) => (b.platform || "mobile") === tab);
 
   async function load() {
     setLoading(true);
@@ -52,7 +57,7 @@ export default function BannersAdmin() {
 
   useEffect(() => { load(); }, []);
 
-  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY } }); }
+  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY, platform: tab } }); }
   function openEdit(b: Banner) { setModal({ open: true, mode: "edit", data: { ...b } }); }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) {
@@ -88,10 +93,12 @@ export default function BannersAdmin() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Hero Banners</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{banners.length} slides · shown in order</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {shown.length} {tab === "web" ? "web" : "mobile"} slide{shown.length !== 1 ? "s" : ""} · shown in order
+          </p>
         </div>
         <button
           onClick={openAdd}
@@ -99,8 +106,23 @@ export default function BannersAdmin() {
           style={{ background: "#ea580c" }}
         >
           <Plus size={16} />
-          Add banner
+          Add {tab} banner
         </button>
+      </div>
+
+      {/* Platform tabs — Mobile and Web banners are managed separately */}
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+        {(["mobile", "web"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-md text-sm font-semibold capitalize transition-colors ${
+              tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -119,9 +141,9 @@ export default function BannersAdmin() {
           <tbody>
             {loading ? (
               <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
-            ) : banners.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No banners yet.</td></tr>
-            ) : banners.map((b) => (
+            ) : shown.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No {tab} banners yet.</td></tr>
+            ) : shown.map((b) => (
               <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div
@@ -167,8 +189,8 @@ export default function BannersAdmin() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl">
-              <h2 className="text-base font-semibold text-gray-900">
-                {modal.mode === "add" ? "Add banner" : "Edit banner"}
+              <h2 className="text-base font-semibold text-gray-900 capitalize">
+                {modal.mode === "add" ? `Add ${modal.data.platform} banner` : `Edit ${modal.data.platform} banner`}
               </h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
@@ -251,7 +273,11 @@ export default function BannersAdmin() {
                 value={modal.data.food_image_url}
                 onChange={(url) => handleField("food_image_url", url)}
                 folder="banners"
-                hint="Recommended 600×700px (portrait) · full banner image — the Order button is added automatically"
+                hint={
+                  modal.data.platform === "web"
+                    ? "Web: food cutout (transparent PNG) ~700×500px — shown on the right with the text on the left"
+                    : "Mobile: full banner image ~600×700px (portrait) — the Order button is added automatically"
+                }
               />
 
               <div>

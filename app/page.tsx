@@ -4,6 +4,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import SpinWheel from "@/components/home/SpinWheel";
 import SearchBar from "@/components/home/SearchBar";
 import HeroBanner from "@/components/home/HeroBanner";
+import HeroBannerWeb from "@/components/home/HeroBannerWeb";
 import RestaurantCards from "@/components/home/RestaurantCards";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
@@ -32,17 +33,21 @@ const restaurantListSchema = {
 // edits also bust this cache via revalidatePath). Big speed win.
 export const revalidate = 60;
 
-async function getBanners(): Promise<BannerSlide[]> {
+async function getBanners(platform: "mobile" | "web"): Promise<BannerSlide[]> {
   const { data } = await supabaseAdmin
     .from("hero_banners")
     .select("*")
     .eq("is_active", true)
+    .eq("platform", platform)
     .order("sort_order", { ascending: true });
   return data || [];
 }
 
 export default async function HomePage() {
-  const banners = await getBanners();
+  const [mobileBanners, webBanners] = await Promise.all([
+    getBanners("mobile"),
+    getBanners("web"),
+  ]);
 
   return (
     <>
@@ -52,8 +57,19 @@ export default async function HomePage() {
         <div className="sticky top-14 sm:top-16 z-30 bg-white border-b border-gray-100">
           <SearchBar />
         </div>
-        <FadeInSection><HomeCategories /></FadeInSection>
-        <HeroBanner slides={banners} />
+
+        {/* Mobile layout: categories on top, then swipeable banner cards */}
+        <div className="sm:hidden">
+          <HomeCategories variant="mobile" />
+          <HeroBanner slides={mobileBanners} />
+        </div>
+
+        {/* Web layout: slideshow hero, then categories with heading */}
+        <div className="hidden sm:block">
+          <HeroBannerWeb slides={webBanners} />
+          <FadeInSection><HomeCategories variant="web" /></FadeInSection>
+        </div>
+
         <FadeInSection><RestaurantCards /></FadeInSection>
         <FadeInSection><HomepageCards /></FadeInSection>
         <FadeInSection><TrustBadges /></FadeInSection>

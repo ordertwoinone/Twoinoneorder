@@ -34,76 +34,89 @@ const FALLBACK: HomeCategory[] = [
   { id: "10", name: "Desserts", emoji: "🍰", image_url: u("photo-1565958011703-44f9829ba187"), href: MINIBOX,  sort_order: 10, is_active: true },
 ];
 
-async function getCategories(): Promise<HomeCategory[]> {
+async function getCategories(platform: "mobile" | "web"): Promise<HomeCategory[]> {
   const { data, error } = await supabaseAdmin
     .from("home_categories")
     .select("*")
     .eq("is_active", true)
+    .eq("platform", platform)
     .order("sort_order", { ascending: true });
   if (error || !data || data.length === 0) return FALLBACK;
   return data;
 }
 
-export default async function HomeCategories() {
-  const categories = await getCategories();
+function CategoryItem({ cat, itemClass }: { cat: HomeCategory; itemClass: string }) {
+  const imgSrc =
+    cat.image_url || FALLBACK.find((f) => f.name === cat.name)?.image_url || FALLBACK[0].image_url;
+  const isExternal = cat.href?.startsWith("http");
+
+  const inner = (
+    <>
+      <div
+        className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm ring-2 ring-transparent transition-all duration-200 ${
+          cat.href ? "group-hover:ring-orange-400 group-hover:shadow-md group-hover:scale-[1.05] cursor-pointer" : ""
+        }`}
+      >
+        <Image src={imgSrc} alt={cat.name} fill className="object-cover" sizes="(max-width: 768px) 20vw, 10vw" />
+        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/40 to-transparent" />
+      </div>
+      <p
+        className={`text-[10px] sm:text-[11px] font-bold text-center leading-tight transition-colors ${
+          cat.href ? "text-gray-700 group-hover:text-orange-600" : "text-gray-500"
+        }`}
+      >
+        {cat.name}
+      </p>
+    </>
+  );
+
+  if (!cat.href) return <div className={`${itemClass} cursor-default`}>{inner}</div>;
+  return isExternal ? (
+    <a href={cat.href} className={itemClass}>{inner}</a>
+  ) : (
+    <Link href={cat.href} className={itemClass}>{inner}</Link>
+  );
+}
+
+export default async function HomeCategories({ variant = "mobile" }: { variant?: "mobile" | "web" }) {
+  const categories = await getCategories(variant);
   if (categories.length === 0) return null;
 
+  // ── Web: heading + even grid filling the width (classic 1da5a55 layout) ──
+  if (variant === "web") {
+    return (
+      <section className="py-5">
+        <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-xl font-extrabold text-gray-900 mb-4">What are you craving?</h2>
+          <div
+            className="grid [grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] justify-items-center gap-4"
+            style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
+          >
+            {categories.map((cat) => (
+              <CategoryItem
+                key={cat.id}
+                cat={cat}
+                itemClass="flex flex-col items-center gap-2 group w-full max-w-[96px] tap-shrink"
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ── Mobile: fixed-size items in a horizontal swipe scroll ──
   return (
     <section className="pt-4 pb-2">
       <div className="max-w-7xl mx-auto">
-
-        {/* Mobile: fixed-size items in a horizontal swipe scroll (right overflow
-            is fine — first item aligns to the page's px-4 left edge).
-            md+: even grid, capped + centered so items don't balloon. */}
-        <div
-          className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 md:grid md:[grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] md:justify-items-center md:gap-3 md:px-4 md:overflow-visible"
-          style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
-        >
-          {categories.map((cat) => {
-            const imgSrc = cat.image_url
-              || FALLBACK.find((f) => f.name === cat.name)?.image_url
-              || FALLBACK[0].image_url;
-
-            const isExternal = cat.href?.startsWith("http");
-            const itemClass = "flex flex-col items-center gap-1.5 group w-[64px] shrink-0 md:w-[72px] snap-item tap-shrink";
-            const Wrapper = cat.href
-              ? ({ children }: { children: React.ReactNode }) =>
-                  isExternal ? (
-                    <a href={cat.href} className={itemClass}>
-                      {children}
-                    </a>
-                  ) : (
-                    <Link href={cat.href} className={itemClass}>
-                      {children}
-                    </Link>
-                  )
-              : ({ children }: { children: React.ReactNode }) => (
-                  <div className={`${itemClass} cursor-default`}>
-                    {children}
-                  </div>
-                );
-
-            return (
-              <Wrapper key={cat.id}>
-                {/* Square image with rounded corners */}
-                <div className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm ring-2 ring-transparent transition-all duration-200 ${cat.href ? "group-hover:ring-orange-400 group-hover:shadow-md group-hover:scale-[1.05] cursor-pointer" : ""}`}>
-                  <Image
-                    src={imgSrc}
-                    alt={cat.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 20vw, 10vw"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/40 to-transparent" />
-                </div>
-
-                {/* Name */}
-                <p className={`text-[10px] sm:text-[11px] font-bold text-center leading-tight transition-colors ${cat.href ? "text-gray-700 group-hover:text-orange-600" : "text-gray-500"}`}>
-                  {cat.name}
-                </p>
-              </Wrapper>
-            );
-          })}
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4">
+          {categories.map((cat) => (
+            <CategoryItem
+              key={cat.id}
+              cat={cat}
+              itemClass="flex flex-col items-center gap-1.5 group w-[64px] shrink-0 snap-item tap-shrink"
+            />
+          ))}
         </div>
       </div>
     </section>

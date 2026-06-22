@@ -10,6 +10,7 @@ interface Category {
   href: string;
   sort_order: number;
   is_active: boolean;
+  platform: "mobile" | "web";
 }
 
 const EMPTY: Omit<Category, "id"> = {
@@ -19,6 +20,7 @@ const EMPTY: Omit<Category, "id"> = {
   href: "",
   sort_order: 0,
   is_active: true,
+  platform: "mobile",
 };
 
 const inputCls =
@@ -49,6 +51,9 @@ export default function HomeCategoriesAdmin() {
   }>({ open: false, mode: "add", data: { ...EMPTY } });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<"mobile" | "web">("mobile");
+
+  const shown = items.filter((i) => (i.platform || "mobile") === tab);
 
   async function load() {
     setLoading(true);
@@ -63,7 +68,7 @@ export default function HomeCategoriesAdmin() {
   }, []);
 
   function openAdd() {
-    setModal({ open: true, mode: "add", data: { ...EMPTY, sort_order: items.length + 1 } });
+    setModal({ open: true, mode: "add", data: { ...EMPTY, platform: tab, sort_order: shown.length + 1 } });
   }
   function openEdit(item: Category) {
     setModal({ open: true, mode: "edit", data: { ...item } });
@@ -113,35 +118,50 @@ export default function HomeCategoriesAdmin() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">
             Homepage Section
           </p>
           <h1 className="text-2xl font-semibold text-gray-900">Cuisine Categories</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {items.filter((i) => i.is_active).length} active ·{" "}
-            Scrollable row shown below the hero banner
+            {shown.filter((i) => i.is_active).length} active {tab} categor
+            {shown.filter((i) => i.is_active).length === 1 ? "y" : "ies"}
           </p>
         </div>
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white capitalize"
           style={{ background: "#ea580c" }}
         >
           <Plus size={16} />
-          Add category
+          Add {tab} category
         </button>
       </div>
 
+      {/* Platform tabs — Mobile and Web categories are managed separately */}
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
+        {(["mobile", "web"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-1.5 rounded-md text-sm font-semibold capitalize transition-colors ${
+              tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
       {/* Live preview */}
-      {items.filter((i) => i.is_active).length > 0 && (
+      {shown.filter((i) => i.is_active).length > 0 && (
         <div className="mb-6 bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Live Preview
           </p>
           <div className="flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {items
+            {shown
               .filter((i) => i.is_active)
               .map((cat) => (
                 <div key={cat.id} className="shrink-0 flex flex-col items-center gap-2 w-[68px]">
@@ -207,14 +227,14 @@ export default function HomeCategoriesAdmin() {
                   Loading…
                 </td>
               </tr>
-            ) : items.length === 0 ? (
+            ) : shown.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
-                  No categories yet — add one above.
+                  No {tab} categories yet — add one above.
                 </td>
               </tr>
             ) : (
-              items.map((item) => (
+              shown.map((item) => (
                 <tr
                   key={item.id}
                   className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
@@ -280,8 +300,8 @@ export default function HomeCategoriesAdmin() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h2 className="text-base font-semibold text-gray-900">
-                {modal.mode === "add" ? "Add category" : "Edit category"}
+              <h2 className="text-base font-semibold text-gray-900 capitalize">
+                {modal.mode === "add" ? `Add ${modal.data.platform} category` : `Edit ${modal.data.platform} category`}
               </h2>
               <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
