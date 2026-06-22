@@ -4,27 +4,26 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
- * Full-screen branded splash shown on a cold page load. It renders during SSR
- * (so it's visible on first paint, no blank flash) and fades out once the page
- * has loaded. Shows once per browser session so internal navigations stay snappy.
+ * Mobile splash screen — shows the logo centered on a plain white background
+ * when the site is first opened (like a native app), then fades out once the
+ * page has loaded. Renders during SSR so it's visible on first paint, and only
+ * shows once per browser session. Mobile only; desktop never sees it.
  */
 export default function LogoLoader() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    // Already shown this session → don't splash again.
     if (sessionStorage.getItem("tio-splash-shown")) {
       setVisible(false);
       return;
     }
 
     const start = Date.now();
-    const MIN_MS = 600; // let the logo animation breathe
+    const MIN_MS = 700; // keep the logo on screen long enough to read
 
     const hide = () => {
       sessionStorage.setItem("tio-splash-shown", "1");
-      const elapsed = Date.now() - start;
-      const wait = Math.max(0, MIN_MS - elapsed);
+      const wait = Math.max(0, MIN_MS - (Date.now() - start));
       setTimeout(() => setVisible(false), wait);
     };
 
@@ -49,25 +48,18 @@ export default function LogoLoader() {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.45, ease: "easeInOut" }}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white"
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-white sm:hidden"
           aria-hidden="true"
         >
-          <div className="relative flex items-center justify-center">
-            {/* Spinning ring around the logo */}
-            <span className="loader-ring absolute w-28 h-28" />
-            <span className="loader-logo relative w-20 h-20">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logos/two-in-one.png"
-                alt="Two In One"
-                className="w-full h-full object-contain"
-              />
-            </span>
-          </div>
-          <p className="mt-6 text-[11px] font-bold tracking-[0.2em] uppercase text-gray-400">
-            Two In One Order
-          </p>
+          <motion.img
+            src="/logos/two-in-one.png"
+            alt="Two In One Order"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className="w-44 h-44 object-contain"
+          />
         </motion.div>
       )}
     </AnimatePresence>
