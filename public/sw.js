@@ -1,7 +1,7 @@
 /* Two In One — service worker
    Conservative, app-shell style caching. Never caches API/admin/auth so
    business logic and data stay live. Bumping CACHE_VERSION invalidates old caches. */
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const STATIC_CACHE = `tio-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `tio-pages-${CACHE_VERSION}`;
 const IMAGE_CACHE = `tio-images-${CACHE_VERSION}`;
@@ -18,8 +18,15 @@ const PRECACHE = [
 const IMAGE_CACHE_LIMIT = 80;
 
 self.addEventListener("install", (event) => {
+  // Best-effort precache: a single failed asset must NOT abort installation.
+  // If install fails the SW never activates, which makes the site appear
+  // non-installable on Android (where an active SW is required to install).
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()),
+    (async () => {
+      const cache = await caches.open(STATIC_CACHE);
+      await Promise.allSettled(PRECACHE.map((url) => cache.add(url)));
+      await self.skipWaiting();
+    })(),
   );
 });
 
