@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
 import JsonLd from "@/components/seo/JsonLd";
 import TrackingScripts from "@/components/seo/TrackingScripts";
+import PwaProvider from "@/components/pwa/PwaProvider";
 import { SITE_URL, organizationSchema, webSiteSchema } from "@/lib/seo";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
@@ -50,7 +51,16 @@ export async function generateMetadata(): Promise<Metadata> {
       "student deals Kalba",
     ],
     alternates: { canonical: "/" },
-    icons: { icon: favicon, shortcut: favicon, apple: favicon },
+    icons: {
+      icon: favicon,
+      shortcut: favicon,
+      apple: "/icons/apple-touch-icon.png",
+    },
+    appleWebApp: {
+      capable: true,
+      title: siteName,
+      statusBarStyle: "default",
+    },
     formatDetection: { telephone: true, email: true, address: true },
     robots: {
       index: true,
@@ -80,6 +90,19 @@ export async function generateMetadata(): Promise<Metadata> {
     },
   };
 }
+
+// Drives the browser/PWA chrome color and enables edge-to-edge (notch) layouts.
+// `viewport-fit=cover` is what lets us use safe-area insets on iOS.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#ffffff" },
+  ],
+};
 
 const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -126,6 +149,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           headScripts={tracking?.head_scripts}
         />
         <FavoritesProvider>{children}</FavoritesProvider>
+        <PwaProvider />
       </body>
     </html>
   );

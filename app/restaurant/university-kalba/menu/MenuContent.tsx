@@ -650,7 +650,7 @@ export default function MenuContent({
               return (
                 <div
                   key={p.id}
-                  className="bg-white rounded-2xl overflow-hidden border border-gray-100 group transition-shadow hover:shadow-md"
+                  className="bg-white rounded-2xl overflow-hidden border border-gray-100 group transition-shadow hover:shadow-md tap-shrink"
                   style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
                 >
                   <div className="relative h-40 sm:h-44">
@@ -713,7 +713,7 @@ export default function MenuContent({
                     {qty === 0 ? (
                       <button
                         onClick={() => handleQtyChange(p.id, 1)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
+                        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors tap-shrink"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
                         <span className="text-xs font-bold">Add to Cart</span>
@@ -748,8 +748,11 @@ export default function MenuContent({
         )}
       </div>
 
-      {/* Mobile cart bar */}
-      <div className="fixed bottom-16 left-0 right-0 z-40 px-4 sm:hidden">
+      {/* Mobile cart bar — sits above the bottom nav + the device safe area */}
+      <div
+        className="fixed left-0 right-0 z-40 px-4 sm:hidden"
+        style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 flex items-center px-4 py-3 gap-3">
           <div className="relative shrink-0">
             <div
@@ -774,7 +777,7 @@ export default function MenuContent({
           </div>
           <button
             onClick={() => setCartOpen(true)}
-            className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2"
+            className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2 tap-shrink"
             style={{ background: "#ea580c" }}
           >
             View Cart <span>→</span>

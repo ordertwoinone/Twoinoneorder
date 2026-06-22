@@ -17,6 +17,24 @@ body {
   /* Kill stray horizontal scroll on small devices.
      `clip` (not `hidden`) does NOT break the sticky navbar/search bar. */
   overflow-x: clip;
+  /* App-like text rendering + no iOS auto text inflation. */
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Stop scroll chaining / browser glow so it feels contained like an app. */
+  overscroll-behavior-y: contain;
+}
+
+/* Remove the grey tap flash + the 300ms click delay on touch — native feel. */
+a,
+button,
+[role="button"],
+input,
+select,
+textarea,
+label {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Safety net: media never forces the viewport wider than the screen */
@@ -152,4 +170,90 @@ canvas {
 }
 .hc-fade-soft {
   animation: hcFadeSoft 0.4s ease;
+}
+
+/* ── App-like mobile utilities ────────────────────────────────────────────── */
+
+@layer utilities {
+  /* Safe-area aware spacing for notched / gesture-bar devices. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Momentum scrolling for horizontal rails / scroll containers. */
+  .momentum-x {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+  }
+  .snap-item {
+    scroll-snap-align: start;
+  }
+
+  /* Press feedback — subtle scale-down on tap, the universal app tell. */
+  .tap-shrink {
+    transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .tap-shrink:active {
+    transform: scale(0.96);
+  }
+}
+
+/* Skeleton shimmer for perceived-performance loading states. */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #eef0f2;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.65) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+/* Soft entrance for route content — gives navigations an app-like feel.
+   OPACITY ONLY (no transform): a transform on this wrapper would become the
+   containing block for position:fixed descendants and break the bottom nav.
+   Mobile only, so the desktop experience is untouched. */
+@keyframes pageFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 640px) {
+  .page-enter {
+    animation: pageFade 0.28s ease both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .page-enter {
+    animation: none;
+  }
+  .tap-shrink {
+    transition: none;
+  }
 }

@@ -56,7 +56,7 @@ export default async function RestaurantCards() {
               <a
                 key={r.id}
                 href={r.url || "#"}
-                className="block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group"
+                className="block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group tap-shrink"
                 style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
               >
                 {/* Image */}

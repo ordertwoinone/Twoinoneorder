@@ -33,7 +33,7 @@ export default function Navbar({ className = "" }: { className?: string }) {
   return (
     <>
       <nav className={`sticky top-0 z-50 bg-white border-b border-gray-100${className ? ` ${className}` : ""}`}>
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center gap-3">
 
           {/* Hamburger */}
           <button
@@ -150,7 +150,10 @@ export default function Navbar({ className = "" }: { className?: string }) {
                   </Link>
                 ))}
               </div>
-              <div className="p-5 border-t border-gray-100">
+              <div
+                className="p-5 border-t border-gray-100"
+                style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
+              >
                 <Link
                   href="/catering"
                   onClick={() => setDrawerOpen(false)}

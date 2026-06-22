@@ -83,24 +83,11 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.18 }}
-                  className="text-gray-500 leading-relaxed whitespace-pre-line mb-5 line-clamp-3"
+                  className="text-gray-500 leading-relaxed whitespace-pre-line line-clamp-3"
                   style={{ fontSize: "clamp(10px, 2vw, 13px)" }}
                 >
                   {s.subtitle?.replace(/\\n/g, "\n")}
                 </motion.p>
-
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
-                  <a
-                    href={s.cta_href}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white font-bold transition-all hover:gap-3 active:scale-95"
-                    style={{ background: s.accent_color, boxShadow: `0 4px 18px ${s.accent_color}50`, fontSize: "clamp(11px, 2vw, 14px)" }}
-                  >
-                    {s.cta_text}
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M5 12h14M12 5l7 7-7 7" />
-                    </svg>
-                  </a>
-                </motion.div>
               </div>
 
               {/* RIGHT: food image */}

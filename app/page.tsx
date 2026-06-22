@@ -49,7 +49,7 @@ export default async function HomePage() {
       <JsonLd data={restaurantListSchema} />
       <Navbar />
       <main className="pb-20 sm:pb-0">
-        <div className="sticky top-16 z-30 bg-white border-b border-gray-100">
+        <div className="sticky top-14 sm:top-16 z-30 bg-white border-b border-gray-100">
           <SearchBar />
         </div>
         <HeroBanner slides={banners} />
