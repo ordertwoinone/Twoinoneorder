@@ -50,13 +50,13 @@ export default async function HomeCategories() {
 
   return (
     <section className="pt-4 pb-2">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto">
 
-        {/* Mobile: horizontal scroll. md+: columns adapt to the number of
-            active categories so the cards always fill the full width with no
-            blank gaps after items are removed. */}
+        {/* Mobile: horizontal scroll (px-4 matches the hero's left edge exactly).
+            md+: columns adapt to the number of active categories so the cards
+            always fill the full width with no blank gaps after items removed. */}
         <div
-          className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x -mx-4 px-4 md:mx-0 md:px-0 md:grid md:[grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] md:gap-3 md:overflow-visible"
+          className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 md:grid md:[grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] md:gap-3 md:overflow-visible"
           style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
         >
           {categories.map((cat) => {
