@@ -53,10 +53,10 @@ export default async function HomeCategories() {
       <div className="max-w-7xl mx-auto">
 
         {/* Mobile: horizontal scroll (px-4 matches the hero's left edge exactly).
-            md+: columns adapt to the number of active categories so the cards
-            always fill the full width with no blank gaps after items removed. */}
+            md+: even columns, but each item is capped small and centered so the
+            categories stay compact instead of stretching huge across the width. */}
         <div
-          className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 md:grid md:[grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] md:gap-3 md:overflow-visible"
+          className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 md:grid md:[grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] md:justify-items-center md:gap-3 md:px-4 md:overflow-visible"
           style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
         >
           {categories.map((cat) => {
@@ -65,7 +65,7 @@ export default async function HomeCategories() {
               || FALLBACK[0].image_url;
 
             const isExternal = cat.href?.startsWith("http");
-            const itemClass = "flex flex-col items-center gap-1.5 group w-[56px] shrink-0 md:w-auto snap-item tap-shrink";
+            const itemClass = "flex flex-col items-center gap-1.5 group w-[56px] shrink-0 md:w-[72px] snap-item tap-shrink";
             const Wrapper = cat.href
               ? ({ children }: { children: React.ReactNode }) =>
                   isExternal ? (
