@@ -52,8 +52,8 @@ export default async function HomePage() {
         <div className="sticky top-14 sm:top-16 z-30 bg-white border-b border-gray-100">
           <SearchBar />
         </div>
-        <HeroBanner slides={banners} />
         <FadeInSection><HomeCategories /></FadeInSection>
+        <HeroBanner slides={banners} />
         <FadeInSection><RestaurantCards /></FadeInSection>
         <FadeInSection><HomepageCards /></FadeInSection>
         <FadeInSection><TrustBadges /></FadeInSection>

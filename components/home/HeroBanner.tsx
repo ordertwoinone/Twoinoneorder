@@ -1,7 +1,5 @@
-"use client";
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 
 export interface BannerSlide {
   id: string;
@@ -18,122 +16,57 @@ export interface BannerSlide {
   sort_order: number;
 }
 
-const AUTOPLAY_MS = 4500;
-
 export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
-  const [current, setCurrent] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  const next = useCallback(() => setCurrent((c) => (c + 1) % slides.length), [slides.length]);
-  const prev = useCallback(() => setCurrent((c) => (c - 1 + slides.length) % slides.length), [slides.length]);
-
-  useEffect(() => {
-    if (paused || slides.length <= 1) return;
-    const id = setInterval(next, AUTOPLAY_MS);
-    return () => clearInterval(id);
-  }, [paused, next, slides.length]);
-
   if (!slides.length) return null;
 
-  const s = slides[current];
-
   return (
-    <section
-      className="px-4 pt-3 pb-2"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
+    <section className="pt-3 pb-2">
       <div className="max-w-7xl mx-auto">
-        <div className="rounded-3xl overflow-hidden relative" style={{ boxShadow: "0 4px 32px rgba(0,0,0,0.08)" }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={s.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="flex items-stretch min-h-[180px] sm:min-h-[240px]"
-              style={{ background: s.bg_color }}
-            >
-              {/* LEFT: text */}
-              <div className="flex flex-col justify-center px-5 sm:px-8 py-6 w-[55%] sm:w-[50%] z-10">
-                <motion.span
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.06 }}
-                  className="inline-block text-[10px] sm:text-[11px] font-extrabold px-3 py-1 rounded-full mb-3 w-fit tracking-wider"
-                  style={{ color: s.accent_color, border: `1.5px solid ${s.accent_color}`, background: `${s.accent_color}10` }}
-                >
-                  {s.tag}
-                </motion.span>
+        {/* Horizontally scrollable, fully clickable banner images */}
+        <div
+          className="flex gap-3 overflow-x-auto scrollbar-none momentum-x px-4 pb-1"
+          style={{ scrollPaddingLeft: "1rem", scrollPaddingRight: "1rem" }}
+        >
+          {slides.map((s, i) => {
+            const href = s.cta_href || "#";
+            const external = /^https?:\/\//.test(href);
 
-                <motion.h2
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.12 }}
-                  className="font-black leading-none mb-2"
-                  style={{ fontSize: "clamp(22px, 5vw, 40px)" }}
-                >
-                  <span style={{ color: s.accent_color }}>{s.headline_orange}</span>
-                  <br />
-                  <span className="text-gray-900">{s.headline_black}</span>
-                </motion.h2>
+            const card = (
+              <div
+                className="relative w-full h-full overflow-hidden rounded-3xl"
+                style={{ background: s.bg_color || "#f3f4f6", boxShadow: "0 4px 20px rgba(0,0,0,0.10)" }}
+              >
+                {s.food_image_url && (
+                  <Image
+                    src={s.food_image_url}
+                    alt={s.food_alt || s.tag || "Offer"}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 640px) 64vw, 360px"
+                    priority={i === 0}
+                  />
+                )}
 
-                <motion.p
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.18 }}
-                  className="text-gray-500 leading-relaxed whitespace-pre-line line-clamp-3"
-                  style={{ fontSize: "clamp(10px, 2vw, 13px)" }}
-                >
-                  {s.subtitle?.replace(/\\n/g, "\n")}
-                </motion.p>
+                {/* Order button — overlaid like the reference design */}
+                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-black/85 text-white text-[11px] sm:text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap backdrop-blur-sm">
+                  {s.cta_text || "Order Now"}
+                </span>
               </div>
+            );
 
-              {/* RIGHT: food image */}
-              <div className="flex-1 relative overflow-hidden">
-                <motion.div
-                  key={s.id}
-                  initial={{ opacity: 0, x: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="absolute inset-0"
-                >
-                  <motion.div
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                    className="w-full h-full"
-                  >
-                    <Image
-                      src={s.food_image_url}
-                      alt={s.food_alt || s.tag}
-                      fill
-                      className="object-contain object-center p-3 sm:p-0"
-                      sizes="(max-width: 640px) 50vw, 45vw"
-                      priority={current === 0}
-                    />
-                  </motion.div>
-                </motion.div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
+            const cls =
+              "snap-item shrink-0 w-[44%] sm:w-[300px] aspect-[6/7] sm:aspect-[16/10] tap-shrink block";
 
-          {/* Dots */}
-          <div className="flex items-center justify-center gap-2 py-3" style={{ background: s.bg_color }}>
-            <button onClick={prev} className="opacity-30 hover:opacity-70 transition-opacity" style={{ color: s.accent_color }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
-            </button>
-            {slides.map((_, i) => (
-              <button key={i} onClick={() => setCurrent(i)}
-                className="rounded-full transition-all duration-300"
-                style={{ width: i === current ? "22px" : "6px", height: "6px", background: i === current ? s.accent_color : `${s.accent_color}35` }}
-              />
-            ))}
-            <button onClick={next} className="opacity-30 hover:opacity-70 transition-opacity" style={{ color: s.accent_color }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
-            </button>
-          </div>
+            return external ? (
+              <a key={s.id} href={href} className={cls} aria-label={s.cta_text || s.tag || "Offer"}>
+                {card}
+              </a>
+            ) : (
+              <Link key={s.id} href={href} className={cls} aria-label={s.cta_text || s.tag || "Offer"}>
+                {card}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>
