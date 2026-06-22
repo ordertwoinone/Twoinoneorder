@@ -109,7 +109,7 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
   return (
     <section className="pt-4 pb-2">
       <div className="max-w-7xl mx-auto">
-        <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4">
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x pl-6 pr-4">
           {categories.map((cat) => (
             <CategoryItem
               key={cat.id}
