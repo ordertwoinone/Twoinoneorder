@@ -58,7 +58,7 @@ export default function Navbar({ className = "" }: { className?: string }) {
             </div>
             <div className="hidden sm:block">
               <p className="text-[13px] font-extrabold text-gray-900 leading-tight tracking-wide uppercase">
-                Two In One
+                Two In One Order
               </p>
               <p className="text-[10px] text-gray-400 leading-none mt-0.5">
                 4 Restaurants. One Destination.
@@ -131,7 +131,7 @@ export default function Navbar({ className = "" }: { className?: string }) {
                   <div className="relative w-9 h-9 shrink-0">
                     <Image src="/logos/two-in-one.png" alt="Two In One" fill className="object-contain" />
                   </div>
-                  <span className="text-sm font-extrabold text-gray-900 uppercase tracking-wide">Two In One</span>
+                  <span className="text-sm font-extrabold text-gray-900 uppercase tracking-wide">Two In One Order</span>
                 </div>
                 <button onClick={() => setDrawerOpen(false)} className="p-1 rounded-full hover:bg-gray-100">
                   <X size={20} />

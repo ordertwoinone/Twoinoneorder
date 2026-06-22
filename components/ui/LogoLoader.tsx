@@ -66,7 +66,7 @@ export default function LogoLoader() {
             </span>
           </div>
           <p className="mt-6 text-[11px] font-bold tracking-[0.2em] uppercase text-gray-400">
-            Two In One
+            Two In One Order
           </p>
         </motion.div>
       )}

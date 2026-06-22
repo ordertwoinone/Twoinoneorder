@@ -154,23 +154,24 @@ export default function PwaProvider() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
             transition={{ type: "spring", damping: 26, stiffness: 320 }}
-            className="fixed left-3 right-3 z-[60] sm:hidden"
-            style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)" }}
+            className={`fixed z-[60] left-3 right-3 bottom-[calc(env(safe-area-inset-bottom,0px)_+_76px)] sm:left-auto sm:right-4 sm:bottom-4 sm:w-[360px] ${
+              deferred ? "" : "sm:hidden"
+            }`}
             role="dialog"
             aria-label="Install app"
           >
             <div className="bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 shadow-[0_10px_40px_rgba(0,0,0,0.16)]">
               <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-gray-50 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icons/icon-192.png" alt="Two In One" className="w-full h-full object-contain" />
+                <img src="/icons/icon-192.png" alt="Two In One Order" className="w-full h-full object-contain" />
               </div>
 
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-extrabold text-gray-900 leading-tight">
-                  Install Two In One
+                  Install Two In One Order
                 </p>
                 <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
-                  Add to your home screen for a faster, app-like experience.
+                  Install the app for a faster, full-screen experience.
                 </p>
               </div>
 
@@ -226,7 +227,7 @@ export default function PwaProvider() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-extrabold text-gray-900">Add to Home Screen</p>
-                    <p className="text-[11px] text-gray-500">Install Two In One as an app</p>
+                    <p className="text-[11px] text-gray-500">Install Two In One Order as an app</p>
                   </div>
                   <button
                     onClick={() => setGuideOpen(false)}
