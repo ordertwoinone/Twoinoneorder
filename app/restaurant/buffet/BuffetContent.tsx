@@ -1051,8 +1051,8 @@ function CartRow({ item, onQtyChange }: {
 type Tab = "overview" | "menu" | "about" | "photos" | "reviews";
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview"    },
   { id: "menu",     label: "Buffet Menu" },
+  { id: "overview", label: "Overview"    },
   { id: "about",    label: "About"       },
   { id: "reviews",  label: "Reviews"     },
   { id: "photos",   label: "Photos"      },
@@ -1070,7 +1070,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
     closes_at: "11:30 PM",
     cover_image_url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=700&q=85",
   };
-  const [activeTab, setActiveTab]           = useState<Tab>("overview");
+  const [activeTab, setActiveTab]           = useState<Tab>("menu");
   const [liked, setLiked]                   = useState(false);
   const [selectedTimingId, setSelectedTimingId] = useState<string | null>(null);
   const [cartQty, setCartQty]               = useState<Record<string, number>>({});
