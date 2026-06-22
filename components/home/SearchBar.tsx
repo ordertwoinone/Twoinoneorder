@@ -26,8 +26,8 @@ export default function SearchBar() {
   }, [setIsOpen]);
 
   return (
-    <div className="px-4 py-3">
-      <div className="max-w-7xl mx-auto flex items-center gap-3">
+    <div className="py-3">
+      <div className="max-w-7xl mx-auto px-4 flex items-center gap-3">
 
         {/* Search pill */}
         <div className="flex-1 relative" ref={containerRef}>
