@@ -20,7 +20,7 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
   if (!slides.length) return null;
 
   return (
-    <section className="pt-3 pb-2">
+    <section className="pt-1 pb-2">
       <div className="max-w-7xl mx-auto">
         {/* Horizontally scrollable, fully clickable banner images */}
         <div
@@ -33,8 +33,8 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
 
             const card = (
               <div
-                className="relative w-full h-full overflow-hidden rounded-3xl"
-                style={{ background: s.bg_color || "#f3f4f6", boxShadow: "0 4px 20px rgba(0,0,0,0.10)" }}
+                className="relative w-full h-full overflow-hidden rounded-2xl"
+                style={{ background: s.bg_color || "#f3f4f6", boxShadow: "0 4px 18px rgba(0,0,0,0.10)" }}
               >
                 {s.food_image_url && (
                   <Image

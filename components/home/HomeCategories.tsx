@@ -49,12 +49,8 @@ export default async function HomeCategories() {
   if (categories.length === 0) return null;
 
   return (
-    <section className="py-5">
+    <section className="pt-3 pb-1">
       <div className="max-w-7xl mx-auto px-4">
-
-        <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 mb-4">
-          What are you craving?
-        </h2>
 
         {/* Mobile: horizontal scroll. md+: columns adapt to the number of
             active categories so the cards always fill the full width with no
@@ -109,8 +105,6 @@ export default async function HomeCategories() {
             );
           })}
         </div>
-
-        <div className="mt-5 h-px bg-gradient-to-r from-transparent via-gray-100 to-transparent" />
       </div>
     </section>
   );
