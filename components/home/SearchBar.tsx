@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useEffect } from "react";
-import { Search, X, ExternalLink, SlidersHorizontal } from "lucide-react";
+import { Search, X, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearch } from "@/hooks/useSearch";
 
@@ -41,7 +41,7 @@ export default function SearchBar() {
             value={query}
             onChange={(e) => handleChange(e.target.value)}
             placeholder="Search for food, restaurants, cuisines..."
-            className="w-full pl-10 pr-10 py-3 rounded-full bg-white border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-orange-400 transition-colors"
+            className="w-full pl-10 pr-10 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-orange-400 focus:bg-white transition-colors"
             onFocus={() => { if (query.trim().length >= 2) setIsOpen(true); }}
           />
           {query && (
@@ -109,14 +109,6 @@ export default function SearchBar() {
             )}
           </AnimatePresence>
         </div>
-
-        {/* Filter button */}
-        <button
-          className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-200 bg-white hover:bg-orange-50 transition-colors shrink-0"
-          style={{ color: "#ea580c" }}
-        >
-          <SlidersHorizontal size={17} />
-        </button>
       </div>
     </div>
   );

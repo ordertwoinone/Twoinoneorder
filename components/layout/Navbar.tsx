@@ -46,7 +46,7 @@ export default function Navbar({ className = "" }: { className?: string }) {
 
   return (
     <>
-      <nav className={`sticky top-0 z-50 bg-white border-b border-gray-100${className ? ` ${className}` : ""}`}>
+      <nav className={`sticky top-0 z-50 bg-white${className ? ` ${className}` : ""}`}>
         <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center gap-3">
 
           {/* Hamburger */}
