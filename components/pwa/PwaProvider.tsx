@@ -36,9 +36,21 @@ function isStandalone(): boolean {
 function detectPlatform(): Platform {
   if (typeof navigator === "undefined") return "other";
   const ua = navigator.userAgent;
-  if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+  // iPadOS 13+ reports as desktop Safari; detect touch Macs too.
+  const iPadOS = /macintosh/i.test(ua) && typeof document !== "undefined" && "ontouchend" in document;
+  if (/iphone|ipad|ipod/i.test(ua) || iPadOS) return "ios";
   if (/android/i.test(ua)) return "android";
   return "other";
+}
+
+// On iOS every browser is WebKit, but the "Add to Home Screen" entry point
+// differs between Safari and Chrome/Edge/Firefox.
+function detectIosBrowser(): "safari" | "chrome" | "other" {
+  if (typeof navigator === "undefined") return "safari";
+  const ua = navigator.userAgent;
+  if (/crios/i.test(ua)) return "chrome";
+  if (/fxios|edgios/i.test(ua)) return "other";
+  return "safari";
 }
 
 function getWindowPrompt(): BeforeInstallPromptEvent | null {
@@ -53,6 +65,7 @@ export default function PwaProvider() {
   const [showBanner, setShowBanner] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const [platform, setPlatform] = useState<Platform>("other");
+  const [iosBrowser, setIosBrowser] = useState<"safari" | "chrome" | "other">("safari");
 
   // Register the service worker.
   useEffect(() => {
@@ -72,6 +85,7 @@ export default function PwaProvider() {
     if (isStandalone() || recentlyDismissed()) return;
     const plat = detectPlatform();
     setPlatform(plat);
+    if (plat === "ios") setIosBrowser(detectIosBrowser());
 
     // Chromium: the event may have been captured before mount (inline head
     // script stashes it on window.deferredInstallPrompt).
@@ -239,7 +253,7 @@ export default function PwaProvider() {
                 </div>
 
                 <ol className="space-y-3 pb-2">
-                  {platform === "ios" ? (
+                  {platform === "ios" && iosBrowser === "safari" && (
                     <>
                       <Step n={1}>
                         Tap the <Share size={14} className="inline text-orange-600 -mt-0.5" /> <b>Share</b>{" "}
@@ -253,7 +267,25 @@ export default function PwaProvider() {
                         Tap <b>Add</b> in the top-right corner.
                       </Step>
                     </>
-                  ) : (
+                  )}
+
+                  {platform === "ios" && iosBrowser !== "safari" && (
+                    <>
+                      <Step n={1}>
+                        Tap the <Share size={14} className="inline text-orange-600 -mt-0.5" /> <b>Share</b>{" "}
+                        button (in the address bar or the <MoreVertical size={13} className="inline text-orange-600 -mt-0.5" /> menu).
+                      </Step>
+                      <Step n={2}>
+                        Choose <b>Add to Home Screen</b>{" "}
+                        <Plus size={14} className="inline text-orange-600 -mt-0.5" />.
+                      </Step>
+                      <Step n={3}>
+                        Tap <b>Add</b> to confirm.
+                      </Step>
+                    </>
+                  )}
+
+                  {platform !== "ios" && (
                     <>
                       <Step n={1}>
                         Tap the <MoreVertical size={14} className="inline text-orange-600 -mt-0.5" /> <b>menu</b>{" "}
@@ -269,9 +301,10 @@ export default function PwaProvider() {
                   )}
                 </ol>
 
-                {platform === "ios" && (
+                {platform === "ios" && iosBrowser !== "safari" && (
                   <p className="text-[11px] text-gray-400 leading-snug mt-1 mb-1">
-                    Note: this only works in <b>Safari</b> on iPhone/iPad — not Chrome.
+                    Tip: if you don&apos;t see <b>Add to Home Screen</b>, open this page in{" "}
+                    <b>Safari</b> instead — the option is always there.
                   </p>
                 )}
               </div>
