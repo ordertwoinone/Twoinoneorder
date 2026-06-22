@@ -131,9 +131,15 @@ export default function BannersAdmin() {
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Preview</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tag</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Headline</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">CTA</th>
+              {tab === "web" ? (
+                <>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tag</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Headline</th>
+                </>
+              ) : (
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Link</th>
+              )}
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Button</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               <th className="px-4 py-3"></th>
@@ -141,27 +147,33 @@ export default function BannersAdmin() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={tab === "web" ? 7 : 6} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : shown.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No {tab} banners yet.</td></tr>
+              <tr><td colSpan={tab === "web" ? 7 : 6} className="text-center py-16 text-gray-400 text-sm">No {tab} banners yet.</td></tr>
             ) : shown.map((b) => (
               <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
                   <div
-                    className="w-16 h-10 rounded-lg overflow-hidden flex items-center justify-center text-xs font-bold"
-                    style={{ background: b.bg_color, color: b.accent_color }}
+                    className="w-16 h-10 rounded-lg overflow-hidden flex items-center justify-center text-xs font-bold bg-gray-100 text-gray-400"
+                    style={b.food_image_url ? undefined : { background: b.bg_color, color: b.accent_color }}
                   >
                     {b.food_image_url
                       ? <img src={b.food_image_url} alt="" className="w-full h-full object-cover" />
-                      : b.tag?.slice(0, 3)
+                      : tab === "web" ? b.tag?.slice(0, 3) : "IMG"
                     }
                   </div>
                 </td>
-                <td className="px-4 py-3 text-xs font-semibold text-gray-600">{b.tag || "—"}</td>
-                <td className="px-4 py-3">
-                  <p className="text-sm font-semibold" style={{ color: b.accent_color }}>{b.headline_orange}</p>
-                  <p className="text-xs text-gray-600">{b.headline_black}</p>
-                </td>
+                {tab === "web" ? (
+                  <>
+                    <td className="px-4 py-3 text-xs font-semibold text-gray-600">{b.tag || "—"}</td>
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-semibold" style={{ color: b.accent_color }}>{b.headline_orange}</p>
+                      <p className="text-xs text-gray-600">{b.headline_black}</p>
+                    </td>
+                  </>
+                ) : (
+                  <td className="px-4 py-3 text-xs font-mono text-blue-600 truncate max-w-[220px]">{b.cta_href || "—"}</td>
+                )}
                 <td className="px-4 py-3 text-xs text-gray-500">{b.cta_text}</td>
                 <td className="px-4 py-3 text-xs text-gray-500">{b.sort_order}</td>
                 <td className="px-4 py-3">
