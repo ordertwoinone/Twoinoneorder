@@ -6,6 +6,7 @@ import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
 import JsonLd from "@/components/seo/JsonLd";
 import TrackingScripts from "@/components/seo/TrackingScripts";
 import PwaProvider from "@/components/pwa/PwaProvider";
+import LogoLoader from "@/components/ui/LogoLoader";
 import { SITE_URL, organizationSchema, webSiteSchema } from "@/lib/seo";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
@@ -158,6 +159,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <FavoritesProvider>{children}</FavoritesProvider>
         <PwaProvider />
+        <LogoLoader />
       </body>
     </html>
   );
