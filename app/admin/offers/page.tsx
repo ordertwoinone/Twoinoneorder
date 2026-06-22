@@ -13,14 +13,17 @@ interface Offer {
   cta_href: string;
   image_url: string;
   bg_color: string;
+  card_color: string;
   sort_order: number;
   is_active: boolean;
 }
 
+const DEFAULT_GRADIENT = "linear-gradient(150deg,#f97316 0%,#db2777 58%,#7c3aed 100%)";
+
 const EMPTY: Omit<Offer, "id"> = {
   badge_text: "", badge_color: "#16a34a", title: "", subtitle: "",
   cta_text: "Order Now", cta_href: "", image_url: "",
-  bg_color: "#ffffff", sort_order: 0, is_active: true,
+  bg_color: "#ffffff", card_color: "", sort_order: 0, is_active: true,
 };
 
 export default function OffersAdmin() {
@@ -42,7 +45,7 @@ export default function OffersAdmin() {
   useEffect(() => { load(); }, []);
 
   function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY } }); }
-  function openEdit(o: Offer) { setModal({ open: true, mode: "edit", data: { ...o } }); }
+  function openEdit(o: Offer) { setModal({ open: true, mode: "edit", data: { ...o, card_color: o.card_color || "" } }); }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) { setModal((m) => ({ ...m, data: { ...m.data, [key]: value } })); }
 
@@ -196,6 +199,27 @@ export default function OffersAdmin() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Offer Card Color (Homepage)</label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(modal.data.card_color) ? modal.data.card_color : "#f97316"}
+                    onChange={(e) => handleField("card_color", e.target.value)}
+                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
+                  <input type="text" value={modal.data.card_color} onChange={(e) => handleField("card_color", e.target.value)}
+                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono"
+                    placeholder="Default gradient" />
+                  {modal.data.card_color && (
+                    <button type="button" onClick={() => handleField("card_color", "")}
+                      className="px-3 py-2.5 rounded-lg text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors shrink-0">
+                      Reset
+                    </button>
+                  )}
+                </div>
+                {/* Live preview swatch */}
+                <div className="mt-2 h-9 rounded-lg border border-gray-200" style={{ background: modal.data.card_color?.trim() || DEFAULT_GRADIENT }} />
+                <p className="text-[11px] text-gray-400 mt-1.5">Sets the homepage Special Offers card background. Leave empty for the default orange→purple gradient. Text auto-switches to dark on light colors.</p>
+              </div>
+
               <ImageUploadField label="Image" value={modal.data.image_url} onChange={(url) => handleField("image_url", url)} folder="offers" hint="600×400px · offer card" />
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Status</label>

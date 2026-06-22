@@ -76,7 +76,7 @@ async function getCards(): Promise<HomepageCard[]> {
 async function getOffers(): Promise<OfferItem[]> {
   const { data } = await supabaseAdmin
     .from("offers")
-    .select("id, badge_text, badge_color, title, subtitle, cta_text, cta_href, image_url")
+    .select("id, badge_text, badge_color, title, subtitle, cta_text, cta_href, image_url, card_color")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   return data || [];

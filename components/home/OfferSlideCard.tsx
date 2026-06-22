@@ -14,6 +14,25 @@ export interface OfferItem {
   cta_text: string;
   cta_href: string;
   image_url: string;
+  card_color?: string | null;
+}
+
+// Default card background when admin hasn't set a custom colour.
+const DEFAULT_CARD_BG = "linear-gradient(150deg,#f97316 0%,#db2777 58%,#7c3aed 100%)";
+
+// For a solid hex colour, decide whether text should be dark (on a light card)
+// or white (on a dark card). Non-hex values (e.g. a gradient) keep white text.
+function isLightHex(color?: string | null): boolean {
+  if (!color) return false;
+  const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(color.trim());
+  if (!m) return false;
+  let hex = m[1];
+  if (hex.length === 3) hex = hex.split("").map((c) => c + c).join("");
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  // Perceived luminance (0–255). High = light background.
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 165;
 }
 
 export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
@@ -37,10 +56,15 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
   const href = o.cta_href || "#";
   const external = href.startsWith("http");
 
+  const cardBg = o.card_color?.trim() || DEFAULT_CARD_BG;
+  const onLight = isLightHex(o.card_color);
+  const titleColor = onLight ? "#111827" : "#ffffff";
+  const subtitleColor = onLight ? "rgba(17,24,39,0.65)" : "rgba(255,255,255,0.8)";
+
   const inner = (
     <div
       className="group rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full"
-      style={{ background: "linear-gradient(150deg,#f97316 0%,#db2777 58%,#7c3aed 100%)" }}
+      style={{ background: cardBg }}
     >
       {/* Slideshow image */}
       <div className="mx-2 mt-2 sm:mx-3 sm:mt-3 rounded-2xl overflow-hidden flex-shrink-0 relative min-h-[112px] sm:min-h-[160px]">
@@ -96,9 +120,9 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
       {/* Content */}
       <div className="px-3 pt-2.5 pb-3 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
         <div key={`${o.id}-info`} className="hc-fade-soft flex flex-col gap-1 sm:gap-1.5 flex-1">
-          <h3 className="font-extrabold text-white text-[13px] sm:text-base leading-tight truncate">{o.title}</h3>
+          <h3 className="font-extrabold text-[13px] sm:text-base leading-tight truncate" style={{ color: titleColor }}>{o.title}</h3>
           {o.subtitle && (
-            <p className="text-white/80 text-[11px] sm:text-[12px] leading-relaxed line-clamp-2">{o.subtitle}</p>
+            <p className="text-[11px] sm:text-[12px] leading-relaxed line-clamp-2" style={{ color: subtitleColor }}>{o.subtitle}</p>
           )}
         </div>
 
