@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   Menu, X, ChevronRight, MapPin,
-  Heart, Navigation, Loader2,
+  Heart, Navigation, Loader2, Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "@/hooks/useLocation";
@@ -23,9 +23,23 @@ const NAV_LINKS = [
 
 export default function Navbar({ className = "" }: { className?: string }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [installed, setInstalled] = useState(false);
   const { location, detect } = useLocation();
   const { keys: favKeys } = useFavorites();
   const favCount = favKeys.size;
+
+  // Hide the "Get App" button once the site is running as an installed app.
+  useEffect(() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    setInstalled(standalone);
+  }, []);
+
+  function getApp() {
+    setDrawerOpen(false);
+    window.dispatchEvent(new Event("tio-open-install"));
+  }
 
   const displayArea =
     location.status === "granted" ? location.area : "Use my location";
@@ -151,9 +165,19 @@ export default function Navbar({ className = "" }: { className?: string }) {
                 ))}
               </div>
               <div
-                className="p-5 border-t border-gray-100"
+                className="p-5 border-t border-gray-100 space-y-2.5"
                 style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
               >
+                {!installed && (
+                  <button
+                    onClick={getApp}
+                    className="w-full flex items-center justify-center gap-2 text-sm font-bold py-3 rounded-2xl border-2 transition-colors active:scale-[0.98]"
+                    style={{ borderColor: "#ea580c", color: "#ea580c" }}
+                  >
+                    <Download size={16} />
+                    Get the App
+                  </button>
+                )}
                 <Link
                   href="/catering"
                   onClick={() => setDrawerOpen(false)}

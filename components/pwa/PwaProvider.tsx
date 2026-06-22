@@ -88,11 +88,14 @@ export default function PwaProvider() {
     if (plat === "ios") setIosBrowser(detectIosBrowser());
 
     // Chromium: the event may have been captured before mount (inline head
-    // script stashes it on window.deferredInstallPrompt).
+    // script stashes it on window.deferredInstallPrompt). Only auto-show the
+    // banner when a real native prompt exists — otherwise the "Get App" button
+    // (in the menu) is the entry point, so we don't nag on iOS.
     function offer() {
       if (isStandalone() || recentlyDismissed()) return;
       const evt = getWindowPrompt();
-      if (evt) setDeferred(evt);
+      if (!evt) return;
+      setDeferred(evt);
       setShowBanner(true);
     }
     function onBeforeInstall(e: Event) {
@@ -108,21 +111,7 @@ export default function PwaProvider() {
       setGuideOpen(false);
     });
 
-    if (getWindowPrompt()) {
-      // Already installable right now.
-      offer();
-    } else {
-      // No native event (iOS always; Android until criteria met). Still show the
-      // banner so the user has a path — tapping Install opens manual steps.
-      const t = setTimeout(() => {
-        if (!isStandalone() && !recentlyDismissed()) setShowBanner(true);
-      }, 2500);
-      return () => {
-        clearTimeout(t);
-        window.removeEventListener("pwa-installable", offer);
-        window.removeEventListener("beforeinstallprompt", onBeforeInstall);
-      };
-    }
+    offer(); // shows the banner only if a prompt was already captured
 
     return () => {
       window.removeEventListener("pwa-installable", offer);
@@ -158,6 +147,14 @@ export default function PwaProvider() {
     }
     setGuideOpen(true);
   }, [deferred]);
+
+  // Lets a "Get App" button anywhere in the UI trigger the install flow.
+  useEffect(() => {
+    if (isStandalone()) return;
+    const open = () => handleInstall();
+    window.addEventListener("tio-open-install", open);
+    return () => window.removeEventListener("tio-open-install", open);
+  }, [handleInstall]);
 
   return (
     <>
@@ -219,7 +216,7 @@ export default function PwaProvider() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-[70] sm:hidden"
+              className="fixed inset-0 bg-black/50 z-[70]"
               onClick={() => setGuideOpen(false)}
             />
             <motion.div
@@ -227,7 +224,7 @@ export default function PwaProvider() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 320 }}
-              className="fixed left-0 right-0 bottom-0 z-[71] bg-white rounded-t-3xl sm:hidden"
+              className="fixed left-0 right-0 bottom-0 z-[71] bg-white rounded-t-3xl sm:mx-auto sm:bottom-6 sm:w-[420px] sm:rounded-3xl sm:shadow-2xl"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
               role="dialog"
               aria-label="How to install"
