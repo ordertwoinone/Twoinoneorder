@@ -49,7 +49,7 @@ export default async function HomeCategories() {
   if (categories.length === 0) return null;
 
   return (
-    <section className="pt-3 pb-1">
+    <section className="pt-4 pb-2">
       <div className="max-w-7xl mx-auto px-4">
 
         {/* Mobile: horizontal scroll. md+: columns adapt to the number of

@@ -247,11 +247,11 @@ export default function BannersAdmin() {
               </div>
 
               <ImageUploadField
-                label="Food Image"
+                label="Banner Image"
                 value={modal.data.food_image_url}
                 onChange={(url) => handleField("food_image_url", url)}
                 folder="banners"
-                hint="800×500px · right side of banner"
+                hint="Recommended 600×700px (portrait) · full banner image — the Order button is added automatically"
               />
 
               <div>

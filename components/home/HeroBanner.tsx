@@ -20,7 +20,7 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
   if (!slides.length) return null;
 
   return (
-    <section className="pt-1 pb-2">
+    <section className="pt-2 pb-3">
       <div className="max-w-7xl mx-auto">
         {/* Horizontally scrollable, fully clickable banner images */}
         <div
@@ -47,15 +47,15 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                   />
                 )}
 
-                {/* Order button — overlaid like the reference design */}
-                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-black/85 text-white text-[11px] sm:text-xs font-bold px-4 py-2 rounded-full whitespace-nowrap backdrop-blur-sm">
+                {/* Order button — small, bottom-right */}
+                <span className="absolute bottom-2 right-2 inline-flex items-center bg-black/85 text-white text-[9px] sm:text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap backdrop-blur-sm">
                   {s.cta_text || "Order Now"}
                 </span>
               </div>
             );
 
             const cls =
-              "snap-item shrink-0 w-[44%] sm:w-[300px] aspect-[6/7] sm:aspect-[16/10] tap-shrink block";
+              "snap-item shrink-0 w-[34%] sm:w-[240px] aspect-[6/7] sm:aspect-[16/10] tap-shrink block";
 
             return external ? (
               <a key={s.id} href={href} className={cls} aria-label={s.cta_text || s.tag || "Offer"}>
