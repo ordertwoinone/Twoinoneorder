@@ -47,6 +47,7 @@ export default function BannersAdmin() {
   const [tab, setTab] = useState<"mobile" | "web">("mobile");
 
   const shown = banners.filter((b) => (b.platform || "mobile") === tab);
+  const isWeb = modal.data.platform === "web";
 
   async function load() {
     setLoading(true);
@@ -196,77 +197,94 @@ export default function BannersAdmin() {
             </div>
 
             <div className="px-6 py-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tag / Brand</label>
-                  <input type="text" value={modal.data.tag} onChange={(e) => handleField("tag", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="FALAFEL AL NILE" />
+              {/* Sort order shows on both. Tag is web-only — on mobile the banner is just the clickable image. */}
+              {isWeb ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tag / Brand</label>
+                    <input type="text" value={modal.data.tag} onChange={(e) => handleField("tag", e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      placeholder="FALAFEL AL NILE" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sort Order</label>
+                    <input type="number" value={modal.data.sort_order} onChange={(e) => handleField("sort_order", parseInt(e.target.value))}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  </div>
                 </div>
+              ) : (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sort Order</label>
                   <input type="number" value={modal.data.sort_order} onChange={(e) => handleField("sort_order", parseInt(e.target.value))}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
-              </div>
+              )}
+
+              {/* Headlines + subtitle render in the web layout's text panel only. */}
+              {isWeb && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (colored)</label>
+                      <input type="text" value={modal.data.headline_orange} onChange={(e) => handleField("headline_orange", e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        placeholder="20% EXTRA" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (black)</label>
+                      <input type="text" value={modal.data.headline_black} onChange={(e) => handleField("headline_black", e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        placeholder="DISCOUNT" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
+                    <textarea value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} rows={2}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+                      placeholder="Description text..." />
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (colored)</label>
-                  <input type="text" value={modal.data.headline_orange} onChange={(e) => handleField("headline_orange", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="20% EXTRA" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (black)</label>
-                  <input type="text" value={modal.data.headline_black} onChange={(e) => handleField("headline_black", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="DISCOUNT" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-                <textarea value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} rows={2}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
-                  placeholder="Description text..." />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">CTA Text</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Button Text</label>
                   <input type="text" value={modal.data.cta_text} onChange={(e) => handleField("cta_text", e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                     placeholder="Order Now" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">CTA Link</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Banner Link</label>
                   <input type="text" value={modal.data.cta_href} onChange={(e) => handleField("cta_href", e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="https://..." />
+                    placeholder="#restaurants or https://..." />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Background Color</label>
-                  <div className="flex gap-2">
-                    <input type="color" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
-                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
-                    <input type="text" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
-                      className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
+              {/* Background/accent colors only affect the web text panel. */}
+              {isWeb && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Background Color</label>
+                    <div className="flex gap-2">
+                      <input type="color" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
+                        className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
+                      <input type="text" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
+                        className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Accent Color</label>
+                    <div className="flex gap-2">
+                      <input type="color" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
+                        className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
+                      <input type="text" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
+                        className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Accent Color</label>
-                  <div className="flex gap-2">
-                    <input type="color" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
-                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
-                    <input type="text" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
-                      className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
-                  </div>
-                </div>
-              </div>
+              )}
 
               <ImageUploadField
                 label="Banner Image"
