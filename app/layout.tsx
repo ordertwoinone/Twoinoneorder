@@ -140,6 +140,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </>
         )}
         <JsonLd data={[organizationSchema(sameAs), webSiteSchema()]} />
+        {/* Capture the install prompt as early as possible — it can fire before
+            React hydrates. PwaProvider reads window.deferredInstallPrompt. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.deferredInstallPrompt=e;window.dispatchEvent(new Event('pwa-installable'));});window.addEventListener('appinstalled',function(){window.deferredInstallPrompt=null;});",
+          }}
+        />
       </head>
       <body className={`${inter.className} ${dancing.variable} antialiased`}>
         <TrackingScripts

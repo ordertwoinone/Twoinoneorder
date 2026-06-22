@@ -55,16 +55,33 @@ export default function PwaProvider() {
   }, []);
 
   // Android / Chromium install flow.
+  // `beforeinstallprompt` can fire BEFORE React mounts, so an inline <head>
+  // script (see layout) stashes it on window.deferredInstallPrompt. We read
+  // that here and also keep listening in case it fires later.
   useEffect(() => {
+    function offer() {
+      if (isStandalone() || recentlyDismissed()) return;
+      const evt = (window as unknown as { deferredInstallPrompt?: BeforeInstallPromptEvent })
+        .deferredInstallPrompt;
+      if (evt) {
+        setDeferred(evt);
+        setShowBanner(true);
+      }
+    }
     function onBeforeInstall(e: Event) {
       e.preventDefault();
-      if (isStandalone() || recentlyDismissed()) return;
-      setDeferred(e as BeforeInstallPromptEvent);
-      setShowBanner(true);
+      (window as unknown as { deferredInstallPrompt?: Event }).deferredInstallPrompt = e;
+      offer();
     }
+
+    offer(); // event may already have been captured before mount
+    window.addEventListener("pwa-installable", offer);
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
     window.addEventListener("appinstalled", () => setShowBanner(false));
-    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+    return () => {
+      window.removeEventListener("pwa-installable", offer);
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+    };
   }, []);
 
   // iOS has no beforeinstallprompt — offer manual "Add to Home Screen" guidance.
@@ -88,9 +105,14 @@ export default function PwaProvider() {
   }, []);
 
   const install = useCallback(async () => {
-    if (!deferred) return;
-    await deferred.prompt();
-    await deferred.userChoice;
+    const evt =
+      deferred ||
+      (window as unknown as { deferredInstallPrompt?: BeforeInstallPromptEvent })
+        .deferredInstallPrompt;
+    if (!evt) return;
+    await evt.prompt();
+    await evt.userChoice;
+    (window as unknown as { deferredInstallPrompt?: null }).deferredInstallPrompt = null;
     setDeferred(null);
     setShowBanner(false);
   }, [deferred]);
