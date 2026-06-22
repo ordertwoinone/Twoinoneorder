@@ -52,8 +52,8 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
-              className="flex items-stretch"
-              style={{ background: s.bg_color, minHeight: "240px" }}
+              className="flex items-stretch min-h-[180px] sm:min-h-[240px]"
+              style={{ background: s.bg_color }}
             >
               {/* LEFT: text */}
               <div className="flex flex-col justify-center px-5 sm:px-8 py-6 w-[55%] sm:w-[50%] z-10">
