@@ -8,6 +8,7 @@ import HeroBannerWeb from "@/components/home/HeroBannerWeb";
 import RestaurantCards from "@/components/home/RestaurantCards";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
+import LocationBar from "@/components/home/LocationBar";
 import TrustBadges from "@/components/home/TrustBadges";
 import FadeInSection from "@/components/ui/FadeInSection";
 import JsonLd from "@/components/seo/JsonLd";
@@ -54,6 +55,7 @@ export default async function HomePage() {
       <JsonLd data={restaurantListSchema} />
       <Navbar />
       <main className="pb-20 sm:pb-0">
+        <LocationBar />
         <div className="sticky top-14 sm:top-16 z-30 bg-white border-b border-gray-100">
           <SearchBar />
         </div>
