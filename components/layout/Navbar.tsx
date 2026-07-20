@@ -47,7 +47,7 @@ export default function Navbar({ className = "" }: { className?: string }) {
   return (
     <>
       <nav className={`sticky top-0 z-50 bg-white${className ? ` ${className}` : ""}`}>
-        <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center gap-3 relative">
+        <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center gap-3">
 
           {/* Hamburger */}
           <button
@@ -59,8 +59,8 @@ export default function Navbar({ className = "" }: { className?: string }) {
             <Menu size={20} className="text-gray-700" />
           </button>
 
-          {/* Desktop: Logo + Brand (left aligned) */}
-          <Link href="/" className="hidden sm:flex items-center gap-2.5 shrink-0">
+          {/* Logo + Brand */}
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <div className="relative w-10 h-10 shrink-0">
               <Image
                 src="/logos/two-in-one.png"
@@ -70,7 +70,7 @@ export default function Navbar({ className = "" }: { className?: string }) {
                 priority
               />
             </div>
-            <div>
+            <div className="hidden sm:block">
               <p className="text-[13px] font-extrabold text-gray-900 leading-tight tracking-wide uppercase">
                 Two In One Order
               </p>
@@ -80,36 +80,15 @@ export default function Navbar({ className = "" }: { className?: string }) {
             </div>
           </Link>
 
-          {/* Mobile: centered TWO IN ONE text logo */}
-          <Link
-            href="/"
-            className="sm:hidden absolute left-1/2 -translate-x-1/2 flex flex-col items-center"
-            aria-label="Two In One — home"
-          >
-            <span className="flex items-center text-[19px] font-extrabold tracking-tight text-gray-900 leading-none">
-              TWO
-              <span
-                className="mx-[3px] inline-flex items-center justify-center w-[22px] h-[22px] rounded-full text-white text-[11px] font-extrabold"
-                style={{ background: "#dc2626" }}
-              >
-                IN
-              </span>
-              ONE
-            </span>
-            <span className="text-[7px] font-bold tracking-[0.16em] text-gray-500 mt-1">
-              FOOD. FOUR WAYS. ONE ORDER.
-            </span>
-          </Link>
-
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Location — desktop only (mobile uses the "Deliver to" bar) */}
+          {/* Location — tap to use current location */}
           <button
             onClick={detect}
             disabled={location.status === "loading"}
             aria-label="Use my current location"
-            className="hidden sm:flex items-center gap-1.5 rounded-xl px-2 py-1.5 hover:bg-gray-50 transition-colors disabled:cursor-default"
+            className="flex items-center gap-1.5 rounded-xl px-2 py-1.5 hover:bg-gray-50 transition-colors disabled:cursor-default"
           >
             <MapPin size={17} fill="#ea580c" stroke="none" />
             {location.status === "loading" ? (
