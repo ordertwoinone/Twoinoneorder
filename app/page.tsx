@@ -3,11 +3,12 @@ import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import SpinWheel from "@/components/home/SpinWheel";
 import SearchBar from "@/components/home/SearchBar";
-import HeroBanner from "@/components/home/HeroBanner";
+import HeroBannerMobile from "@/components/home/HeroBannerMobile";
 import HeroBannerWeb from "@/components/home/HeroBannerWeb";
 import RestaurantCards from "@/components/home/RestaurantCards";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
+import LocationBar from "@/components/home/LocationBar";
 import TrustBadges from "@/components/home/TrustBadges";
 import FadeInSection from "@/components/ui/FadeInSection";
 import JsonLd from "@/components/seo/JsonLd";
@@ -44,24 +45,28 @@ async function getBanners(platform: "mobile" | "web"): Promise<BannerSlide[]> {
 }
 
 export default async function HomePage() {
-  const [mobileBanners, webBanners] = await Promise.all([
-    getBanners("mobile"),
-    getBanners("web"),
-  ]);
+  const webBanners = await getBanners("web");
 
   return (
     <>
       <JsonLd data={restaurantListSchema} />
       <Navbar />
-      <main className="pb-20 sm:pb-0">
-        <div className="sticky top-14 sm:top-16 z-30 bg-white border-b border-gray-100">
+      <main className="pb-36 sm:pb-0">
+        {/* Desktop: sticky search bar under the navbar */}
+        <div className="hidden sm:block sticky top-16 z-30 bg-white border-b border-gray-100">
           <SearchBar />
         </div>
 
-        {/* Mobile layout: categories on top, then swipeable banner cards */}
+        {/* Mobile layout: deliver bar, rounded full-bleed hero, then a white
+            "second section" sheet with a rounded top that rises over the hero,
+            holding the search pill + category row */}
         <div className="sm:hidden">
-          <HomeCategories variant="mobile" />
-          <HeroBanner slides={mobileBanners} />
+          <LocationBar />
+          <HeroBannerMobile />
+          <div className="relative z-20 -mt-7 bg-white rounded-t-[28px]">
+            <SearchBar />
+            <HomeCategories variant="mobile" />
+          </div>
         </div>
 
         {/* Web layout: slideshow hero, then categories with heading */}

@@ -83,12 +83,12 @@ export default function Navbar({ className = "" }: { className?: string }) {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Location — tap to use current location */}
+          {/* Location — desktop only (mobile uses the "Deliver to" bar) */}
           <button
             onClick={detect}
             disabled={location.status === "loading"}
             aria-label="Use my current location"
-            className="flex items-center gap-1.5 rounded-xl px-2 py-1.5 hover:bg-gray-50 transition-colors disabled:cursor-default"
+            className="hidden sm:flex items-center gap-1.5 rounded-xl px-2 py-1.5 hover:bg-gray-50 transition-colors disabled:cursor-default"
           >
             <MapPin size={17} fill="#ea580c" stroke="none" />
             {location.status === "loading" ? (

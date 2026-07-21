@@ -1,56 +1,51 @@
 "use client";
-import { MapPin, Loader2, Navigation } from "lucide-react";
+import { MapPin, Loader2, Navigation, ChevronDown } from "lucide-react";
 import { useLocation } from "@/hooks/useLocation";
 
+// Mobile "Deliver to" bar — sits directly under the header, above the hero.
 export default function LocationBar() {
   const { location, detect } = useLocation();
 
   const displayArea =
-    location.status === "granted" ? location.area : "Use my current location";
-
-  const subLabel =
-    location.status === "granted"
-      ? "Delivering to"
-      : location.status === "denied" || location.status === "error"
-        ? "Location access needed"
-        : "Tap to detect";
+    location.status === "granted" ? location.area : "Set your location";
 
   return (
-    <div className="px-4 pt-3 pb-2">
-      <div className="max-w-7xl mx-auto">
-        {/* ── Location bar — tap to use current location ── */}
+    <div className="sm:hidden px-4 pt-2.5 pb-3 bg-white">
+      <div className="flex items-center justify-between gap-3">
+        {/* Deliver to — tap to detect */}
         <button
           onClick={detect}
           disabled={location.status === "loading"}
-          className="w-full flex items-center gap-3 bg-gray-50 border border-gray-100 hover:border-green-200 rounded-2xl px-4 py-3 transition-all text-left disabled:cursor-default"
+          className="flex items-center gap-2 text-left min-w-0 disabled:cursor-default"
+          aria-label="Set delivery location"
         >
-          {/* Pin icon */}
-          <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center shrink-0">
-            <MapPin size={17} className="text-green-600" />
-          </div>
-
-          {/* Label */}
-          <div className="flex-1 min-w-0">
-            {location.status === "loading" ? (
-              <div className="flex items-center gap-2">
-                <Loader2 size={13} className="animate-spin text-green-600" />
-                <span className="text-sm text-gray-500">Detecting location…</span>
-              </div>
-            ) : (
-              <>
-                <p className="text-[10px] text-gray-400 leading-none mb-0.5">{subLabel}</p>
-                <p className="text-sm font-bold text-gray-900 truncate">{displayArea}</p>
-              </>
-            )}
-          </div>
-
-          {/* Use my current location button */}
-          {location.status !== "loading" && (
-            <span className="flex items-center gap-1.5 text-[11px] text-green-600 font-semibold bg-green-50 px-2.5 py-1.5 rounded-lg shrink-0">
-              <Navigation size={12} />
-              {location.status === "granted" ? "Update" : "Use location"}
+          <MapPin size={18} fill="#ea580c" stroke="#ea580c" className="shrink-0" />
+          <span className="min-w-0">
+            <span className="block text-[11px] text-gray-400 leading-none mb-0.5">
+              Deliver to
             </span>
-          )}
+            {location.status === "loading" ? (
+              <span className="flex items-center gap-1.5 text-[13px] font-bold text-gray-500">
+                <Loader2 size={13} className="animate-spin" style={{ color: "#ea580c" }} />
+                Detecting…
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[13px] font-bold text-gray-900">
+                <span className="truncate max-w-[190px]">{displayArea}</span>
+                <ChevronDown size={15} className="text-gray-500 shrink-0" />
+              </span>
+            )}
+          </span>
+        </button>
+
+        {/* Change button */}
+        <button
+          onClick={detect}
+          disabled={location.status === "loading"}
+          className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3.5 py-2 text-[13px] font-semibold text-gray-800 shrink-0 hover:bg-gray-50 transition-colors disabled:cursor-default"
+        >
+          <Navigation size={14} style={{ color: "#ea580c" }} />
+          Change
         </button>
       </div>
     </div>

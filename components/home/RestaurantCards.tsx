@@ -59,14 +59,15 @@ export default async function RestaurantCards() {
                 className="block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group tap-shrink"
                 style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
               >
-                {/* Image */}
-                <div className="relative" style={{ height: "120px" }}>
-                  {r.food_image_url ? (
+                {/* Brand logo tile — contain + padding so every logo shows fully
+                    at a consistent size regardless of its aspect ratio */}
+                <div className="relative bg-white" style={{ height: "120px" }}>
+                  {r.logo_url ? (
                     <Image
-                      src={r.food_image_url}
+                      src={r.logo_url}
                       alt={r.name}
                       fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 640px) 50vw, 25vw"
                     />
                   ) : (
@@ -81,42 +82,30 @@ export default async function RestaurantCards() {
                       {r.badge}
                     </span>
                   )}
-
-                  {r.logo_url && (
-                    <div className="absolute top-2 right-2 w-9 h-9 rounded-xl bg-white shadow-sm overflow-hidden p-1 z-10">
-                      <Image
-                        src={r.logo_url}
-                        alt={`${r.name} logo`}
-                        width={32}
-                        height={32}
-                        className="object-contain w-full h-full"
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Info */}
                 <div className="px-3 pt-2.5 pb-3">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="flex items-center gap-0.5 text-[11px] font-bold text-amber-500">
-                      <Star size={10} className="fill-amber-400 stroke-amber-400" />
-                      {r.rating}
-                    </span>
-                    <span className="text-gray-300 text-[10px]">·</span>
-                    <span className="flex items-center gap-0.5 text-gray-400 text-[10px]">
-                      <Clock size={9} />
-                      {r.delivery_time}
-                    </span>
-                  </div>
                   <h3 className="text-gray-900 font-extrabold text-sm leading-tight mb-0.5 truncate">
                     {r.name}
                   </h3>
-                  <p className="text-gray-400 text-[10px] truncate mb-1.5">
+                  <p className="text-gray-400 text-[11px] truncate mb-2.5">
                     {r.cuisine?.join(", ")}
                   </p>
-                  <p className="text-[11px] font-semibold" style={{ color: "#16a34a" }}>
-                    Free delivery
-                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-gray-500 text-[11px] font-medium">
+                      <Clock size={11} />
+                      {r.delivery_time}
+                    </span>
+                    <span
+                      className="flex items-center gap-0.5 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md"
+                      style={{ background: "#16a34a" }}
+                    >
+                      <Star size={10} className="fill-white stroke-white" />
+                      {r.rating}
+                    </span>
+                  </div>
                 </div>
               </a>
             );

@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useEffect } from "react";
-import { Search, X, ExternalLink } from "lucide-react";
+import { Search, X, ExternalLink, SlidersHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearch } from "@/hooks/useSearch";
 
@@ -32,7 +32,7 @@ export default function SearchBar() {
         {/* Search pill */}
         <div className="flex-1 relative" ref={containerRef}>
           <Search
-            size={16}
+            size={20}
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10"
           />
           <input
@@ -40,17 +40,25 @@ export default function SearchBar() {
             type="text"
             value={query}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder="Search for food, restaurants, cuisines..."
-            className="w-full pl-10 pr-10 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-orange-400 focus:bg-white transition-colors"
+            placeholder="Search shawarma, biryani, falafel, karak…"
+            className="w-full pl-12 pr-12 py-4 rounded-[20px] bg-white text-[15px] text-gray-700 placeholder:text-gray-400 focus:outline-none ring-1 ring-black/[0.06] focus:ring-orange-300 shadow-[0_6px_22px_rgba(0,0,0,0.10)] transition-shadow"
             onFocus={() => { if (query.trim().length >= 2) setIsOpen(true); }}
           />
-          {query && (
+          {query ? (
             <button
               onClick={clear}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-50 z-10"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
+          ) : (
+            <span
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full text-gray-500 z-10 pointer-events-none"
+              aria-hidden="true"
+            >
+              <SlidersHorizontal size={17} />
+            </span>
           )}
 
           {/* Dropdown results */}

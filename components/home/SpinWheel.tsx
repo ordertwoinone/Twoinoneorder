@@ -1,7 +1,10 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Gift, Copy, Check, Sparkles } from "lucide-react";
+import { X, Gift, Copy, Check, Sparkles, ChevronRight } from "lucide-react";
+
+const WHEEL_GRADIENT =
+  "conic-gradient(#ef4444 0deg 45deg, #f59e0b 45deg 90deg, #22c55e 90deg 135deg, #3b82f6 135deg 180deg, #8b5cf6 180deg 225deg, #ec4899 225deg 270deg, #ef4444 270deg 315deg, #f59e0b 315deg 360deg)";
 
 interface Segment {
   id: string;
@@ -78,6 +81,7 @@ const CONFETTI = Array.from({ length: 36 }, (_, i) => ({
 export default function SpinWheel() {
   const [data, setData] = useState<WheelData | null>(null);
   const [open, setOpen] = useState(false);
+  const [bannerClosed, setBannerClosed] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<Prize | null>(null);
@@ -239,10 +243,67 @@ export default function SpinWheel() {
 
   return (
     <>
-      {/* ── Floating button (bottom-left) ─────────────────────── */}
+      {/* ── Mobile: rounded "Spin & Win" banner floating above the bottom nav ── */}
+      {!bannerClosed && (
+        <motion.div
+          className="sm:hidden fixed left-3 right-3 z-40 flex items-center gap-2.5 rounded-2xl pl-3 pr-2 py-2.5 text-white overflow-hidden"
+          style={{
+            bottom: "calc(4rem + 8px + env(safe-area-inset-bottom, 0px))",
+            background: "linear-gradient(90deg, #f97316 0%, #db2777 55%, #7c3aed 100%)",
+            boxShadow: "0 8px 24px rgba(124,58,237,0.35)",
+          }}
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.8, type: "spring", stiffness: 200, damping: 22 }}
+        >
+          {/* Main tap target — opens the wheel */}
+          <button
+            onClick={() => setOpen(true)}
+            className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+            aria-label={settings.button_label}
+          >
+            {/* Spinning wheel icon */}
+            <span className="relative w-9 h-9 rounded-full shrink-0 border-2 border-white/80 overflow-hidden">
+              <motion.span
+                className="absolute inset-0"
+                style={{ background: WHEEL_GRADIENT }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+              />
+              <span className="absolute inset-0 m-auto w-2.5 h-2.5 rounded-full bg-white" />
+            </span>
+
+            <span className="flex-1 min-w-0 leading-tight">
+              <span className="block font-extrabold text-sm">Spin &amp; Win</span>
+              <span className="block text-white/85 text-[11px] truncate">Exciting prizes await you!</span>
+            </span>
+          </button>
+
+          {/* Spin Now */}
+          <button
+            onClick={() => setOpen(true)}
+            className="flex items-center gap-1 bg-white text-[13px] font-bold px-3.5 py-1.5 rounded-full shrink-0"
+            style={{ color: "#7c3aed" }}
+          >
+            Spin Now
+            <ChevronRight size={15} strokeWidth={2.6} />
+          </button>
+
+          {/* Close */}
+          <button
+            onClick={() => setBannerClosed(true)}
+            aria-label="Dismiss Spin & Win"
+            className="w-6 h-6 flex items-center justify-center rounded-full text-white/80 hover:bg-white/20 shrink-0"
+          >
+            <X size={15} />
+          </button>
+        </motion.div>
+      )}
+
+      {/* ── Desktop: floating button (bottom-left) ─────────────────────── */}
       <motion.button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 left-4 sm:bottom-6 sm:left-6 z-50 flex items-center gap-2 rounded-full text-white shadow-xl shadow-orange-500/40 pl-2 pr-4 py-2 overflow-hidden"
+        className="hidden sm:flex fixed bottom-6 left-6 z-50 items-center gap-2 rounded-full text-white shadow-xl shadow-orange-500/40 pl-2 pr-4 py-2 overflow-hidden"
         style={{ background: "linear-gradient(135deg, #f97316 0%, #db2777 60%, #7c3aed 100%)" }}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
