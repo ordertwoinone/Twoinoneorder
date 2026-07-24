@@ -15,6 +15,7 @@ interface Restaurant {
   cuisine: string[];
   logo_url: string;
   food_image_url: string;
+  background_image_url: string | null;
   rating: number;
   delivery_time: string;
   url: string;
@@ -24,7 +25,7 @@ interface Restaurant {
 async function getRestaurants(): Promise<Restaurant[]> {
   const { data, error } = await supabaseAdmin
     .from("restaurants")
-    .select("id, name, cuisine, logo_url, food_image_url, rating, delivery_time, url, badge")
+    .select("id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge")
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
@@ -59,19 +60,34 @@ export default async function RestaurantCards() {
                 className="block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group tap-shrink"
                 style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
               >
-                {/* Brand logo tile — contain + padding so every logo shows fully
-                    at a consistent size regardless of its aspect ratio */}
-                <div className="relative bg-white" style={{ height: "120px" }}>
-                  {r.logo_url ? (
+                {/* Brand logo tile — optional background image behind a
+                    fixed-size, centered logo box so every logo renders at a
+                    consistent visual size regardless of its aspect ratio */}
+                <div className="relative bg-white overflow-hidden" style={{ height: "120px" }}>
+                  {r.background_image_url && (
                     <Image
-                      src={r.logo_url}
-                      alt={r.name}
+                      src={r.background_image_url}
+                      alt=""
                       fill
-                      className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+                      className="object-cover"
                       sizes="(max-width: 640px) 50vw, 25vw"
                     />
+                  )}
+
+                  {r.logo_url ? (
+                    <div className="absolute inset-0 flex items-center justify-center p-3">
+                      <div className="relative w-20 h-20 transition-transform duration-500 group-hover:scale-105">
+                        <Image
+                          src={r.logo_url}
+                          alt={r.name}
+                          fill
+                          className="object-contain"
+                          sizes="80px"
+                        />
+                      </div>
+                    </div>
                   ) : (
-                    <div className="w-full h-full bg-gray-100" />
+                    !r.background_image_url && <div className="w-full h-full bg-gray-100" />
                   )}
 
                   {badge && (

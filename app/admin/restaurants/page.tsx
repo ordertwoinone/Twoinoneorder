@@ -10,6 +10,7 @@ interface Restaurant {
   cuisine: string[];
   logo_url: string;
   food_image_url: string;
+  background_image_url: string;
   rating: number;
   delivery_time: string;
   url: string;
@@ -19,7 +20,7 @@ interface Restaurant {
 }
 
 const EMPTY: Omit<Restaurant, "id" | "created_at"> = {
-  name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "",
+  name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
   rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, is_active: true,
 };
 
@@ -205,6 +206,7 @@ export default function RestaurantsAdmin() {
               </div>
 
               <ImageUploadField label="Logo" value={modal.data.logo_url} onChange={(url) => handleField("logo_url", url)} folder="logos" hint="200×200px · square" />
+              <ImageUploadField label="Background Image" value={modal.data.background_image_url} onChange={(url) => handleField("background_image_url", url)} folder="restaurants" hint="Optional · sits behind the logo on the card" />
               <ImageUploadField label="Food Image" value={modal.data.food_image_url} onChange={(url) => handleField("food_image_url", url)} folder="restaurants" hint="800×500px · right side of card" />
 
               <div className="grid grid-cols-2 gap-3">
