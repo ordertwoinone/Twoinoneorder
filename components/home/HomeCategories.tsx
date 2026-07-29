@@ -88,15 +88,18 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
       <section className="py-5">
         <div className="max-w-7xl mx-auto px-4">
           <h2 className="text-xl font-extrabold text-gray-900 mb-4">What are you craving?</h2>
+          {/* Columns are capped at 110px (rather than 1fr) so a short list
+              stays grouped under the heading instead of spreading across the
+              full container width; they shrink below that on narrow screens. */}
           <div
-            className="grid [grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] justify-items-center gap-4"
+            className="grid [grid-template-columns:repeat(var(--cat-cols),minmax(0,110px))] justify-items-center gap-4 sm:gap-5"
             style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
           >
             {categories.map((cat) => (
               <CategoryItem
                 key={cat.id}
                 cat={cat}
-                itemClass="flex flex-col items-center gap-2 group w-full max-w-[96px] tap-shrink"
+                itemClass="flex flex-col items-center gap-2 group w-full tap-shrink"
               />
             ))}
           </div>
