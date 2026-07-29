@@ -49,15 +49,18 @@ export default async function RestaurantCards() {
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3">
+        {/* Cards — mobile: a swipe rail sized to three per view so the rest
+            scroll into place rather than wrapping to a second row. The negative
+            margin lets it bleed to the screen edges while scroll-pl-4 keeps the
+            first card lined up with the heading. sm+: an even grid. */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none momentum-x -mx-4 px-4 scroll-pl-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible">
           {restaurants.map((r) => {
             const badge = r.badge ? BADGE_STYLE[r.badge] : null;
             return (
               <a
                 key={r.id}
                 href={r.url || "#"}
-                className="block bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group tap-shrink"
+                className="block w-[calc((100vw-3rem)/3)] shrink-0 sm:w-auto bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
                 style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
               >
                 {/* Brand logo tile — optional background image behind a
