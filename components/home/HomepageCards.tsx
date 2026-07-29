@@ -98,17 +98,20 @@ export default async function HomepageCards() {
           </h2>
         </div>
 
-        <div className={`grid grid-cols-2 gap-3 sm:gap-4 items-start ${hasOffers ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+        <div className={`grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-4 items-start ${hasOffers ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
           {cards.map((card) => {
             const isExternal = card.href?.startsWith("http");
+            // Booking already has its own action in the mobile bottom nav, so
+            // the card is desktop-only.
+            const wrapperCls = card.href === "/book-table" ? "hidden sm:flex flex-col" : "flex flex-col";
 
             const cardEl = (
-              <div className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full">
+              <div className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full">
 
                 {/* Image / Emoji — sits inside with margin, its own rounded corners */}
-                <div className="mx-2 mt-2 sm:mx-3 sm:mt-3 rounded-2xl overflow-hidden flex-shrink-0">
+                <div className="mx-1.5 mt-1.5 sm:mx-3 sm:mt-3 rounded-xl sm:rounded-2xl overflow-hidden flex-shrink-0">
                   <div
-                    className="relative w-full flex items-center justify-center min-h-[112px] sm:min-h-[160px]"
+                    className="relative w-full flex items-center justify-center min-h-[84px] sm:min-h-[160px]"
                     style={{
                       background: `linear-gradient(135deg, ${card.bg_from} 0%, ${card.bg_to} 100%)`,
                     }}
@@ -119,10 +122,10 @@ export default async function HomepageCards() {
                         alt={card.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        sizes="(max-width: 640px) 45vw, 25vw"
+                        sizes="(max-width: 640px) 33vw, 25vw"
                       />
                     ) : (
-                      <span className="text-5xl sm:text-7xl select-none py-5 sm:py-6 drop-shadow-sm group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-3xl sm:text-7xl select-none py-4 sm:py-6 drop-shadow-sm group-hover:scale-110 transition-transform duration-300">
                         {card.emoji}
                       </span>
                     )}
@@ -130,11 +133,11 @@ export default async function HomepageCards() {
                 </div>
 
                 {/* Content */}
-                <div className="px-3 pt-2.5 pb-3 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
+                <div className="px-2 pt-2 pb-2.5 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
 
                   {/* Title + badge chip */}
                   <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-gray-900 text-[13px] sm:text-base leading-tight truncate">
+                    <h3 className="font-extrabold text-gray-900 text-[11px] sm:text-base leading-tight truncate">
                       {card.title}
                     </h3>
                     {card.badge && (
@@ -149,13 +152,13 @@ export default async function HomepageCards() {
 
                   {/* Description */}
                   {card.description && (
-                    <p className="text-gray-400 text-[11px] sm:text-[13px] leading-relaxed line-clamp-2">
+                    <p className="text-gray-400 text-[9px] sm:text-[13px] leading-snug sm:leading-relaxed line-clamp-2">
                       {card.description}
                     </p>
                   )}
 
                   {/* Bottom row — subtitle chip + CTA */}
-                  <div className="flex items-center gap-2 mt-auto pt-2.5 sm:pt-3">
+                  <div className="flex items-center gap-2 mt-auto pt-2 sm:pt-3">
                     {card.subtitle && (
                       <span className="hidden xl:flex items-center gap-1 text-[12px] text-gray-500 font-medium bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-full whitespace-nowrap truncate min-w-0">
                         {card.subtitle}
@@ -163,14 +166,16 @@ export default async function HomepageCards() {
                     )}
 
                     <div
-                      className="w-full sm:w-auto sm:ml-auto shrink-0 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 rounded-full text-[12px] sm:text-[13px] font-bold whitespace-nowrap transition-all duration-200 group-hover:gap-2.5"
+                      className="w-full sm:w-auto sm:ml-auto shrink-0 flex items-center justify-center gap-1.5 px-1.5 sm:px-4 py-1.5 sm:py-1.5 rounded-full text-[10px] sm:text-[13px] font-bold whitespace-nowrap transition-all duration-200 group-hover:gap-2.5 overflow-hidden"
                       style={{
                         background: `${card.accent_color}15`,
                         color: card.accent_color,
                       }}
                     >
-                      {card.button_text}
-                      <ArrowRight size={13} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
+                      <span className="truncate">{card.button_text}</span>
+                      {/* Arrow costs ~20px — too much next to the label once the
+                          card is a third of a phone screen wide. */}
+                      <ArrowRight size={13} strokeWidth={2.5} className="hidden sm:block shrink-0 group-hover:translate-x-0.5 transition-transform duration-200" />
                     </div>
                   </div>
 
@@ -179,11 +184,11 @@ export default async function HomepageCards() {
             );
 
             return isExternal ? (
-              <a key={card.id} href={card.href} target="_blank" rel="noopener noreferrer" className="flex flex-col">
+              <a key={card.id} href={card.href} target="_blank" rel="noopener noreferrer" className={wrapperCls}>
                 {cardEl}
               </a>
             ) : (
-              <Link key={card.id} href={card.href} className="flex flex-col">
+              <Link key={card.id} href={card.href} className={wrapperCls}>
                 {cardEl}
               </Link>
             );

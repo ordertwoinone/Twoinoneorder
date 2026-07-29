@@ -63,29 +63,29 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
 
   const inner = (
     <div
-      className="group rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full"
+      className="group rounded-2xl sm:rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full"
       style={{ background: cardBg }}
     >
       {/* Slideshow image */}
-      <div className="mx-2 mt-2 sm:mx-3 sm:mt-3 rounded-2xl overflow-hidden flex-shrink-0 relative min-h-[112px] sm:min-h-[160px]">
-        <div key={o.id} className="hc-fade relative w-full h-full min-h-[112px] sm:min-h-[160px]">
+      <div className="mx-1.5 mt-1.5 sm:mx-3 sm:mt-3 rounded-xl sm:rounded-2xl overflow-hidden flex-shrink-0 relative min-h-[84px] sm:min-h-[160px]">
+        <div key={o.id} className="hc-fade relative w-full h-full min-h-[84px] sm:min-h-[160px]">
           {o.image_url ? (
             <Image
               src={o.image_url}
               alt={o.title}
               fill
               className="object-cover"
-              sizes="(max-width: 640px) 45vw, 25vw"
+              sizes="(max-width: 640px) 33vw, 25vw"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-5xl sm:text-6xl bg-white/10 min-h-[112px] sm:min-h-[160px]">🎁</div>
+            <div className="w-full h-full flex items-center justify-center text-3xl sm:text-6xl bg-white/10 min-h-[84px] sm:min-h-[160px]">🎁</div>
           )}
         </div>
 
         {/* Offer badge */}
         {o.badge_text && (
           <span
-            className="absolute top-3 left-3 text-[10px] font-extrabold px-2.5 py-1 rounded-full leading-none z-10 text-white shadow-sm"
+            className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 text-[8px] sm:text-[10px] font-extrabold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full leading-none z-10 text-white shadow-sm max-w-[calc(100%-12px)] truncate"
             style={{ background: o.badge_color || "#ea580c" }}
           >
             {o.badge_text}
@@ -94,7 +94,7 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
 
         {/* Slide counter */}
         {multi && (
-          <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-1 rounded-full bg-black/45 text-white leading-none z-10">
+          <span className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-black/45 text-white leading-none z-10">
             {idx + 1}/{items.length}
           </span>
         )}
@@ -118,18 +118,18 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
       </div>
 
       {/* Content */}
-      <div className="px-3 pt-2.5 pb-3 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
+      <div className="px-2 pt-2 pb-2.5 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
         <div key={`${o.id}-info`} className="hc-fade-soft flex flex-col gap-1 sm:gap-1.5 flex-1">
-          <h3 className="font-extrabold text-[13px] sm:text-base leading-tight truncate" style={{ color: titleColor }}>{o.title}</h3>
+          <h3 className="font-extrabold text-[11px] sm:text-base leading-tight truncate" style={{ color: titleColor }}>{o.title}</h3>
           {o.subtitle && (
-            <p className="text-[11px] sm:text-[12px] leading-relaxed line-clamp-2" style={{ color: subtitleColor }}>{o.subtitle}</p>
+            <p className="text-[9px] sm:text-[12px] leading-snug sm:leading-relaxed line-clamp-2" style={{ color: subtitleColor }}>{o.subtitle}</p>
           )}
         </div>
 
-        <div className="flex items-center mt-auto pt-2.5 sm:pt-3">
-          <div className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 rounded-full text-[12px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm">
-            {o.cta_text || "Order Now"}
-            <ArrowRight size={13} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
+        <div className="flex items-center mt-auto pt-2 sm:pt-3">
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-1.5 px-1.5 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm overflow-hidden">
+            <span className="truncate">{o.cta_text || "Order Now"}</span>
+            <ArrowRight size={13} strokeWidth={2.5} className="hidden sm:block shrink-0 group-hover:translate-x-0.5 transition-transform duration-200" />
           </div>
         </div>
       </div>
@@ -159,17 +159,19 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
             type="button"
             aria-label="Previous offer"
             onClick={() => go(-1)}
-            className="absolute left-4 sm:left-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute left-4 sm:left-5 top-[50px] sm:top-[92px] -translate-y-1/2 z-20 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
-            <ChevronLeft size={17} strokeWidth={2.5} />
+            <ChevronLeft size={15} strokeWidth={2.5} className="sm:hidden" />
+            <ChevronLeft size={17} strokeWidth={2.5} className="hidden sm:block" />
           </button>
           <button
             type="button"
             aria-label="Next offer"
             onClick={() => go(1)}
-            className="absolute right-4 sm:right-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute right-4 sm:right-5 top-[50px] sm:top-[92px] -translate-y-1/2 z-20 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
-            <ChevronRight size={17} strokeWidth={2.5} />
+            <ChevronRight size={15} strokeWidth={2.5} className="sm:hidden" />
+            <ChevronRight size={17} strokeWidth={2.5} className="hidden sm:block" />
           </button>
         </>
       )}
