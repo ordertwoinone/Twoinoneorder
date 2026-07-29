@@ -112,7 +112,10 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
   return (
     <section className="pt-4 pb-2">
       <div className="max-w-7xl mx-auto">
-        <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4">
+        {/* scroll-pl-4 matches the px-4 inset: without it, snapping aligns the
+            first tile to the container edge and scrolls the left padding out of
+            view, so the row starts tighter than the other sections. */}
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4">
           {categories.map((cat) => (
             <CategoryItem
               key={cat.id}

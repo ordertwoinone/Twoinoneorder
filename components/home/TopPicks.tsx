@@ -117,7 +117,9 @@ export default async function TopPicks() {
         </div>
 
         {/* Mobile: horizontal swipe strip. Desktop: even grid. */}
-        <div className="flex gap-3 overflow-x-auto scrollbar-none momentum-x px-4 sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:overflow-visible sm:gap-4">
+        {/* scroll-pl-4 matches the px-4 inset — see HomeCategories: snapping
+            otherwise pulls the first card flush to the screen edge. */}
+        <div className="flex gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4 sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:overflow-visible sm:gap-4">
           {picks.map((p) => (
             <div
               key={p.key}
