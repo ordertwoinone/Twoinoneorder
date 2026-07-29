@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import TopPicksField from "@/components/admin/TopPicksField";
+import TopPicksToggle from "@/components/admin/TopPicksToggle";
 
 interface PopularDish {
   id: string;
@@ -110,14 +111,15 @@ export default function PopularDishesAdmin() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Top Picks</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No dishes yet.</td></tr>
+              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">No dishes yet.</td></tr>
             ) : items.map((item) => (
               <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
@@ -139,16 +141,16 @@ export default function PopularDishesAdmin() {
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{item.sort_order}</td>
                 <td className="px-4 py-3">
-                  <div className="flex flex-col items-start gap-1">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                      {item.is_active ? "Active" : "Inactive"}
-                    </span>
-                    {item.show_in_top_picks && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 whitespace-nowrap">
-                        ✨ Top Picks
-                      </span>
-                    )}
-                  </div>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                    {item.is_active ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <TopPicksToggle
+                    endpoint={`/api/admin/buffet/popular-dishes/${item.id}`}
+                    enabled={!!item.show_in_top_picks}
+                    onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_top_picks: v } : x)))}
+                  />
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1 justify-end">
