@@ -143,16 +143,17 @@ export default async function TopPicks() {
         </div>
 
         {/* Mobile: horizontal swipe strip. Desktop: even grid. */}
-        {/* scroll-pl-4 matches the px-4 inset — see HomeCategories: snapping
-            otherwise pulls the first card flush to the screen edge. */}
-        <div className="flex gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4 sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:overflow-visible sm:gap-4">
+        {/* Mobile: two rows that scroll sideways — grid-flow-col fills top to
+            bottom, then moves to the next column, with each column sized so
+            three sit in view. scroll-pl-4 matches the px-4 inset (see
+            HomeCategories: snapping otherwise pulls the first card flush to the
+            screen edge). sm+: a plain single-row grid. */}
+        <div className="grid grid-flow-col grid-rows-2 auto-cols-[calc((100vw-3.5rem)/3)] gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4 sm:grid-flow-row sm:grid-rows-none sm:auto-cols-auto sm:grid-cols-4 lg:grid-cols-5 sm:gap-4 sm:overflow-visible">
           {picks.map((p) => (
             <div
               key={p.key}
-              // Mobile card width is sized so exactly three fit the viewport:
-              // 100vw minus the 1rem side padding either side and the two
-              // 0.75rem gaps between the three cards.
-              className="relative w-[calc((100vw-3.5rem)/3)] shrink-0 sm:w-auto bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
+              // Width comes from the grid's column sizing, not the card.
+              className="relative bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
               style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
             >
               <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
