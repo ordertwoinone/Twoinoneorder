@@ -131,14 +131,8 @@ export default function BannersAdmin() {
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Preview</th>
-              {tab === "web" ? (
-                <>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tag</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Headline</th>
-                </>
-              ) : (
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Link</th>
-              )}
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tag</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Headline</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Button</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
@@ -147,9 +141,9 @@ export default function BannersAdmin() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={tab === "web" ? 7 : 6} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : shown.length === 0 ? (
-              <tr><td colSpan={tab === "web" ? 7 : 6} className="text-center py-16 text-gray-400 text-sm">No {tab} banners yet.</td></tr>
+              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No {tab} banners yet.</td></tr>
             ) : shown.map((b) => (
               <tr key={b.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
@@ -159,21 +153,15 @@ export default function BannersAdmin() {
                   >
                     {b.food_image_url
                       ? <img src={b.food_image_url} alt="" className="w-full h-full object-cover" />
-                      : tab === "web" ? b.tag?.slice(0, 3) : "IMG"
+                      : b.tag?.slice(0, 3) || "IMG"
                     }
                   </div>
                 </td>
-                {tab === "web" ? (
-                  <>
-                    <td className="px-4 py-3 text-xs font-semibold text-gray-600">{b.tag || "—"}</td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-semibold" style={{ color: b.accent_color }}>{b.headline_orange}</p>
-                      <p className="text-xs text-gray-600">{b.headline_black}</p>
-                    </td>
-                  </>
-                ) : (
-                  <td className="px-4 py-3 text-xs font-mono text-blue-600 truncate max-w-[220px]">{b.cta_href || "—"}</td>
-                )}
+                <td className="px-4 py-3 text-xs font-semibold text-gray-600">{b.tag || "—"}</td>
+                <td className="px-4 py-3">
+                  <p className="text-sm font-semibold" style={{ color: b.accent_color }}>{b.headline_orange}</p>
+                  <p className="text-xs text-gray-600">{b.headline_black}</p>
+                </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{b.cta_text}</td>
                 <td className="px-4 py-3 text-xs text-gray-500">{b.sort_order}</td>
                 <td className="px-4 py-3">
@@ -209,55 +197,44 @@ export default function BannersAdmin() {
             </div>
 
             <div className="px-6 py-5 space-y-4">
-              {/* Sort order shows on both. Tag is web-only — on mobile the banner is just the clickable image. */}
-              {isWeb ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tag / Brand</label>
-                    <input type="text" value={modal.data.tag} onChange={(e) => handleField("tag", e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                      placeholder="FALAFEL AL NILE" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sort Order</label>
-                    <input type="number" value={modal.data.sort_order} onChange={(e) => handleField("sort_order", parseInt(e.target.value))}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-                  </div>
+              {/* Both layouts render the tag, headlines, subtitle and colours. */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tag / Brand</label>
+                  <input type="text" value={modal.data.tag} onChange={(e) => handleField("tag", e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    placeholder="FALAFEL AL NILE" />
                 </div>
-              ) : (
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sort Order</label>
                   <input type="number" value={modal.data.sort_order} onChange={(e) => handleField("sort_order", parseInt(e.target.value))}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
-              )}
+              </div>
 
-              {/* Headlines + subtitle render in the web layout's text panel only. */}
-              {isWeb && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (colored)</label>
-                      <input type="text" value={modal.data.headline_orange} onChange={(e) => handleField("headline_orange", e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        placeholder="20% EXTRA" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (black)</label>
-                      <input type="text" value={modal.data.headline_black} onChange={(e) => handleField("headline_black", e.target.value)}
-                        className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        placeholder="DISCOUNT" />
-                    </div>
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (colored)</label>
+                  <input type="text" value={modal.data.headline_orange} onChange={(e) => handleField("headline_orange", e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    placeholder="20% EXTRA" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Headline (second line)
+                  </label>
+                  <input type="text" value={modal.data.headline_black} onChange={(e) => handleField("headline_black", e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    placeholder="DISCOUNT" />
+                </div>
+              </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-                    <textarea value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} rows={2}
-                      className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
-                      placeholder="Description text..." />
-                  </div>
-                </>
-              )}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
+                <textarea value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} rows={2}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+                  placeholder="Description text..." />
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -274,29 +251,29 @@ export default function BannersAdmin() {
                 </div>
               </div>
 
-              {/* Background/accent colors only affect the web text panel. */}
-              {isWeb && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Background Color</label>
-                    <div className="flex gap-2">
-                      <input type="color" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
-                        className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
-                      <input type="text" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
-                        className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Accent Color</label>
-                    <div className="flex gap-2">
-                      <input type="color" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
-                        className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
-                      <input type="text" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
-                        className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
-                    </div>
+              {/* Banner background and the colour used for the first headline
+                  line, the tag and the button. Body text flips between dark and
+                  white automatically depending on how light the background is. */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Background Color</label>
+                  <div className="flex gap-2">
+                    <input type="color" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
+                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
+                    <input type="text" value={modal.data.bg_color} onChange={(e) => handleField("bg_color", e.target.value)}
+                      className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
                   </div>
                 </div>
-              )}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Accent Color</label>
+                  <div className="flex gap-2">
+                    <input type="color" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
+                      className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
+                    <input type="text" value={modal.data.accent_color} onChange={(e) => handleField("accent_color", e.target.value)}
+                      className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 font-mono" />
+                  </div>
+                </div>
+              </div>
 
               <ImageUploadField
                 label="Banner Image"
@@ -304,9 +281,9 @@ export default function BannersAdmin() {
                 onChange={(url) => handleField("food_image_url", url)}
                 folder="banners"
                 hint={
-                  modal.data.platform === "web"
+                  isWeb
                     ? "Web: food cutout (transparent PNG) ~700×500px — shown on the right with the text on the left"
-                    : "Mobile: full banner image ~600×700px (portrait) — the Order button is added automatically"
+                    : "Mobile: food cutout (transparent PNG) ~500×500px — bleeds off the right edge, text sits on the left"
                 }
               />
 

@@ -46,7 +46,7 @@ async function getBanners(platform: "mobile" | "web"): Promise<BannerSlide[]> {
 }
 
 export default async function HomePage() {
-  const webBanners = await getBanners("web");
+  const [webBanners, mobileBanners] = await Promise.all([getBanners("web"), getBanners("mobile")]);
 
   return (
     <>
@@ -63,7 +63,7 @@ export default async function HomePage() {
             holding the search pill + category row */}
         <div className="sm:hidden">
           <LocationBar />
-          <HeroBannerMobile />
+          <HeroBannerMobile slides={mobileBanners} />
           <div className="relative z-20 -mt-7 bg-white rounded-t-[28px]">
             <SearchBar />
             <HomeCategories variant="mobile" />
