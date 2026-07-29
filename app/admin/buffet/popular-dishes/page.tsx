@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import TopPicksField from "@/components/admin/TopPicksField";
 
 interface PopularDish {
   id: string;
@@ -11,6 +12,8 @@ interface PopularDish {
   is_veg: boolean;
   sort_order: number;
   is_active: boolean;
+  show_in_top_picks: boolean;
+  top_picks_order: number;
 }
 
 const EMPTY: Omit<PopularDish, "id"> = {
@@ -20,6 +23,8 @@ const EMPTY: Omit<PopularDish, "id"> = {
   is_veg: false,
   sort_order: 0,
   is_active: true,
+  show_in_top_picks: false,
+  top_picks_order: 0,
 };
 
 const TAG_SUGGESTIONS = ["Chef's Special", "Bestseller", "Healthy Pick", "Sweet Treat", "New", "Popular", "Must Try"];
@@ -134,9 +139,16 @@ export default function PopularDishesAdmin() {
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{item.sort_order}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                    {item.is_active ? "Active" : "Inactive"}
-                  </span>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                      {item.is_active ? "Active" : "Inactive"}
+                    </span>
+                    {item.show_in_top_picks && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 whitespace-nowrap">
+                        ✨ Top Picks
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1 justify-end">
@@ -225,6 +237,12 @@ export default function PopularDishesAdmin() {
                   </select>
                 </div>
               </div>
+
+              <TopPicksField
+                enabled={!!modal.data.show_in_top_picks}
+                order={modal.data.top_picks_order ?? 0}
+                onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}
+              />
             </div>
 
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-2xl">

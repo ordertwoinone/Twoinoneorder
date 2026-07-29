@@ -6,6 +6,7 @@ import SearchBar from "@/components/home/SearchBar";
 import HeroBannerMobile from "@/components/home/HeroBannerMobile";
 import HeroBannerWeb from "@/components/home/HeroBannerWeb";
 import RestaurantCards from "@/components/home/RestaurantCards";
+import TopPicks from "@/components/home/TopPicks";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
 import LocationBar from "@/components/home/LocationBar";
@@ -76,6 +77,7 @@ export default async function HomePage() {
         </div>
 
         <FadeInSection><RestaurantCards /></FadeInSection>
+        <FadeInSection><TopPicks /></FadeInSection>
         <FadeInSection><HomepageCards /></FadeInSection>
         <FadeInSection><TrustBadges /></FadeInSection>
         <Footer />

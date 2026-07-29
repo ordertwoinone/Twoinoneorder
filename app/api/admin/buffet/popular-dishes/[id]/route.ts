@@ -15,6 +15,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/restaurant/buffet");
+  revalidatePath("/"); // Top Picks strip on the home page
   return NextResponse.json(data);
 }
 
@@ -26,5 +27,6 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/restaurant/buffet");
+  revalidatePath("/"); // Top Picks strip on the home page
   return NextResponse.json({ success: true });
 }

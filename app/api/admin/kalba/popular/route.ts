@@ -24,5 +24,6 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/restaurant/university-kalba");
+  revalidatePath("/"); // Top Picks strip on the home page
   return NextResponse.json(data, { status: 201 });
 }

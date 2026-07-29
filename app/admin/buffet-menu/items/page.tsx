@@ -1,6 +1,7 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Star, Clock } from "lucide-react";
+import TopPicksField from "@/components/admin/TopPicksField";
 
 interface MenuSection {
   id: string;
@@ -27,6 +28,8 @@ interface MenuItem {
   timing_qty: Record<string, number>;
   sort_order: number;
   is_active: boolean;
+  show_in_top_picks: boolean;
+  top_picks_order: number;
   buffet_menu_sections?: { title: string; category_id: string };
 }
 
@@ -42,6 +45,8 @@ const EMPTY: Omit<MenuItem, "id" | "buffet_menu_sections"> = {
   timing_qty: {},
   sort_order: 0,
   is_active: true,
+  show_in_top_picks: false,
+  top_picks_order: 0,
 };
 
 const DIETARY_TAGS = [
@@ -242,9 +247,16 @@ export default function MenuItemsAdmin() {
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tl.cls}`}>{tl.text}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                      {item.is_active ? "Active" : "Inactive"}
-                    </span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${item.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {item.is_active ? "Active" : "Inactive"}
+                      </span>
+                      {item.show_in_top_picks && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 whitespace-nowrap">
+                          ✨ Top Picks
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
@@ -367,6 +379,13 @@ export default function MenuItemsAdmin() {
                   </select>
                 </div>
               </div>
+
+              <TopPicksField
+                enabled={!!modal.data.show_in_top_picks}
+                order={modal.data.top_picks_order ?? 0}
+                onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}
+              />
+
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-2">Dietary Tags</label>
                 <div className="flex flex-wrap gap-2">
