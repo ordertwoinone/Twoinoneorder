@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft, Heart, Star, MapPin, MessageCircle, Mail, Clock, ChevronRight } from "lucide-react";
+import { Star, MapPin, MessageCircle, Mail, Clock, ChevronRight } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
@@ -90,18 +89,7 @@ export default async function ContactPage() {
 
   return (
     <>
-      {/* Desktop keeps the full navbar; mobile uses the slim app-style header below */}
-      <Navbar className="hidden sm:block" />
-
-      {/* Mobile header */}
-      <div className="sm:hidden flex items-center justify-between px-4 h-14">
-        <Link href="/" aria-label="Back" className="w-9 h-9 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-orange-500">
-          <ChevronLeft size={20} />
-        </Link>
-        <Link href="/account/favourites" aria-label="Favourites" className="w-9 h-9 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-700">
-          <Heart size={18} />
-        </Link>
-      </div>
+      <Navbar />
 
       <main className="bg-white pb-32 sm:pb-10">
         <div className="max-w-3xl mx-auto px-4">
