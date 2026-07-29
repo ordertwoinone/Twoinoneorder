@@ -1,6 +1,7 @@
 "use client";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, Search, ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
+import TopPicksToggle from "@/components/admin/TopPicksToggle";
 
 interface RestaurantSummary {
   id: string;
@@ -24,6 +25,7 @@ interface MenuItem {
   category: string | null;
   product_url: string | null;
   is_available: boolean;
+  show_in_top_picks: boolean;
   last_synced_at: string;
 }
 
@@ -133,6 +135,8 @@ export default function RestaurantMenuAdmin() {
     }
     return Array.from(map.entries());
   }, [filtered]);
+
+  const topPicksCount = useMemo(() => items.filter((i) => i.show_in_top_picks).length, [items]);
 
   const busy = syncingId !== null;
 
@@ -261,24 +265,25 @@ export default function RestaurantMenuAdmin() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Item</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Price</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Top Picks</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {itemsLoading ? (
-                  <tr><td colSpan={5} className="text-center py-16 text-gray-400 text-sm">Loading items…</td></tr>
+                  <tr><td colSpan={6} className="text-center py-16 text-gray-400 text-sm">Loading items…</td></tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
+                    <td colSpan={6} className="text-center py-16 text-gray-400 text-sm">
                       Nothing imported yet — hit &ldquo;Sync this menu&rdquo; to pull the items in.
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-16 text-gray-400 text-sm">No items match that search.</td></tr>
+                  <tr><td colSpan={6} className="text-center py-16 text-gray-400 text-sm">No items match that search.</td></tr>
                 ) : grouped.map(([categoryName, rows]) => (
                   <Fragment key={categoryName}>
                     <tr className="bg-gray-50/70 border-b border-gray-100">
-                      <td colSpan={5} className="px-4 py-2">
+                      <td colSpan={6} className="px-4 py-2">
                         <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wide">{categoryName}</span>
                         <span className="text-[11px] text-gray-400 ml-2">{rows.length} item{rows.length !== 1 ? "s" : ""}</span>
                       </td>
@@ -313,6 +318,13 @@ export default function RestaurantMenuAdmin() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
+                          <TopPicksToggle
+                            endpoint={`/api/admin/restaurant-menu/${item.id}`}
+                            enabled={item.show_in_top_picks}
+                            onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_top_picks: v } : x)))}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
                           {item.product_url && (
                             <a
                               href={item.product_url}
@@ -334,7 +346,8 @@ export default function RestaurantMenuAdmin() {
 
           {!itemsLoading && filtered.length > 0 && (
             <p className="text-xs text-gray-400 mt-3">
-              Showing {filtered.length} of {items.length} items.
+              Showing {filtered.length} of {items.length} items
+              {topPicksCount > 0 && ` · ${topPicksCount} shown in home Top Picks`}.
             </p>
           )}
         </>

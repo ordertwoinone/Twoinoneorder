@@ -6,6 +6,9 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "*.supabase.co" },
       { protocol: "https", hostname: "**.supabase.co" },
+      // Imported restaurant menu photos are served from take.app's image CDN.
+      { protocol: "https", hostname: "emofly.b-cdn.net" },
+      { protocol: "https", hostname: "storage.googleapis.com" },
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,

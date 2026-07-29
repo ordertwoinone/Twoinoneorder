@@ -24,13 +24,21 @@ function formatPrice(raw: string | number | null | undefined): string | null {
   return `AED ${n.toFixed(2)}`;
 }
 
+/** An embedded to-one relation comes back as an object, or an array in some shapes. */
+function restaurantName(relation: unknown): string | null {
+  const row = Array.isArray(relation) ? relation[0] : relation;
+  const name = (row as { name?: unknown } | null)?.name;
+  return typeof name === "string" && name ? name : null;
+}
+
 /**
- * Items are spread across the per-area admin tables; each one carries a
- * show_in_top_picks flag. Pull the flagged rows from every source and merge
- * them into a single strip ordered by top_picks_order.
+ * Items are spread across the per-area admin tables plus the menus imported
+ * from the restaurants' storefronts; each one carries a show_in_top_picks
+ * flag. Pull the flagged rows from every source and merge them into a single
+ * strip ordered by top_picks_order.
  */
 async function getPicks(): Promise<Pick[]> {
-  const [menuItems, buffetDishes, kalbaPopular, kalbaSpecials] = await Promise.all([
+  const [menuItems, buffetDishes, kalbaPopular, kalbaSpecials, imported] = await Promise.all([
     supabaseAdmin
       .from("buffet_menu_items")
       .select("id, name, image_url, price, sort_order, top_picks_order")
@@ -50,6 +58,13 @@ async function getPicks(): Promise<Pick[]> {
       .from("kalba_specials")
       .select("id, name, image_url, price_text, sort_order, top_picks_order")
       .eq("is_active", true)
+      .eq("show_in_top_picks", true),
+    // Items imported from the restaurants' ordering storefronts. These are the
+    // only source with a real per-item order link.
+    supabaseAdmin
+      .from("restaurant_menu_items")
+      .select("id, name, image_url, price, product_url, top_picks_order, restaurants(name)")
+      .eq("is_available", true)
       .eq("show_in_top_picks", true),
   ]);
 
@@ -93,6 +108,17 @@ async function getPicks(): Promise<Pick[]> {
       subtitle: "University Kalba",
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
+    })),
+    ...(imported.data ?? []).map((r) => ({
+      key: `menuitem:${r.id}`,
+      name: r.name,
+      price: formatPrice(r.price),
+      imageUrl: r.image_url,
+      // Straight to the item on the restaurant's own ordering site.
+      href: r.product_url || "#",
+      subtitle: restaurantName(r.restaurants) ?? "Order now",
+      order: r.top_picks_order ?? 0,
+      sortOrder: 0,
     })),
   ];
 

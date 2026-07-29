@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   if (restaurantId) {
     const { data, error } = await supabaseAdmin
       .from("restaurant_menu_items")
-      .select("id, external_id, name, price, currency, image_url, category, product_url, is_available, last_synced_at")
+      .select("id, external_id, name, price, currency, image_url, category, product_url, is_available, show_in_top_picks, top_picks_order, last_synced_at")
       .eq("restaurant_id", restaurantId)
       .order("category", { ascending: true })
       .order("name", { ascending: true })

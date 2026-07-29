@@ -11,6 +11,10 @@
 -- is_available = false instead of being deleted, so nothing referencing them
 -- breaks.
 
+-- show_in_top_picks publishes an imported item to the home page "Top Picks For
+-- You" strip. The sync only writes the columns it scrapes, so this flag (and
+-- its ordering) survives a re-import untouched.
+
 create table if not exists restaurant_menu_items (
   id                   uuid primary key default gen_random_uuid(),
   restaurant_id        uuid not null references restaurants(id) on delete cascade,
@@ -23,10 +27,15 @@ create table if not exists restaurant_menu_items (
   category_external_id text,
   product_url          text,
   is_available         boolean not null default true,
+  show_in_top_picks    boolean not null default false,
+  top_picks_order      integer not null default 0,
   last_synced_at       timestamptz not null default now(),
   created_at           timestamptz not null default now(),
   unique (restaurant_id, external_id)
 );
+
+create index if not exists restaurant_menu_items_top_picks_idx
+  on restaurant_menu_items (top_picks_order) where show_in_top_picks;
 
 create index if not exists restaurant_menu_items_restaurant_idx
   on restaurant_menu_items (restaurant_id, category, name);
