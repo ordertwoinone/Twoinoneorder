@@ -121,7 +121,10 @@ export default async function TopPicks() {
           {picks.map((p) => (
             <div
               key={p.key}
-              className="relative w-[150px] shrink-0 sm:w-auto bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
+              // Mobile card width is sized so exactly three fit the viewport:
+              // 100vw minus the 1rem side padding either side and the two
+              // 0.75rem gaps between the three cards.
+              className="relative w-[calc((100vw-3.5rem)/3)] shrink-0 sm:w-auto bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
               style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
             >
               <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
@@ -130,24 +133,24 @@ export default async function TopPicks() {
                   alt={p.name}
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(max-width: 640px) 150px, 20vw"
+                  sizes="(max-width: 640px) 33vw, 20vw"
                 />
               </div>
 
-              <div className="px-2.5 pt-2 pb-2.5">
-                <h3 className="text-gray-900 font-bold text-[12px] leading-snug line-clamp-2 min-h-[2.4em]">
+              <div className="px-2 pt-2 pb-2.5 sm:px-2.5">
+                <h3 className="text-gray-900 font-bold text-[11px] sm:text-[12px] leading-snug line-clamp-2 min-h-[2.4em]">
                   {p.name}
                 </h3>
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[12px] font-extrabold" style={{ color: "#ea580c" }}>
+                <div className="flex items-center justify-between gap-1 mt-1.5">
+                  <span className="text-[11px] sm:text-[12px] font-extrabold truncate" style={{ color: "#ea580c" }}>
                     {p.price ?? p.subtitle}
                   </span>
                   <span
                     aria-hidden
-                    className="flex items-center justify-center w-6 h-6 rounded-lg text-white shrink-0"
+                    className="flex items-center justify-center w-[22px] h-[22px] sm:w-6 sm:h-6 rounded-lg text-white shrink-0"
                     style={{ background: "#ea580c" }}
                   >
-                    <Plus size={14} strokeWidth={3} />
+                    <Plus size={13} strokeWidth={3} />
                   </span>
                 </div>
               </div>
