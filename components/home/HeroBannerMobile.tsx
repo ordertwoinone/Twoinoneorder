@@ -68,7 +68,9 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
   const onLight = isLight(s.bg_color);
   const titleColor = onLight ? "#111827" : "#ffffff";
   const bodyColor = onLight ? "rgba(17,24,39,0.6)" : "rgba(255,255,255,0.8)";
-  const ctaTextColor = isLight(s.accent_color) ? "#111827" : "#ffffff";
+  // On a light accent (the gold brand pill) the label takes the banner colour,
+  // which is what gives the original green-on-gold button.
+  const ctaTextColor = isLight(s.accent_color) ? s.bg_color || "#111827" : "#ffffff";
 
   const cta = (
     <>
@@ -116,22 +118,25 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
             </span>
           )}
 
+          {/* Line 1 plain, line 2 in the accent colour — the emphasis the
+              mobile hero has always used ("Four Restaurants." above a gold
+              "One Easy Order."). The web hero accents the first line instead. */}
           <h2
             className="font-extrabold leading-[1.05] tracking-tight"
             style={{ fontSize: "clamp(21px, 6.2vw, 27px)", color: titleColor }}
           >
-            <span style={{ color: s.accent_color }}>{s.headline_orange}</span>
+            {s.headline_orange}
             {s.headline_black && (
               <>
                 <br />
-                {s.headline_black}
+                <span style={{ color: s.accent_color }}>{s.headline_black}</span>
               </>
             )}
           </h2>
 
           {s.subtitle && (
             <p
-              className="text-[11px] leading-snug mt-2.5 whitespace-pre-line line-clamp-3"
+              className="text-[11px] leading-snug mt-2.5 whitespace-pre-line"
               style={{ color: bodyColor }}
             >
               {s.subtitle.replace(/\\n/g, "\n")}

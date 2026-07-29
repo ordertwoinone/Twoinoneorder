@@ -213,19 +213,23 @@ export default function BannersAdmin() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                {/* Web accents the first line, mobile the second — label them
+                    so it is clear which one picks up the accent colour. */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Headline (colored)</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    {isWeb ? "Headline (colored)" : "Headline line 1"}
+                  </label>
                   <input type="text" value={modal.data.headline_orange} onChange={(e) => handleField("headline_orange", e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="20% EXTRA" />
+                    placeholder={isWeb ? "20% EXTRA" : "Four Restaurants."} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Headline (second line)
+                    {isWeb ? "Headline (black)" : "Headline line 2 (colored)"}
                   </label>
                   <input type="text" value={modal.data.headline_black} onChange={(e) => handleField("headline_black", e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="DISCOUNT" />
+                    placeholder={isWeb ? "DISCOUNT" : "One Easy Order."} />
                 </div>
               </div>
 
