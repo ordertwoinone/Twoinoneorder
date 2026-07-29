@@ -56,6 +56,10 @@ export default async function RestaurantCards() {
         <div className="flex gap-2 overflow-x-auto scrollbar-none momentum-x -mx-4 px-4 scroll-pl-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 sm:gap-3 sm:overflow-visible">
           {restaurants.map((r) => {
             const badge = r.badge ? BADGE_STYLE[r.badge] : null;
+            // background_image_url is the dedicated slot, but it is optional and
+            // currently unset everywhere — fall back to the food photo so cards
+            // still get artwork, and pick up a real background if one is added.
+            const cardImage = r.background_image_url || r.food_image_url;
             return (
               <a
                 key={r.id}
@@ -63,43 +67,42 @@ export default async function RestaurantCards() {
                 className="block w-[calc((100vw-3rem)/3)] shrink-0 sm:w-auto bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
                 style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
               >
-                {/* Brand logo tile — optional background image behind a
-                    fixed-size, centered logo box so every logo renders at a
-                    consistent visual size regardless of its aspect ratio */}
-                <div className="relative bg-white overflow-hidden h-[88px] sm:h-[120px]">
-                  {r.background_image_url && (
+                {/* Photo fills the tile, with the brand logo pinned to the top
+                    right. The logo sits on a white chip at a fixed size so every
+                    brand reads clearly over the photo whatever its aspect ratio
+                    or colour. */}
+                <div className="relative bg-gray-100 overflow-hidden h-[88px] sm:h-[120px]">
+                  {cardImage && (
                     <Image
-                      src={r.background_image_url}
+                      src={cardImage}
                       alt=""
                       fill
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                       sizes="(max-width: 640px) 33vw, 25vw"
                     />
                   )}
 
-                  {r.logo_url ? (
-                    <div className="absolute inset-0 flex items-center justify-center p-2 sm:p-3">
-                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 transition-transform duration-500 group-hover:scale-105">
+                  {badge && (
+                    <span
+                      className="absolute top-1 left-1 sm:top-2 sm:left-2 text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full z-10 max-w-[calc(100%-44px)] truncate"
+                      style={{ background: badge.bg, color: badge.text }}
+                    >
+                      {r.badge}
+                    </span>
+                  )}
+
+                  {r.logo_url && (
+                    <div className="absolute top-1 right-1 sm:top-2 sm:right-2 z-10 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white/95 shadow-sm p-1 sm:p-1.5">
+                      <div className="relative w-full h-full">
                         <Image
                           src={r.logo_url}
                           alt={r.name}
                           fill
                           className="object-contain"
-                          sizes="80px"
+                          sizes="40px"
                         />
                       </div>
                     </div>
-                  ) : (
-                    !r.background_image_url && <div className="w-full h-full bg-gray-100" />
-                  )}
-
-                  {badge && (
-                    <span
-                      className="absolute top-1 left-1 sm:top-2 sm:left-2 text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full z-10 max-w-[calc(100%-8px)] truncate"
-                      style={{ background: badge.bg, color: badge.text }}
-                    >
-                      {r.badge}
-                    </span>
                   )}
                 </div>
 
