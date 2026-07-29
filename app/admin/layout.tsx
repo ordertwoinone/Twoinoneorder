@@ -20,6 +20,7 @@ type NavItem =
 
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+  { label: "Restaurant Menus", href: "/admin/restaurant-menu", icon: BookOpen },
   {
     label: "Homepage",
     icon: Home,
