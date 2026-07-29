@@ -2,10 +2,10 @@
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("site_settings")
     .select("*")
     .single();
@@ -19,7 +19,7 @@ export async function PUT(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id, created_at: _created_at, ...fields } = body;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("site_settings")
     .update({ ...fields, updated_at: new Date().toISOString() })
     .eq("id", id)

@@ -2,10 +2,10 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("buffet_banners")
     .select("*")
     .order("sort_order", { ascending: true });
@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("buffet_banners")
     .insert([body])
     .select()

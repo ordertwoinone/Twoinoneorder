@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const { error } = await supabaseAdmin
+  const { error } = await supabaseAdminLive
     .from("spin_wheel_entries")
     .delete()
     .eq("id", params.id);

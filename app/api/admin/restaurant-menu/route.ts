@@ -1,17 +1,24 @@
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { unstable_noStore as noStore } from "next/cache";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 /**
  * Without `restaurantId`: a per-restaurant summary (item count + last sync).
  * With `restaurantId`: that restaurant's imported menu items.
  */
 export async function GET(request: Request) {
+  // The admin panel must read its own writes. Supabase queries go through
+  // fetch, so Next's data cache will otherwise serve a snapshot from before the
+  // last toggle — the row reads as "off" while the home page already shows it.
+  noStore();
+
   const restaurantId = new URL(request.url).searchParams.get("restaurantId");
 
   if (restaurantId) {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdminLive
       .from("restaurant_menu_items")
       .select("id, external_id, name, price, currency, image_url, category, product_url, is_available, show_in_top_picks, top_picks_order, last_synced_at")
       .eq("restaurant_id", restaurantId)
@@ -24,11 +31,11 @@ export async function GET(request: Request) {
   }
 
   const [restaurantsRes, itemsRes] = await Promise.all([
-    supabaseAdmin
+    supabaseAdminLive
       .from("restaurants")
       .select("id, name, logo_url, url, is_active")
       .order("created_at", { ascending: false }),
-    supabaseAdmin
+    supabaseAdminLive
       .from("restaurant_menu_items")
       .select("restaurant_id, category, is_available, last_synced_at")
       .limit(5000),

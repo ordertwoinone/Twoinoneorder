@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { scrapeStore } from "@/lib/takeapp-scraper";
 
 /**
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "restaurantId is required" }, { status: 400 });
   }
 
-  const { data: restaurant, error: restaurantError } = await supabaseAdmin
+  const { data: restaurant, error: restaurantError } = await supabaseAdminLive
     .from("restaurants")
     .select("id, name, url")
     .eq("id", restaurantId)
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     last_synced_at: syncedAt,
   }));
 
-  const { error: upsertError } = await supabaseAdmin
+  const { error: upsertError } = await supabaseAdminLive
     .from("restaurant_menu_items")
     .upsert(rows, { onConflict: "restaurant_id,external_id" });
 
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
 
   // Anything not touched by this run is gone from the storefront. Keep the row
   // (it may be referenced elsewhere) but flag it as unavailable.
-  const { data: removed } = await supabaseAdmin
+  const { data: removed } = await supabaseAdminLive
     .from("restaurant_menu_items")
     .update({ is_available: false })
     .eq("restaurant_id", restaurant.id)

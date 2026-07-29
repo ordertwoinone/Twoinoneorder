@@ -2,10 +2,10 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("kalba_hero")
     .select("*")
     .limit(1)
@@ -18,7 +18,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   const body = await request.json();
 
-  const { data: existing } = await supabaseAdmin
+  const { data: existing } = await supabaseAdminLive
     .from("kalba_hero")
     .select("id")
     .limit(1)
@@ -26,14 +26,14 @@ export async function PUT(request: Request) {
 
   let result;
   if (existing?.id) {
-    result = await supabaseAdmin
+    result = await supabaseAdminLive
       .from("kalba_hero")
       .update({ ...body, updated_at: new Date().toISOString() })
       .eq("id", existing.id)
       .select()
       .single();
   } else {
-    result = await supabaseAdmin
+    result = await supabaseAdminLive
       .from("kalba_hero")
       .insert([body])
       .select()

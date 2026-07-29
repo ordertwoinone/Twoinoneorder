@@ -1,11 +1,11 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const body = await request.json();
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("kalba_coupons")
     .update({ ...body, updated_at: new Date().toISOString() })
     .eq("id", params.id)
@@ -17,7 +17,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const { error } = await supabaseAdmin
+  const { error } = await supabaseAdminLive
     .from("kalba_coupons")
     .delete()
     .eq("id", params.id);

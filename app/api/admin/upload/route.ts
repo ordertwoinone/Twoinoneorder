@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 const SKIP_TYPES = ["image/svg+xml", "image/gif"];
 
@@ -31,13 +31,13 @@ export async function POST(request: Request) {
 
   const fileName = `${folder}/${Date.now()}.${ext}`;
 
-  const { data, error } = await supabaseAdmin.storage
+  const { data, error } = await supabaseAdminLive.storage
     .from("media")
     .upload(fileName, uploadData, { contentType, upsert: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const { data: { publicUrl } } = supabaseAdmin.storage
+  const { data: { publicUrl } } = supabaseAdminLive.storage
     .from("media")
     .getPublicUrl(data.path);
 

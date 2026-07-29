@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 /**
  * Only the Top Picks fields are editable here. Everything else on the row is
@@ -20,7 +20,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("restaurant_menu_items")
     .update(patch)
     .eq("id", params.id)

@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("spin_wheel_entries")
     .select("*")
     .order("created_at", { ascending: false })

@@ -1,12 +1,12 @@
 ﻿export const dynamic = 'force-dynamic'
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 const FOLDERS = ["banners", "restaurants", "offers", "brand", "logos", "general"];
 
 async function listFolder(folder: string) {
-  const { data } = await supabaseAdmin.storage
+  const { data } = await supabaseAdminLive.storage
     .from("media")
     .list(folder, { limit: 500, sortBy: { column: "created_at", order: "desc" } });
 
@@ -14,7 +14,7 @@ async function listFolder(folder: string) {
     .filter((f) => f.name !== ".emptyFolderPlaceholder" && f.metadata)
     .map((f) => {
       const path = `${folder}/${f.name}`;
-      const { data: { publicUrl } } = supabaseAdmin.storage.from("media").getPublicUrl(path);
+      const { data: { publicUrl } } = supabaseAdminLive.storage.from("media").getPublicUrl(path);
       return { name: f.name, path, url: publicUrl, created_at: f.created_at, size: f.metadata?.size };
     });
 }
@@ -40,7 +40,7 @@ export async function DELETE(request: Request) {
   const { path } = await request.json();
   if (!path) return NextResponse.json({ error: "No path provided" }, { status: 400 });
 
-  const { error } = await supabaseAdmin.storage.from("media").remove([path]);
+  const { error } = await supabaseAdminLive.storage.from("media").remove([path]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ success: true });

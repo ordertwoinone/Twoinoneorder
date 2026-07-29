@@ -1,10 +1,10 @@
 ﻿export const dynamic = 'force-dynamic'
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  const { data, error } = await supabaseAdminLive.auth.admin.createUser({
     email: "ordertwoinone@gmail.com",
     password: "admin@8008",
     email_confirm: true,
