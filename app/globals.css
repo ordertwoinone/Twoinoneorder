@@ -258,3 +258,45 @@ canvas {
     transition: none;
   }
 }
+
+/* ── Mobile type scale ───────────────────────────────────────────────────────
+   Every font size drops by 1px below the `sm` breakpoint. These rules sit
+   after `@tailwind utilities`, so at equal specificity they win over the
+   utility they shadow; `sm:`-and-up utilities live in min-width queries and
+   are untouched, which keeps desktop exactly as it was.
+
+   This mirrors the size utilities the app actually uses — if you introduce a
+   new one (say `text-[16px]`), add its 1px-smaller twin here too. Line heights
+   are deliberately left alone so nothing reflows. */
+@media (max-width: 639.98px) {
+  .text-xs   { font-size: 11px; }
+  .text-sm   { font-size: 13px; }
+  .text-base { font-size: 15px; }
+  .text-lg   { font-size: 17px; }
+  .text-xl   { font-size: 19px; }
+  .text-2xl  { font-size: 23px; }
+  .text-3xl  { font-size: 29px; }
+  .text-4xl  { font-size: 35px; }
+  .text-5xl  { font-size: 47px; }
+  .text-6xl  { font-size: 59px; }
+  .text-7xl  { font-size: 71px; }
+
+  .text-\[8px\]    { font-size: 7px; }
+  .text-\[9px\]    { font-size: 8px; }
+  .text-\[10px\]   { font-size: 9px; }
+  .text-\[10\.5px\] { font-size: 9.5px; }
+  .text-\[11px\]   { font-size: 10px; }
+  .text-\[11\.5px\] { font-size: 10.5px; }
+  .text-\[12px\]   { font-size: 11px; }
+  .text-\[12\.5px\] { font-size: 11.5px; }
+  .text-\[13px\]   { font-size: 12px; }
+  .text-\[13\.5px\] { font-size: 12.5px; }
+  .text-\[14px\]   { font-size: 13px; }
+  .text-\[15px\]   { font-size: 14px; }
+  .text-\[17px\]   { font-size: 16px; }
+
+  .text-\[1rem\]   { font-size: 15px; }
+  .text-\[1\.3rem\] { font-size: 19.8px; }
+  .text-\[1\.5rem\] { font-size: 23px; }
+  .text-\[1\.6rem\] { font-size: 24.6px; }
+}
