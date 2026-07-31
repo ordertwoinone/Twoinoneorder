@@ -95,6 +95,15 @@ canvas {
   will-change: auto;
 }
 
+/* Trigger-only wrapper: visible from the start, there purely to tell its
+   `.stagger-item` children when they've been scrolled to. A wrapper that
+   fades in itself would play over the children's entrance and hide it. */
+.fade-section.fade-trigger,
+.fade-section.fade-trigger.is-visible {
+  opacity: 1;
+  animation: none;
+}
+
 /* Cards that arrive one after another rather than all at once. They hold
    still until their FadeInSection scrolls into view, so the sequence plays
    when it's actually watched — set the offset per item with an inline
@@ -102,7 +111,7 @@ canvas {
 @keyframes riseIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -112,8 +121,33 @@ canvas {
 .stagger-item {
   opacity: 0;
 }
+/* `backwards`, not `both`, and the end state written as a plain declaration:
+   a filled-forwards animation would keep `transform: none` applied for good
+   and override the `tap-shrink` press feedback on these same cards. */
 .fade-section.is-visible .stagger-item {
-  animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  opacity: 1;
+  animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Mount-time twin of the staggered rise, for content outside a FadeInSection
+   — the hero, say, which is on screen the moment the page opens. */
+.rise-in {
+  animation: riseIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* The hero food drifts, so the banner reads as alive rather than a
+   screenshot. Slow and small on purpose — it should register, not distract. */
+@keyframes heroFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+.hero-float {
+  animation: heroFloat 4.5s ease-in-out infinite;
 }
 
 /* Same idea for things already on screen at load, where waiting on a scroll
@@ -129,7 +163,21 @@ canvas {
   }
 }
 .pop-in {
-  animation: popIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: popIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Two quick beats then a rest, so an offer pill keeps catching the eye in a
+   list of cards without turning into a strobe. */
+@keyframes heartbeat {
+  0%   { transform: scale(1); }
+  8%   { transform: scale(1.13); }
+  16%  { transform: scale(1); }
+  24%  { transform: scale(1.09); }
+  32%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+.heartbeat {
+  animation: heartbeat 2.2s ease-in-out infinite;
 }
 
 /* ── Floating food bubbles (footer CTA) ───────────────────────────────────── */
@@ -298,7 +346,10 @@ canvas {
      cancelling the animation alone would leave them invisible. */
   .stagger-item,
   .fade-section.is-visible .stagger-item,
-  .pop-in {
+  .pop-in,
+  .rise-in,
+  .hero-float,
+  .heartbeat {
     animation: none;
     opacity: 1;
     transform: none;

@@ -7,9 +7,21 @@ interface FadeInSectionProps {
   className?: string;
   /** Stagger delay in ms before the animation starts */
   delay?: number;
+  /**
+   * Don't fade the wrapper itself — just mark it visible so `.stagger-item`
+   * children can run. Without this the wrapper's own 0.65s fade plays over
+   * the children's entrance and swallows it, and the section reads as
+   * arriving in one piece.
+   */
+  trigger?: boolean;
 }
 
-export default function FadeInSection({ children, className = "", delay = 0 }: FadeInSectionProps) {
+export default function FadeInSection({
+  children,
+  className = "",
+  delay = 0,
+  trigger = false,
+}: FadeInSectionProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,7 +55,7 @@ export default function FadeInSection({ children, className = "", delay = 0 }: F
   }, [delay]);
 
   return (
-    <div ref={ref} className={`fade-section ${className}`}>
+    <div ref={ref} className={`fade-section ${trigger ? "fade-trigger" : ""} ${className}`}>
       {children}
     </div>
   );

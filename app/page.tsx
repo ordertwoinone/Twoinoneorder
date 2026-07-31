@@ -73,13 +73,15 @@ export default async function HomePage() {
         {/* Web layout: slideshow hero, then categories with heading */}
         <div className="hidden sm:block">
           <HeroBannerWeb slides={webBanners} />
-          <FadeInSection><HomeCategories variant="web" /></FadeInSection>
+          <FadeInSection trigger><HomeCategories variant="web" /></FadeInSection>
         </div>
 
-        <FadeInSection><RestaurantCards /></FadeInSection>
-        <FadeInSection><TopPicks /></FadeInSection>
-        <FadeInSection><HomepageCards /></FadeInSection>
-        <FadeInSection><TrustBadges /></FadeInSection>
+        {/* `trigger` on the sections whose cards stagger in themselves — the
+            wrapper only reports when they've been scrolled to. */}
+        <FadeInSection trigger><RestaurantCards /></FadeInSection>
+        <FadeInSection trigger><TopPicks /></FadeInSection>
+        <FadeInSection trigger><HomepageCards /></FadeInSection>
+        <FadeInSection trigger><TrustBadges /></FadeInSection>
         <Footer />
       </main>
       <BottomNav />
