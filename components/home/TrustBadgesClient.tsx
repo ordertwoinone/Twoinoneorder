@@ -20,31 +20,37 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
 
   useEffect(() => setMounted(true), []);
 
+  // Mobile keeps every badge on a single row, sharing the width evenly, so a
+  // third one doesn't drop to a line of its own. sm+ goes back to fixed-width
+  // tiles that wrap.
+  const itemCls =
+    "stagger-item flex flex-col items-center text-center rounded-2xl py-3 px-1.5 sm:py-4 sm:px-2 bg-white transition-transform hover:-translate-y-0.5 active:scale-95 flex-1 min-w-0 sm:flex-none sm:w-44";
+
   return (
     <section className="py-5">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="flex flex-nowrap sm:flex-wrap justify-center gap-2 sm:gap-3">
           {badges.map((b, i) =>
             b.is_call ? (
               <a
                 key={b.title}
                 href={telHref}
-                className="stagger-item flex flex-col items-center text-center rounded-2xl py-4 px-2 bg-white transition-transform hover:-translate-y-0.5 active:scale-95 w-[calc(50%-0.375rem)] sm:w-44"
+                className={itemCls}
                 style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)", animationDelay: `${stagger(i)}ms` }}
               >
-                <span className="text-2xl sm:text-3xl mb-2">{b.emoji}</span>
-                <p className="text-[11px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
+                <span className="text-xl sm:text-3xl mb-1.5 sm:mb-2">{b.emoji}</span>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
                 <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.subtitle}</p>
               </a>
             ) : (
               <button
                 key={b.title}
                 onClick={() => setActive(b)}
-                className="stagger-item flex flex-col items-center text-center rounded-2xl py-4 px-2 bg-white transition-transform hover:-translate-y-0.5 active:scale-95 w-[calc(50%-0.375rem)] sm:w-44"
+                className={itemCls}
                 style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)", animationDelay: `${stagger(i)}ms` }}
               >
-                <span className="text-2xl sm:text-3xl mb-2">{b.emoji}</span>
-                <p className="text-[11px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
+                <span className="text-xl sm:text-3xl mb-1.5 sm:mb-2">{b.emoji}</span>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
                 <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.subtitle}</p>
               </button>
             )

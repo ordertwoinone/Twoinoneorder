@@ -132,7 +132,9 @@ export default async function RestaurantCards() {
                       Set per restaurant in the admin panel; hidden when blank. */}
                   {r.offer_text?.trim() && (
                     <div className="mt-1.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md max-w-full truncate">
+                      {/* Beats from its left edge so the pill pulses in place
+                          instead of nudging the text beside it. */}
+                      <span className="heartbeat origin-left inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md max-w-full truncate">
                         <Tag size={10} className="shrink-0" />
                         {r.offer_text}
                       </span>

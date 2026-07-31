@@ -79,8 +79,12 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
     </>
   );
   const ctaCls =
-    "inline-flex items-center gap-1.5 font-bold text-[13px] mt-3.5 px-4 py-2 rounded-full active:scale-95 transition-transform";
-  const ctaStyle = { background: s.accent_color || "#ea580c", color: ctaTextColor };
+    "rise-in inline-flex items-center gap-1.5 font-bold text-[13px] mt-3.5 px-4 py-2 rounded-full active:scale-95 transition-transform";
+  const ctaStyle = {
+    background: s.accent_color || "#ea580c",
+    color: ctaTextColor,
+    animationDelay: "210ms",
+  };
 
   return (
     <section className="sm:hidden">
@@ -88,9 +92,10 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
         className="relative overflow-hidden rounded-t-[28px] transition-colors duration-500"
         style={{ background: s.bg_color || "#1d3d2f", minHeight: "210px" }}
       >
-        {/* Food image — right side, bleeding off the edge */}
+        {/* Food image — right side, bleeding off the edge. The wrapper carries
+            the drift so it doesn't fight the image's own slide-change fade. */}
         {s.food_image_url && (
-          <div className="absolute right-[-8px] top-0 bottom-0 w-[48%] pointer-events-none">
+          <div className="hero-float absolute right-[-8px] top-0 bottom-0 w-[48%] pointer-events-none">
             <Image
               key={s.id}
               src={s.food_image_url}
@@ -103,11 +108,12 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
           </div>
         )}
 
-        {/* Text */}
-        <div className="relative z-10 pl-5 pr-[42%] pt-5 pb-10">
+        {/* Text — keyed on the slide so the copy re-enters line by line every
+            time the banner rotates, instead of swapping in place. */}
+        <div key={s.id} className="relative z-10 pl-5 pr-[42%] pt-5 pb-10">
           {s.tag && (
             <span
-              className="inline-block text-[9px] font-extrabold tracking-wider px-2 py-0.5 rounded-full mb-2"
+              className="rise-in inline-block text-[9px] font-extrabold tracking-wider px-2 py-0.5 rounded-full mb-2"
               style={{
                 color: s.accent_color,
                 border: `1px solid ${s.accent_color}`,
@@ -122,8 +128,8 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
               mobile hero has always used ("Four Restaurants." above a gold
               "One Easy Order."). The web hero accents the first line instead. */}
           <h2
-            className="font-extrabold leading-[1.05] tracking-tight"
-            style={{ fontSize: "clamp(21px, 6.2vw, 27px)", color: titleColor }}
+            className="rise-in font-extrabold leading-[1.05] tracking-tight"
+            style={{ fontSize: "clamp(21px, 6.2vw, 27px)", color: titleColor, animationDelay: "70ms" }}
           >
             {s.headline_orange}
             {s.headline_black && (
@@ -136,8 +142,8 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
 
           {s.subtitle && (
             <p
-              className="text-[11px] leading-snug mt-2.5 whitespace-pre-line"
-              style={{ color: bodyColor }}
+              className="rise-in text-[11px] leading-snug mt-2.5 whitespace-pre-line"
+              style={{ color: bodyColor, animationDelay: "140ms" }}
             >
               {s.subtitle.replace(/\\n/g, "\n")}
             </p>
