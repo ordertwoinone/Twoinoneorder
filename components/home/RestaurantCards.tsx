@@ -11,6 +11,10 @@ const BADGE_STYLE: Record<string, { bg: string; text: string }> = {
   "New":           { bg: "#7c3aed", text: "#fff" },
 };
 
+/* Offer pills cycle through four animations by card position, so a column of
+   promos catches the eye in turn instead of throbbing as one. */
+const OFFER_ANIM = ["heartbeat", "offer-glow", "offer-wiggle", "offer-shine"];
+
 /* The mobile list shows the badge as a soft pill next to the meta line rather
    than as a solid chip over the photo, so it needs a tinted variant. */
 const BADGE_PILL: Record<string, string> = {
@@ -132,9 +136,9 @@ export default async function RestaurantCards() {
                       Set per restaurant in the admin panel; hidden when blank. */}
                   {r.offer_text?.trim() && (
                     <div className="mt-1.5">
-                      {/* Beats from its left edge so the pill pulses in place
-                          instead of nudging the text beside it. */}
-                      <span className="heartbeat origin-left inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md max-w-full truncate">
+                      <span
+                        className={`${OFFER_ANIM[i % OFFER_ANIM.length]} inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md max-w-full truncate`}
+                      >
                         <Tag size={10} className="shrink-0" />
                         {r.offer_text}
                       </span>
