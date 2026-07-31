@@ -1,8 +1,13 @@
 "use client";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { Search, X, ExternalLink, SlidersHorizontal } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useSearch } from "@/hooks/useSearch";
+
+/* The placeholder cycles through these one at a time instead of listing them
+   all in a comma-separated line — one dish reads far better at a glance. */
+const SEARCH_TERMS = ["shawarma", "biryani", "falafel", "karak chai", "samosa", "grills"];
+const TERM_MS = 2200;
 
 const RESTAURANT_COLORS: Record<string, string> = {
   "Two In One":     "bg-orange-600 text-white",
@@ -15,6 +20,19 @@ export default function SearchBar() {
   const { query, results, isOpen, setIsOpen, handleChange, clear } = useSearch();
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [termIndex, setTermIndex] = useState(0);
+  const reduceMotion = useReducedMotion();
+
+  // Rotate the placeholder word, but hold still while there's a query — the
+  // hint is irrelevant once someone is typing.
+  useEffect(() => {
+    if (query) return;
+    const id = setInterval(
+      () => setTermIndex((i) => (i + 1) % SEARCH_TERMS.length),
+      TERM_MS
+    );
+    return () => clearInterval(id);
+  }, [query]);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -40,10 +58,37 @@ export default function SearchBar() {
             type="text"
             value={query}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder="Search shawarma, biryani, falafel, karak…"
+            aria-label="Search dishes and restaurants"
+            placeholder=""
             className="w-full pl-12 pr-12 py-4 rounded-[20px] bg-white text-[15px] text-gray-700 placeholder:text-gray-400 focus:outline-none ring-1 ring-black/[0.06] focus:ring-orange-300 shadow-[0_6px_22px_rgba(0,0,0,0.10)] transition-shadow"
             onFocus={() => { if (query.trim().length >= 2) setIsOpen(true); }}
           />
+
+          {/* Animated stand-in for the placeholder — a native one can't
+              animate, so the input's is left empty and this sits in its
+              place. Purely decorative: it never swallows a tap. */}
+          {!query && (
+            <div
+              className="absolute left-12 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[15px] text-gray-400 pointer-events-none select-none"
+              aria-hidden="true"
+            >
+              <span>Search</span>
+              <span className="relative block h-[22px] leading-[22px] overflow-hidden">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={SEARCH_TERMS[termIndex]}
+                    initial={reduceMotion ? { opacity: 0 } : { y: 22, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={reduceMotion ? { opacity: 0 } : { y: -22, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="block whitespace-nowrap"
+                  >
+                    {SEARCH_TERMS[termIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+            </div>
+          )}
           {query ? (
             <button
               onClick={clear}
