@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Plus } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { stagger } from "@/lib/stagger";
 
 /** Normalised shape every source table is mapped into. */
 interface Pick {
@@ -149,12 +150,15 @@ export default async function TopPicks() {
             HomeCategories: snapping otherwise pulls the first card flush to the
             screen edge). sm+: a plain single-row grid. */}
         <div className="grid grid-flow-col grid-rows-2 auto-cols-[calc((100vw-3.5rem)/3)] gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4 sm:grid-flow-row sm:grid-rows-none sm:auto-cols-auto sm:grid-cols-4 lg:grid-cols-5 sm:gap-4 sm:overflow-visible">
-          {picks.map((p) => (
+          {picks.map((p, i) => (
             <div
               key={p.key}
               // Width comes from the grid's column sizing, not the card.
-              className="relative bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
-              style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
+              className="stagger-item relative bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group snap-item tap-shrink"
+              style={{
+                boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+                animationDelay: `${stagger(i, 45)}ms`,
+              }}
             >
               <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
                 <Image

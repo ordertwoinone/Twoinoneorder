@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { stagger } from "@/lib/stagger";
 import OfferSlideCard, { OfferItem } from "./OfferSlideCard";
 
 interface HomepageCard {
@@ -99,11 +100,12 @@ export default async function HomepageCards() {
         </div>
 
         <div className={`grid grid-cols-3 gap-2 sm:grid-cols-2 sm:gap-4 items-start ${hasOffers ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
-          {cards.map((card) => {
+          {cards.map((card, i) => {
             const isExternal = card.href?.startsWith("http");
             // Booking already has its own action in the mobile bottom nav, so
             // the card is desktop-only.
-            const wrapperCls = card.href === "/book-table" ? "hidden sm:flex flex-col" : "flex flex-col";
+            const wrapperCls = `stagger-item ${card.href === "/book-table" ? "hidden sm:flex flex-col" : "flex flex-col"}`;
+            const wrapperStyle = { animationDelay: `${stagger(i)}ms` };
 
             const cardEl = (
               <div className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1.5 overflow-hidden flex flex-col h-full">
@@ -184,11 +186,11 @@ export default async function HomepageCards() {
             );
 
             return isExternal ? (
-              <a key={card.id} href={card.href} target="_blank" rel="noopener noreferrer" className={wrapperCls}>
+              <a key={card.id} href={card.href} target="_blank" rel="noopener noreferrer" className={wrapperCls} style={wrapperStyle}>
                 {cardEl}
               </a>
             ) : (
-              <Link key={card.id} href={card.href} className={wrapperCls}>
+              <Link key={card.id} href={card.href} className={wrapperCls} style={wrapperStyle}>
                 {cardEl}
               </Link>
             );

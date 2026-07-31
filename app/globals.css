@@ -95,6 +95,43 @@ canvas {
   will-change: auto;
 }
 
+/* Cards that arrive one after another rather than all at once. They hold
+   still until their FadeInSection scrolls into view, so the sequence plays
+   when it's actually watched — set the offset per item with an inline
+   `animationDelay`. Only ever use this inside a FadeInSection. */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.stagger-item {
+  opacity: 0;
+}
+.fade-section.is-visible .stagger-item {
+  animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Same idea for things already on screen at load, where waiting on a scroll
+   would mean the animation is never seen. Runs straight away on mount. */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pop-in {
+  animation: popIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── Floating food bubbles (footer CTA) ───────────────────────────────────── */
 
 @keyframes floatBubble {
@@ -256,6 +293,15 @@ canvas {
   }
   .tap-shrink {
     transition: none;
+  }
+  /* Drop the entrance but keep the content — these start at opacity 0, so
+     cancelling the animation alone would leave them invisible. */
+  .stagger-item,
+  .fade-section.is-visible .stagger-item,
+  .pop-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
   }
 }
 

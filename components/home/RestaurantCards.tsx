@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Star, Clock, Truck, Tag } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { stagger } from "@/lib/stagger";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 
 const BADGE_STYLE: Record<string, { bg: string; text: string }> = {
@@ -63,14 +64,17 @@ export default async function RestaurantCards() {
         {/* Mobile: a full-width list, one restaurant per row — photo on the
             left, name and details on the right, favourite on the far right. */}
         <div className="flex flex-col gap-2.5 sm:hidden">
-          {restaurants.map((r) => {
+          {restaurants.map((r, i) => {
             const cardImage = r.background_image_url || r.food_image_url;
             const pill = r.badge ? BADGE_PILL[r.badge] : null;
             return (
               <div
                 key={r.id}
-                className="relative flex items-center gap-3 bg-white rounded-2xl border border-gray-100 p-2 tap-shrink"
-                style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
+                className="stagger-item relative flex items-center gap-3 bg-white rounded-2xl border border-gray-100 p-2 tap-shrink"
+                style={{
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+                  animationDelay: `${stagger(i)}ms`,
+                }}
               >
                 {/* Photo with the brand logo pinned to its bottom-left corner,
                     on a white chip so every logo reads over any artwork. */}
@@ -156,7 +160,7 @@ export default async function RestaurantCards() {
 
         {/* sm+: an even four-across grid of vertical cards. */}
         <div className="hidden sm:grid sm:grid-cols-4 sm:gap-3">
-          {restaurants.map((r) => {
+          {restaurants.map((r, i) => {
             const badge = r.badge ? BADGE_STYLE[r.badge] : null;
             // background_image_url is the dedicated slot, but it is optional and
             // currently unset everywhere — fall back to the food photo so cards
@@ -166,8 +170,11 @@ export default async function RestaurantCards() {
               <a
                 key={r.id}
                 href={r.url || "#"}
-                className="block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group tap-shrink"
-                style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}
+                className="stagger-item block bg-white rounded-2xl overflow-hidden border border-gray-100 transition-shadow hover:shadow-md group tap-shrink"
+                style={{
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+                  animationDelay: `${stagger(i)}ms`,
+                }}
               >
                 {/* Photo fills the tile, with the brand logo pinned to the top
                     right. The logo sits on a white chip at a fixed size so every

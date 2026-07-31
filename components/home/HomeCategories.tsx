@@ -1,6 +1,8 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { stagger } from "@/lib/stagger";
 
 interface HomeCategory {
   id: string;
@@ -45,7 +47,15 @@ async function getCategories(platform: "mobile" | "web"): Promise<HomeCategory[]
   return data;
 }
 
-function CategoryItem({ cat, itemClass }: { cat: HomeCategory; itemClass: string }) {
+function CategoryItem({
+  cat,
+  itemClass,
+  style,
+}: {
+  cat: HomeCategory;
+  itemClass: string;
+  style?: CSSProperties;
+}) {
   const imgSrc =
     cat.image_url || FALLBACK.find((f) => f.name === cat.name)?.image_url || FALLBACK[0].image_url;
   const isExternal = cat.href?.startsWith("http");
@@ -70,11 +80,11 @@ function CategoryItem({ cat, itemClass }: { cat: HomeCategory; itemClass: string
     </>
   );
 
-  if (!cat.href) return <div className={`${itemClass} cursor-default`}>{inner}</div>;
+  if (!cat.href) return <div className={`${itemClass} cursor-default`} style={style}>{inner}</div>;
   return isExternal ? (
-    <a href={cat.href} className={itemClass}>{inner}</a>
+    <a href={cat.href} className={itemClass} style={style}>{inner}</a>
   ) : (
-    <Link href={cat.href} className={itemClass}>{inner}</Link>
+    <Link href={cat.href} className={itemClass} style={style}>{inner}</Link>
   );
 }
 
@@ -95,11 +105,12 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
             className="grid [grid-template-columns:repeat(var(--cat-cols),minmax(0,110px))] justify-items-center gap-4 sm:gap-5"
             style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
           >
-            {categories.map((cat) => (
+            {categories.map((cat, i) => (
               <CategoryItem
                 key={cat.id}
                 cat={cat}
-                itemClass="flex flex-col items-center gap-2 group w-full tap-shrink"
+                itemClass="stagger-item flex flex-col items-center gap-2 group w-full tap-shrink"
+                style={{ animationDelay: `${stagger(i, 40)}ms` }}
               />
             ))}
           </div>
@@ -116,11 +127,14 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
             first tile to the container edge and scrolls the left padding out of
             view, so the row starts tighter than the other sections. */}
         <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4">
-          {categories.map((cat) => (
+          {/* This row sits above the fold, so the tiles pop in on load rather
+              than waiting for a scroll that has already happened. */}
+          {categories.map((cat, i) => (
             <CategoryItem
               key={cat.id}
               cat={cat}
-              itemClass="flex flex-col items-center gap-1.5 group w-[64px] shrink-0 snap-item tap-shrink"
+              itemClass="pop-in flex flex-col items-center gap-1.5 group w-[64px] shrink-0 snap-item tap-shrink"
+              style={{ animationDelay: `${stagger(i, 45)}ms` }}
             />
           ))}
         </div>
