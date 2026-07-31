@@ -15,13 +15,14 @@ interface Restaurant {
   delivery_time: string;
   url: string;
   badge: string | null;
+  offer_text: string | null;
   is_active: boolean;
   created_at: string;
 }
 
 const EMPTY: Omit<Restaurant, "id" | "created_at"> = {
   name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
-  rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, is_active: true,
+  rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, offer_text: "", is_active: true,
 };
 
 const BADGES = ["", "Free Delivery", "Best Seller", "Popular", "New"];
@@ -116,15 +117,16 @@ export default function RestaurantsAdmin() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rating</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Delivery</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Badge</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Offer</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">{search ? "No results found." : "No restaurants yet."}</td></tr>
+              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">{search ? "No results found." : "No restaurants yet."}</td></tr>
             ) : filtered.map((r) => (
               <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
@@ -154,6 +156,11 @@ export default function RestaurantsAdmin() {
                 <td className="px-4 py-3">
                   {r.badge
                     ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${BADGE_COLOR[r.badge] || "bg-gray-100 text-gray-600"}`}>{r.badge}</span>
+                    : <span className="text-gray-300 text-xs">—</span>}
+                </td>
+                <td className="px-4 py-3">
+                  {r.offer_text
+                    ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">{r.offer_text}</span>
                     : <span className="text-gray-300 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3">
@@ -228,6 +235,14 @@ export default function RestaurantsAdmin() {
                 <input type="url" value={modal.data.url} onChange={(e) => handleField("url", e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
                   placeholder="https://..." />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Offer</label>
+                <input type="text" value={modal.data.offer_text || ""} onChange={(e) => handleField("offer_text", e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  placeholder="30% OFF" />
+                <p className="text-[11px] text-gray-400 mt-1">Shown as a pill on the restaurant card. Leave blank to hide it.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

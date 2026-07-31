@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Star, Clock, Truck } from "lucide-react";
+import { Star, Clock, Truck, Tag } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 
@@ -30,12 +30,13 @@ interface Restaurant {
   delivery_time: string;
   url: string;
   badge: string | null;
+  offer_text: string | null;
 }
 
 async function getRestaurants(): Promise<Restaurant[]> {
   const { data, error } = await supabaseAdmin
     .from("restaurants")
-    .select("id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge")
+    .select("id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text")
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
@@ -122,6 +123,17 @@ export default async function RestaurantCards() {
                       </span>
                     )}
                   </div>
+
+                  {/* Offer — its own line so a long one has room to breathe.
+                      Set per restaurant in the admin panel; hidden when blank. */}
+                  {r.offer_text?.trim() && (
+                    <div className="mt-1.5">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md max-w-full truncate">
+                        <Tag size={10} className="shrink-0" />
+                        {r.offer_text}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Stretched link keeps the whole row tappable while leaving the
