@@ -8,6 +8,8 @@ export async function GET() {
   const { data, error } = await supabaseAdminLive
     .from("restaurants")
     .select("*")
+    // Same order the homepage uses, so the admin list is what visitors see.
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

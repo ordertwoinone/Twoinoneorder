@@ -43,6 +43,9 @@ async function getRestaurants(): Promise<Restaurant[]> {
     .from("restaurants")
     .select("id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text")
     .eq("is_active", true)
+    // Position is set by the arrows in admin → Restaurants; newest-first only
+    // breaks ties between rows that share a position.
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   if (error || !data?.length) return [];

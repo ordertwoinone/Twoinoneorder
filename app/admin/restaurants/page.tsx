@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Search, Star, Clock } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Search, Star, Clock, ChevronUp, ChevronDown } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
 interface Restaurant {
@@ -16,13 +16,15 @@ interface Restaurant {
   url: string;
   badge: string | null;
   offer_text: string | null;
+  sort_order: number;
   is_active: boolean;
   created_at: string;
 }
 
 const EMPTY: Omit<Restaurant, "id" | "created_at"> = {
   name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
-  rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, offer_text: "", is_active: true,
+  rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, offer_text: "", sort_order: 0,
+  is_active: true,
 };
 
 const BADGES = ["", "Free Delivery", "Best Seller", "Popular", "New"];
@@ -46,6 +48,7 @@ export default function RestaurantsAdmin() {
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [moving, setMoving] = useState<string | null>(null);
   const [cuisineInput, setCuisineInput] = useState("");
 
   async function load() {
@@ -57,7 +60,13 @@ export default function RestaurantsAdmin() {
 
   useEffect(() => { load(); }, []);
 
-  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY } }); setCuisineInput(""); }
+  // New restaurants land at the bottom of the homepage rather than jumping
+  // ahead of the running order.
+  function openAdd() {
+    const last = Math.max(0, ...restaurants.map((r) => r.sort_order ?? 0));
+    setModal({ open: true, mode: "add", data: { ...EMPTY, sort_order: last + 1 } });
+    setCuisineInput("");
+  }
   function openEdit(r: Restaurant) { setModal({ open: true, mode: "edit", data: { ...r } }); setCuisineInput(r.cuisine?.join(", ") || ""); }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) { setModal((m) => ({ ...m, data: { ...m.data, [key]: value } })); }
@@ -76,6 +85,44 @@ export default function RestaurantsAdmin() {
     }
     setSaving(false);
     closeModal();
+    load();
+  }
+
+  /**
+   * Move a restaurant one place up or down the homepage. The list is
+   * renumbered 1..n rather than swapping two values, so positions stay unique
+   * even if rows arrive sharing one — only the rows that actually changed get
+   * written.
+   */
+  async function move(id: string, dir: -1 | 1) {
+    const from = restaurants.findIndex((r) => r.id === id);
+    const to = from + dir;
+    if (from < 0 || to < 0 || to >= restaurants.length) return;
+
+    const reordered = [...restaurants];
+    const [row] = reordered.splice(from, 1);
+    reordered.splice(to, 0, row);
+    const renumbered = reordered.map((r, i) => ({ ...r, sort_order: i + 1 }));
+
+    const changed = renumbered.filter(
+      (r) => restaurants.find((o) => o.id === r.id)?.sort_order !== r.sort_order
+    );
+
+    // Show the new order straight away — waiting on the round trip reads as a
+    // dead button.
+    setRestaurants(renumbered);
+    setMoving(id);
+
+    await Promise.all(
+      changed.map((r) =>
+        fetch(`/api/admin/restaurants/${r.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sort_order: r.sort_order }),
+        })
+      )
+    );
+    setMoving(null);
     load();
   }
 
@@ -112,6 +159,7 @@ export default function RestaurantsAdmin() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Restaurant</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Cuisine</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rating</th>
@@ -124,11 +172,39 @@ export default function RestaurantsAdmin() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">{search ? "No results found." : "No restaurants yet."}</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">{search ? "No results found." : "No restaurants yet."}</td></tr>
             ) : filtered.map((r) => (
               <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                {/* Position on the homepage. Reordering is disabled while a
+                    search is on, since the neighbours you'd swap with are
+                    hidden. */}
+                <td className="px-3 py-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 text-xs font-semibold text-gray-400 tabular-nums">{r.sort_order}</span>
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => move(r.id, -1)}
+                        disabled={!!search || !!moving || restaurants[0]?.id === r.id}
+                        title={search ? "Clear the search to reorder" : "Move up"}
+                        aria-label="Move up"
+                        className="w-6 h-5 flex items-center justify-center rounded text-gray-400 hover:text-orange-600 hover:bg-orange-50 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        onClick={() => move(r.id, 1)}
+                        disabled={!!search || !!moving || restaurants[restaurants.length - 1]?.id === r.id}
+                        title={search ? "Clear the search to reorder" : "Move down"}
+                        aria-label="Move down"
+                        className="w-6 h-5 flex items-center justify-center rounded text-gray-400 hover:text-orange-600 hover:bg-orange-50 disabled:opacity-25 disabled:hover:bg-transparent disabled:hover:text-gray-400 transition-colors"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
