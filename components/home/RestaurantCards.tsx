@@ -178,7 +178,7 @@ export default async function RestaurantCards() {
                       )}
                       {r.offer_text?.trim() && (
                         <span
-                          className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md leading-relaxed"
                           style={pillColors(r.offer_bg_color, r.offer_text_color, OFFER_FALLBACK)}
                         >
                           {r.offer_text}

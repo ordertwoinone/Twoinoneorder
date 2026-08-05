@@ -425,7 +425,7 @@ export default function RestaurantsAdmin() {
                       </span>
                     )}
                     {modal.data.offer_text && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md leading-relaxed"
                         style={pillColors(modal.data.offer_bg_color, modal.data.offer_text_color, OFFER_FALLBACK)}>
                         {modal.data.offer_text}
                       </span>
