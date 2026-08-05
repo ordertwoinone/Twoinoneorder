@@ -43,7 +43,9 @@ export default function NavbarClient({
             />
           </div>
           <div className="min-w-0">
-            <p className="font-brand text-[11.5px] sm:text-[14px] font-extrabold leading-none tracking-tight uppercase truncate">
+            {/* No `uppercase` here — the wordmark reads exactly as it is typed
+                in admin → Header, caps and all. */}
+            <p className="font-brand text-[11.5px] sm:text-[14px] font-extrabold leading-none tracking-tight truncate">
               <span className="text-gray-900">{content.title}</span>
               {content.titleHighlight && (
                 <span style={{ color: "#ea580c" }}> {content.titleHighlight}</span>

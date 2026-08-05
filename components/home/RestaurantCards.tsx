@@ -55,18 +55,43 @@ function pillColors(
   };
 }
 
-async function getRestaurants(): Promise<Restaurant[]> {
-  const { data, error } = await supabaseAdmin
+const BASE_COLUMNS =
+  "id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text";
+/* Added by supabase/restaurant_card_colors.sql and restaurant_free_delivery.sql. */
+const EXTRA_COLUMNS =
+  "free_delivery, badge_bg_color, badge_text_color, offer_bg_color, offer_text_color";
+
+function query(columns: string) {
+  return supabaseAdmin
     .from("restaurants")
-    .select("id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text, free_delivery, badge_bg_color, badge_text_color, offer_bg_color, offer_text_color")
+    .select(columns)
     .eq("is_active", true)
     // Position is set by the arrows in admin → Restaurants; newest-first only
     // breaks ties between rows that share a position.
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
+}
 
-  if (error || !data?.length) return [];
-  return data;
+/**
+ * PostgREST rejects the whole select if one column is unknown, so a database
+ * that has not run the latest migration would blank the entire section. Fall
+ * back to the columns that have always existed and let the cards render with
+ * their default colours instead.
+ */
+async function getRestaurants(): Promise<Restaurant[]> {
+  const full = await query(`${BASE_COLUMNS}, ${EXTRA_COLUMNS}`);
+  if (!full.error) return (full.data as unknown as Restaurant[]) ?? [];
+
+  const base = await query(BASE_COLUMNS);
+  if (base.error || !base.data?.length) return [];
+  return (base.data as unknown as Restaurant[]).map((r) => ({
+    ...r,
+    free_delivery: null,
+    badge_bg_color: null,
+    badge_text_color: null,
+    offer_bg_color: null,
+    offer_text_color: null,
+  }));
 }
 
 export default async function RestaurantCards() {

@@ -82,7 +82,7 @@ export default function HeaderAdmin() {
             className="w-10 h-10 object-contain shrink-0"
           />
           <div className="min-w-0">
-            <p className="font-brand text-[14px] font-extrabold leading-none tracking-tight uppercase truncate">
+            <p className="font-brand text-[14px] font-extrabold leading-none tracking-tight truncate">
               <span className="text-gray-900">{form.header_title || "TWOINONE"}</span>
               {form.header_title_highlight && (
                 <span style={{ color: "#ea580c" }}> {form.header_title_highlight}</span>
@@ -117,7 +117,7 @@ export default function HeaderAdmin() {
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tagline</label>
             <input value={form.header_tagline} onChange={(e) => handleField("header_tagline", e.target.value)} placeholder="Good Food, One Click Away" className={inputCls} />
-            <p className="text-[11px] text-gray-400 mt-1.5">Shown small under the name. Leave blank to hide it.</p>
+            <p className="text-[11px] text-gray-400 mt-1.5">Shown small under the name. Leave blank to hide it. The header prints the name exactly as typed — type it in capitals if you want capitals.</p>
           </div>
         </div>
       </div>
