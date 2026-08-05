@@ -82,14 +82,14 @@ export default function HeaderAdmin() {
             className="w-10 h-10 object-contain shrink-0"
           />
           <div className="min-w-0">
-            <p className="font-brand text-[17px] font-extrabold leading-none tracking-tight uppercase truncate">
+            <p className="font-brand text-[14px] font-extrabold leading-none tracking-tight uppercase truncate">
               <span className="text-gray-900">{form.header_title || "TWOINONE"}</span>
               {form.header_title_highlight && (
                 <span style={{ color: "#ea580c" }}> {form.header_title_highlight}</span>
               )}
             </p>
             {form.header_tagline && (
-              <p className="font-brand text-[10.5px] font-semibold text-gray-400 leading-none mt-1 truncate">
+              <p className="font-brand text-[9.5px] font-semibold text-gray-400 leading-none mt-1 truncate">
                 {form.header_tagline}
               </p>
             )}

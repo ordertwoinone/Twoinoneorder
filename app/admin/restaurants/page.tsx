@@ -16,6 +16,10 @@ interface Restaurant {
   url: string;
   badge: string | null;
   offer_text: string | null;
+  badge_bg_color: string;
+  badge_text_color: string;
+  offer_bg_color: string;
+  offer_text_color: string;
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -24,16 +28,70 @@ interface Restaurant {
 const EMPTY: Omit<Restaurant, "id" | "created_at"> = {
   name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
   rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, offer_text: "", sort_order: 0,
-  is_active: true,
+  is_active: true, badge_bg_color: "", badge_text_color: "", offer_bg_color: "", offer_text_color: "",
 };
 
-const BADGES = ["", "Free Delivery", "Best Seller", "Popular", "New"];
-const BADGE_COLOR: Record<string, string> = {
-  "Free Delivery": "bg-green-100 text-green-700",
-  "Best Seller":   "bg-orange-100 text-orange-700",
-  "Popular":       "bg-red-100 text-red-700",
-  "New":           "bg-purple-100 text-purple-700",
+/* Suggestions only — the badge is free text, so new ones can be typed in. */
+const BADGE_SUGGESTIONS = ["Free Delivery", "Best Seller", "Popular", "New"];
+
+/* Mirrors the card's fallbacks so the admin preview matches the homepage. */
+const BADGE_PILL: Record<string, { bg: string; text: string }> = {
+  "Best Seller": { bg: "#fff7ed", text: "#ea580c" },
+  "Popular":     { bg: "#fef2f2", text: "#dc2626" },
+  "New":         { bg: "#faf5ff", text: "#7c3aed" },
 };
+const BADGE_PILL_FALLBACK = { bg: "#f3f4f6", text: "#4b5563" };
+const OFFER_FALLBACK = { bg: "#FEF3C7", text: "#8A6100" };
+
+function pillColors(bg: string, text: string, fallback: { bg: string; text: string }) {
+  return { background: bg?.trim() || fallback.bg, color: text?.trim() || fallback.text };
+}
+
+/* A background/text pair for one pill. Empty means "use the default", so the
+   swatch shows the fallback and Reset clears back to it. */
+function ColorPair({ label, bg, text, fallback, onBg, onText }: {
+  label: string;
+  bg: string;
+  text: string;
+  fallback: { bg: string; text: string };
+  onBg: (v: string) => void;
+  onText: (v: string) => void;
+}) {
+  const field = (
+    value: string,
+    fallbackValue: string,
+    onChange: (v: string) => void,
+    name: string,
+  ) => (
+    <div>
+      <label className="block text-[11px] font-medium text-gray-500 mb-1">{name}</label>
+      <div className="flex items-center gap-2">
+        <input type="color" value={/^#[0-9a-fA-F]{6}$/.test(value) ? value : fallbackValue}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-9 h-9 rounded-lg border border-gray-200 cursor-pointer shrink-0 bg-white" />
+        <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
+          placeholder={fallbackValue}
+          className="w-full min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        {value && (
+          <button type="button" onClick={() => onChange("")}
+            className="px-2.5 py-2 rounded-lg text-[11px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors shrink-0">
+            Reset
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <p className="text-[11px] font-semibold text-gray-600 mb-1.5">{label}</p>
+      <div className="grid grid-cols-2 gap-3">
+        {field(bg, fallback.bg, onBg, "Background")}
+        {field(text, fallback.text, onText, "Text")}
+      </div>
+    </div>
+  );
+}
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -67,7 +125,22 @@ export default function RestaurantsAdmin() {
     setModal({ open: true, mode: "add", data: { ...EMPTY, sort_order: last + 1 } });
     setCuisineInput("");
   }
-  function openEdit(r: Restaurant) { setModal({ open: true, mode: "edit", data: { ...r } }); setCuisineInput(r.cuisine?.join(", ") || ""); }
+  // Colour columns may be missing on rows saved before they existed — coalesce
+  // so the inputs stay controlled.
+  function openEdit(r: Restaurant) {
+    setModal({
+      open: true,
+      mode: "edit",
+      data: {
+        ...r,
+        badge_bg_color: r.badge_bg_color || "",
+        badge_text_color: r.badge_text_color || "",
+        offer_bg_color: r.offer_bg_color || "",
+        offer_text_color: r.offer_text_color || "",
+      },
+    });
+    setCuisineInput(r.cuisine?.join(", ") || "");
+  }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) { setModal((m) => ({ ...m, data: { ...m.data, [key]: value } })); }
 
@@ -231,12 +304,18 @@ export default function RestaurantsAdmin() {
                 </td>
                 <td className="px-4 py-3">
                   {r.badge
-                    ? <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${BADGE_COLOR[r.badge] || "bg-gray-100 text-gray-600"}`}>{r.badge}</span>
+                    ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                        style={pillColors(r.badge_bg_color, r.badge_text_color, BADGE_PILL[r.badge] || BADGE_PILL_FALLBACK)}>
+                        {r.badge}
+                      </span>
                     : <span className="text-gray-300 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3">
                   {r.offer_text
-                    ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">{r.offer_text}</span>
+                    ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                        style={pillColors(r.offer_bg_color, r.offer_text_color, OFFER_FALLBACK)}>
+                        {r.offer_text}
+                      </span>
                     : <span className="text-gray-300 text-xs">—</span>}
                 </td>
                 <td className="px-4 py-3">
@@ -313,30 +392,75 @@ export default function RestaurantsAdmin() {
                   placeholder="https://..." />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Offer</label>
-                <input type="text" value={modal.data.offer_text || ""} onChange={(e) => handleField("offer_text", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="30% OFF" />
-                <p className="text-[11px] text-gray-400 mt-1">Shown as a pill on the restaurant card. Leave blank to hide it.</p>
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Badge</label>
-                  <select value={modal.data.badge || ""} onChange={(e) => handleField("badge", e.target.value || null)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
-                    {BADGES.map((b) => <option key={b} value={b}>{b || "None"}</option>)}
-                  </select>
+                  <input type="text" list="badge-suggestions" value={modal.data.badge || ""}
+                    onChange={(e) => handleField("badge", e.target.value || null)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    placeholder="Best Seller" />
+                  <datalist id="badge-suggestions">
+                    {BADGE_SUGGESTIONS.map((b) => <option key={b} value={b} />)}
+                  </datalist>
+                  <p className="text-[11px] text-gray-400 mt-1">Type anything — new badges are allowed.</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Status</label>
-                  <select value={modal.data.is_active ? "active" : "inactive"} onChange={(e) => handleField("is_active", e.target.value === "active")}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Offer</label>
+                  <input type="text" value={modal.data.offer_text || ""} onChange={(e) => handleField("offer_text", e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    placeholder="30% OFF ALL ITEMS" />
+                  <p className="text-[11px] text-gray-400 mt-1">Blank hides the pill.</p>
                 </div>
+              </div>
+
+              {/* Pill colours — blank means the built-in palette. */}
+              <div className="rounded-lg border border-gray-200 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-gray-700">Card pill colours</p>
+                  <div className="flex flex-wrap items-center gap-1.5 justify-end">
+                    {modal.data.badge && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                        style={pillColors(modal.data.badge_bg_color, modal.data.badge_text_color, BADGE_PILL[modal.data.badge] || BADGE_PILL_FALLBACK)}>
+                        {modal.data.badge}
+                      </span>
+                    )}
+                    {modal.data.offer_text && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                        style={pillColors(modal.data.offer_bg_color, modal.data.offer_text_color, OFFER_FALLBACK)}>
+                        {modal.data.offer_text}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <ColorPair
+                  label="Badge"
+                  bg={modal.data.badge_bg_color} text={modal.data.badge_text_color}
+                  fallback={BADGE_PILL[modal.data.badge || ""] || BADGE_PILL_FALLBACK}
+                  onBg={(v) => handleField("badge_bg_color", v)}
+                  onText={(v) => handleField("badge_text_color", v)}
+                />
+                <ColorPair
+                  label="Offer"
+                  bg={modal.data.offer_bg_color} text={modal.data.offer_text_color}
+                  fallback={OFFER_FALLBACK}
+                  onBg={(v) => handleField("offer_bg_color", v)}
+                  onText={(v) => handleField("offer_text_color", v)}
+                />
+                <p className="text-[11px] text-gray-400">
+                  Leave a colour blank to use the default. A{" "}
+                  <span className="font-semibold text-gray-600">Free Delivery</span> badge shows as a
+                  green “Free” on the card&rsquo;s delivery line instead of a pill, so its colours are ignored.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Status</label>
+                <select value={modal.data.is_active ? "active" : "inactive"} onChange={(e) => handleField("is_active", e.target.value === "active")}
+                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
             </div>
 

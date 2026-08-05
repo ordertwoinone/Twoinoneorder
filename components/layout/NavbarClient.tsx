@@ -43,14 +43,14 @@ export default function NavbarClient({
             />
           </div>
           <div className="min-w-0">
-            <p className="font-brand text-[13px] sm:text-[17px] font-extrabold leading-none tracking-tight uppercase truncate">
+            <p className="font-brand text-[11.5px] sm:text-[14px] font-extrabold leading-none tracking-tight uppercase truncate">
               <span className="text-gray-900">{content.title}</span>
               {content.titleHighlight && (
                 <span style={{ color: "#ea580c" }}> {content.titleHighlight}</span>
               )}
             </p>
             {content.tagline && (
-              <p className="font-brand text-[8.5px] sm:text-[10.5px] font-semibold text-gray-400 leading-none mt-1 truncate">
+              <p className="font-brand text-[8px] sm:text-[9.5px] font-semibold text-gray-400 leading-none mt-1 truncate">
                 {content.tagline}
               </p>
             )}
@@ -66,18 +66,18 @@ export default function NavbarClient({
         >
           <MapPin size={15} fill="#ea580c" stroke="none" className="shrink-0" />
           <span className="min-w-0">
-            <span className="block text-[9px] text-gray-400 leading-none mb-0.5">
+            <span className="block text-[8px] text-gray-400 leading-none mb-0.5">
               Deliver to
             </span>
             {location.status === "loading" ? (
-              <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500">
-                <Loader2 size={11} className="animate-spin" style={{ color: "#ea580c" }} />
+              <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
+                <Loader2 size={10} className="animate-spin" style={{ color: "#ea580c" }} />
                 Detecting…
               </span>
             ) : (
-              <span className="flex items-center gap-0.5 text-[11px] font-bold text-gray-900">
-                <span className="truncate max-w-[85px] sm:max-w-[150px]">{displayArea}</span>
-                <ChevronDown size={12} className="text-gray-500 shrink-0" />
+              <span className="flex items-center gap-0.5 text-[10px] font-bold text-gray-900">
+                <span className="truncate max-w-[90px] sm:max-w-[150px]">{displayArea}</span>
+                <ChevronDown size={11} className="text-gray-500 shrink-0" />
               </span>
             )}
           </span>
