@@ -419,13 +419,13 @@ export default function RestaurantsAdmin() {
                   <p className="text-xs font-semibold text-gray-700">Card pill colours</p>
                   <div className="flex flex-wrap items-center gap-1.5 justify-end">
                     {modal.data.badge && (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                      <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md"
                         style={pillColors(modal.data.badge_bg_color, modal.data.badge_text_color, BADGE_PILL[modal.data.badge] || BADGE_PILL_FALLBACK)}>
                         {modal.data.badge}
                       </span>
                     )}
                     {modal.data.offer_text && (
-                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md leading-relaxed"
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-relaxed"
                         style={pillColors(modal.data.offer_bg_color, modal.data.offer_text_color, OFFER_FALLBACK)}>
                         {modal.data.offer_text}
                       </span>

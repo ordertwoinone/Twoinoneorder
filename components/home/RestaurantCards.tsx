@@ -130,14 +130,15 @@ export default async function RestaurantCards() {
                     {r.name}
                   </h3>
 
-                  <div className="flex items-center gap-1 text-[12.5px] font-bold text-gray-800 mt-1">
-                    <Star size={13} className="fill-orange-500 stroke-orange-500" />
-                    {r.rating}
-                  </div>
-
-                  {/* Delivery line — a free drop leads in green, as on the
-                      cards this list is modelled on. */}
+                  {/* Rating, delivery and cuisines share one line — a free drop
+                      leads in green, as on the cards this list is modelled on.
+                      Only the cuisines wrap, and only when they must. */}
                   <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-gray-500 mt-1">
+                    <span className="flex items-center gap-1 font-bold text-gray-800">
+                      <Star size={13} className="fill-orange-500 stroke-orange-500" />
+                      {r.rating}
+                    </span>
+                    <span className="text-gray-300">·</span>
                     {freeDelivery && (
                       <>
                         <span className="flex items-center gap-1 font-semibold text-green-600">
@@ -147,7 +148,7 @@ export default async function RestaurantCards() {
                         <span className="text-gray-300">·</span>
                       </>
                     )}
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Clock size={12} />
                       {r.delivery_time}
                     </span>
@@ -159,14 +160,13 @@ export default async function RestaurantCards() {
                     )}
                   </div>
 
-                  {/* Badge and offer wrap onto as many lines as they need — a
-                      clipped promo is worse than a taller card. Colours are set
+                  {/* Both pills hold one row, so they run small. Colours are set
                       per restaurant in the admin panel. */}
                   {(showBadge || r.offer_text?.trim()) && (
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <div className="flex items-center gap-1.5 mt-1.5">
                       {showBadge && (
                         <span
-                          className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                          className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
                           style={pillColors(
                             r.badge_bg_color,
                             r.badge_text_color,
@@ -178,7 +178,7 @@ export default async function RestaurantCards() {
                       )}
                       {r.offer_text?.trim() && (
                         <span
-                          className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md leading-relaxed"
+                          className="text-[9px] font-bold px-1.5 py-0.5 rounded-md min-w-0 truncate leading-relaxed"
                           style={pillColors(r.offer_bg_color, r.offer_text_color, OFFER_FALLBACK)}
                         >
                           {r.offer_text}
