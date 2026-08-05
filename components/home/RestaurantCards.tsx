@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Star, Clock, Truck, Tag } from "lucide-react";
+import { Star, Clock, Bike } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { stagger } from "@/lib/stagger";
 import FavoriteButton from "@/components/ui/FavoriteButton";
@@ -11,17 +11,13 @@ const BADGE_STYLE: Record<string, { bg: string; text: string }> = {
   "New":           { bg: "#7c3aed", text: "#fff" },
 };
 
-/* Offer pills cycle through four animations by card position, so a column of
-   promos catches the eye in turn instead of throbbing as one. */
-const OFFER_ANIM = ["heartbeat", "offer-glow", "offer-wiggle", "offer-shine"];
-
 /* The mobile list shows the badge as a soft pill next to the meta line rather
-   than as a solid chip over the photo, so it needs a tinted variant. */
+   than as a solid chip over the photo, so it needs a tinted variant. Free
+   Delivery is absent — it reads as a green "Free" on the meta line instead. */
 const BADGE_PILL: Record<string, string> = {
-  "Free Delivery": "bg-green-50 text-green-700",
-  "Best Seller":   "bg-orange-50 text-orange-600",
-  "Popular":       "bg-red-50 text-red-600",
-  "New":           "bg-purple-50 text-purple-700",
+  "Best Seller": "bg-orange-50 text-orange-600",
+  "Popular":     "bg-red-50 text-red-600",
+  "New":         "bg-purple-50 text-purple-700",
 };
 
 interface Restaurant {
@@ -74,6 +70,7 @@ export default async function RestaurantCards() {
           {restaurants.map((r, i) => {
             const cardImage = r.background_image_url || r.food_image_url;
             const pill = r.badge ? BADGE_PILL[r.badge] : null;
+            const freeDelivery = r.badge === "Free Delivery";
             return (
               <div
                 key={r.id}
@@ -109,42 +106,49 @@ export default async function RestaurantCards() {
                     {r.name}
                   </h3>
 
+                  <div className="flex items-center gap-0.5 text-[11px] font-semibold text-gray-700 mt-1">
+                    <Star size={11} className="fill-orange-500 stroke-orange-500" />
+                    {r.rating}
+                  </div>
+
+                  {/* Delivery line — a free drop leads in green, as on the
+                      cards this list is modelled on. */}
                   <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-1">
-                    <span className="flex items-center gap-0.5 font-semibold text-gray-700 shrink-0">
-                      <Star size={11} className="fill-orange-500 stroke-orange-500" />
-                      {r.rating}
-                    </span>
-                    <span className="text-gray-300">·</span>
+                    {freeDelivery && (
+                      <>
+                        <span className="flex items-center gap-1 font-semibold text-green-600 shrink-0">
+                          <Bike size={12} />
+                          Free
+                        </span>
+                        <span className="text-gray-300">·</span>
+                      </>
+                    )}
                     <span className="flex items-center gap-0.5 shrink-0">
                       <Clock size={11} />
                       {r.delivery_time}
                     </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    {pill && (
-                      <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${pill}`}>
-                        {r.badge === "Free Delivery" && <Truck size={11} />}
-                        {r.badge}
-                      </span>
-                    )}
                     {r.cuisine?.length > 0 && (
-                      <span className="text-[10px] text-gray-400 truncate">
-                        {r.cuisine.join(", ")}
-                      </span>
+                      <>
+                        <span className="text-gray-300">·</span>
+                        <span className="text-gray-400 truncate">{r.cuisine.join(", ")}</span>
+                      </>
                     )}
                   </div>
 
                   {/* Offer — its own line so a long one has room to breathe.
                       Set per restaurant in the admin panel; hidden when blank. */}
-                  {r.offer_text?.trim() && (
-                    <div className="mt-1.5">
-                      <span
-                        className={`${OFFER_ANIM[i % OFFER_ANIM.length]} inline-flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-md max-w-full truncate`}
-                      >
-                        <Tag size={10} className="shrink-0" />
-                        {r.offer_text}
-                      </span>
+                  {(pill || r.offer_text?.trim()) && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      {pill && (
+                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${pill}`}>
+                          {r.badge}
+                        </span>
+                      )}
+                      {r.offer_text?.trim() && (
+                        <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded-md max-w-full truncate bg-[#FEF3C7] text-[#8A6100]">
+                          {r.offer_text}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

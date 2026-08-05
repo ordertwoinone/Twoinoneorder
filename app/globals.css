@@ -166,67 +166,6 @@ canvas {
   animation: popIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
-/* ── Offer pills ──────────────────────────────────────────────────────────────
-   Four takes on "look at me", handed out by card position so a column of
-   promos never pulses in lockstep. Each rests between moves — a pill that
-   never settles reads as a broken image. */
-
-/* 1 — two quick beats then a rest. */
-@keyframes heartbeat {
-  0%   { transform: scale(1); }
-  8%   { transform: scale(1.13); }
-  16%  { transform: scale(1); }
-  24%  { transform: scale(1.09); }
-  32%  { transform: scale(1); }
-  100% { transform: scale(1); }
-}
-.heartbeat {
-  transform-origin: left center;
-  animation: heartbeat 2.2s ease-in-out infinite;
-}
-
-/* 2 — a halo breathing out from the edge. */
-@keyframes offerGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
-  50%      { box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.16); }
-}
-.offer-glow {
-  animation: offerGlow 2.4s ease-in-out infinite;
-}
-
-/* 3 — a nudge, like a tap on the shoulder. */
-@keyframes offerWiggle {
-  0%, 62%, 100% { transform: rotate(0deg); }
-  68%           { transform: rotate(-3.5deg); }
-  74%           { transform: rotate(3.5deg); }
-  80%           { transform: rotate(-2deg); }
-  86%           { transform: rotate(0deg); }
-}
-.offer-wiggle {
-  transform-origin: center;
-  animation: offerWiggle 3s ease-in-out infinite;
-}
-
-/* 4 — light catching the label as it sweeps past. */
-@keyframes offerShine {
-  0%        { transform: translateX(-140%); }
-  55%, 100% { transform: translateX(320%); }
-}
-.offer-shine {
-  position: relative;
-}
-.offer-shine::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 35%;
-  pointer-events: none;
-  background: linear-gradient(100deg, transparent, rgba(234, 88, 12, 0.3), transparent);
-  animation: offerShine 2.8s ease-in-out infinite;
-}
-
 /* ── Floating food bubbles (footer CTA) ───────────────────────────────────── */
 
 @keyframes floatBubble {
@@ -395,16 +334,10 @@ canvas {
   .fade-section.is-visible .stagger-item,
   .pop-in,
   .rise-in,
-  .hero-float,
-  .heartbeat,
-  .offer-glow,
-  .offer-wiggle {
+  .hero-float {
     animation: none;
     opacity: 1;
     transform: none;
-  }
-  .offer-shine::after {
-    display: none;
   }
 }
 
