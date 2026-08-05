@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Dancing_Script } from "next/font/google";
+import { Inter, Dancing_Script, Outfit } from "next/font/google";
 import "./globals.css";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
@@ -14,6 +14,13 @@ const dancing = Dancing_Script({
   subsets: ["latin"],
   variable: "--font-dancing",
   weight: ["700"],
+  display: "swap",
+});
+// Header wordmark only — kept off the body so it costs one small file.
+const brand = Outfit({
+  subsets: ["latin"],
+  variable: "--font-brand",
+  weight: ["600", "800"],
   display: "swap",
 });
 
@@ -150,7 +157,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className={`${inter.className} ${dancing.variable} antialiased`}>
+      <body className={`${inter.className} ${dancing.variable} ${brand.variable} antialiased`}>
         <TrackingScripts
           metaPixelId={tracking?.meta_pixel_id}
           gaMeasurementId={tracking?.ga_measurement_id}

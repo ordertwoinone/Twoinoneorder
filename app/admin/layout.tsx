@@ -8,7 +8,7 @@ import {
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, CalendarCheck, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
-  Disc3, ShieldCheck, Phone,
+  Disc3, ShieldCheck, Phone, PanelTop,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -83,6 +83,7 @@ const NAV: NavItem[] = [
       { label: "Map Locations",    href: "/admin/contact-locations", icon: MapPin },
     ],
   },
+  { label: "Header",        href: "/admin/header",   icon: PanelTop  },
   { label: "Bookings",       href: "/admin/bookings", icon: CalendarCheck },
   { label: "Spin & Win",    href: "/admin/spin-wheel", icon: Disc3   },
   { label: "Media Library", href: "/admin/media",     icon: Images   },

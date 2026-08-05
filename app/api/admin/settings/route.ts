@@ -27,7 +27,9 @@ export async function PUT(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  revalidatePath("/");
+  // The header reads these settings on every page, so purge the whole tree
+  // rather than the handful of routes that used to matter.
+  revalidatePath("/", "layout");
   revalidatePath("/admin");
   revalidatePath("/contact");
   return NextResponse.json(data);
