@@ -130,7 +130,7 @@ export default async function UniversityKalbaPage() {
     <>
       <JsonLd data={[kalbaSchema, kalbaBreadcrumb]} />
       <Navbar />
-      <main className="bg-white pb-24 sm:pb-0">
+      <main className="bg-white pb-cart-bar">
         <KalbaContent {...data} />
       </main>
       <Footer />

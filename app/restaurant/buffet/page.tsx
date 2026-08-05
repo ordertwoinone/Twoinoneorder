@@ -90,7 +90,7 @@ export default async function BuffetPage() {
     <>
       <JsonLd data={[buffetSchema, buffetBreadcrumb]} />
       <Navbar className="hidden sm:block" />
-      <main className="bg-white pb-24 sm:pb-0">
+      <main className="bg-white pb-cart-bar">
         <BuffetContent
           hero={data.hero}
           banners={data.banners}

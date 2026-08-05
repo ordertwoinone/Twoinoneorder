@@ -412,7 +412,7 @@ export default function MenuContent({
   const [couponLoading, setCouponLoading] = useState(false);
 
   // Keep the install prompt from landing on the cart bar.
-  useBottomBarSpace(74);
+  useBottomBarSpace();
 
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
@@ -530,7 +530,8 @@ export default function MenuContent({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 pb-28 sm:pb-12">
+      {/* No bottom padding on mobile — the page's pb-cart-bar covers it. */}
+      <div className="max-w-7xl mx-auto px-4 sm:pb-12">
         {/* Hero strip */}
         <div
           className="mt-4 rounded-3xl px-5 py-5 sm:px-8 sm:py-6 flex flex-col sm:flex-row sm:items-center gap-4"

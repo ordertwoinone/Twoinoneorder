@@ -1081,7 +1081,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [searchFocused, setSearchFocused]   = useState(false);
 
   // Keep the install prompt from landing on the cart bar.
-  useBottomBarSpace(74);
+  useBottomBarSpace();
 
   // When a session is selected, start Party Size at that package's base person count
   useEffect(() => {

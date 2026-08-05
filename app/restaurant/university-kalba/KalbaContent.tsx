@@ -462,7 +462,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
   const [couponLoading, setCouponLoading] = useState(false);
 
   // Keep the install prompt from landing on the cart bar.
-  useBottomBarSpace(74);
+  useBottomBarSpace();
 
   const waUrl = (text: string) =>
     `https://wa.me/${hero.whatsapp}?text=${encodeURIComponent(text)}`;

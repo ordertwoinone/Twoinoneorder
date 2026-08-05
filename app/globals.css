@@ -11,9 +11,11 @@
      home-indicator strip.
 
      --bottom-stack  the tab bar plus the device's safe-area inset.
-     --cart-bar-space  room a page's floating cart bar has claimed above that;
-       set by useBottomBarSpace while such a bar is mounted, 0 otherwise. */
+     --cart-bar-h    height of a page's floating cart bar.
+     --cart-bar-space  room that bar has claimed above the stack; set by
+       useBottomBarSpace while such a bar is mounted, 0 otherwise. */
   --bottom-stack: calc(4rem + env(safe-area-inset-bottom, 0px));
+  --cart-bar-h: 74px;
   --cart-bar-space: 0px;
 }
 
@@ -29,6 +31,19 @@ html {
 @media (min-width: 640px) {
   .install-dock {
     bottom: 1rem;
+  }
+}
+
+/* Bottom padding for a page that carries a floating cart bar. Without it the
+   last row of dishes sits behind the bar and cannot be added to the cart. The
+   allowance is static — the page always has the bar, so waiting on hydration
+   would only shift the layout. */
+.pb-cart-bar {
+  padding-bottom: calc(var(--bottom-stack) + var(--cart-bar-h) + 16px);
+}
+@media (min-width: 640px) {
+  .pb-cart-bar {
+    padding-bottom: 0;
   }
 }
 

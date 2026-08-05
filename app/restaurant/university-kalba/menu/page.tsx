@@ -58,7 +58,7 @@ export default async function KalbaMenuPage() {
     <>
       <JsonLd data={menuBreadcrumb} />
       <Navbar />
-      <main className="bg-white min-h-screen pb-24 sm:pb-0">
+      <main className="bg-white min-h-screen pb-cart-bar">
         <Suspense fallback={<div className="min-h-screen" />}>
           <MenuContent
             popular={popular}
