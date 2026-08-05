@@ -165,7 +165,9 @@ export default function PwaProvider() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
             transition={{ type: "spring", damping: 26, stiffness: 320 }}
-            className={`fixed z-[60] left-3 right-3 bottom-[calc(env(safe-area-inset-bottom,0px)_+_76px)] sm:left-auto sm:right-4 sm:bottom-4 sm:w-[360px] ${
+            /* `install-dock` stacks it above the tab bar, and above a page's
+               cart bar when there is one, so it never covers "View Cart". */
+            className={`fixed z-[60] left-3 right-3 install-dock sm:left-auto sm:right-4 sm:w-[360px] ${
               deferred ? "" : "sm:hidden"
             }`}
             role="dialog"

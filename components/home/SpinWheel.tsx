@@ -248,7 +248,7 @@ export default function SpinWheel() {
         <motion.div
           className="sm:hidden fixed left-3 right-3 z-40 flex items-center gap-2.5 rounded-2xl pl-3 pr-2 py-2.5 text-white overflow-hidden"
           style={{
-            bottom: "calc(4rem + 8px + env(safe-area-inset-bottom, 0px))",
+            bottom: "calc(var(--bottom-stack) + var(--cart-bar-space) + 8px)",
             background: "linear-gradient(90deg, #f97316 0%, #db2777 55%, #7c3aed 100%)",
             boxShadow: "0 8px 24px rgba(124,58,237,0.35)",
           }}

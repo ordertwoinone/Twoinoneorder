@@ -14,6 +14,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
+import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
 
 const DIETARY_TAGS: Record<string, string> = {
@@ -410,6 +411,9 @@ export default function MenuContent({
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
+  // Keep the install prompt from landing on the cart bar.
+  useBottomBarSpace(74);
+
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
   }
@@ -748,10 +752,10 @@ export default function MenuContent({
         )}
       </div>
 
-      {/* Mobile cart bar — sits above the bottom nav + the device safe area */}
+      {/* Mobile cart bar — clears the bottom nav and the device safe area */}
       <div
         className="fixed left-0 right-0 z-40 px-4 sm:hidden"
-        style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
+        style={{ bottom: "calc(var(--bottom-stack) + 8px)" }}
       >
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 flex items-center px-4 py-3 gap-3">
           <div className="relative shrink-0">

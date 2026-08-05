@@ -10,6 +10,7 @@ import {
   ShieldCheck, Wifi, Music, MapPin as MapPinIcon,
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
+import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 
 const DIETARY_TAGS: Record<string, string> = {
   veg: "🥗 Veg",
@@ -1079,6 +1080,9 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const [searchQuery, setSearchQuery]       = useState("");
   const [searchFocused, setSearchFocused]   = useState(false);
 
+  // Keep the install prompt from landing on the cart bar.
+  useBottomBarSpace(74);
+
   // When a session is selected, start Party Size at that package's base person count
   useEffect(() => {
     if (!selectedTimingId) return;
@@ -1295,8 +1299,11 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
         {activeTab === "reviews"  && <ReviewsTab summary={reviewSummary} reviews={reviews} />}
       </div>
 
-      {/* Mobile cart bar */}
-      <div className="fixed bottom-16 left-0 right-0 z-40 px-4 sm:hidden">
+      {/* Mobile cart bar — clears the bottom nav and the device safe area */}
+      <div
+        className="fixed left-0 right-0 z-40 px-4 sm:hidden"
+        style={{ bottom: "calc(var(--bottom-stack) + 8px)" }}
+      >
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 flex items-center px-4 py-3 gap-3">
           <div className="relative shrink-0">
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "#ea580c" }}>

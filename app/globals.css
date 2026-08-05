@@ -4,10 +4,32 @@
 
 :root {
   --foreground: #111827;
+
+  /* ── Bottom stacking ────────────────────────────────────────────────────
+     Everything that docks to the bottom of a phone screen measures from here
+     rather than from 0, so nothing lands underneath the tab bar or in the
+     home-indicator strip.
+
+     --bottom-stack  the tab bar plus the device's safe-area inset.
+     --cart-bar-space  room a page's floating cart bar has claimed above that;
+       set by useBottomBarSpace while such a bar is mounted, 0 otherwise. */
+  --bottom-stack: calc(4rem + env(safe-area-inset-bottom, 0px));
+  --cart-bar-space: 0px;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+/* The install prompt docks above the tab bar and above a page's cart bar. On
+   sm+ there is no tab bar, so it returns to the corner. */
+.install-dock {
+  bottom: calc(var(--bottom-stack) + var(--cart-bar-space) + 12px);
+}
+@media (min-width: 640px) {
+  .install-dock {
+    bottom: 1rem;
+  }
 }
 
 body {
