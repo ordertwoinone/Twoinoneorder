@@ -1,5 +1,5 @@
 "use client";
-import { MapPin, Loader2, Navigation, ChevronDown } from "lucide-react";
+import { MapPin, Loader2, ChevronDown } from "lucide-react";
 import { useLocation } from "@/hooks/useLocation";
 
 // Mobile "Deliver to" bar — sits directly under the header, above the hero.
@@ -11,7 +11,7 @@ export default function LocationBar() {
 
   return (
     <div className="sm:hidden px-4 pt-2.5 pb-3 bg-white">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
         {/* Deliver to — tap to detect */}
         <button
           onClick={detect}
@@ -36,16 +36,6 @@ export default function LocationBar() {
               </span>
             )}
           </span>
-        </button>
-
-        {/* Change button */}
-        <button
-          onClick={detect}
-          disabled={location.status === "loading"}
-          className="flex items-center gap-1.5 border border-gray-200 rounded-full px-3.5 py-2 text-[13px] font-semibold text-gray-800 shrink-0 hover:bg-gray-50 transition-colors disabled:cursor-default"
-        >
-          <Navigation size={14} style={{ color: "#ea580c" }} />
-          Change
         </button>
       </div>
     </div>
