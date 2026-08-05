@@ -9,7 +9,6 @@ import RestaurantCards from "@/components/home/RestaurantCards";
 import TopPicks from "@/components/home/TopPicks";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
-import LocationBar from "@/components/home/LocationBar";
 import TrustBadges from "@/components/home/TrustBadges";
 import FadeInSection from "@/components/ui/FadeInSection";
 import JsonLd from "@/components/seo/JsonLd";
@@ -58,11 +57,10 @@ export default async function HomePage() {
           <SearchBar />
         </div>
 
-        {/* Mobile layout: deliver bar, rounded full-bleed hero, then a white
-            "second section" sheet with a rounded top that rises over the hero,
+        {/* Mobile layout: rounded full-bleed hero, then a white "second
+            section" sheet with a rounded top that rises over the hero,
             holding the search pill + category row */}
         <div className="sm:hidden">
-          <LocationBar />
           <HeroBannerMobile slides={mobileBanners} />
           <div className="relative z-20 -mt-7 bg-white rounded-t-[28px]">
             <SearchBar />
