@@ -13,9 +13,8 @@ const BADGE_STYLE: Record<string, { bg: string; text: string }> = {
 };
 const BADGE_FALLBACK = { bg: "#6b7280", text: "#fff" };
 
-/* The mobile list shows the badge as a soft pill next to the meta line rather
-   than as a solid chip over the photo, so it needs a tinted variant. Free
-   Delivery is absent — it reads as a green "Free" on the meta line instead. */
+/* The mobile list shows the badge as a soft pill under the meta lines rather
+   than as a solid chip over the photo, so it needs a tinted variant. */
 const BADGE_PILL: Record<string, { bg: string; text: string }> = {
   "Best Seller": { bg: "#fff7ed", text: "#ea580c" },
   "Popular":     { bg: "#fef2f2", text: "#dc2626" },
@@ -36,6 +35,7 @@ interface Restaurant {
   url: string;
   badge: string | null;
   offer_text: string | null;
+  free_delivery: boolean | null;
   badge_bg_color: string | null;
   badge_text_color: string | null;
   offer_bg_color: string | null;
@@ -58,7 +58,7 @@ function pillColors(
 async function getRestaurants(): Promise<Restaurant[]> {
   const { data, error } = await supabaseAdmin
     .from("restaurants")
-    .select("id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text, badge_bg_color, badge_text_color, offer_bg_color, offer_text_color")
+    .select("id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text, free_delivery, badge_bg_color, badge_text_color, offer_bg_color, offer_text_color")
     .eq("is_active", true)
     // Position is set by the arrows in admin → Restaurants; newest-first only
     // breaks ties between rows that share a position.
@@ -91,10 +91,8 @@ export default async function RestaurantCards() {
         <div className="flex flex-col gap-2.5 sm:hidden">
           {restaurants.map((r, i) => {
             const cardImage = r.background_image_url || r.food_image_url;
-            const freeDelivery = r.badge === "Free Delivery";
+            const freeDelivery = !!r.free_delivery;
             const badgeLabel = r.badge?.trim();
-            // Free Delivery reads as the green "Free" on the meta line instead.
-            const showBadge = badgeLabel && !freeDelivery;
             return (
               <div
                 key={r.id}
@@ -130,41 +128,41 @@ export default async function RestaurantCards() {
                     {r.name}
                   </h3>
 
-                  {/* Rating, delivery and cuisines share one line — a free drop
-                      leads in green, as on the cards this list is modelled on.
-                      Only the cuisines wrap, and only when they must. */}
+                  {/* Rating and delivery time share a line. */}
                   <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-gray-500 mt-1">
                     <span className="flex items-center gap-1 font-bold text-gray-800">
                       <Star size={13} className="fill-orange-500 stroke-orange-500" />
                       {r.rating}
                     </span>
                     <span className="text-gray-300">·</span>
-                    {freeDelivery && (
-                      <>
-                        <span className="flex items-center gap-1 font-semibold text-green-600">
-                          <Bike size={13} />
-                          Free
-                        </span>
-                        <span className="text-gray-300">·</span>
-                      </>
-                    )}
                     <span className="flex items-center gap-1 whitespace-nowrap">
                       <Clock size={12} />
                       {r.delivery_time}
                     </span>
-                    {r.cuisine?.length > 0 && (
-                      <>
-                        <span className="text-gray-300">·</span>
-                        <span className="text-gray-400">{r.cuisine.join(", ")}</span>
-                      </>
-                    )}
                   </div>
+
+                  {/* Cuisines, led by a green free drop when the restaurant
+                      delivers for nothing — set by the tick in the admin panel. */}
+                  {(freeDelivery || r.cuisine?.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-gray-400 mt-1">
+                      {freeDelivery && (
+                        <>
+                          <span className="flex items-center gap-1 font-semibold text-green-600">
+                            <Bike size={13} />
+                            Free
+                          </span>
+                          {r.cuisine?.length > 0 && <span className="text-gray-300">·</span>}
+                        </>
+                      )}
+                      {r.cuisine?.length > 0 && <span>{r.cuisine.join(", ")}</span>}
+                    </div>
+                  )}
 
                   {/* Both pills hold one row, so they run small. Colours are set
                       per restaurant in the admin panel. */}
-                  {(showBadge || r.offer_text?.trim()) && (
+                  {(badgeLabel || r.offer_text?.trim()) && (
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      {showBadge && (
+                      {badgeLabel && (
                         <span
                           className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap"
                           style={pillColors(

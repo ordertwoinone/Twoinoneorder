@@ -16,6 +16,7 @@ interface Restaurant {
   url: string;
   badge: string | null;
   offer_text: string | null;
+  free_delivery: boolean;
   badge_bg_color: string;
   badge_text_color: string;
   offer_bg_color: string;
@@ -28,11 +29,13 @@ interface Restaurant {
 const EMPTY: Omit<Restaurant, "id" | "created_at"> = {
   name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
   rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, offer_text: "", sort_order: 0,
-  is_active: true, badge_bg_color: "", badge_text_color: "", offer_bg_color: "", offer_text_color: "",
+  is_active: true, free_delivery: false,
+  badge_bg_color: "", badge_text_color: "", offer_bg_color: "", offer_text_color: "",
 };
 
-/* Suggestions only — the badge is free text, so new ones can be typed in. */
-const BADGE_SUGGESTIONS = ["Free Delivery", "Best Seller", "Popular", "New"];
+/* Suggestions only — the badge is free text, so new ones can be typed in.
+   Free delivery is not among them: it has a tick of its own. */
+const BADGE_SUGGESTIONS = ["Best Seller", "Popular", "New"];
 
 /* Mirrors the card's fallbacks so the admin preview matches the homepage. */
 const BADGE_PILL: Record<string, { bg: string; text: string }> = {
@@ -133,6 +136,7 @@ export default function RestaurantsAdmin() {
       mode: "edit",
       data: {
         ...r,
+        free_delivery: !!r.free_delivery,
         badge_bg_color: r.badge_bg_color || "",
         badge_text_color: r.badge_text_color || "",
         offer_bg_color: r.offer_bg_color || "",
@@ -300,6 +304,9 @@ export default function RestaurantsAdmin() {
                 <td className="px-4 py-3">
                   <span className="flex items-center gap-1 text-gray-500 text-xs">
                     <Clock size={11} />{r.delivery_time}
+                    {r.free_delivery && (
+                      <span className="text-green-600 font-semibold">· Free</span>
+                    )}
                   </span>
                 </td>
                 <td className="px-4 py-3">
@@ -384,6 +391,18 @@ export default function RestaurantsAdmin() {
                     placeholder="20-30 min" />
                 </div>
               </div>
+
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input type="checkbox" checked={modal.data.free_delivery}
+                  onChange={(e) => handleField("free_delivery", e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-400 cursor-pointer" />
+                <span>
+                  <span className="block text-xs font-semibold text-gray-700">Free delivery</span>
+                  <span className="block text-[11px] text-gray-400 mt-0.5">
+                    Shows a green “Free” at the start of the card&rsquo;s cuisine line.
+                  </span>
+                </span>
+              </label>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Order URL</label>
