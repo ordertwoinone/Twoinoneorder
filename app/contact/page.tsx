@@ -13,15 +13,12 @@ export const metadata: Metadata = {
     "Get in touch with Two In One UAE. Call, WhatsApp or email us for orders, catering enquiries, table bookings and more.",
 };
 
-const DEFAULT_HERO =
-  "https://images.unsplash.com/photo-1633945274405-b6c8069047b0?w=600&q=80";
-
 async function getData() {
   const [{ data: settings }, { data: locations }] = await Promise.all([
     supabaseAdmin
       .from("site_settings")
       .select(
-        "logo_url, whatsapp_number, phone, email, address, city, contact_heading, contact_heading_highlight, contact_subheading, contact_hours, contact_restaurant_name, contact_rating, contact_reviews, contact_location_label, contact_hero_image_url"
+        "logo_url, whatsapp_number, phone, email, address, city, contact_heading, contact_heading_highlight, contact_subheading, contact_hours, contact_restaurant_name, contact_rating, contact_reviews, contact_location_label"
       )
       .single(),
     supabaseAdmin
@@ -47,7 +44,6 @@ export default async function ContactPage() {
   const locationLabel =
     settings?.contact_location_label ||
     (settings?.address ? `${settings.address}${settings.city ? `, ${settings.city}` : ""}` : "Al Nahda, Fujairah, Dubai");
-  const heroImage = settings?.contact_hero_image_url || DEFAULT_HERO;
 
   const heading = settings?.contact_heading || "Get in";
   const headingHighlight = settings?.contact_heading_highlight || "Touch";
@@ -99,17 +95,7 @@ export default async function ContactPage() {
             className="relative overflow-hidden rounded-3xl mt-2 sm:mt-4"
             style={{ background: "linear-gradient(to right,#fdf0e6 0%,#fbe2cf 56%,#fbe2cf 100%)" }}
           >
-            {/* Food image — bleeds in from the right and fades into the peach */}
-            <div className="absolute top-0 right-0 h-full w-[40%] sm:w-[40%]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImage} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: "linear-gradient(to right,#fbe2cf 0%,#fbe2cf 16%,rgba(251,226,207,0) 72%)" }}
-              />
-            </div>
-
-            <div className="relative z-10 p-5 sm:p-8 pr-[37%] sm:pr-[42%]">
+            <div className="relative z-10 p-5 sm:p-8">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

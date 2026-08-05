@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import BottomNav from "@/components/layout/BottomNav";
 import TableBookingPage from "@/components/book-table/TableBookingPage";
 
 export const metadata: Metadata = {
@@ -16,6 +17,7 @@ export default function BookTablePage() {
       <Navbar />
       <TableBookingPage />
       <Footer />
+      <BottomNav />
     </>
   );
 }

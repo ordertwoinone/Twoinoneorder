@@ -15,10 +15,33 @@ export default function Navbar({ className = "" }: { className?: string }) {
 
   return (
     <nav className={`sticky top-0 z-50 bg-white${className ? ` ${className}` : ""}`}>
-      <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center gap-3">
+      <div className="relative max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center gap-3">
 
-        {/* Logo + Brand — leads the header */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+        {/* Location — leads the header (mobile uses the "Deliver to" bar) */}
+        <button
+          onClick={detect}
+          disabled={location.status === "loading"}
+          aria-label="Use my current location"
+          className="hidden sm:flex items-center gap-1 rounded-lg px-1.5 py-1 hover:bg-gray-50 transition-colors disabled:cursor-default shrink-0"
+        >
+          <MapPin size={14} fill="#ea580c" stroke="none" />
+          {location.status === "loading" ? (
+            <Loader2 size={12} className="animate-spin" style={{ color: "#ea580c" }} />
+          ) : (
+            <span className="text-[11px] font-semibold text-gray-800 max-w-[100px] truncate block">
+              {displayArea}
+            </span>
+          )}
+          {location.status !== "loading" && location.status !== "granted" && (
+            <Navigation size={11} style={{ color: "#ea580c" }} />
+          )}
+        </button>
+
+        {/* Logo + Brand — centred in the header */}
+        <Link
+          href="/"
+          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5 shrink-0"
+        >
           <div className="relative w-10 h-10 shrink-0">
             <Image
               src="/logos/two-in-one.png"
@@ -38,34 +61,11 @@ export default function Navbar({ className = "" }: { className?: string }) {
           </div>
         </Link>
 
-        {/* Location — sits beside the brand (mobile uses the "Deliver to" bar) */}
-        <button
-          onClick={detect}
-          disabled={location.status === "loading"}
-          aria-label="Use my current location"
-          className="hidden sm:flex items-center gap-1.5 rounded-xl px-2 py-1.5 hover:bg-gray-50 transition-colors disabled:cursor-default"
-        >
-          <MapPin size={17} fill="#ea580c" stroke="none" />
-          {location.status === "loading" ? (
-            <Loader2 size={14} className="animate-spin" style={{ color: "#ea580c" }} />
-          ) : (
-            <span className="text-[13px] font-semibold text-gray-800 max-w-[120px] truncate block">
-              {displayArea}
-            </span>
-          )}
-          {location.status !== "loading" && location.status !== "granted" && (
-            <Navigation size={13} style={{ color: "#ea580c" }} />
-          )}
-        </button>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
         {/* Favourites */}
         <Link
           href="/account/favourites"
           aria-label="Favourites"
-          className="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors shrink-0"
+          className="ml-auto relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition-colors shrink-0"
         >
           <Heart size={20} className={favCount > 0 ? "fill-red-500 stroke-red-500" : "text-gray-700"} />
           {favCount > 0 && (
