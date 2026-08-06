@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { stagger } from "@/lib/stagger";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export interface Badge {
   emoji: string;
@@ -14,6 +15,7 @@ export interface Badge {
 }
 
 export default function TrustBadgesClient({ phone, badges }: { phone: string; badges: Badge[] }) {
+  const { t } = useTranslation();
   const [active, setActive] = useState<Badge | null>(null);
   const [mounted, setMounted] = useState(false);
   const telHref = `tel:${phone.replace(/\s+/g, "")}`;
@@ -70,8 +72,8 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
           >
             <button
               onClick={() => setActive(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
-              aria-label="Close"
+              className="absolute top-4 end-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
+              aria-label={t("common.close")}
             >
               <X size={16} />
             </button>
@@ -88,7 +90,7 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
               className="mt-5 w-full py-3 rounded-2xl text-white font-bold text-sm transition-opacity hover:opacity-90"
               style={{ background: "#ea580c" }}
             >
-              Got it
+              {t("common.gotIt")}
             </button>
           </div>
         </div>,

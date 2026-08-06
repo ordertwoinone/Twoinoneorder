@@ -5,6 +5,9 @@ import Link from "next/link";
 import { ChevronLeft, ShoppingBag, Loader2, LogIn, Armchair, CalendarDays, Clock, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { LOCALE_META, type Locale } from "@/lib/i18n/config";
+import type { TranslationKey } from "@/lib/i18n/types";
 
 interface Booking {
   id: string;
@@ -28,25 +31,40 @@ const STATUS_COLORS: Record<string, string> = {
   completed: "bg-blue-100 text-blue-700",
 };
 
-const TYPE_META: Record<string, { label: string; chip: string }> = {
-  table:    { label: "Table Booking", chip: "bg-orange-100 text-orange-700" },
-  buffet:   { label: "Buffet Booking", chip: "bg-amber-100 text-amber-700" },
-  catering: { label: "Catering",       chip: "bg-purple-100 text-purple-700" },
-  kalba:    { label: "Kalba Order",     chip: "bg-green-100 text-green-700" },
+const STATUS_KEYS: Record<string, TranslationKey> = {
+  pending: "orders.statuses.pending",
+  confirmed: "orders.statuses.confirmed",
+  cancelled: "orders.statuses.cancelled",
+  completed: "orders.statuses.completed",
 };
 
-function fmtDate(d: string) {
+const TYPE_META: Record<string, { labelKey: TranslationKey; chip: string }> = {
+  table:    { labelKey: "orders.types.table",    chip: "bg-orange-100 text-orange-700" },
+  buffet:   { labelKey: "orders.types.buffet",   chip: "bg-amber-100 text-amber-700" },
+  catering: { labelKey: "orders.types.catering", chip: "bg-purple-100 text-purple-700" },
+  kalba:    { labelKey: "orders.types.kalba",    chip: "bg-green-100 text-green-700" },
+};
+
+function fmtDate(d: string, locale: Locale) {
   if (!d) return "";
-  return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(d + "T00:00:00").toLocaleDateString(LOCALE_META[locale].htmlLang, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
-function fmtTime(t: string) {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+function fmtTime(value: string, locale: Locale) {
+  if (!value) return "";
+  const [h, m] = value.split(":").map(Number);
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString(LOCALE_META[locale].htmlLang, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export default function OrdersClient() {
   const supabase = createClient();
+  const { t, tp, tMaybe, locale } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [checking, setChecking] = useState(true);
@@ -69,30 +87,30 @@ export default function OrdersClient() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <Link href="/account" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 mb-4 transition-colors">
-        <ChevronLeft size={16} /> Back to Account
+        <ChevronLeft size={16} /> {t("orders.backToAccount")}
       </Link>
 
-      <h1 className="text-2xl font-extrabold text-gray-900 mb-1">My Orders &amp; Bookings</h1>
-      <p className="text-sm text-gray-500 mb-6">Your table reservations and bookings.</p>
+      <h1 className="text-2xl font-extrabold text-gray-900 mb-1">{t("orders.title")}</h1>
+      <p className="text-sm text-gray-500 mb-6">{t("orders.subtitle")}</p>
 
       {checking ? (
         <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-orange-500" size={24} /></div>
       ) : !user ? (
         <Empty
           icon={<LogIn size={26} className="text-orange-400" />}
-          title="Sign in to see your bookings"
-          sub="Log in to track your reservations and bookings."
-          cta={<Link href="/account" className="inline-flex bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">Sign in</Link>}
+          title={t("orders.signInTitle")}
+          sub={t("orders.signInSub")}
+          cta={<Link href="/account" className="inline-flex bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">{t("common.signIn")}</Link>}
         />
       ) : bookings.length === 0 ? (
         <Empty
           icon={<ShoppingBag size={26} className="text-orange-400" />}
-          title="No bookings yet"
-          sub="Reserve a table — your bookings will appear here."
+          title={t("orders.emptyTitle")}
+          sub={t("orders.emptySub")}
           cta={
             <div className="flex items-center justify-center gap-2">
-              <Link href="/book-table" className="inline-flex bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">Book a table</Link>
-              <Link href="/#restaurants" className="inline-flex border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-bold px-5 py-2.5 rounded-full transition-colors">Browse</Link>
+              <Link href="/book-table" className="inline-flex bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">{t("orders.bookTable")}</Link>
+              <Link href="/#restaurants" className="inline-flex border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm font-bold px-5 py-2.5 rounded-full transition-colors">{t("orders.browse")}</Link>
             </div>
           }
         />
@@ -108,22 +126,31 @@ export default function OrdersClient() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <p className="text-sm font-extrabold text-gray-900 truncate">
-                        {b.table_id ? `Table ${b.table_id}` : (TYPE_META[b.type]?.label ?? "Booking")}
+                        {b.table_id
+                          ? t("orders.tableNumber", { id: b.table_id })
+                          : TYPE_META[b.type]
+                            ? t(TYPE_META[b.type].labelKey)
+                            : t("orders.booking")}
                       </p>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${TYPE_META[b.type]?.chip ?? "bg-gray-100 text-gray-500"}`}>
-                        {TYPE_META[b.type]?.label ?? b.type}
+                        {TYPE_META[b.type] ? t(TYPE_META[b.type].labelKey) : b.type}
                       </span>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize shrink-0 ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-500"}`}>
-                      {b.status}
+                      {STATUS_KEYS[b.status] ? t(STATUS_KEYS[b.status]) : b.status}
                     </span>
                   </div>
-                  {b.table_section && <p className="text-[12px] text-gray-400">{b.table_section}{b.seats ? ` · ${b.seats} seats` : ""}</p>}
+                  {b.table_section && (
+                    <p className="text-[12px] text-gray-400">
+                      {tMaybe(`booking.sections.${b.table_section}`, b.table_section)}
+                      {b.seats ? ` · ${tp("common.seats", Number(b.seats) || 0, { count: b.seats })}` : ""}
+                    </p>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12px] text-gray-600">
-                    {b.date && <span className="flex items-center gap-1"><CalendarDays size={12} className="text-gray-400" />{fmtDate(b.date)}</span>}
-                    {b.time && <span className="flex items-center gap-1"><Clock size={12} className="text-gray-400" />{fmtTime(b.time)}</span>}
-                    {b.guests > 0 && <span className="flex items-center gap-1"><Users size={12} className="text-gray-400" />{b.guests} guests</span>}
+                    {b.date && <span className="flex items-center gap-1"><CalendarDays size={12} className="text-gray-400" />{fmtDate(b.date, locale)}</span>}
+                    {b.time && <span className="flex items-center gap-1"><Clock size={12} className="text-gray-400" />{fmtTime(b.time, locale)}</span>}
+                    {b.guests > 0 && <span className="flex items-center gap-1"><Users size={12} className="text-gray-400" />{tp("common.guests", b.guests)}</span>}
                   </div>
                   {b.notes && <p className="text-[11px] text-gray-400 mt-1.5 italic">“{b.notes}”</p>}
                 </div>

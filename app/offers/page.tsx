@@ -5,6 +5,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { T } from "@/lib/i18n/T";
+import PageMeta from "@/lib/i18n/PageMeta";
 
 export const revalidate = 60;
 
@@ -43,6 +45,7 @@ export default async function OffersPage() {
 
   return (
     <>
+      <PageMeta titleKey="offers.metaTitle" descriptionKey="offers.metaDescription" />
       <Navbar />
 
       <main className="bg-white pb-20 sm:pb-8">
@@ -59,14 +62,13 @@ export default async function OffersPage() {
                   style={{ color: "#ea580c", border: "1.5px solid #ea580c", background: "#ea580c10" }}
                 >
                   <Sparkles size={12} className="fill-orange-500 stroke-orange-500" />
-                  Limited Time
+                  <T k="offers.badge" />
                 </span>
                 <h1 className="text-2xl sm:text-4xl font-black leading-tight text-gray-900 mb-3">
-                  Offers &amp; <span style={{ color: "#ea580c" }}>Deals</span>
+                  <T k="offers.title" /> <span style={{ color: "#ea580c" }}><T k="offers.titleHighlight" /></span>
                 </h1>
                 <p className="text-gray-600 text-[13px] sm:text-[15px] leading-relaxed max-w-md">
-                  Grab the latest discounts and combos across all four Two In One
-                  restaurants — fresh deals added regularly.
+                  <T k="offers.subtitle" />
                 </p>
               </div>
 
@@ -105,7 +107,7 @@ export default async function OffersPage() {
             {offers.length > 0 ? (
               <>
                 <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 mb-4">
-                  Available Now
+                  <T k="offers.availableNow" />
                 </h2>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {offers.map((offer) => {
@@ -120,7 +122,7 @@ export default async function OffersPage() {
                         }}
                       >
                         {/* LEFT: text */}
-                        <div className="flex flex-col justify-between p-5 sm:p-6 flex-1 z-10 pr-2">
+                        <div className="flex flex-col justify-between p-5 sm:p-6 flex-1 z-10 pe-2">
                           {offer.badge_text && (
                             <span
                               className="inline-block text-white text-[11px] font-bold px-3 py-1 rounded-full mb-2 w-fit"
@@ -141,7 +143,7 @@ export default async function OffersPage() {
                             className="inline-flex items-center gap-1.5 self-start px-4 py-2 rounded-full text-white text-[12px] sm:text-[13px] font-bold transition-all group-hover:gap-2.5"
                             style={{ background: "#ea580c" }}
                           >
-                            {offer.cta_text || "Order Now"}
+                            {offer.cta_text || <T k="common.orderNow" />}
                             <ArrowRight size={13} />
                           </div>
                         </div>
@@ -157,9 +159,10 @@ export default async function OffersPage() {
                               sizes="(max-width: 640px) 40vw, 20vw"
                             />
                             <div
-                              className="absolute inset-0"
+                              className="absolute inset-0 edge-fade"
                               style={{
-                                background: `linear-gradient(to right, ${offer.bg_color || "#fff"} 0%, ${offer.bg_color || "#fff"}88 18%, transparent 55%)`,
+                                ["--fade-from" as string]: offer.bg_color || "#fff",
+                                ["--fade-mid" as string]: `${offer.bg_color || "#fff"}88`,
                               }}
                             />
                           </div>
@@ -181,9 +184,9 @@ export default async function OffersPage() {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-50 flex items-center justify-center">
                   <Tag size={28} className="text-orange-500" />
                 </div>
-                <h2 className="text-lg font-extrabold text-gray-900 mb-1.5">No offers right now</h2>
+                <h2 className="text-lg font-extrabold text-gray-900 mb-1.5"><T k="offers.emptyTitle" /></h2>
                 <p className="text-sm text-gray-500">
-                  Check back soon — new deals are added regularly across all our restaurants.
+                  <T k="offers.emptyText" />
                 </p>
               </div>
             )}

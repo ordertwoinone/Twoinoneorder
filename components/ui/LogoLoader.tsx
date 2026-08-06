@@ -19,7 +19,14 @@ const FOOD = ["🍔", "🍟", "🍕", "🌯", "🥪", "🍗", "☕", "🥤"];
 const RADIUS = 78;      // px from centre to each food item
 const ORBIT_MS = 1150;  // how long the ring spins before the logo takes over
 
-export default function LogoLoader() {
+export default function LogoLoader({
+  logoUrl = "/logos/two-in-one.png",
+  siteName = "Two In One",
+}: {
+  /** Brand mark from admin → Header / Settings, so the splash matches the site. */
+  logoUrl?: string;
+  siteName?: string;
+}) {
   const [visible, setVisible] = useState(true);
   const [logoIn, setLogoIn] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -121,8 +128,8 @@ export default function LogoLoader() {
 
             {/* Logo — lands in the middle once the ring closes in. */}
             <motion.img
-              src="/logos/two-in-one.png"
-              alt="Two In One Order"
+              src={logoUrl}
+              alt={siteName}
               initial={{ opacity: 0, scale: 0.5 }}
               animate={
                 logoIn || reduceMotion

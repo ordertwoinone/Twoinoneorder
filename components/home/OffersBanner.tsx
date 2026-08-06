@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { T } from "@/lib/i18n/T";
 
 interface Offer {
   id: string;
@@ -35,7 +36,7 @@ export default async function OffersBanner() {
       <div className="max-w-7xl mx-auto px-4">
 
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Special Offers</h2>
+          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900"><T k="home.specialOffersTitle" /></h2>
         </div>
 
         {/* Cards */}
@@ -52,7 +53,7 @@ export default async function OffersBanner() {
               }}
             >
               {/* LEFT: text */}
-              <div className="flex flex-col justify-between p-5 flex-1 z-10 pr-2">
+              <div className="flex flex-col justify-between p-5 flex-1 z-10 pe-2">
                 {/* Badge pill */}
                 {offer.badge_text && (
                   <span
@@ -80,7 +81,7 @@ export default async function OffersBanner() {
                   className="inline-flex items-center gap-1.5 self-start px-4 py-1.5 rounded-full text-white text-[12px] font-bold transition-all group-hover:gap-2.5"
                   style={{ background: "#ea580c" }}
                 >
-                  {offer.cta_text || "Order Now"}
+                  {offer.cta_text || <T k="common.orderNow" />}
                   <ArrowRight size={12} />
                 </div>
               </div>
@@ -97,9 +98,12 @@ export default async function OffersBanner() {
                   />
                   {/* Gradient blend */}
                   <div
-                    className="absolute inset-0"
+                    className="absolute inset-0 edge-fade"
                     style={{
-                      background: `linear-gradient(to right, ${offer.bg_color || "#fff"} 0%, ${offer.bg_color || "#fff"}88 15%, transparent 50%)`,
+                      ["--fade-from" as string]: offer.bg_color || "#fff",
+                      ["--fade-mid" as string]: `${offer.bg_color || "#fff"}88`,
+                      ["--fade-stop" as string]: "15%",
+                      ["--fade-end" as string]: "50%",
                     }}
                   />
                 </div>

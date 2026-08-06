@@ -4,11 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import type { BannerSlide } from "./HeroBanner";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const AUTOPLAY_MS = 4500;
 
 // Desktop/web hero — the original slideshow design (text panel + food image).
 export default function HeroBannerWeb({ slides }: { slides: BannerSlide[] }) {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -87,8 +89,8 @@ export default function HeroBannerWeb({ slides }: { slides: BannerSlide[] }) {
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white font-bold transition-all hover:gap-3 active:scale-95"
                         style={{ background: s.accent_color, boxShadow: `0 4px 18px ${s.accent_color}50`, fontSize: "14px" }}
                       >
-                        {s.cta_text || "Order Now"}
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        {s.cta_text || t("common.orderNow")}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rtl-flip">
                           <path d="M5 12h14M12 5l7 7-7 7" />
                         </svg>
                       </a>
@@ -98,8 +100,8 @@ export default function HeroBannerWeb({ slides }: { slides: BannerSlide[] }) {
                         className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-white font-bold transition-all hover:gap-3 active:scale-95"
                         style={{ background: s.accent_color, boxShadow: `0 4px 18px ${s.accent_color}50`, fontSize: "14px" }}
                       >
-                        {s.cta_text || "Order Now"}
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        {s.cta_text || t("common.orderNow")}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rtl-flip">
                           <path d="M5 12h14M12 5l7 7-7 7" />
                         </svg>
                       </Link>
@@ -139,17 +141,17 @@ export default function HeroBannerWeb({ slides }: { slides: BannerSlide[] }) {
 
           {/* Dots */}
           <div className="flex items-center justify-center gap-2 py-3" style={{ background: s.bg_color }}>
-            <button onClick={prev} aria-label="Previous" className="opacity-30 hover:opacity-70 transition-opacity" style={{ color: s.accent_color }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+            <button onClick={prev} aria-label={t("common.previous")} className="opacity-30 hover:opacity-70 transition-opacity" style={{ color: s.accent_color }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rtl-flip"><path d="M15 18l-6-6 6-6" /></svg>
             </button>
             {slides.map((_, i) => (
-              <button key={i} onClick={() => setCurrent(i)} aria-label={`Slide ${i + 1}`}
+              <button key={i} onClick={() => setCurrent(i)} aria-label={t("home.slideAria", { number: i + 1 })}
                 className="rounded-full transition-all duration-300"
                 style={{ width: i === current ? "22px" : "6px", height: "6px", background: i === current ? s.accent_color : `${s.accent_color}35` }}
               />
             ))}
-            <button onClick={next} aria-label="Next" className="opacity-30 hover:opacity-70 transition-opacity" style={{ color: s.accent_color }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
+            <button onClick={next} aria-label={t("common.next")} className="opacity-30 hover:opacity-70 transition-opacity" style={{ color: s.accent_color }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rtl-flip"><path d="M9 18l6-6-6-6" /></svg>
             </button>
           </div>
         </div>

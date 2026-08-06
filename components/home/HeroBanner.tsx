@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { T } from "@/lib/i18n/T";
 
 export interface BannerSlide {
   id: string;
@@ -25,7 +26,7 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
         {/* Horizontally scrollable, fully clickable banner images */}
         <div
           className="flex gap-3 overflow-x-auto scrollbar-none momentum-x px-4 pb-1"
-          style={{ scrollPaddingLeft: "1rem", scrollPaddingRight: "1rem" }}
+          style={{ scrollPaddingInline: "1rem" }}
         >
           {slides.map((s, i) => {
             const href = s.cta_href || "#";
@@ -48,8 +49,8 @@ export default function HeroBanner({ slides }: { slides: BannerSlide[] }) {
                 )}
 
                 {/* Order button — small, bottom-right */}
-                <span className="absolute bottom-2 right-2 inline-flex items-center bg-black/85 text-white text-[9px] sm:text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap backdrop-blur-sm">
-                  {s.cta_text || "Order Now"}
+                <span className="absolute bottom-2 end-2 inline-flex items-center bg-black/85 text-white text-[9px] sm:text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap backdrop-blur-sm">
+                  {s.cta_text || <T k="common.orderNow" />}
                 </span>
               </div>
             );

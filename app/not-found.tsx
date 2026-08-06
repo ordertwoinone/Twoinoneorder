@@ -1,32 +1,40 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Home, UtensilsCrossed, CalendarCheck, Tag } from "lucide-react";
+import { getBranding } from "@/lib/branding";
+import { T } from "@/lib/i18n/T";
+import PageMeta from "@/lib/i18n/PageMeta";
+import type { TranslationKey } from "@/lib/i18n/types";
 
 export const metadata = {
   title: "Page Not Found",
   robots: { index: false, follow: false },
 };
 
-const QUICK_LINKS = [
-  { label: "Home", href: "/", icon: Home },
-  { label: "Buffet", href: "/restaurant/buffet", icon: UtensilsCrossed },
-  { label: "Book a Table", href: "/book-table", icon: CalendarCheck },
-  { label: "Offers", href: "/offers", icon: Tag },
+const QUICK_LINKS: { labelKey: TranslationKey; href: string; icon: typeof Home }[] = [
+  { labelKey: "nav.home", href: "/", icon: Home },
+  { labelKey: "nav.buffet", href: "/restaurant/buffet", icon: UtensilsCrossed },
+  { labelKey: "nav.bookTable", href: "/book-table", icon: CalendarCheck },
+  { labelKey: "nav.offers", href: "/offers", icon: Tag },
 ];
 
 // Decorative floating food — pure ambience.
 const FOODIES = [
-  { e: "🍔", cls: "top-[12%] left-[10%] text-5xl food-bubble" },
-  { e: "🥤", cls: "top-[20%] right-[12%] text-4xl food-bubble-alt" },
-  { e: "🧆", cls: "bottom-[22%] left-[14%] text-4xl food-bubble-alt" },
-  { e: "🍩", cls: "bottom-[16%] right-[10%] text-5xl food-bubble" },
-  { e: "☕", cls: "top-[42%] left-[6%] text-3xl food-bubble" },
-  { e: "🥪", cls: "top-[38%] right-[7%] text-3xl food-bubble-alt" },
+  { e: "🍔", cls: "top-[12%] start-[10%] text-5xl food-bubble" },
+  { e: "🥤", cls: "top-[20%] end-[12%] text-4xl food-bubble-alt" },
+  { e: "🧆", cls: "bottom-[22%] start-[14%] text-4xl food-bubble-alt" },
+  { e: "🍩", cls: "bottom-[16%] end-[10%] text-5xl food-bubble" },
+  { e: "☕", cls: "top-[42%] start-[6%] text-3xl food-bubble" },
+  { e: "🥪", cls: "top-[38%] end-[7%] text-3xl food-bubble-alt" },
 ];
 
-export default function NotFound() {
+export default async function NotFound() {
+  const { logoUrl, siteName } = await getBranding();
+
   return (
     <main className="relative min-h-screen overflow-hidden flex flex-col items-center justify-center px-5 py-16 text-center">
+      <PageMeta titleKey="notFound.metaTitle" />
+
       {/* Warm restaurant gradient backdrop */}
       <div
         className="absolute inset-0 -z-10"
@@ -47,8 +55,8 @@ export default function NotFound() {
 
       {/* Brand */}
       <Link href="/" className="mb-8 inline-flex items-center gap-2">
-        <Image src="/logos/two-in-one.png" alt="Two In One" width={40} height={40} className="object-contain" />
-        <span className="text-lg font-bold text-gray-800">Two In One</span>
+        <Image src={logoUrl} alt={siteName} width={40} height={40} className="object-contain" />
+        <span className="text-lg font-bold text-gray-800">{siteName}</span>
       </Link>
 
       {/* The "empty plate" */}
@@ -68,16 +76,17 @@ export default function NotFound() {
         </div>
       </div>
 
-      {/* Headline */}
+      {/* Headline. Dancing Script carries no Arabic glyphs, so Cairo is listed
+          straight after it — the browser falls back per glyph, which keeps the
+          English script face exactly as it is today. */}
       <h1
         className="text-4xl sm:text-5xl text-orange-600"
-        style={{ fontFamily: "var(--font-dancing)" }}
+        style={{ fontFamily: "var(--font-dancing), var(--font-ar), cursive" }}
       >
-        Oops! This dish isn&apos;t on the menu
+        <T k="notFound.headline" />
       </h1>
       <p className="mt-3 max-w-md text-sm sm:text-base text-gray-600">
-        The page you&apos;re craving has been taken off the table — or maybe it never made it to the kitchen.
-        Let&apos;s get you back to something delicious.
+        <T k="notFound.text" />
       </p>
 
       {/* Primary CTA */}
@@ -87,21 +96,23 @@ export default function NotFound() {
         style={{ background: "linear-gradient(135deg, #f97316, #dc2626)" }}
       >
         <Home size={17} />
-        Back to Home
+        <T k="notFound.backHome" />
       </Link>
 
       {/* Quick links */}
       <div className="mt-10 w-full max-w-md">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Or jump to</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+          <T k="notFound.orJumpTo" />
+        </p>
         <div className="flex flex-wrap items-center justify-center gap-2.5">
-          {QUICK_LINKS.map(({ label, href, icon: Icon }) => (
+          {QUICK_LINKS.map(({ labelKey, href, icon: Icon }) => (
             <Link
               key={href}
               href={href}
               className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white/70 px-4 py-2 text-sm font-semibold text-gray-700 backdrop-blur-sm transition-colors hover:border-orange-400 hover:text-orange-600"
             >
               <Icon size={15} className="text-orange-500" />
-              {label}
+              <T k={labelKey} />
             </Link>
           ))}
         </div>

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Star, Tag } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import FavoriteButton from "@/components/ui/FavoriteButton";
+import { T } from "@/lib/i18n/T";
+import Price from "@/components/ui/Price";
 
 interface Highlight {
   id: string;
@@ -35,7 +37,7 @@ export default async function BuffetHighlights() {
       <div className="max-w-7xl mx-auto px-4">
 
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Buffet Highlights</h2>
+          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900"><T k="home.buffetHighlightsTitle" /></h2>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -62,7 +64,7 @@ export default async function BuffetHighlights() {
                   {/* Badge on image */}
                   {b.badge && (
                     <span
-                      className="absolute top-2 left-2 text-[10px] font-bold px-2.5 py-1 rounded-full text-white leading-none"
+                      className="absolute top-2 start-2 text-[10px] font-bold px-2.5 py-1 rounded-full text-white leading-none"
                       style={{ background: b.badge_color || "#ea580c" }}
                     >
                       {b.badge}
@@ -86,7 +88,7 @@ export default async function BuffetHighlights() {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <span className="flex items-center gap-1 text-[11px] sm:text-[13px] text-gray-600 font-medium">
                     <Tag size={11} className="text-gray-400" />
-                    <span>from <strong className="text-gray-900">AED {b.price}</strong></span>
+                    <span><T k="common.from" /> <strong className="text-gray-900"><Price amount={b.price} /></strong></span>
                   </span>
                   <span className="flex items-center gap-1 text-[11px] sm:text-[13px] text-gray-600 font-medium">
                     <Star size={11} className="fill-amber-400 stroke-amber-400" />
@@ -101,7 +103,7 @@ export default async function BuffetHighlights() {
                     href={b.href}
                     className="flex-1 text-center bg-gray-900 hover:bg-gray-800 text-white text-[11px] sm:text-[13px] font-bold py-2.5 rounded-full transition-colors duration-200"
                   >
-                    Book Now
+                    <T k="common.bookNow" />
                   </Link>
                   <FavoriteButton
                     itemKey={`buffet:${b.id}`}

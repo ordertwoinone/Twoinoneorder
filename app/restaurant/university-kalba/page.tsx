@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import JsonLd from "@/components/seo/JsonLd";
+import PageMeta from "@/lib/i18n/PageMeta";
 import { SITE_URL, restaurantSchema, breadcrumbSchema } from "@/lib/seo";
 import KalbaContent from "./KalbaContent";
 import type {
@@ -128,6 +129,7 @@ export default async function UniversityKalbaPage() {
 
   return (
     <>
+      <PageMeta titleKey="kalba.metaTitle" descriptionKey="kalba.metaDescription" />
       <JsonLd data={[kalbaSchema, kalbaBreadcrumb]} />
       <Navbar />
       <main className="bg-white pb-cart-bar">

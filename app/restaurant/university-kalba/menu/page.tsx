@@ -5,6 +5,7 @@ import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import JsonLd from "@/components/seo/JsonLd";
+import PageMeta from "@/lib/i18n/PageMeta";
 import { breadcrumbSchema } from "@/lib/seo";
 import MenuContent from "./MenuContent";
 import type { KalbaPopularItem, KalbaCategory, KalbaHero } from "../KalbaContent";
@@ -56,6 +57,7 @@ export default async function KalbaMenuPage() {
 
   return (
     <>
+      <PageMeta titleKey="menuPage.metaTitle" descriptionKey="menuPage.metaDescription" />
       <JsonLd data={menuBreadcrumb} />
       <Navbar />
       <main className="bg-white min-h-screen pb-cart-bar">

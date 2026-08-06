@@ -3,6 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPin, ChevronDown, Loader2 } from "lucide-react";
 import { useLocation } from "@/hooks/useLocation";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 export interface NavbarContent {
   /** Dark half of the wordmark, e.g. "TWOINONE". */
@@ -22,9 +24,10 @@ export default function NavbarClient({
   content: NavbarContent;
 }) {
   const { location, detect } = useLocation();
+  const { t } = useTranslation();
 
   const displayArea =
-    location.status === "granted" ? location.area : "Set your location";
+    location.status === "granted" ? location.area : t("header.setLocation");
 
   return (
     <nav className={`sticky top-0 z-50 bg-white${className ? ` ${className}` : ""}`}>
@@ -59,31 +62,38 @@ export default function NavbarClient({
           </div>
         </Link>
 
-        {/* "Deliver to" — closes the header, tap to detect */}
-        <button
-          onClick={detect}
-          disabled={location.status === "loading"}
-          aria-label="Set delivery location"
-          className="ml-auto shrink-0 flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-left hover:bg-gray-50 transition-colors disabled:cursor-default"
-        >
-          <MapPin size={15} fill="#ea580c" stroke="none" className="shrink-0" />
-          <span className="min-w-0">
-            <span className="block text-[8px] text-gray-400 leading-none mb-0.5">
-              Deliver to
+        {/* Language + "Deliver to" close the header. They share one shrink-0
+            group so the wordmark, not this pair, is what gives way on a narrow
+            phone. */}
+        <div className="ms-auto flex items-center gap-1 sm:gap-2 shrink-0">
+          <LanguageSwitcher compact />
+
+          {/* Tap to detect */}
+          <button
+            onClick={detect}
+            disabled={location.status === "loading"}
+            aria-label={t("header.setLocationAria")}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-start hover:bg-gray-50 transition-colors disabled:cursor-default"
+          >
+            <MapPin size={15} fill="#ea580c" stroke="none" className="shrink-0" />
+            <span className="min-w-0">
+              <span className="block text-[8px] text-gray-400 leading-none mb-0.5">
+                {t("header.deliverTo")}
+              </span>
+              {location.status === "loading" ? (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
+                  <Loader2 size={10} className="animate-spin" style={{ color: "#ea580c" }} />
+                  {t("header.detecting")}
+                </span>
+              ) : (
+                <span className="flex items-center gap-0.5 text-[10px] font-bold text-gray-900">
+                  <span className="truncate max-w-[70px] sm:max-w-[150px]">{displayArea}</span>
+                  <ChevronDown size={11} className="text-gray-500 shrink-0" />
+                </span>
+              )}
             </span>
-            {location.status === "loading" ? (
-              <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
-                <Loader2 size={10} className="animate-spin" style={{ color: "#ea580c" }} />
-                Detecting…
-              </span>
-            ) : (
-              <span className="flex items-center gap-0.5 text-[10px] font-bold text-gray-900">
-                <span className="truncate max-w-[90px] sm:max-w-[150px]">{displayArea}</span>
-                <ChevronDown size={11} className="text-gray-500 shrink-0" />
-              </span>
-            )}
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
     </nav>
   );

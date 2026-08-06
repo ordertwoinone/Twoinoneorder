@@ -4,6 +4,7 @@ import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import BuffetContent from "./BuffetContent";
 import JsonLd from "@/components/seo/JsonLd";
+import PageMeta from "@/lib/i18n/PageMeta";
 import { SITE_URL, restaurantSchema, breadcrumbSchema } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -88,6 +89,7 @@ export default async function BuffetPage() {
 
   return (
     <>
+      <PageMeta titleKey="buffet.metaTitle" descriptionKey="buffet.metaDescription" />
       <JsonLd data={[buffetSchema, buffetBreadcrumb]} />
       <Navbar className="hidden sm:block" />
       <main className="bg-white pb-cart-bar">

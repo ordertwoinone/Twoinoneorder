@@ -15,13 +15,15 @@ import {
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { TranslationKey } from "@/lib/i18n/types";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
 
-const DIETARY_TAGS: Record<string, string> = {
-  veg: "🥗 Veg",
-  non_veg: "🍗 Non-Veg",
-  spicy: "🌶️ Spicy",
-  contains_cheese: "🧀 Cheese",
+const DIETARY_TAGS: Record<string, TranslationKey> = {
+  veg: "buffet.tags.veg",
+  non_veg: "buffet.tags.non_veg",
+  spicy: "buffet.tags.spicy",
+  contains_cheese: "buffet.tags.contains_cheese",
 };
 
 interface CartItem {
@@ -130,6 +132,7 @@ function CartModal({
   discountAmount: number;
   finalPrice: number;
 }) {
+  const { t, tp } = useTranslation();
   const [couponInput, setCouponInput] = useState("");
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
 
@@ -138,19 +141,27 @@ function CartModal({
       .map((i) => `• ${i.name} x${cartQty[i.id]} (${i.priceLabel})`)
       .join("\n");
     const lines = [
-      `Hi! I'd like to place a ${type === "pickup" ? "PICKUP" : "DELIVERY"} order at ${restaurantName}.`,
+      t("kalba.wa.order", {
+        type: type === "pickup" ? t("kalba.wa.pickupWord") : t("kalba.wa.deliveryWord"),
+        restaurant: restaurantName,
+      }),
       "",
-      orderLines || "• (no items selected)",
+      orderLines || t("kalba.wa.noItems"),
       "",
-      `Party Size: ${members} member${members !== 1 ? "s" : ""}`,
+      t("kalba.wa.party", { party: tp("common.members", members) }),
     ];
     if (appliedCoupon && discountAmount > 0) {
-      lines.push(`Coupon: ${appliedCoupon.code} (−AED ${discountAmount})`);
-      lines.push(`Total: AED ${finalPrice}`);
+      lines.push(t("kalba.wa.coupon", { code: appliedCoupon.code, amount: discountAmount }));
+      lines.push(t("kalba.wa.total", { total: finalPrice }));
     } else {
-      lines.push(`Total: AED ${totalPrice}`);
+      lines.push(t("kalba.wa.total", { total: totalPrice }));
     }
-    lines.push("", `Order Type: ${type === "pickup" ? "Pickup 🏃" : "Delivery 🛵"}`);
+    lines.push(
+      "",
+      t("kalba.wa.orderType", {
+        type: type === "pickup" ? t("kalba.wa.pickupLabel") : t("kalba.wa.deliveryLabel"),
+      }),
+    );
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
   }
 
@@ -168,7 +179,7 @@ function CartModal({
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-orange-500" />
             <h2 className="text-base font-extrabold text-gray-900">
-              Your Cart
+              {t("kalba.cart.title")}
             </h2>
             {totalQty > 0 && (
               <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
@@ -178,6 +189,7 @@ function CartModal({
           </div>
           <button
             onClick={onClose}
+            aria-label={t("common.close")}
             className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
           >
             <svg
@@ -200,24 +212,24 @@ function CartModal({
             <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] text-gray-500">Order Total</p>
+                  <p className="text-[11px] text-gray-500">{t("kalba.cart.orderTotal")}</p>
                   <p className="text-sm font-extrabold text-gray-900">
-                    {totalQty} item{totalQty !== 1 ? "s" : ""}
+                    {tp("common.items", totalQty)}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   {discountAmount > 0 ? (
                     <>
                       <p className="text-xs text-gray-400 line-through">
-                        AED {totalPrice}
+                        {t("common.price", { amount: totalPrice })}
                       </p>
                       <p className="text-lg font-extrabold text-orange-500">
-                        AED {finalPrice}
+                        {t("common.price", { amount: finalPrice })}
                       </p>
                     </>
                   ) : (
                     <p className="text-lg font-extrabold text-orange-500">
-                      AED {totalPrice}
+                      {t("common.price", { amount: totalPrice })}
                     </p>
                   )}
                 </div>
@@ -227,20 +239,20 @@ function CartModal({
                   <span className="text-[11px] text-green-600 font-semibold">
                     ✓ {appliedCoupon.code} —{" "}
                     {appliedCoupon.discount_type === "percentage"
-                      ? `${appliedCoupon.discount_value}% off`
-                      : `AED ${appliedCoupon.discount_value} off`}
+                      ? t("kalba.cart.percentOff", { value: appliedCoupon.discount_value })
+                      : t("kalba.cart.amountOff", { value: appliedCoupon.discount_value })}
                   </span>
                   <span className="text-[11px] text-green-600 font-bold">
-                    −AED {discountAmount}
+                    {t("kalba.cart.discount", { amount: discountAmount })}
                   </span>
                 </div>
               )}
             </div>
           ) : (
             <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center">
-              <p className="text-sm text-gray-400">Your cart is empty</p>
+              <p className="text-sm text-gray-400">{t("kalba.cart.emptyTitle")}</p>
               <p className="text-[11px] text-gray-300 mt-0.5">
-                Add items to build your order
+                {t("kalba.cart.emptyHintMenu")}
               </p>
             </div>
           )}
@@ -253,10 +265,10 @@ function CartModal({
               <Users className="w-4 h-4 text-gray-500" />
               <div>
                 <p className="text-[11px] text-gray-500 leading-none">
-                  Party Size
+                  {t("kalba.cart.partySize")}
                 </p>
                 <p className="text-xs font-bold text-gray-800 mt-0.5">
-                  {members} member{members !== 1 ? "s" : ""}
+                  {tp("common.members", members)}
                 </p>
               </div>
             </div>
@@ -302,7 +314,7 @@ function CartModal({
                 onClick={onRemoveCoupon}
                 className="text-[11px] font-bold text-red-400 hover:text-red-600 transition-colors"
               >
-                Remove
+                {t("common.remove")}
               </button>
             </div>
           ) : (
@@ -316,7 +328,8 @@ function CartModal({
                     onApplyCoupon(couponInput.trim());
                   }
                 }}
-                placeholder="Coupon code"
+                placeholder={t("kalba.cart.couponPlaceholder")}
+                dir="ltr"
                 className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-xs font-semibold placeholder-gray-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all uppercase"
               />
               <button
@@ -325,7 +338,7 @@ function CartModal({
                 className="px-4 py-2 rounded-xl text-xs font-bold text-white disabled:opacity-50 transition-opacity shrink-0"
                 style={{ background: "#ea580c" }}
               >
-                {couponLoading ? "..." : "Apply"}
+                {couponLoading ? "…" : t("common.apply")}
               </button>
             </div>
           )}
@@ -341,9 +354,9 @@ function CartModal({
           {inCart.length === 0 ? (
             <div className="py-8 text-center">
               <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No items yet</p>
+              <p className="text-sm text-gray-400">{t("kalba.cart.noItems")}</p>
               <p className="text-[11px] text-gray-300 mt-0.5">
-                Tap Add on any item to build your order
+                {t("kalba.cart.noItemsHint")}
               </p>
             </div>
           ) : (
@@ -369,7 +382,7 @@ function CartModal({
               className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm border-2 transition-colors"
               style={{ borderColor: "#ea580c", color: "#ea580c" }}
             >
-              🏃 Pickup
+              {t("kalba.cart.pickup")}
             </a>
             <a
               href={buildWaUrl("delivery")}
@@ -379,7 +392,7 @@ function CartModal({
               className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
               style={{ background: "#ea580c" }}
             >
-              🛵 Delivery
+              {t("kalba.cart.delivery")}
             </a>
           </div>
         </div>
@@ -400,6 +413,7 @@ export default function MenuContent({
   restaurantName: string;
 }) {
   const searchParams = useSearchParams();
+  const { t, tp } = useTranslation();
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [members, setMembers] = useState(1);
@@ -422,7 +436,7 @@ export default function MenuContent({
     id: p.id,
     name: p.name,
     image_url: p.image_url,
-    priceLabel: `AED ${p.price}`,
+    priceLabel: t("common.price", { amount: p.price }),
     numericPrice: parseFloat(p.price) || 0,
   }));
 
@@ -468,15 +482,15 @@ export default function MenuContent({
           setAppliedCoupon(data.coupon);
           setCouponError("");
         } else {
-          setCouponError(data.error ?? "Invalid coupon");
+          setCouponError(data.error ?? t("kalba.cart.invalidCoupon"));
         }
       } catch {
-        setCouponError("Failed to validate coupon");
+        setCouponError(t("kalba.cart.couponFailed"));
       } finally {
         setCouponLoading(false);
       }
     },
-    [totalPrice]
+    [totalPrice, t]
   );
 
   const filtered = useMemo(() => {
@@ -491,7 +505,7 @@ export default function MenuContent({
   }, [popular, search, activeCategory]);
 
   const orderUrl = `https://wa.me/${whatsapp}?text=${encodeURIComponent(
-    `Hi! I'd like to place an order at ${restaurantName}.`
+    t("kalba.wa.simple", { restaurant: restaurantName })
   )}`;
 
   const activeCategoryLabel =
@@ -515,7 +529,7 @@ export default function MenuContent({
               {restaurantName}
             </p>
             <h1 className="text-base font-extrabold text-gray-900 leading-tight">
-              Full Menu
+              {t("menuPage.fullMenu")}
             </h1>
           </div>
           <a
@@ -525,7 +539,7 @@ export default function MenuContent({
             className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold hover:opacity-90 transition-opacity shrink-0"
             style={{ background: "#ea580c" }}
           >
-            Order via WhatsApp
+            {t("menuPage.orderViaWhatsapp")}
           </a>
         </div>
       </div>
@@ -544,18 +558,17 @@ export default function MenuContent({
             <span className="text-3xl">🍽️</span>
             <div>
               <h2 className="text-lg font-extrabold text-gray-900">
-                Popular Around Campus
+                {t("menuPage.heroTitle")}
               </h2>
               <p className="text-[12px] text-gray-500 mt-0.5">
-                {popular.length} item{popular.length !== 1 ? "s" : ""} · Fresh
-                &amp; made to order
+                {t("menuPage.heroSubtitle", { items: tp("common.items", popular.length) })}
               </p>
             </div>
           </div>
-          <div className="sm:ml-auto flex items-center gap-2">
+          <div className="sm:ms-auto flex items-center gap-2">
             <GraduationCap size={16} className="text-orange-500 shrink-0" />
             <span className="text-[12px] font-semibold text-gray-600">
-              Student-friendly prices
+              {t("menuPage.studentPrices")}
             </span>
           </div>
         </div>
@@ -564,14 +577,14 @@ export default function MenuContent({
         <div className="mt-4 relative">
           <Search
             size={16}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="absolute start-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
           />
           <input
             type="text"
-            placeholder="Search menu items…"
+            placeholder={t("menuPage.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all"
+            className="w-full ps-10 pe-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all"
           />
         </div>
 
@@ -589,7 +602,7 @@ export default function MenuContent({
                 activeCategory === "all" ? { background: "#ea580c" } : {}
               }
             >
-              All
+              {t("menuPage.all")}
             </button>
             {categories.map((c) => (
               <button
@@ -615,9 +628,9 @@ export default function MenuContent({
 
         {/* Results count */}
         <p className="mt-5 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-          {filtered.length} item{filtered.length !== 1 ? "s" : ""}
+          {tp("common.items", filtered.length)}
           {activeCategoryLabel && ` · ${activeCategoryLabel.emoji} ${activeCategoryLabel.label}`}
-          {search && ` for "${search}"`}
+          {search && t("menuPage.resultsFor", { query: search })}
         </p>
 
         {/* Menu grid */}
@@ -625,7 +638,7 @@ export default function MenuContent({
           <div className="mt-16 text-center">
             <p className="text-4xl mb-3">🍽️</p>
             <p className="text-sm font-semibold text-gray-500">
-              No items found
+              {t("menuPage.noItems")}
             </p>
             <div className="flex items-center justify-center gap-4 mt-3">
               {search && (
@@ -634,7 +647,7 @@ export default function MenuContent({
                   className="text-xs font-bold underline"
                   style={{ color: "#ea580c" }}
                 >
-                  Clear search
+                  {t("menuPage.clearSearch")}
                 </button>
               )}
               {activeCategory !== "all" && (
@@ -643,7 +656,7 @@ export default function MenuContent({
                   className="text-xs font-bold underline"
                   style={{ color: "#ea580c" }}
                 >
-                  Show all items
+                  {t("menuPage.showAll")}
                 </button>
               )}
             </div>
@@ -673,10 +686,10 @@ export default function MenuContent({
                       </div>
                     )}
                     <span
-                      className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white z-10"
+                      className="absolute top-2 start-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white z-10"
                       style={{ background: "#ea580c" }}
                     >
-                      AED {p.price}
+                      {t("common.price", { amount: p.price })}
                     </span>
                     <FavoriteButton
                       itemKey={`menu:${p.id}`}
@@ -684,7 +697,7 @@ export default function MenuContent({
                       imageUrl={p.image_url}
                       href="/restaurant/university-kalba/menu"
                       subtitle={`AED ${p.price}`}
-                      className="absolute top-2 right-2 w-7 h-7 z-10"
+                      className="absolute top-2 end-2 w-7 h-7 z-10"
                     />
                   </div>
                   <div className="px-3 pt-2.5 pb-3">
@@ -693,10 +706,10 @@ export default function MenuContent({
                     </h3>
                     {(p.tags ?? []).length > 0 && (
                       <div className="flex flex-wrap gap-0.5 mb-1.5">
-                        {(p.tags ?? []).map((t) => {
-                          const dt = DIETARY_TAGS[t];
+                        {(p.tags ?? []).map((tag) => {
+                          const dt = DIETARY_TAGS[tag];
                           return dt ? (
-                            <span key={t} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
+                            <span key={tag} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{t(dt)}</span>
                           ) : null;
                         })}
                       </div>
@@ -721,7 +734,7 @@ export default function MenuContent({
                         className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors tap-shrink"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">Add to Cart</span>
+                        <span className="text-xs font-bold">{t("common.addToCart")}</span>
                       </button>
                     ) : (
                       <div className="flex items-center justify-between">
@@ -767,31 +780,31 @@ export default function MenuContent({
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
             {totalQty > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -end-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
                 {totalQty}
               </span>
             )}
           </div>
           <div>
             <p className="text-xs text-gray-500 leading-none">
-              {totalQty} item{totalQty !== 1 ? "s" : ""}
+              {tp("common.items", totalQty)}
             </p>
             <p className="text-sm font-extrabold text-gray-900 leading-tight">
-              {totalQty > 0 ? `AED ${totalPrice}` : "Cart is empty"}
+              {totalQty > 0 ? t("common.price", { amount: totalPrice }) : t("kalba.cart.barEmpty")}
             </p>
           </div>
           <button
             onClick={() => setCartOpen(true)}
-            className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2 tap-shrink"
+            className="ms-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2 tap-shrink"
             style={{ background: "#ea580c" }}
           >
-            View Cart <span>→</span>
+            {t("kalba.cart.viewCart")} <span className="rtl-flip inline-block">→</span>
           </button>
         </div>
       </div>
 
       {/* Desktop floating cart */}
-      <div className="hidden sm:flex fixed bottom-6 right-6 z-40">
+      <div className="hidden sm:flex fixed bottom-6 end-6 z-40">
         <button
           onClick={() => setCartOpen(true)}
           className="flex items-center gap-3 text-white font-bold px-5 py-3.5 rounded-2xl shadow-xl text-sm sm:text-base"
@@ -799,14 +812,14 @@ export default function MenuContent({
         >
           <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
           <span>
-            {totalQty} item{totalQty !== 1 ? "s" : ""}
-            {totalQty > 0 ? ` · AED ${totalPrice}` : ""}
+            {tp("common.items", totalQty)}
+            {totalQty > 0 ? ` · ${t("common.price", { amount: totalPrice })}` : ""}
           </span>
           <span
             className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full"
             style={{ color: "#ea580c" }}
           >
-            View Cart
+            {t("kalba.cart.viewCart")}
           </span>
         </button>
       </div>

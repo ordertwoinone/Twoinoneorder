@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Dancing_Script, Outfit } from "next/font/google";
+import { Inter, Dancing_Script, Outfit, Cairo } from "next/font/google";
 import "./globals.css";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
@@ -8,6 +8,10 @@ import TrackingScripts from "@/components/seo/TrackingScripts";
 import PwaProvider from "@/components/pwa/PwaProvider";
 import LogoLoader from "@/components/ui/LogoLoader";
 import { SITE_URL, organizationSchema, webSiteSchema } from "@/lib/seo";
+import { FALLBACK_LOGO, FALLBACK_SITE_NAME } from "@/lib/branding";
+import { I18nProvider } from "@/lib/i18n/I18nProvider";
+import LocaleScript from "@/lib/i18n/LocaleScript";
+import { DEFAULT_LOCALE, LOCALE_META, LOCALES } from "@/lib/i18n/config";
 
 const inter = Inter({ subsets: ["latin"], display: "swap" });
 const dancing = Dancing_Script({
@@ -21,6 +25,14 @@ const brand = Outfit({
   subsets: ["latin"],
   variable: "--font-brand",
   weight: ["600", "800"],
+  display: "swap",
+});
+// Arabic body face. Latin stays on Inter — globals.css only swaps the family in
+// when <html lang> is "ar", so the English design is byte-for-byte unchanged.
+const arabic = Cairo({
+  subsets: ["arabic"],
+  variable: "--font-ar",
+  weight: ["400", "600", "700", "800"],
   display: "swap",
 });
 
@@ -58,6 +70,11 @@ export async function generateMetadata(): Promise<Metadata> {
       "book a table Kalba",
       "student deals Kalba",
     ],
+    // hreflang is *not* declared here: Next strips the query string from
+    // `alternates.languages`, and any page that sets its own `alternates`
+    // replaces the inherited block wholesale. It is declared in two places that
+    // do work — app/sitemap.ts for crawlers, and I18nProvider for the rendered
+    // DOM, both pointing at `?lang=` URLs.
     alternates: { canonical: "/" },
     icons: {
       icon: favicon,
@@ -87,7 +104,10 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       url: SITE_URL,
       siteName,
-      locale: "en_AE",
+      locale: LOCALE_META[DEFAULT_LOCALE].ogLocale,
+      alternateLocale: LOCALES.filter((code) => code !== DEFAULT_LOCALE).map(
+        (code) => LOCALE_META[code].ogLocale,
+      ),
       ...(ogImage && { images: [{ url: ogImage, width: 1200, height: 630, alt: siteName }] }),
     },
     twitter: {
@@ -114,30 +134,38 @@ export const viewport: Viewport = {
 
 const supabaseOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-async function getSameAs(): Promise<string[]> {
+/* Socials, tracking IDs and the brand mark all live on the same row, so they
+   come back in one round trip rather than three. */
+async function getShellSettings() {
   const { data } = await supabaseAdmin
     .from("site_settings")
-    .select("facebook_url, instagram_url, twitter_url, tiktok_url")
+    .select(
+      "facebook_url, instagram_url, twitter_url, tiktok_url, meta_pixel_id, ga_measurement_id, gtm_id, head_scripts, header_logo_url, logo_url, site_name",
+    )
     .single();
-  return [data?.facebook_url, data?.instagram_url, data?.twitter_url, data?.tiktok_url].filter(
-    Boolean,
-  ) as string[];
-}
 
-async function getTracking() {
-  const { data } = await supabaseAdmin
-    .from("site_settings")
-    .select("meta_pixel_id, ga_measurement_id, gtm_id, head_scripts")
-    .single();
-  return data;
+  return {
+    sameAs: [
+      data?.facebook_url,
+      data?.instagram_url,
+      data?.twitter_url,
+      data?.tiktok_url,
+    ].filter(Boolean) as string[],
+    tracking: data,
+    logoUrl: data?.header_logo_url?.trim() || data?.logo_url?.trim() || FALLBACK_LOGO,
+    siteName: data?.site_name?.trim() || FALLBACK_SITE_NAME,
+  };
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [sameAs, tracking] = await Promise.all([getSameAs(), getTracking()]);
+  const { sameAs, tracking, logoUrl, siteName } = await getShellSettings();
 
   return (
-    <html lang="en" className="scroll-smooth">
+    // lang/dir are the static-English defaults; LocaleScript overwrites both
+    // before first paint when the visitor's language is something else.
+    <html lang={LOCALE_META[DEFAULT_LOCALE].htmlLang} dir={LOCALE_META[DEFAULT_LOCALE].dir} className="scroll-smooth">
       <head>
+        <LocaleScript />
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -157,16 +185,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className={`${inter.className} ${dancing.variable} ${brand.variable} antialiased`}>
+      <body
+        className={`${inter.className} ${dancing.variable} ${brand.variable} ${arabic.variable} antialiased`}
+      >
         <TrackingScripts
           metaPixelId={tracking?.meta_pixel_id}
           gaMeasurementId={tracking?.ga_measurement_id}
           gtmId={tracking?.gtm_id}
           headScripts={tracking?.head_scripts}
         />
-        <FavoritesProvider>{children}</FavoritesProvider>
-        <PwaProvider />
-        <LogoLoader />
+        <I18nProvider>
+          <FavoritesProvider>{children}</FavoritesProvider>
+          <PwaProvider logoUrl={logoUrl} siteName={siteName} />
+          <LogoLoader logoUrl={logoUrl} siteName={siteName} />
+        </I18nProvider>
       </body>
     </html>
   );

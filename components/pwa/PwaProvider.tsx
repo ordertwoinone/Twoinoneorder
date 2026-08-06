@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Share, Plus, Download, MoreVertical } from "lucide-react";
+import { X, Download } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { TranslationListKey } from "@/lib/i18n/types";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -60,7 +62,15 @@ function getWindowPrompt(): BeforeInstallPromptEvent | null {
   );
 }
 
-export default function PwaProvider() {
+export default function PwaProvider({
+  logoUrl = "/icons/icon-192.png",
+  siteName = "Two In One",
+}: {
+  /** Brand mark from admin, so the install card matches the rest of the site. */
+  logoUrl?: string;
+  siteName?: string;
+}) {
+  const { t, tList } = useTranslation();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -156,6 +166,14 @@ export default function PwaProvider() {
     return () => window.removeEventListener("tio-open-install", open);
   }, [handleInstall]);
 
+  // Which set of manual steps to show — the entry point differs per platform.
+  const stepsKey: TranslationListKey =
+    platform !== "ios"
+      ? "pwa.android"
+      : iosBrowser === "safari"
+        ? "pwa.iosSafari"
+        : "pwa.iosOther";
+
   return (
     <>
       <AnimatePresence>
@@ -167,24 +185,24 @@ export default function PwaProvider() {
             transition={{ type: "spring", damping: 26, stiffness: 320 }}
             /* `install-dock` stacks it above the tab bar, and above a page's
                cart bar when there is one, so it never covers "View Cart". */
-            className={`fixed z-[60] left-3 right-3 install-dock sm:left-auto sm:right-4 sm:w-[360px] ${
+            className={`fixed z-[60] left-3 right-3 install-dock sm:start-auto sm:end-4 sm:w-[360px] ${
               deferred ? "" : "sm:hidden"
             }`}
             role="dialog"
-            aria-label="Install app"
+            aria-label={t("pwa.installAria")}
           >
             <div className="bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 shadow-[0_10px_40px_rgba(0,0,0,0.16)]">
               <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-gray-50 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/icons/icon-192.png" alt="Two In One Order" className="w-full h-full object-contain" />
+                <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
               </div>
 
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-extrabold text-gray-900 leading-tight">
-                  Install Two In One Order
+                  {t("pwa.installTitle")}
                 </p>
                 <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
-                  Install the app for a faster, full-screen experience.
+                  {t("pwa.installText")}
                 </p>
               </div>
 
@@ -194,12 +212,12 @@ export default function PwaProvider() {
                 style={{ background: "#ea580c", boxShadow: "0 4px 14px rgba(234,88,12,0.4)" }}
               >
                 <Download size={14} />
-                Install
+                {t("pwa.install")}
               </button>
 
               <button
                 onClick={dismiss}
-                aria-label="Dismiss"
+                aria-label={t("common.dismiss")}
                 className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 active:scale-90 transition"
               >
                 <X size={16} />
@@ -229,22 +247,22 @@ export default function PwaProvider() {
               className="fixed left-0 right-0 bottom-0 z-[71] bg-white rounded-t-3xl sm:mx-auto sm:bottom-6 sm:w-[420px] sm:rounded-3xl sm:shadow-2xl"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
               role="dialog"
-              aria-label="How to install"
+              aria-label={t("pwa.guideAria")}
             >
               <div className="px-5 pt-3">
                 <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mb-4" />
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-gray-50 flex items-center justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/icons/icon-192.png" alt="Two In One" className="w-full h-full object-contain" />
+                    <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-extrabold text-gray-900">Add to Home Screen</p>
-                    <p className="text-[11px] text-gray-500">Install Two In One Order as an app</p>
+                    <p className="text-sm font-extrabold text-gray-900">{t("pwa.addToHomeScreen")}</p>
+                    <p className="text-[11px] text-gray-500">{t("pwa.installAsApp")}</p>
                   </div>
                   <button
                     onClick={() => setGuideOpen(false)}
-                    aria-label="Close"
+                    aria-label={t("common.close")}
                     className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:scale-90 transition"
                   >
                     <X size={16} />
@@ -252,58 +270,16 @@ export default function PwaProvider() {
                 </div>
 
                 <ol className="space-y-3 pb-2">
-                  {platform === "ios" && iosBrowser === "safari" && (
-                    <>
-                      <Step n={1}>
-                        Tap the <Share size={14} className="inline text-orange-600 -mt-0.5" /> <b>Share</b>{" "}
-                        button in Safari&apos;s toolbar.
-                      </Step>
-                      <Step n={2}>
-                        Scroll down and tap <b>Add to Home Screen</b>{" "}
-                        <Plus size={14} className="inline text-orange-600 -mt-0.5" />.
-                      </Step>
-                      <Step n={3}>
-                        Tap <b>Add</b> in the top-right corner.
-                      </Step>
-                    </>
-                  )}
-
-                  {platform === "ios" && iosBrowser !== "safari" && (
-                    <>
-                      <Step n={1}>
-                        Tap the <Share size={14} className="inline text-orange-600 -mt-0.5" /> <b>Share</b>{" "}
-                        button (in the address bar or the <MoreVertical size={13} className="inline text-orange-600 -mt-0.5" /> menu).
-                      </Step>
-                      <Step n={2}>
-                        Choose <b>Add to Home Screen</b>{" "}
-                        <Plus size={14} className="inline text-orange-600 -mt-0.5" />.
-                      </Step>
-                      <Step n={3}>
-                        Tap <b>Add</b> to confirm.
-                      </Step>
-                    </>
-                  )}
-
-                  {platform !== "ios" && (
-                    <>
-                      <Step n={1}>
-                        Tap the <MoreVertical size={14} className="inline text-orange-600 -mt-0.5" /> <b>menu</b>{" "}
-                        in the top-right of Chrome.
-                      </Step>
-                      <Step n={2}>
-                        Tap <b>Install app</b> (or <b>Add to Home screen</b>).
-                      </Step>
-                      <Step n={3}>
-                        Confirm with <b>Install</b>.
-                      </Step>
-                    </>
-                  )}
+                  {tList(stepsKey).map((line, i) => (
+                    <Step key={i} n={i + 1}>
+                      {line}
+                    </Step>
+                  ))}
                 </ol>
 
                 {platform === "ios" && iosBrowser !== "safari" && (
                   <p className="text-[11px] text-gray-400 leading-snug mt-1 mb-1">
-                    Tip: if you don&apos;t see <b>Add to Home Screen</b>, open this page in{" "}
-                    <b>Safari</b> instead — the option is always there.
+                    {t("pwa.iosTip")}
                   </p>
                 )}
               </div>

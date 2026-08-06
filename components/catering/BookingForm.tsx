@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import { buildWhatsAppUrl, CateringEnquiry } from "@/lib/whatsapp";
 import { format } from "date-fns";
+import { arSA, enGB } from "date-fns/locale";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { TranslationKey } from "@/lib/i18n/types";
 
 type FormValues = {
   name: string;
@@ -20,11 +23,21 @@ type FormValues = {
   notes?: string;
 };
 
-const EVENT_TYPES = ["Wedding", "Corporate", "Birthday", "Graduation", "Ramadan Iftar", "Other"];
-const TIME_SLOTS = [
-  { value: "Morning (8am – 12pm)", label: "Morning", sub: "8:00 AM – 12:00 PM" },
-  { value: "Afternoon (12pm – 5pm)", label: "Afternoon", sub: "12:00 PM – 5:00 PM" },
-  { value: "Evening (5pm – 11pm)", label: "Evening", sub: "5:00 PM – 11:00 PM" },
+/* `value` is what travels to WhatsApp and the bookings table, so it stays in
+   English no matter which language the form is filled in — the kitchen reads
+   one consistent wording. Only the on-screen label is translated. */
+const EVENT_TYPES: { value: string; key: TranslationKey }[] = [
+  { value: "Wedding",       key: "cateringForm.eventTypes.wedding" },
+  { value: "Corporate",     key: "cateringForm.eventTypes.corporate" },
+  { value: "Birthday",      key: "cateringForm.eventTypes.birthday" },
+  { value: "Graduation",    key: "cateringForm.eventTypes.graduation" },
+  { value: "Ramadan Iftar", key: "cateringForm.eventTypes.iftar" },
+  { value: "Other",         key: "cateringForm.eventTypes.other" },
+];
+const TIME_SLOTS: { value: string; labelKey: TranslationKey; subKey: TranslationKey }[] = [
+  { value: "Morning (8am – 12pm)",   labelKey: "cateringForm.slots.morning",   subKey: "cateringForm.slots.morningSub" },
+  { value: "Afternoon (12pm – 5pm)", labelKey: "cateringForm.slots.afternoon", subKey: "cateringForm.slots.afternoonSub" },
+  { value: "Evening (5pm – 11pm)",   labelKey: "cateringForm.slots.evening",   subKey: "cateringForm.slots.eveningSub" },
 ];
 
 function EventTypeDropdown({
@@ -36,8 +49,10 @@ function EventTypeDropdown({
   onChange: (v: string) => void;
   error?: string;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const selected = EVENT_TYPES.find((e) => e.value === value);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -52,17 +67,17 @@ function EventTypeDropdown({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`w-full flex items-center gap-3 pl-10 pr-4 py-3 border-2 rounded-xl text-sm text-left transition-colors ${
+        className={`w-full flex items-center gap-3 ps-10 pe-4 py-3 border-2 rounded-xl text-sm text-start transition-colors ${
           open ? "border-orange-400 bg-white" : "border-neutral-200 bg-white hover:border-orange-300"
         } ${error ? "border-red-300" : ""}`}
       >
-        <Utensils size={16} className="absolute left-3.5 text-neutral-400 shrink-0" />
+        <Utensils size={16} className="absolute start-3.5 text-neutral-400 shrink-0" />
         <span className={value ? "text-neutral-900" : "text-neutral-400"}>
-          {value || "Select event type..."}
+          {selected ? t(selected.key) : t("cateringForm.eventTypePlaceholder")}
         </span>
         <ChevronDown
           size={16}
-          className={`ml-auto text-neutral-400 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}
+          className={`ms-auto text-neutral-400 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -77,13 +92,13 @@ function EventTypeDropdown({
           >
             {EVENT_TYPES.map((type) => (
               <button
-                key={type}
+                key={type.value}
                 type="button"
-                onClick={() => { onChange(type); setOpen(false); }}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm text-left text-neutral-700 hover:bg-orange-50 hover:text-orange-700 transition-colors"
+                onClick={() => { onChange(type.value); setOpen(false); }}
+                className="w-full flex items-center justify-between px-4 py-3 text-sm text-start text-neutral-700 hover:bg-orange-50 hover:text-orange-700 transition-colors"
               >
-                {type}
-                {value === type && <Check size={14} className="text-orange-500 shrink-0" />}
+                {t(type.key)}
+                {value === type.value && <Check size={14} className="text-orange-500 shrink-0" />}
               </button>
             ))}
           </motion.div>
@@ -96,6 +111,7 @@ function EventTypeDropdown({
 }
 
 export default function BookingForm() {
+  const { t, locale, dir } = useTranslation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [showCalendar, setShowCalendar] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -110,6 +126,8 @@ export default function BookingForm() {
   } = useForm<FormValues>();
 
   const watchedTime = watch("timeSlot");
+  // date-fns needs the locale object to write month and weekday names in Arabic.
+  const dateLocale = locale === "ar" ? arSA : enGB;
 
   const handleEventChange = (v: string) => {
     setSelectedEvent(v);
@@ -124,10 +142,32 @@ export default function BookingForm() {
       phone: data.phone,
       eventType: data.eventType,
       guests: data.guests,
-      date: format(selectedDate, "d MMMM yyyy"),
+      date: format(selectedDate, "d MMMM yyyy", { locale: dateLocale }),
       timeSlot: data.timeSlot,
       notes: data.notes,
     };
+
+    // The event type and time slot are stored in English; show the customer
+    // their own language in the message they are about to send.
+    const eventLabel = t(
+      EVENT_TYPES.find((e) => e.value === enquiry.eventType)?.key ?? "cateringForm.eventTypes.other",
+    );
+    const slot = TIME_SLOTS.find((sl) => sl.value === enquiry.timeSlot);
+    const timeLabel = slot ? `${t(slot.labelKey)} (${t(slot.subKey)})` : enquiry.timeSlot;
+
+    const message = [
+      t("cateringForm.wa.heading"),
+      "",
+      t("cateringForm.wa.name", { name: enquiry.name }),
+      t("cateringForm.wa.phone", { phone: enquiry.phone }),
+      t("cateringForm.wa.event", { event: eventLabel }),
+      t("cateringForm.wa.guests", { guests: enquiry.guests }),
+      t("cateringForm.wa.date", { date: enquiry.date }),
+      t("cateringForm.wa.time", { time: timeLabel }),
+      enquiry.notes ? t("cateringForm.wa.notes", { notes: enquiry.notes }) : "",
+      "",
+      t("cateringForm.wa.footer"),
+    ];
 
     // Save the catering enquiry as a booking (fire-and-forget — must NOT await
     // before window.open or the browser blocks the WhatsApp popup)
@@ -147,7 +187,7 @@ export default function BookingForm() {
     }).catch(() => { /* ignore — still continue to WhatsApp */ });
 
     // Open WhatsApp synchronously (inside the click gesture)
-    window.open(buildWhatsAppUrl(enquiry), "_blank");
+    window.open(buildWhatsAppUrl(message), "_blank");
     setSubmitted(true);
   };
 
@@ -161,9 +201,9 @@ export default function BookingForm() {
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-5">
           <CheckCircle2 size={40} className="text-green-500" />
         </div>
-        <h3 className="text-2xl font-bold text-neutral-900 mb-2">Enquiry Sent!</h3>
+        <h3 className="text-2xl font-bold text-neutral-900 mb-2">{t("cateringForm.successTitle")}</h3>
         <p className="text-neutral-500 mb-6">
-          Redirecting you to WhatsApp to complete your catering booking...
+          {t("cateringForm.successText")}
         </p>
         <div className="flex gap-2 items-center text-sm text-neutral-400">
           <div className="w-2 h-2 rounded-full bg-green-400 animate-bounce" />
@@ -180,15 +220,15 @@ export default function BookingForm() {
       <div className="grid sm:grid-cols-2 gap-5">
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-            Full Name *
+            {t("cateringForm.nameLabel")}
           </label>
           <div className="relative">
-            <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <User size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
-              {...register("name", { required: "Full name is required" })}
+              {...register("name", { required: t("cateringForm.errors.nameRequired") })}
               type="text"
-              placeholder="John Doe"
-              className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
+              placeholder={t("cateringForm.namePlaceholder")}
+              className="w-full ps-10 pe-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
             />
           </div>
           {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
@@ -196,21 +236,22 @@ export default function BookingForm() {
 
         <div>
           <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-            Phone Number *
+            {t("cateringForm.phoneLabel")}
           </label>
           <div className="relative">
-            <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Phone size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               {...register("phone", {
-                required: "Phone is required",
+                required: t("cateringForm.errors.phoneRequired"),
                 pattern: {
                   value: /^[+\d\s\-()]{7,15}$/,
-                  message: "Enter a valid phone number",
+                  message: t("cateringForm.errors.phoneInvalid"),
                 },
               })}
               type="tel"
-              placeholder="+971 50 123 4567"
-              className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
+              placeholder={t("cateringForm.phonePlaceholder")}
+              dir="ltr"
+              className="w-full ps-10 pe-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
             />
           </div>
           {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
@@ -220,11 +261,11 @@ export default function BookingForm() {
       {/* Event Type */}
       <div>
         <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-          Event Type *
+          {t("cateringForm.eventTypeLabel")}
         </label>
         <input
           type="hidden"
-          {...register("eventType", { required: "Please select an event type" })}
+          {...register("eventType", { required: t("cateringForm.errors.eventTypeRequired") })}
         />
         <EventTypeDropdown
           value={selectedEvent}
@@ -236,20 +277,20 @@ export default function BookingForm() {
       {/* Guests */}
       <div>
         <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-          Number of Guests *
+          {t("cateringForm.guestsLabel")}
         </label>
         <div className="relative">
-          <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <Users size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             {...register("guests", {
-              required: "Number of guests required",
-              min: { value: 10, message: "Minimum 10 guests" },
-              max: { value: 5000, message: "Maximum 5000 guests" },
+              required: t("cateringForm.errors.guestsRequired"),
+              min: { value: 10, message: t("cateringForm.errors.guestsMin") },
+              max: { value: 5000, message: t("cateringForm.errors.guestsMax") },
               valueAsNumber: true,
             })}
             type="number"
-            placeholder="e.g. 150"
-            className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
+            placeholder={t("cateringForm.guestsPlaceholder")}
+            className="w-full ps-10 pe-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors"
           />
         </div>
         {errors.guests && <p className="text-red-500 text-xs mt-1">{errors.guests.message}</p>}
@@ -258,16 +299,18 @@ export default function BookingForm() {
       {/* Date Picker */}
       <div>
         <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-          Event Date *
+          {t("cateringForm.dateLabel")}
         </label>
         <button
           type="button"
           onClick={() => setShowCalendar(!showCalendar)}
-          className="w-full flex items-center gap-3 px-4 py-3 border-2 border-neutral-200 rounded-xl text-sm text-left hover:border-orange-400 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 border-2 border-neutral-200 rounded-xl text-sm text-start hover:border-orange-400 transition-colors"
         >
           <CalendarIcon size={16} className="text-neutral-400" />
           <span className={selectedDate ? "text-neutral-900" : "text-neutral-400"}>
-            {selectedDate ? format(selectedDate, "EEEE, d MMMM yyyy") : "Select a date..."}
+            {selectedDate
+              ? format(selectedDate, "EEEE, d MMMM yyyy", { locale: dateLocale })
+              : t("cateringForm.datePlaceholder")}
           </span>
         </button>
         <AnimatePresence>
@@ -281,6 +324,8 @@ export default function BookingForm() {
               <div className="mt-2 bg-white border-2 border-orange-200 rounded-2xl p-4 shadow-lg">
                 <DayPicker
                   mode="single"
+                  dir={dir}
+                  locale={dateLocale}
                   selected={selectedDate}
                   onSelect={(date) => {
                     setSelectedDate(date);
@@ -297,14 +342,14 @@ export default function BookingForm() {
           )}
         </AnimatePresence>
         {!selectedDate && (
-          <p className="text-xs text-neutral-400 mt-1">Minimum 3 days advance booking required</p>
+          <p className="text-xs text-neutral-400 mt-1">{t("cateringForm.dateHint")}</p>
         )}
       </div>
 
       {/* Time Slot */}
       <div>
         <label className="block text-sm font-medium text-neutral-700 mb-2">
-          Preferred Time *
+          {t("cateringForm.timeLabel")}
         </label>
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {TIME_SLOTS.map((slot) => (
@@ -317,7 +362,7 @@ export default function BookingForm() {
               }`}
             >
               <input
-                {...register("timeSlot", { required: "Please select a time slot" })}
+                {...register("timeSlot", { required: t("cateringForm.errors.timeRequired") })}
                 type="radio"
                 value={slot.value}
                 className="sr-only"
@@ -326,8 +371,8 @@ export default function BookingForm() {
                 size={18}
                 className={watchedTime === slot.value ? "text-orange-500" : "text-neutral-400"}
               />
-              <span className="text-sm font-semibold mt-2 text-neutral-800">{slot.label}</span>
-              <span className="text-xs text-neutral-500 mt-0.5">{slot.sub}</span>
+              <span className="text-sm font-semibold mt-2 text-neutral-800">{t(slot.labelKey)}</span>
+              <span className="text-xs text-neutral-500 mt-0.5 force-ltr">{t(slot.subKey)}</span>
             </label>
           ))}
         </div>
@@ -337,15 +382,15 @@ export default function BookingForm() {
       {/* Notes */}
       <div>
         <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-          Special Requests
+          {t("cateringForm.notesLabel")}
         </label>
         <div className="relative">
-          <MessageSquare size={16} className="absolute left-3.5 top-3.5 text-neutral-400" />
+          <MessageSquare size={16} className="absolute start-3.5 top-3.5 text-neutral-400" />
           <textarea
             {...register("notes")}
             rows={4}
-            placeholder="Dietary requirements, special arrangements, allergies..."
-            className="w-full pl-10 pr-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors resize-none"
+            placeholder={t("cateringForm.notesPlaceholder")}
+            className="w-full ps-10 pe-4 py-3 border-2 border-neutral-200 rounded-xl focus:border-orange-400 focus:outline-none text-sm transition-colors resize-none"
           />
         </div>
       </div>
@@ -357,11 +402,11 @@ export default function BookingForm() {
         className="w-full flex items-center justify-center gap-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-neutral-300 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] text-sm"
       >
         <Send size={16} />
-        Send Enquiry via WhatsApp
+        {t("cateringForm.submit")}
       </button>
 
       <p className="text-center text-xs text-neutral-400">
-        Your enquiry will be sent directly via WhatsApp for a quick response.
+        {t("cateringForm.footnote")}
       </p>
     </form>
   );

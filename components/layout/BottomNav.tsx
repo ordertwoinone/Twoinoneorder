@@ -3,17 +3,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Home, Tag, CalendarCheck, Phone, User } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { TranslationKey } from "@/lib/i18n/types";
 
-const ITEMS = [
-  { icon: Home, label: "Home", href: "/" },
-  { icon: Tag, label: "Offers", href: "/offers" },
-  { icon: CalendarCheck, label: "Book Table", href: "/book-table" },
-  { icon: Phone, label: "Contact", href: "/contact" },
-  { icon: User, label: "Account", href: "/account" },
+const ITEMS: { icon: typeof Home; labelKey: TranslationKey; href: string }[] = [
+  { icon: Home, labelKey: "nav.home", href: "/" },
+  { icon: Tag, labelKey: "nav.offers", href: "/offers" },
+  { icon: CalendarCheck, labelKey: "nav.bookTable", href: "/book-table" },
+  { icon: Phone, labelKey: "nav.contact", href: "/contact" },
+  { icon: User, labelKey: "nav.account", href: "/account" },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <nav
@@ -26,7 +29,7 @@ export default function BottomNav() {
 
           return (
             <Link
-              key={item.label}
+              key={item.href}
               href={item.href}
               className={`relative flex-1 flex flex-col items-center gap-0.5 py-1 tap-shrink transition-colors ${
                 active ? "text-orange-600" : "text-gray-400 hover:text-gray-600"
@@ -46,7 +49,7 @@ export default function BottomNav() {
                 className={`relative z-10 ${active ? "text-orange-600" : ""}`}
               />
               <span className="relative z-10 text-[10px] font-medium whitespace-nowrap">
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </Link>
           );

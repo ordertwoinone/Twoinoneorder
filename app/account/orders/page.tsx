@@ -3,6 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import OrdersClient from "./OrdersClient";
+import PageMeta from "@/lib/i18n/PageMeta";
 
 export const metadata: Metadata = {
   title: "My Orders",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function OrdersPage() {
   return (
     <>
+      <PageMeta titleKey="orders.metaTitle" />
       <Navbar />
       <main className="bg-white min-h-[70vh] pb-20 sm:pb-8">
         <OrdersClient />

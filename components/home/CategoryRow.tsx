@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { GraduationCap, LayoutGrid } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const CATEGORIES = [
   {
@@ -57,6 +58,7 @@ const CATEGORIES = [
 ];
 
 export default function CategoryRow() {
+  const { tMaybe } = useTranslation();
   return (
     <section className="px-4 py-3">
       <div className="max-w-7xl mx-auto">
@@ -86,7 +88,7 @@ export default function CategoryRow() {
                     <div className="relative w-14 h-14 rounded-full overflow-hidden">
                       <Image
                         src={cat.image}
-                        alt={cat.label}
+                        alt={tMaybe(`home.categories.${cat.label}`, cat.label)}
                         fill
                         className="object-cover"
                         sizes="56px"
@@ -102,7 +104,7 @@ export default function CategoryRow() {
 
               {/* Label */}
               <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 text-center leading-tight whitespace-pre-line">
-                {cat.label}
+                {tMaybe(`home.categories.${cat.label}`, cat.label)}
               </span>
             </a>
           ))}

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import ConfirmBookingClient from './ConfirmBookingClient'
+import PageMeta from '@/lib/i18n/PageMeta'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
@@ -19,5 +20,10 @@ async function getWhatsApp(): Promise<string> {
 
 export default async function ConfirmBookingPage() {
   const whatsapp = await getWhatsApp()
-  return <ConfirmBookingClient whatsapp={whatsapp} />
+  return (
+    <>
+      <PageMeta titleKey="confirm.metaTitle" />
+      <ConfirmBookingClient whatsapp={whatsapp} />
+    </>
+  )
 }

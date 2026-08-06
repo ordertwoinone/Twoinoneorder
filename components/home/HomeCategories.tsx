@@ -1,8 +1,7 @@
-import type { CSSProperties } from "react";
-import Image from "next/image";
-import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { stagger } from "@/lib/stagger";
+import { T } from "@/lib/i18n/T";
+import CategoryTile from "./CategoryTile";
 
 interface HomeCategory {
   id: string;
@@ -47,45 +46,14 @@ async function getCategories(platform: "mobile" | "web"): Promise<HomeCategory[]
   return data;
 }
 
-function CategoryItem({
-  cat,
-  itemClass,
-  style,
-}: {
-  cat: HomeCategory;
-  itemClass: string;
-  style?: CSSProperties;
-}) {
-  const imgSrc =
-    cat.image_url || FALLBACK.find((f) => f.name === cat.name)?.image_url || FALLBACK[0].image_url;
-  const isExternal = cat.href?.startsWith("http");
-
-  const inner = (
-    <>
-      <div
-        className={`relative w-full aspect-square rounded-2xl overflow-hidden shadow-sm ring-2 ring-transparent transition-all duration-200 ${
-          cat.href ? "group-hover:ring-orange-400 group-hover:shadow-md group-hover:scale-[1.05] cursor-pointer" : ""
-        }`}
-      >
-        <Image src={imgSrc} alt={cat.name} fill className="object-cover" sizes="(max-width: 768px) 20vw, 10vw" />
-        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/40 to-transparent" />
-      </div>
-      <p
-        className={`text-[10px] sm:text-[11px] font-bold text-center leading-tight transition-colors ${
-          cat.href ? "text-gray-700 group-hover:text-orange-600" : "text-gray-500"
-        }`}
-      >
-        {cat.name}
-      </p>
-    </>
-  );
-
-  if (!cat.href) return <div className={`${itemClass} cursor-default`} style={style}>{inner}</div>;
-  return isExternal ? (
-    <a href={cat.href} className={itemClass} style={style}>{inner}</a>
-  ) : (
-    <Link href={cat.href} className={itemClass} style={style}>{inner}</Link>
-  );
+/** Shape CategoryTile expects, with the image fallback already resolved. */
+function toTile(cat: HomeCategory) {
+  return {
+    name: cat.name,
+    imageUrl:
+      cat.image_url || FALLBACK.find((f) => f.name === cat.name)?.image_url || FALLBACK[0].image_url,
+    href: cat.href,
+  };
 }
 
 export default async function HomeCategories({ variant = "mobile" }: { variant?: "mobile" | "web" }) {
@@ -97,7 +65,9 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
     return (
       <section className="py-5">
         <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-xl font-extrabold text-gray-900 mb-4">What are you craving?</h2>
+          <h2 className="text-xl font-extrabold text-gray-900 mb-4">
+            <T k="home.categoriesTitle" />
+          </h2>
           {/* Columns are capped at 110px (rather than 1fr) so a short list
               stays grouped under the heading instead of spreading across the
               full container width; they shrink below that on narrow screens. */}
@@ -106,9 +76,9 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
             style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
           >
             {categories.map((cat, i) => (
-              <CategoryItem
+              <CategoryTile
                 key={cat.id}
-                cat={cat}
+                cat={toTile(cat)}
                 itemClass="stagger-item flex flex-col items-center gap-2 group w-full tap-shrink"
                 style={{ animationDelay: `${stagger(i, 40)}ms` }}
               />
@@ -123,16 +93,16 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
   return (
     <section className="pt-4 pb-2">
       <div className="max-w-7xl mx-auto">
-        {/* scroll-pl-4 matches the px-4 inset: without it, snapping aligns the
+        {/* scroll-ps-4 matches the px-4 inset: without it, snapping aligns the
             first tile to the container edge and scrolls the left padding out of
             view, so the row starts tighter than the other sections. */}
-        <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4">
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-none momentum-x px-4 scroll-ps-4">
           {/* This row sits above the fold, so the tiles pop in on load rather
               than waiting for a scroll that has already happened. */}
           {categories.map((cat, i) => (
-            <CategoryItem
+            <CategoryTile
               key={cat.id}
-              cat={cat}
+              cat={toTile(cat)}
               itemClass="pop-in flex flex-col items-center gap-1.5 group w-[64px] shrink-0 snap-item tap-shrink"
               style={{ animationDelay: `${stagger(i, 45)}ms` }}
             />

@@ -2,6 +2,7 @@
 
 import { Heart } from "lucide-react";
 import { useFavorites, FavoriteItem } from "@/lib/favorites/FavoritesContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Props extends FavoriteItem {
   size?: number;
@@ -14,12 +15,13 @@ export default function FavoriteButton({
   ...item
 }: Props) {
   const { isFavorite, toggle } = useFavorites();
+  const { t } = useTranslation();
   const active = isFavorite(item.itemKey);
 
   return (
     <button
       type="button"
-      aria-label={active ? "Remove from favourites" : "Add to favourites"}
+      aria-label={active ? t("favourites.removeAria") : t("favourites.add")}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

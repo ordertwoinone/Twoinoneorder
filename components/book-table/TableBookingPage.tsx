@@ -6,14 +6,21 @@ import nextDynamic from 'next/dynamic'
 import { useTableStore } from './useTableStore'
 import { TABLES } from './tableData'
 import type { ViewMode } from './TableScene'
+import { useTranslation } from '@/lib/i18n/useTranslation'
+import type { TranslationKey } from '@/lib/i18n/types'
+
+function SceneLoading() {
+  const { t } = useTranslation()
+  return (
+    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+      {t('booking.loadingScene')}
+    </div>
+  )
+}
 
 const TableScene = nextDynamic(() => import('./TableScene'), {
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-      Loading 3D floor plan…
-    </div>
-  ),
+  loading: SceneLoading,
 })
 
 // ══════════════ Icons ══════════════
@@ -65,22 +72,22 @@ const I = {
 
 // ══════════════ Config ══════════════
 
-const STEPS = [
-  { label: 'Select Area',     icon: I.Pin   },
-  { label: 'Your Details',    icon: I.User  },
-  { label: 'Confirm Booking', icon: I.Check },
+const STEPS: { key: TranslationKey; icon: () => JSX.Element }[] = [
+  { key: 'booking.steps.area',    icon: I.Pin   },
+  { key: 'booking.steps.details', icon: I.User  },
+  { key: 'booking.steps.confirm', icon: I.Check },
 ]
 
-const VIEW_BUTTONS: { key: ViewMode; label: string; icon: () => JSX.Element }[] = [
-  { key: '3d',  label: '3D View',   icon: I.Cube   },
-  { key: 'top', label: 'Top View',  icon: I.Square },
-  { key: '360', label: '360°',      icon: I.Rotate },
+const VIEW_BUTTONS: { key: ViewMode; labelKey: TranslationKey; icon: () => JSX.Element }[] = [
+  { key: '3d',  labelKey: 'booking.views.threeD',     icon: I.Cube   },
+  { key: 'top', labelKey: 'booking.views.top',        icon: I.Square },
+  { key: '360', labelKey: 'booking.views.threeSixty', icon: I.Rotate },
 ]
 
-const LEGEND = [
-  { color: '#22C55E', label: 'Available' },
-  { color: '#F59E0B', label: 'Limited'   },
-  { color: '#EF4444', label: 'Booked'    },
+const LEGEND: { color: string; labelKey: TranslationKey }[] = [
+  { color: '#22C55E', labelKey: 'booking.legend.available' },
+  { color: '#F59E0B', labelKey: 'booking.legend.limited'   },
+  { color: '#EF4444', labelKey: 'booking.legend.booked'    },
 ]
 
 const TABLE_PHOTO = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80'
@@ -102,6 +109,7 @@ const EMPTY_FORM: DetailsForm = {
 
 export default function TableBookingPage() {
   const router = useRouter()
+  const { t, tp, tMaybe } = useTranslation()
   const [step, setStep] = useState(1)
   const [viewMode, setViewMode] = useState<ViewMode>('3d')
   const [form, setForm] = useState<DetailsForm>(EMPTY_FORM)
@@ -118,11 +126,11 @@ export default function TableBookingPage() {
 
   function validateForm() {
     const e: Partial<DetailsForm> = {}
-    if (!form.name.trim()) e.name = 'Name is required'
-    if (!form.phone.trim()) e.phone = 'Phone is required'
-    if (!form.date) e.date = 'Date is required'
-    if (!form.time) e.time = 'Time is required'
-    if (!form.guests || parseInt(form.guests) < 1) e.guests = 'Enter number of guests'
+    if (!form.name.trim()) e.name = t('booking.errors.name')
+    if (!form.phone.trim()) e.phone = t('booking.errors.phone')
+    if (!form.date) e.date = t('booking.errors.date')
+    if (!form.time) e.time = t('booking.errors.time')
+    if (!form.guests || parseInt(form.guests) < 1) e.guests = t('booking.errors.guests')
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -157,9 +165,9 @@ export default function TableBookingPage() {
 
         {/* Heading */}
         <div className="pt-4 pb-1 text-center">
-          <h1 className="text-xl sm:text-2xl font-extrabold">Book a Table</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold">{t('booking.title')}</h1>
           <p className="text-[12.5px] text-[#6B7280] mt-0.5">
-            {step === 1 ? 'Tap a table on the map below to select it' : 'Fill in your details to complete the booking'}
+            {step === 1 ? t('booking.subtitleSelect') : t('booking.subtitleDetails')}
           </p>
         </div>
 
@@ -170,16 +178,16 @@ export default function TableBookingPage() {
               const active = i + 1 === step
               const done = i + 1 < step
               return (
-                <div key={s.label} className="flex items-center gap-1 flex-1">
+                <div key={s.key} className="flex items-center gap-1 flex-1">
                   <div className={`flex items-center gap-2 px-2 py-1 ${active ? 'border-b-2 border-[#E8521A]' : ''}`}>
                     <span className={active ? 'text-[#E8521A]' : done ? 'text-green-500' : 'text-[#9CA3AF]'}>
                       <s.icon />
                     </span>
                     <span className={`text-[12.5px] font-semibold whitespace-nowrap ${active ? 'text-[#E8521A]' : done ? 'text-green-600' : 'text-[#6B7280]'}`}>
-                      {s.label}
+                      {t(s.key)}
                     </span>
                   </div>
-                  {i < STEPS.length - 1 && <span className="text-[#C5C8CE] mx-auto"><I.Chevron /></span>}
+                  {i < STEPS.length - 1 && <span className="text-[#C5C8CE] mx-auto rtl-flip"><I.Chevron /></span>}
                 </div>
               )
             })}
@@ -192,7 +200,7 @@ export default function TableBookingPage() {
             {/* Mobile controls — placed ABOVE the canvas so they never cover the tables */}
             <div className="sm:hidden mt-3 flex flex-col gap-2">
               <div className="flex bg-gray-100 rounded-xl p-1 gap-1">
-                {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
+                {VIEW_BUTTONS.map(({ key, labelKey, icon: Icon }) => {
                   const active = viewMode === key
                   return (
                     <button
@@ -203,16 +211,16 @@ export default function TableBookingPage() {
                       }`}
                     >
                       <Icon />
-                      {label}
+                      {t(labelKey)}
                     </button>
                   )
                 })}
               </div>
               <div className="flex items-center justify-center gap-4">
-                {LEGEND.map(({ color, label }) => (
-                  <span key={label} className="flex items-center gap-1.5 text-[11px] font-medium text-[#374151]">
+                {LEGEND.map(({ color, labelKey }) => (
+                  <span key={labelKey} className="flex items-center gap-1.5 text-[11px] font-medium text-[#374151]">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-                    {label}
+                    {t(labelKey)}
                   </span>
                 ))}
               </div>
@@ -223,8 +231,8 @@ export default function TableBookingPage() {
               <TableScene viewMode={viewMode} />
 
               {/* View mode buttons — desktop overlay only */}
-              <div className="hidden sm:flex absolute left-3 top-3 flex-col gap-2 z-10">
-                {VIEW_BUTTONS.map(({ key, label, icon: Icon }) => {
+              <div className="hidden sm:flex absolute start-3 top-3 flex-col gap-2 z-10">
+                {VIEW_BUTTONS.map(({ key, labelKey, icon: Icon }) => {
                   const active = viewMode === key
                   return (
                     <button
@@ -235,26 +243,26 @@ export default function TableBookingPage() {
                       }`}
                     >
                       <Icon />
-                      {label}
+                      {t(labelKey)}
                     </button>
                   )
                 })}
               </div>
 
               {/* Legend — desktop overlay only */}
-              <div className="hidden sm:block absolute right-3 top-3 bg-white rounded-xl shadow-md px-3 py-2.5 space-y-1.5 z-10">
-                {LEGEND.map(({ color, label }) => (
-                  <div key={label} className="flex items-center gap-2">
+              <div className="hidden sm:block absolute end-3 top-3 bg-white rounded-xl shadow-md px-3 py-2.5 space-y-1.5 z-10">
+                {LEGEND.map(({ color, labelKey }) => (
+                  <div key={labelKey} className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-                    <span className="text-[11px] font-medium text-[#374151]">{label}</span>
+                    <span className="text-[11px] font-medium text-[#374151]">{t(labelKey)}</span>
                   </div>
                 ))}
               </div>
 
               {/* Hint */}
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/50 text-white text-[10px] sm:text-[11px] font-medium px-3 py-1 rounded-full z-10 whitespace-nowrap pointer-events-none max-w-[92%] text-center">
-                <span className="sm:hidden">Drag · Pinch zoom · Tap a table</span>
-                <span className="hidden sm:inline">Drag to rotate · Scroll to zoom · Tap a table to select</span>
+                <span className="sm:hidden">{t('booking.hintMobile')}</span>
+                <span className="hidden sm:inline">{t('booking.hintDesktop')}</span>
               </div>
             </div>
 
@@ -263,26 +271,26 @@ export default function TableBookingPage() {
               {selected ? (
                 <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={TABLE_PHOTO} alt={`Table ${selected.id}`} loading="lazy" decoding="async" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0" />
+                  <img src={TABLE_PHOTO} alt={t('booking.tableNumber', { id: selected.id })} loading="lazy" decoding="async" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-xl font-extrabold mb-2">Table {selected.id}</h2>
+                    <h2 className="text-xl font-extrabold mb-2">{t('booking.tableNumber', { id: selected.id })}</h2>
                     <div className="space-y-1.5 text-[13.5px] text-[#374151]">
-                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.Users /></span>{selected.seats} Guests</p>
-                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.MapPin /></span>{selected.section}</p>
-                      <p className="flex items-center gap-2"><I.Star />Best for small groups</p>
+                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.Users /></span>{tp('common.guests', Number(selected.seats.split('–')[0]) || 0, { count: selected.seats })}</p>
+                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.MapPin /></span>{tMaybe(`booking.sections.${selected.section}`, selected.section)}</p>
+                      <p className="flex items-center gap-2"><I.Star />{t('booking.bestFor')}</p>
                     </div>
                   </div>
-                  <div className="sm:border-l sm:border-gray-100 sm:pl-5 flex items-center sm:items-stretch justify-end shrink-0">
+                  <div className="sm:border-s sm:border-gray-100 sm:ps-5 flex items-center sm:items-stretch justify-end shrink-0">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
                       <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                      <span className="text-[12px] font-semibold text-green-700">Selected</span>
+                      <span className="text-[12px] font-semibold text-green-700">{t('booking.selected')}</span>
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="py-6 text-center">
-                  <p className="text-[15px] font-semibold text-[#6B7280]">Select a table to continue</p>
-                  <p className="text-[12.5px] text-[#9CA3AF] mt-1">Tap any available table on the map above</p>
+                  <p className="text-[15px] font-semibold text-[#6B7280]">{t('booking.selectPrompt')}</p>
+                  <p className="text-[12.5px] text-[#9CA3AF] mt-1">{t('booking.selectHint')}</p>
                 </div>
               )}
             </div>
@@ -296,42 +304,45 @@ export default function TableBookingPage() {
             <div className="bg-white rounded-2xl shadow-sm mt-3 p-4 flex items-center gap-4">
               <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={TABLE_PHOTO} alt="table" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                <img src={TABLE_PHOTO} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1">
-                <p className="font-extrabold text-[#1A1A1A]">Table {selected.id}</p>
-                <p className="text-[13px] text-[#6B7280]">{selected.section} · {selected.seats} seats</p>
+                <p className="font-extrabold text-[#1A1A1A]">{t('booking.tableNumber', { id: selected.id })}</p>
+                <p className="text-[13px] text-[#6B7280]">
+                  {tMaybe(`booking.sections.${selected.section}`, selected.section)} · {tp('common.seats', Number(selected.seats.split('–')[0]) || 0, { count: selected.seats })}
+                </p>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full shrink-0">
                 <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                <span className="text-[12px] font-semibold text-green-700">Selected</span>
+                <span className="text-[12px] font-semibold text-green-700">{t('booking.selected')}</span>
               </div>
             </div>
 
             {/* Details form */}
             <div className="bg-white rounded-2xl shadow-sm mt-3 p-4 sm:p-5">
-              <h2 className="text-[15px] font-extrabold mb-4">Your Details</h2>
+              <h2 className="text-[15px] font-extrabold mb-4">{t('booking.yourDetails')}</h2>
               <div className="space-y-4">
 
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Full Name *</label>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">{t('booking.nameLabel')}</label>
                   <input
                     type="text"
                     value={form.name}
                     onChange={(e) => handleField('name', e.target.value)}
-                    placeholder="Enter your full name"
+                    placeholder={t('booking.namePlaceholder')}
                     className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 ${errors.name ? 'border-red-400' : 'border-gray-200'}`}
                   />
                   {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Phone Number *</label>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">{t('booking.phoneLabel')}</label>
                   <input
                     type="tel"
                     value={form.phone}
                     onChange={(e) => handleField('phone', e.target.value)}
-                    placeholder="+971 50 000 0000"
+                    placeholder={t('booking.phonePlaceholder')}
+                    dir="ltr"
                     className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 ${errors.phone ? 'border-red-400' : 'border-gray-200'}`}
                   />
                   {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
@@ -339,7 +350,7 @@ export default function TableBookingPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Date *</label>
+                    <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">{t('booking.dateLabel')}</label>
                     <input
                       type="date"
                       value={form.date}
@@ -350,7 +361,7 @@ export default function TableBookingPage() {
                     {errors.date && <p className="text-[11px] text-red-500 mt-1">{errors.date}</p>}
                   </div>
                   <div>
-                    <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Time *</label>
+                    <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">{t('booking.timeLabel')}</label>
                     <input
                       type="time"
                       value={form.time}
@@ -362,7 +373,7 @@ export default function TableBookingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Number of Guests *</label>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">{t('booking.guestsLabel')}</label>
                   <input
                     type="number"
                     min="1"
@@ -376,12 +387,12 @@ export default function TableBookingPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">Special Requests <span className="font-normal text-[#9CA3AF]">(optional)</span></label>
+                  <label className="block text-[12px] font-semibold text-[#374151] mb-1.5">{t('booking.notesLabel')} <span className="font-normal text-[#9CA3AF]">{t('common.optional')}</span></label>
                   <textarea
                     value={form.notes}
                     onChange={(e) => handleField('notes', e.target.value)}
                     rows={3}
-                    placeholder="Allergies, birthday decorations, high chair, etc."
+                    placeholder={t('booking.notesPlaceholder')}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#E8521A]/40 resize-none"
                   />
                 </div>
@@ -401,9 +412,9 @@ export default function TableBookingPage() {
                 step === 1 ? 'bg-white border border-gray-100 text-[#D1D5DB] cursor-not-allowed' : 'bg-white border border-gray-200 text-[#1A1A1A] hover:bg-gray-50'
               }`}
             >
-              <I.ChevronL />
+              <span className="rtl-flip inline-flex"><I.ChevronL /></span>
             </button>
-            <span className="text-[11px] text-[#6B7280] font-medium">Previous</span>
+            <span className="text-[11px] text-[#6B7280] font-medium">{t('common.previous')}</span>
           </div>
 
           <div className="flex flex-col items-center gap-1">
@@ -418,9 +429,9 @@ export default function TableBookingPage() {
                       : 'bg-white border border-gray-100 text-[#C5C8CE] cursor-not-allowed'
                   }`}
                 >
-                  <span className="rotate-180 inline-flex"><I.ChevronL /></span>
+                  <span className="rotate-180 rtl-flip inline-flex"><I.ChevronL /></span>
                 </button>
-                <span className="text-[11px] text-[#6B7280] font-medium">Next</span>
+                <span className="text-[11px] text-[#6B7280] font-medium">{t('common.next')}</span>
               </>
             ) : (
               <>
@@ -429,9 +440,9 @@ export default function TableBookingPage() {
                   onClick={handleSubmit}
                   className="h-12 px-6 rounded-2xl bg-[#E8521A] text-white font-bold text-sm hover:bg-[#F97316] transition shadow-sm disabled:opacity-60"
                 >
-                  {submitting ? 'Please wait…' : 'Review Booking'}
+                  {submitting ? t('booking.pleaseWait') : t('booking.review')}
                 </button>
-                <span className="text-[11px] text-[#6B7280] font-medium">Continue</span>
+                <span className="text-[11px] text-[#6B7280] font-medium">{t('common.continueLabel')}</span>
               </>
             )}
           </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, Heart, Loader2, LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useFavorites } from "@/lib/favorites/FavoritesContext";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Row {
   id: string;
@@ -17,6 +18,7 @@ interface Row {
 
 export default function FavouritesClient() {
   const supabase = createClient();
+  const { t } = useTranslation();
   const { isFavorite, toggle, loggedIn, ready } = useFavorites();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,11 +42,11 @@ export default function FavouritesClient() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-6">
       <Link href="/account" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 mb-4 transition-colors">
-        <ChevronLeft size={16} /> Back to Account
+        <ChevronLeft size={16} /> {t("orders.backToAccount")}
       </Link>
 
-      <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Favourites</h1>
-      <p className="text-sm text-gray-500 mb-6">Your saved restaurants & dishes.</p>
+      <h1 className="text-2xl font-extrabold text-gray-900 mb-1">{t("favourites.title")}</h1>
+      <p className="text-sm text-gray-500 mb-6">{t("favourites.subtitle")}</p>
 
       {!ready || loading ? (
         <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-orange-500" size={24} /></div>
@@ -72,8 +74,8 @@ export default function FavouritesClient() {
               </a>
               <button
                 onClick={() => toggle({ itemKey: r.item_key, name: r.name, imageUrl: r.image_url, href: r.href, subtitle: r.subtitle })}
-                aria-label="Remove from favourites"
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm shadow-sm border border-gray-100 flex items-center justify-center hover:scale-110 transition-transform"
+                aria-label={t("favourites.removeAria")}
+                className="absolute top-2 end-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm shadow-sm border border-gray-100 flex items-center justify-center hover:scale-110 transition-transform"
               >
                 <Heart size={15} className="fill-red-500 stroke-red-500" />
               </button>
@@ -86,30 +88,32 @@ export default function FavouritesClient() {
 }
 
 function Empty() {
+  const { t } = useTranslation();
   return (
     <div className="text-center py-16">
       <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-50 flex items-center justify-center">
         <Heart size={26} className="text-orange-400" />
       </div>
-      <h2 className="text-lg font-extrabold text-gray-900 mb-1">No favourites yet</h2>
-      <p className="text-sm text-gray-500 mb-5">Tap the heart on any restaurant or dish to save it here.</p>
+      <h2 className="text-lg font-extrabold text-gray-900 mb-1">{t("favourites.emptyTitle")}</h2>
+      <p className="text-sm text-gray-500 mb-5">{t("favourites.emptySub")}</p>
       <Link href="/" className="inline-flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">
-        Browse restaurants
+        {t("favourites.browse")}
       </Link>
     </div>
   );
 }
 
 function EmptyLogin() {
+  const { t } = useTranslation();
   return (
     <div className="text-center py-16">
       <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-50 flex items-center justify-center">
         <LogIn size={26} className="text-orange-400" />
       </div>
-      <h2 className="text-lg font-extrabold text-gray-900 mb-1">Sign in to view favourites</h2>
-      <p className="text-sm text-gray-500 mb-5">Log in to save and sync your favourite restaurants & dishes.</p>
+      <h2 className="text-lg font-extrabold text-gray-900 mb-1">{t("favourites.signInTitle")}</h2>
+      <p className="text-sm text-gray-500 mb-5">{t("favourites.signInSub")}</p>
       <Link href="/account" className="inline-flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">
-        Sign in
+        {t("common.signIn")}
       </Link>
     </div>
   );

@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Star, Clock, Bike } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { stagger } from "@/lib/stagger";
+import { T } from "@/lib/i18n/T";
 
 /* Fallback palettes, used when a restaurant carries no colours of its own.
    Anything outside these four names lands on the neutral grey. */
@@ -105,8 +106,12 @@ export default async function RestaurantCards() {
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Our Restaurants</h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">Tap to order · Fast delivery across UAE</p>
+            <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">
+              <T k="home.restaurantsTitle" />
+            </h2>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              <T k="home.restaurantsSubtitle" />
+            </p>
           </div>
         </div>
 
@@ -140,7 +145,7 @@ export default async function RestaurantCards() {
                     />
                   )}
                   {r.logo_url && (
-                    <div className="absolute bottom-1 left-1 w-9 h-9 rounded-lg bg-white/95 shadow-sm p-1">
+                    <div className="absolute bottom-1 start-1 w-9 h-9 rounded-lg bg-white/95 shadow-sm p-1">
                       <div className="relative w-full h-full">
                         <Image src={r.logo_url} alt={r.name} fill className="object-contain" sizes="36px" />
                       </div>
@@ -174,7 +179,7 @@ export default async function RestaurantCards() {
                         <>
                           <span className="flex items-center gap-1 font-semibold text-green-600">
                             <Bike size={13} />
-                            Free
+                            <T k="common.free" />
                           </span>
                           {r.cuisine?.length > 0 && <span className="text-gray-300">·</span>}
                         </>
@@ -253,7 +258,7 @@ export default async function RestaurantCards() {
 
                   {badgeLabel && (
                     <span
-                      className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full z-10 max-w-[calc(100%-44px)] truncate"
+                      className="absolute top-2 start-2 text-[10px] font-bold px-2 py-0.5 rounded-full z-10 max-w-[calc(100%-44px)] truncate"
                       style={pillColors(
                         r.badge_bg_color,
                         r.badge_text_color,
@@ -265,7 +270,7 @@ export default async function RestaurantCards() {
                   )}
 
                   {r.logo_url && (
-                    <div className="absolute top-2 right-2 z-10 w-10 h-10 rounded-lg bg-white/95 shadow-sm p-1.5">
+                    <div className="absolute top-2 end-2 z-10 w-10 h-10 rounded-lg bg-white/95 shadow-sm p-1.5">
                       <div className="relative w-full h-full">
                         <Image
                           src={r.logo_url}

@@ -11,12 +11,14 @@ import {
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { TranslationKey } from "@/lib/i18n/types";
 
-const DIETARY_TAGS: Record<string, string> = {
-  veg: "🥗 Veg",
-  non_veg: "🍗 Non-Veg",
-  spicy: "🌶️ Spicy",
-  contains_cheese: "🧀 Cheese",
+const DIETARY_TAGS: Record<string, TranslationKey> = {
+  veg: "buffet.tags.veg",
+  non_veg: "buffet.tags.non_veg",
+  spicy: "buffet.tags.spicy",
+  contains_cheese: "buffet.tags.contains_cheese",
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -172,12 +174,13 @@ function VegBadge({ veg }: { veg: boolean }) {
 }
 
 function DomeLogo({ size = "md", logoUrl }: { size?: "md" | "lg"; logoUrl?: string }) {
+  const { t } = useTranslation();
   const cls = size === "lg" ? "w-16 h-16 lg:w-20 lg:h-20" : "w-14 h-14";
   return (
     <div className={`${cls} rounded-full bg-gray-900 flex flex-col items-center justify-center shrink-0 border-2 border-yellow-400 shadow-md overflow-hidden`}>
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="Branch logo" className="w-full h-full object-cover" />
+        <img src={logoUrl} alt={t("buffet.branchLogoAlt")} className="w-full h-full object-cover" />
       ) : (
         <>
           <svg viewBox="0 0 28 16" className="w-7 h-4 mb-0.5" fill="none">
@@ -197,21 +200,22 @@ function DishCard({ id, name, img, price, veg, special, tags, isIncluded, qty, o
   id: string; name: string; img: string; price: number; veg: boolean; special: boolean; tags?: string[] | null;
   isIncluded: boolean; qty: number; onQtyChange: (qty: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="shrink-0 w-[110px] sm:w-full bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className="relative h-[90px] sm:h-[140px] lg:h-[155px] bg-gray-100">
         <img src={img} alt={name} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
         {special && (
-          <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded leading-tight z-10">
-            Chef&apos;s<br />Special
+          <span className="absolute top-1.5 start-1.5 bg-red-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded leading-tight z-10 whitespace-pre-line">
+            {t("buffet.menu.chefsSpecial")}
           </span>
         )}
         {isIncluded && (
-          <span className="absolute bottom-1.5 left-1.5 bg-green-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10 flex items-center gap-0.5">
-            ✓ Included
+          <span className="absolute bottom-1.5 start-1.5 bg-green-500 text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full z-10 flex items-center gap-0.5">
+            {t("buffet.menu.included")}
           </span>
         )}
-        <span className="absolute top-1.5 right-1.5 z-10"><VegBadge veg={veg} /></span>
+        <span className="absolute top-1.5 end-1.5 z-10"><VegBadge veg={veg} /></span>
         <FavoriteButton
           itemKey={`buffetdish:${id}`}
           name={name}
@@ -219,20 +223,20 @@ function DishCard({ id, name, img, price, veg, special, tags, isIncluded, qty, o
           href="/restaurant/buffet"
           subtitle="Buffet dish"
           size={13}
-          className="absolute bottom-1.5 right-1.5 w-7 h-7 z-10"
+          className="absolute bottom-1.5 end-1.5 w-7 h-7 z-10"
         />
       </div>
       <div className="px-2 sm:px-3 pt-1.5 sm:pt-2 pb-2 sm:pb-3">
         <p className="text-[11px] sm:text-sm font-semibold text-gray-800 leading-tight line-clamp-2 min-h-[28px] sm:min-h-[40px]">{name}</p>
         {price > 0 && (
-          <p className="text-[12px] sm:text-sm font-extrabold text-orange-600 mt-0.5">AED {price}</p>
+          <p className="text-[12px] sm:text-sm font-extrabold text-orange-600 mt-0.5">{t("common.price", { amount: price })}</p>
         )}
         {(tags ?? []).filter((t) => t !== "veg" && t !== "non_veg").length > 0 && (
           <div className="flex flex-wrap gap-0.5 mt-1">
-            {(tags ?? []).filter((t) => t !== "veg" && t !== "non_veg").map((t) => {
-              const dt = DIETARY_TAGS[t];
+            {(tags ?? []).filter((tag) => tag !== "veg" && tag !== "non_veg").map((tag) => {
+              const dt = DIETARY_TAGS[tag];
               return dt ? (
-                <span key={t} className="text-[8px] sm:text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
+                <span key={tag} className="text-[8px] sm:text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{t(dt)}</span>
               ) : null;
             })}
           </div>
@@ -244,7 +248,7 @@ function DishCard({ id, name, img, price, veg, special, tags, isIncluded, qty, o
             className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
           >
             <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-            <span className="text-[10px] sm:text-xs font-semibold">Add</span>
+            <span className="text-[10px] sm:text-xs font-semibold">{t("common.add")}</span>
           </button>
         ) : (
           <div className="flex items-center justify-between">
@@ -277,27 +281,28 @@ function BuffetMenuTab({
   cartQty: Record<string, number>;
   onQtyChange: (itemId: string, qty: number) => void;
 }) {
+  const { t } = useTranslation();
   const totalItems = menuSections.reduce((n, s) => n + s.buffet_menu_items.filter((i) => i.is_active).length, 0);
 
   return (
     <div className="space-y-6 sm:space-y-8">
       <div>
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900">Buffet Menu</h2>
-        <p className="text-sm sm:text-base text-gray-400 mt-0.5">{totalItems}+ dishes from around the world</p>
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-gray-900">{t("buffet.menu.title")}</h2>
+        <p className="text-sm sm:text-base text-gray-400 mt-0.5">{t("buffet.menu.subtitle", { count: totalItems })}</p>
       </div>
 
       {/* Selectable timing cards */}
       <div>
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Select your session to see what&apos;s included</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t("buffet.menu.selectSession")}</p>
         <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
-          {timings.map((t) => {
-            const cfg = THEME_MAP[t.theme] ?? THEME_MAP.orange;
-            const selected = selectedTimingId === t.id;
+          {timings.map((timing) => {
+            const cfg = THEME_MAP[timing.theme] ?? THEME_MAP.orange;
+            const selected = selectedTimingId === timing.id;
             return (
               <button
-                key={t.id}
-                onClick={() => onTimingSelect(selected ? null : t.id)}
-                className={`text-left rounded-2xl p-3 sm:p-5 lg:p-6 border-2 transition-all ${
+                key={timing.id}
+                onClick={() => onTimingSelect(selected ? null : timing.id)}
+                className={`text-start rounded-2xl p-3 sm:p-5 lg:p-6 border-2 transition-all ${
                   selected
                     ? "border-orange-500 shadow-md"
                     : `${cfg.border} ${cfg.bg} hover:border-orange-300`
@@ -308,14 +313,14 @@ function BuffetMenuTab({
                   <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                     <div className="flex items-center gap-1 sm:gap-2">
                       <cfg.Icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 shrink-0 ${selected ? "text-orange-500" : cfg.iconCls}`} />
-                      <span className={`text-[10px] sm:text-sm lg:text-base font-bold leading-tight ${selected ? "text-orange-700" : "text-gray-800"}`}>{t.label}</span>
+                      <span className={`text-[10px] sm:text-sm lg:text-base font-bold leading-tight ${selected ? "text-orange-700" : "text-gray-800"}`}>{timing.label}</span>
                     </div>
                     {selected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />}
                   </div>
-                  <p className="text-[9px] sm:text-xs lg:text-sm text-gray-500 mb-2 sm:mb-3">{t.time_range}</p>
+                  <p className="text-[9px] sm:text-xs lg:text-sm text-gray-500 mb-2 sm:mb-3">{timing.time_range}</p>
                   <p className={`text-[11px] sm:text-base lg:text-lg font-extrabold ${selected ? "text-orange-600" : cfg.priceCls}`}>
-                    {t.price}
-                    <span className="text-[9px] sm:text-xs font-normal text-gray-400 ml-1">{t.price_label}</span>
+                    {timing.price}
+                    <span className="text-[9px] sm:text-xs font-normal text-gray-400 ms-1">{timing.price_label}</span>
                   </p>
                 </div>
               </button>
@@ -323,15 +328,15 @@ function BuffetMenuTab({
           })}
         </div>
         {!selectedTimingId && (
-          <p className="text-[11px] text-gray-400 mt-2 text-center">Tap a session above — included dishes will be highlighted automatically</p>
+          <p className="text-[11px] text-gray-400 mt-2 text-center">{t("buffet.menu.selectHint")}</p>
         )}
       </div>
 
       <div className="flex items-start gap-3 bg-green-50 border border-green-100 rounded-2xl p-3 sm:p-5">
         <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 shrink-0 mt-0.5" />
         <div>
-          <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800">Kids 0–5 eat free &nbsp;·&nbsp; Kids 6–10 50% off</p>
-          <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 mt-0.5">Prices are inclusive of VAT</p>
+          <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800">{t("buffet.menu.kidsTitle")}</p>
+          <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 mt-0.5">{t("buffet.menu.kidsSub")}</p>
         </div>
       </div>
 
@@ -343,7 +348,7 @@ function BuffetMenuTab({
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{section.title}</h3>
               <span className="text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5">
-                {activeItems.length} Items
+                {t("buffet.menu.itemsCount", { count: activeItems.length })}
               </span>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 sm:overflow-visible sm:pb-0 sm:gap-4" style={{ scrollbarWidth: "none" }}>
@@ -367,8 +372,8 @@ function BuffetMenuTab({
                   />
                 );
               })}
-              <div className="shrink-0 flex items-center pr-1 sm:hidden">
-                <button className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shadow-sm transition-colors">
+              <div className="shrink-0 flex items-center pe-1 sm:hidden">
+                <button aria-label={t("common.next")} className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shadow-sm transition-colors">
                   <ChevronRight className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
@@ -390,6 +395,7 @@ function OverviewTab({
   timings:  BuffetTiming[];
   dishes:   PopularDish[];
 }) {
+  const { t } = useTranslation();
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
@@ -410,7 +416,7 @@ function OverviewTab({
           className="rounded-2xl overflow-hidden border border-orange-100 relative h-[178px] sm:h-[205px] lg:h-[228px]"
           style={{ background: banner.bg_color }}
         >
-          <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-4 sm:px-8 lg:px-10 w-[66%] sm:w-[57%]">
+          <div className="absolute inset-y-0 start-0 flex flex-col justify-center px-4 sm:px-8 lg:px-10 w-[66%] sm:w-[57%]">
             <p className="font-bold text-gray-900 leading-tight text-[1rem] sm:text-[1.3rem] lg:text-[1.5rem]">{banner.title}</p>
             <p className="font-extrabold leading-tight text-[1rem] sm:text-[1.3rem] lg:text-[1.5rem] mt-0.5 mb-2" style={{ color: banner.accent_color }}>
               {banner.title_highlight}
@@ -427,13 +433,13 @@ function OverviewTab({
                 className="shrink-0 text-white font-bold rounded-full text-[10px] sm:text-sm px-3 sm:px-5 py-1.5 sm:py-2.5 hover:opacity-90 transition-opacity"
                 style={{ background: banner.accent_color }}
               >
-                {banner.cta_text} →
+                {banner.cta_text} <span className="rtl-flip inline-block">→</span>
               </Link>
               <div className="flex items-start gap-1 sm:gap-1.5 bg-white/90 border border-orange-100 rounded-xl px-1.5 sm:px-2.5 py-1 sm:py-1.5">
                 <Users className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400 mt-px shrink-0" />
                 <div className="text-[8px] sm:text-[10px] leading-tight text-gray-600">
-                  <p className="font-semibold">Kids 0–5 eat free</p>
-                  <p>Kids 6–10 50% off</p>
+                  <p className="font-semibold">{t("buffet.overview.kidsFree")}</p>
+                  <p>{t("buffet.overview.kidsHalf")}</p>
                 </div>
               </div>
             </div>
@@ -451,12 +457,17 @@ function OverviewTab({
 
           {banner.image_url && (
             <>
-              <img src={banner.image_url} alt="Buffet spread"
+              <img src={banner.image_url} alt={t("buffet.overview.bannerAlt")}
                 loading="lazy" decoding="async"
-                className="absolute top-0 right-0 h-full object-cover w-[40%] sm:w-[46%]"
+                className="absolute top-0 end-0 h-full object-cover w-[40%] sm:w-[46%]"
               />
-              <div className="absolute top-0 right-0 h-full pointer-events-none w-[40%] sm:w-[46%]"
-                style={{ background: `linear-gradient(to right, ${banner.bg_color} 0%, ${banner.bg_color}72 22%, transparent 50%)` }}
+              <div className="absolute top-0 end-0 h-full pointer-events-none w-[40%] sm:w-[46%] edge-fade"
+                style={{
+                  ["--fade-from" as string]: banner.bg_color,
+                  ["--fade-mid" as string]: `${banner.bg_color}72`,
+                  ["--fade-stop" as string]: "22%",
+                  ["--fade-end" as string]: "50%",
+                }}
               />
             </>
           )}
@@ -466,7 +477,7 @@ function OverviewTab({
       {/* Why Choose Us — dynamic */}
       {features.length > 0 && (
         <div>
-          <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 mb-4 sm:mb-6">Why Choose Us</h3>
+          <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 mb-4 sm:mb-6">{t("buffet.overview.whyChooseUs")}</h3>
           <div
             className="grid gap-3 sm:gap-6 lg:gap-8 [grid-template-columns:repeat(auto-fit,minmax(68px,1fr))] sm:[grid-template-columns:var(--feat-cols)]"
             style={{ ["--feat-cols" as string]: `repeat(${features.length}, minmax(0,1fr))` }}
@@ -497,23 +508,23 @@ function OverviewTab({
               <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: "#ea580c" }}>
                 <Clock className="w-3.5 h-3.5 text-white" />
               </span>
-              <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900">Buffet Timings</h3>
+              <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900">{t("buffet.overview.timings")}</h3>
             </div>
-            <button className="text-xs sm:text-sm font-semibold hover:opacity-80" style={{ color: "#ea580c" }}>View all</button>
+            <button className="text-xs sm:text-sm font-semibold hover:opacity-80" style={{ color: "#ea580c" }}>{t("common.viewAll")}</button>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
-            {timings.map((t) => {
-              const cfg = THEME_MAP[t.theme] ?? THEME_MAP.orange;
+            {timings.map((timing) => {
+              const cfg = THEME_MAP[timing.theme] ?? THEME_MAP.orange;
               return (
-                <div key={t.id} className={`${cfg.bg} border ${cfg.border} rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3`}>
+                <div key={timing.id} className={`${cfg.bg} border ${cfg.border} rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3`}>
                   <div className={`${cfg.iconBg} w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0`}>
                     <cfg.Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${cfg.iconCls}`} />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-gray-900 text-[11px] sm:text-base leading-tight">{t.label}</p>
-                    <p className="text-gray-500 text-[9px] sm:text-xs mt-0.5 leading-tight">{t.time_range}</p>
+                    <p className="font-bold text-gray-900 text-[11px] sm:text-base leading-tight">{timing.label}</p>
+                    <p className="text-gray-500 text-[9px] sm:text-xs mt-0.5 leading-tight">{timing.time_range}</p>
                     <p className={`font-bold text-[11px] sm:text-base mt-1 leading-tight ${cfg.priceCls}`}>
-                      {t.price} <span className="font-normal text-gray-400 text-[9px] sm:text-xs">{t.price_label}</span>
+                      {timing.price} <span className="font-normal text-gray-400 text-[9px] sm:text-xs">{timing.price_label}</span>
                     </p>
                   </div>
                 </div>
@@ -528,11 +539,11 @@ function OverviewTab({
 
       <div className="rounded-2xl bg-green-50 border border-green-200 p-5 sm:p-8 lg:p-10 flex items-center justify-between gap-4">
         <div>
-          <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">Reserve your seat today!</p>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">Walk-ins welcome · Bookings preferred</p>
+          <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{t("buffet.overview.reserveTitle")}</p>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">{t("buffet.overview.reserveSub")}</p>
         </div>
         <Link href="/book-table" className="shrink-0 border-2 border-green-500 text-green-700 font-bold px-5 sm:px-8 py-2.5 sm:py-3 lg:py-4 rounded-full text-sm sm:text-base hover:bg-green-100 transition-colors whitespace-nowrap">
-          Book Table
+          {t("common.bookTable")}
         </Link>
       </div>
     </div>
@@ -542,13 +553,14 @@ function OverviewTab({
 // ─── Popular Dishes Section ───────────────────────────────────────────────────
 
 function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
+  const { t } = useTranslation();
   if (dishes.length === 0) return null;
   return (
     <div>
       <div className="flex items-center justify-between mb-4 sm:mb-6">
-        <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">Popular Dishes</h3>
+        <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{t("buffet.overview.popularDishes")}</h3>
         <button className="text-sm sm:text-base font-semibold flex items-center gap-1 hover:opacity-80" style={{ color: "#ea580c" }}>
-          See all <ChevronRight className="w-4 h-4" />
+          {t("common.seeAll")} <ChevronRight className="w-4 h-4" />
         </button>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 md:grid-cols-5 sm:overflow-visible sm:pb-0 sm:gap-5" style={{ scrollbarWidth: "none" }}>
@@ -557,8 +569,8 @@ function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
             <div className="w-full h-32 sm:h-40 lg:h-48 rounded-2xl mb-2 relative overflow-hidden bg-gray-100">
               <img src={dish.image_url} alt={dish.name} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/10" />
-              <span className="absolute top-2 left-2 bg-red-500 text-white text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full leading-tight z-10">{dish.tag}</span>
-              <span className="absolute bottom-2 right-2 z-10"><VegBadge veg={dish.is_veg} /></span>
+              <span className="absolute top-2 start-2 bg-red-500 text-white text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full leading-tight z-10">{dish.tag}</span>
+              <span className="absolute bottom-2 end-2 z-10"><VegBadge veg={dish.is_veg} /></span>
             </div>
             <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 text-center leading-tight">{dish.name}</p>
           </div>
@@ -571,6 +583,7 @@ function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
 // ─── About Tab ────────────────────────────────────────────────────────────────
 
 function AboutTab({ about }: { about: BuffetAbout | null }) {
+  const { t } = useTranslation();
   if (!about) return null;
   const hours = Array.isArray(about.hours) ? about.hours : [];
   const cuisines = Array.isArray(about.cuisines) ? about.cuisines : [];
@@ -583,7 +596,7 @@ function AboutTab({ about }: { about: BuffetAbout | null }) {
         </p>
       </div>
       <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8 space-y-3 sm:space-y-4">
-        <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900">Location & Hours</h3>
+        <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900">{t("buffet.about.locationHours")}</h3>
         {about.location && (
           <div className="flex items-start gap-2.5">
             <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0 mt-0.5" />
@@ -603,7 +616,7 @@ function AboutTab({ about }: { about: BuffetAbout | null }) {
       </div>
       {cuisines.length > 0 && (
         <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8 sm:col-span-2">
-          <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3 sm:mb-4">Cuisine Types</h3>
+          <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3 sm:mb-4">{t("buffet.about.cuisineTypes")}</h3>
           <div className="flex flex-wrap gap-2 sm:gap-3">
             {cuisines.map((c) => (
               <span key={c} className="bg-orange-50 text-orange-600 text-xs sm:text-sm lg:text-base font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-full">{c}</span>
@@ -618,12 +631,13 @@ function AboutTab({ about }: { about: BuffetAbout | null }) {
 // ─── Photos Tab ───────────────────────────────────────────────────────────────
 
 function PhotosTab({ photos }: { photos: BuffetPhoto[] }) {
-  if (!photos.length) return <p className="text-sm text-gray-400 text-center py-10">No photos yet.</p>;
+  const { t } = useTranslation();
+  if (!photos.length) return <p className="text-sm text-gray-400 text-center py-10">{t("buffet.photos.empty")}</p>;
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
       {photos.map((p, i) => (
         <div key={p.id} className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity">
-          <img src={p.image_url} alt={`Photo ${i + 1}`} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
+          <img src={p.image_url} alt={t("buffet.photos.alt", { number: i + 1 })} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
         </div>
       ))}
     </div>
@@ -633,6 +647,7 @@ function PhotosTab({ photos }: { photos: BuffetPhoto[] }) {
 // ─── Reviews Tab ─────────────────────────────────────────────────────────────
 
 function ReviewsTab({ summary, reviews }: { summary: BuffetReviewSummary | null; reviews: BuffetReview[] }) {
+  const { t } = useTranslation();
   const bars = summary ? [summary.bar5, summary.bar4, summary.bar3, summary.bar2, summary.bar1] : [0, 0, 0, 0, 0];
   const ratingNum = summary ? Math.round(parseFloat(summary.rating) || 0) : 0;
   return (
@@ -644,7 +659,7 @@ function ReviewsTab({ summary, reviews }: { summary: BuffetReviewSummary | null;
             <div className="flex gap-0.5 justify-center mt-2">
               {[1,2,3,4,5].map((i) => <Star key={i} className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${i<=ratingNum?"fill-yellow-400 text-yellow-400":"fill-gray-200 text-gray-200"}`} />)}
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-gray-400 mt-1.5">{summary.rating_count} ratings</p>
+            <p className="text-xs sm:text-sm lg:text-base text-gray-400 mt-1.5">{summary.rating_count} {t("common.ratings")}</p>
           </div>
           <div className="flex-1 space-y-2 sm:space-y-3">
             {[5,4,3,2,1].map((n) => (
@@ -727,6 +742,7 @@ function CartModal({
   onMembersChange: (n: number) => void;
   whatsapp: string;
 }) {
+  const { t, tp } = useTranslation();
   const [step, setStep] = useState<"cart" | "details">("cart");
   const [form, setForm] = useState({ name: "", phone: "", date: "", notes: "" });
   const [errors, setErrors] = useState<{ name?: string; phone?: string; date?: string }>({});
@@ -759,9 +775,9 @@ function CartModal({
 
   function validate() {
     const e: typeof errors = {};
-    if (!form.name.trim()) e.name = "Name is required";
-    if (!form.phone.trim()) e.phone = "Phone is required";
-    if (!form.date) e.date = "Date is required";
+    if (!form.name.trim()) e.name = t("buffet.cart.errorName");
+    if (!form.phone.trim()) e.phone = t("buffet.cart.errorPhone");
+    if (!form.date) e.date = t("buffet.cart.errorDate");
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -774,19 +790,27 @@ function CartModal({
     const included = includedItems.map((i) => `• ${i.name}`).join("\n");
     const extras = extrasInCart.map((i) => `• ${i.name} x${i.qty}`).join("\n");
     const lines = [
-      "🍽️ *Buffet Reservation — Buffet By Two In One*",
+      t("buffet.wa.heading"),
       "",
-      `👤 *Name:* ${form.name}`,
-      `📞 *Phone:* ${form.phone}`,
-      `📅 *Date:* ${form.date}`,
-      selectedTiming ? `📋 *Session:* ${selectedTiming.label} (${selectedTiming.time_range})` : "",
-      `👥 *Party Size:* ${members} ${members === 1 ? "person" : "people"}`,
-      total !== null && pricing ? `💰 *Est. Total:* ${pricing.currency} ${total.toLocaleString()} (${pricing.currency} ${Math.round(pricing.perPerson)}/person)` : "",
-      included ? `\n*Included dishes:*\n${included}` : "",
-      extras ? `\n*Extra add-ons:*\n${extras}` : "",
-      form.notes ? `\n📝 *Special Requests:* ${form.notes}` : "",
+      t("buffet.wa.name", { name: form.name }),
+      t("buffet.wa.phone", { phone: form.phone }),
+      t("buffet.wa.date", { date: form.date }),
+      selectedTiming
+        ? t("buffet.wa.session", { label: selectedTiming.label, time: selectedTiming.time_range })
+        : "",
+      t("buffet.wa.party", { party: tp("common.people", members) }),
+      total !== null && pricing
+        ? t("buffet.wa.total", {
+            currency: pricing.currency,
+            total: total.toLocaleString(),
+            rate: Math.round(pricing.perPerson),
+          })
+        : "",
+      included ? `\n${t("buffet.wa.included")}\n${included}` : "",
+      extras ? `\n${t("buffet.wa.extras")}\n${extras}` : "",
+      form.notes ? `\n${t("buffet.wa.notes", { notes: form.notes })}` : "",
       "",
-      "Please confirm my buffet reservation. Thank you!",
+      t("buffet.wa.footer"),
     ].filter(Boolean);
     const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
 
@@ -820,18 +844,18 @@ function CartModal({
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-2">
             {step === "details" ? (
-              <button onClick={() => setStep("cart")} className="w-8 h-8 -ml-1 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600" aria-label="Back">
+              <button onClick={() => setStep("cart")} className="w-8 h-8 -ms-1 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600" aria-label={t("common.back")}>
                 <ArrowLeft className="w-5 h-5" />
               </button>
             ) : (
               <ShoppingCart className="w-5 h-5 text-orange-500" />
             )}
-            <h2 className="text-base font-extrabold text-gray-900">{step === "details" ? "Your Details" : "Your Cart"}</h2>
+            <h2 className="text-base font-extrabold text-gray-900">{step === "details" ? t("buffet.cart.detailsTitle") : t("buffet.cart.title")}</h2>
             {step === "cart" && totalQty > 0 && (
               <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{totalQty}</span>
             )}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors">
+          <button onClick={onClose} aria-label={t("common.close")} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -841,19 +865,19 @@ function CartModal({
           {selectedTiming ? (
             <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
               <div>
-                <p className="text-[11px] text-gray-500">Selected Session</p>
+                <p className="text-[11px] text-gray-500">{t("buffet.cart.selectedSession")}</p>
                 <p className="text-sm font-extrabold text-gray-900">{selectedTiming.label}</p>
                 <p className="text-[11px] text-gray-400">{selectedTiming.time_range}</p>
               </div>
               <p className="text-lg font-extrabold text-orange-500">
                 {selectedTiming.price}
-                <span className="text-[11px] font-normal text-gray-400 ml-1">{selectedTiming.price_label}</span>
+                <span className="text-[11px] font-normal text-gray-400 ms-1">{selectedTiming.price_label}</span>
               </p>
             </div>
           ) : (
             <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center">
-              <p className="text-sm text-gray-400">No session selected</p>
-              <p className="text-[11px] text-gray-300 mt-0.5">Go to Buffet Menu tab to choose a timing</p>
+              <p className="text-sm text-gray-400">{t("buffet.cart.noSession")}</p>
+              <p className="text-[11px] text-gray-300 mt-0.5">{t("buffet.cart.noSessionHint")}</p>
             </div>
           )}
         </div>
@@ -866,8 +890,8 @@ function CartModal({
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4 text-gray-500" />
                   <div>
-                    <p className="text-[11px] text-gray-500 leading-none">Party Size</p>
-                    <p className="text-xs font-bold text-gray-800 mt-0.5">{members} member{members !== 1 ? "s" : ""}</p>
+                    <p className="text-[11px] text-gray-500 leading-none">{t("buffet.cart.partySize")}</p>
+                    <p className="text-xs font-bold text-gray-800 mt-0.5">{tp("common.members", members)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -890,16 +914,16 @@ function CartModal({
               {includedItems.length === 0 && extrasInCart.length === 0 ? (
                 <div className="py-8 text-center">
                   <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">No session selected</p>
-                  <p className="text-[11px] text-gray-300 mt-0.5">Select a buffet timing to see included dishes</p>
+                  <p className="text-sm text-gray-400">{t("buffet.cart.emptyTitle")}</p>
+                  <p className="text-[11px] text-gray-300 mt-0.5">{t("buffet.cart.emptyHint")}</p>
                 </div>
               ) : (
                 <>
                   {includedItems.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">Included in Session</p>
-                        <span className="text-[10px] text-gray-400">{includedItems.length} dishes</span>
+                        <p className="text-[10px] font-semibold text-green-600 uppercase tracking-wider">{t("buffet.cart.includedHeading")}</p>
+                        <span className="text-[10px] text-gray-400">{tp("common.dishes", includedItems.length)}</span>
                       </div>
                       <div className="space-y-2">
                         {includedItems.map((item) => (
@@ -910,7 +934,7 @@ function CartModal({
                   )}
                   {extrasInCart.length > 0 && (
                     <div>
-                      <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider mb-2">Extra Add-ons</p>
+                      <p className="text-[10px] font-semibold text-orange-500 uppercase tracking-wider mb-2">{t("buffet.cart.extrasHeading")}</p>
                       <div className="space-y-2">
                         {extrasInCart.map((item) => (
                           <CartRow key={item.id} item={item} onQtyChange={onQtyChange} />
@@ -926,28 +950,29 @@ function CartModal({
           /* Details form */
           <div className="flex-1 overflow-y-auto px-5 pb-3 space-y-3 min-h-0">
             <div>
-              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Full Name *</label>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">{t("buffet.cart.nameLabel")}</label>
               <input
                 value={form.name}
                 onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: undefined }); }}
-                placeholder="Enter your name"
+                placeholder={t("buffet.cart.namePlaceholder")}
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${errors.name ? "border-red-400" : "border-gray-200"}`}
               />
               {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
             </div>
             <div>
-              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Phone Number *</label>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">{t("buffet.cart.phoneLabel")}</label>
               <input
                 type="tel"
                 value={form.phone}
                 onChange={(e) => { setForm({ ...form, phone: e.target.value }); setErrors({ ...errors, phone: undefined }); }}
-                placeholder="+971 50 000 0000"
+                placeholder={t("buffet.cart.phonePlaceholder")}
+                dir="ltr"
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 ${errors.phone ? "border-red-400" : "border-gray-200"}`}
               />
               {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
             </div>
             <div>
-              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Date *</label>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">{t("buffet.cart.dateLabel")}</label>
               <input
                 type="date"
                 value={form.date}
@@ -958,12 +983,12 @@ function CartModal({
               {errors.date && <p className="text-[11px] text-red-500 mt-1">{errors.date}</p>}
             </div>
             <div>
-              <label className="block text-[12px] font-semibold text-gray-600 mb-1">Special Requests <span className="font-normal text-gray-400">(optional)</span></label>
+              <label className="block text-[12px] font-semibold text-gray-600 mb-1">{t("buffet.cart.notesLabel")} <span className="font-normal text-gray-400">{t("common.optional")}</span></label>
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 rows={2}
-                placeholder="Allergies, occasion, seating preference…"
+                placeholder={t("buffet.cart.notesPlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
               />
             </div>
@@ -977,9 +1002,13 @@ function CartModal({
             <div className="flex items-end justify-between mb-3">
               <div>
                 <p className="text-[11px] text-gray-400">
-                  {pricing.currency} {Math.round(pricing.perPerson)} / person × {members} {members === 1 ? "person" : "people"}
+                  {t("buffet.cart.perPerson", {
+                    currency: pricing.currency,
+                    rate: Math.round(pricing.perPerson),
+                    members: tp("common.people", members),
+                  })}
                 </p>
-                <p className="text-[11px] text-gray-500 font-semibold">Estimated Total</p>
+                <p className="text-[11px] text-gray-500 font-semibold">{t("buffet.cart.estimatedTotal")}</p>
               </div>
               <p className="text-xl font-extrabold text-orange-500 leading-none">
                 {pricing.currency} {total.toLocaleString()}
@@ -994,7 +1023,7 @@ function CartModal({
               className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "#ea580c" }}
             >
-              {selectedTiming ? "Continue Booking" : "Select a session first"}
+              {selectedTiming ? t("buffet.cart.continueBooking") : t("buffet.cart.selectSessionFirst")}
               {selectedTiming && <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>}
             </button>
           ) : (
@@ -1004,11 +1033,11 @@ function CartModal({
               style={{ background: "#25D366" }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
-              Reserve on WhatsApp
+              {t("buffet.cart.reserve")}
             </button>
           )}
           <p className="text-[11px] text-gray-400 text-center mt-2">
-            {step === "cart" ? "Next: add your contact details" : "We'll confirm your reservation on WhatsApp"}
+            {step === "cart" ? t("buffet.cart.footnoteCart") : t("buffet.cart.footnoteDetails")}
           </p>
         </div>
       </div>
@@ -1020,6 +1049,7 @@ function CartRow({ item, onQtyChange }: {
   item: MenuItemDB & { included: boolean; qty: number };
   onQtyChange: (id: string, qty: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
       <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
@@ -1028,7 +1058,7 @@ function CartRow({ item, onQtyChange }: {
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-gray-800 leading-tight truncate">{item.name}</p>
         {item.included && (
-          <p className="text-[10px] text-green-600 font-semibold">✓ Included</p>
+          <p className="text-[10px] text-green-600 font-semibold">{t("buffet.menu.included")}</p>
         )}
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
@@ -1051,18 +1081,19 @@ function CartRow({ item, onQtyChange }: {
 
 type Tab = "overview" | "menu" | "about" | "photos" | "reviews";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "menu",     label: "Buffet Menu" },
-  { id: "overview", label: "Overview"    },
-  { id: "about",    label: "About"       },
-  { id: "reviews",  label: "Reviews"     },
-  { id: "photos",   label: "Photos"      },
+const TABS: { id: Tab; labelKey: TranslationKey }[] = [
+  { id: "menu",     labelKey: "buffet.tabs.menu"     },
+  { id: "overview", labelKey: "buffet.tabs.overview" },
+  { id: "about",    labelKey: "buffet.tabs.about"    },
+  { id: "reviews",  labelKey: "buffet.tabs.reviews"  },
+  { id: "photos",   labelKey: "buffet.tabs.photos"   },
 ];
 
 export default function BuffetContent({ hero, banners, features, timings, dishes, menuSections, about, photos, reviewSummary, reviews, whatsapp }: Props) {
+  const { t, tp } = useTranslation();
   const h = hero ?? {
-    restaurant_name: "Buffet By Two In One",
-    cuisine: "Buffet · International",
+    restaurant_name: t("buffet.heroName"),
+    cuisine: t("buffet.heroCuisine"),
     rating: "4.6",
     rating_count: "2.1K+",
     delivery_time: "20–30 min",
@@ -1164,9 +1195,9 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
   const barPricing = sessionPricing(selectedTiming);
   const barPriceText = selectedTiming
     ? barPricing
-      ? `${barPricing.currency} ${Math.round(barPricing.perPerson * members).toLocaleString()} · ${members} ${members === 1 ? "person" : "people"}`
+      ? `${barPricing.currency} ${Math.round(barPricing.perPerson * members).toLocaleString()} · ${tp("common.people", members)}`
       : `${selectedTiming.price} ${selectedTiming.price_label}`
-    : "No session selected";
+    : t("buffet.bar.noSession");
 
   return (
     <>
@@ -1209,9 +1240,9 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
               </div>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className={`text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 rounded-full ${h.is_open ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                  {h.is_open ? "Open" : "Closed"}
+                  {h.is_open ? t("common.open") : t("common.closed")}
                 </span>
-                <span className="text-[10px] sm:text-xs text-gray-400">· Closes {h.closes_at}</span>
+                <span className="text-[10px] sm:text-xs text-gray-400">{t("common.closesAt", { time: h.closes_at })}</span>
               </div>
             </div>
           </div>
@@ -1221,7 +1252,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
               <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 shrink-0" />
               <input
                 type="text"
-                placeholder="Search dishes, cuisines..."
+                placeholder={t("buffet.searchPlaceholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
@@ -1232,14 +1263,14 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
             {searchFocused && searchQuery.trim() !== "" && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-50">
                 {searchResults.length === 0 ? (
-                  <p className="px-4 py-4 text-xs sm:text-sm text-gray-400 text-center">No dishes found for &quot;{searchQuery.trim()}&quot;</p>
+                  <p className="px-4 py-4 text-xs sm:text-sm text-gray-400 text-center">{t("buffet.searchEmpty", { query: searchQuery.trim() })}</p>
                 ) : (
                   <div className="max-h-80 overflow-y-auto">
                     {searchResults.map(({ item, sectionId, sectionTitle }) => (
                       <button
                         key={item.id}
                         onMouseDown={() => handleSearchResultClick(sectionId)}
-                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-orange-50 transition-colors text-left"
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-orange-50 transition-colors text-start"
                       >
                         <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                           {item.image_url && (
@@ -1272,8 +1303,8 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
                 }`}
               >
                 {tab.id === "reviews" && reviewSummary?.tab_count
-                  ? `Reviews (${reviewSummary.tab_count})`
-                  : tab.label}
+                  ? t("buffet.tabs.reviewsCount", { count: reviewSummary.tab_count })
+                  : t(tab.labelKey)}
               </button>
             ))}
           </div>
@@ -1310,30 +1341,30 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
             {totalCartItems > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{totalCartItems}</span>
+              <span className="absolute -top-1 -end-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{totalCartItems}</span>
             )}
           </div>
           <div>
-            <p className="text-xs text-gray-500 leading-none">{totalCartItems} item{totalCartItems !== 1 ? "s" : ""}</p>
+            <p className="text-xs text-gray-500 leading-none">{tp("common.items", totalCartItems)}</p>
             <p className="text-sm font-extrabold text-gray-900 leading-tight">
               {barPriceText}
             </p>
           </div>
-          <button onClick={() => setCartOpen(true)} className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
-            View Cart <span>→</span>
+          <button onClick={() => setCartOpen(true)} className="ms-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
+            {t("buffet.bar.viewCart")} <span className="rtl-flip inline-block">→</span>
           </button>
         </div>
       </div>
 
       {/* Desktop floating cart */}
-      <div className="hidden sm:flex fixed bottom-6 right-6 z-40">
+      <div className="hidden sm:flex fixed bottom-6 end-6 z-40">
         <button onClick={() => setCartOpen(true)} className="flex items-center gap-3 text-white font-bold px-5 py-3.5 rounded-2xl shadow-xl text-sm sm:text-base" style={{ background: "#ea580c" }}>
           <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
           <span>
-            {totalCartItems} item{totalCartItems !== 1 ? "s" : ""}
+            {tp("common.items", totalCartItems)}
             {selectedTiming ? ` · ${barPriceText}` : ""}
           </span>
-          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>View Cart</span>
+          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>{t("buffet.bar.viewCart")}</span>
         </button>
       </div>
 

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Gift, Copy, Check, Sparkles, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const WHEEL_GRADIENT =
   "conic-gradient(#ef4444 0deg 45deg, #f59e0b 45deg 90deg, #22c55e 90deg 135deg, #3b82f6 135deg 180deg, #8b5cf6 180deg 225deg, #ec4899 225deg 270deg, #ef4444 270deg 315deg, #f59e0b 315deg 360deg)";
@@ -79,6 +80,7 @@ const CONFETTI = Array.from({ length: 36 }, (_, i) => ({
 }));
 
 export default function SpinWheel() {
+  const { t } = useTranslation();
   const [data, setData] = useState<WheelData | null>(null);
   const [open, setOpen] = useState(false);
   const [bannerClosed, setBannerClosed] = useState(false);
@@ -167,13 +169,13 @@ export default function SpinWheel() {
       }).then((r) => r.json());
     } catch {
       setSpinning(false);
-      setEmailError("Something went wrong. Please try again.");
+      setEmailError(t("common.tryAgain"));
       return;
     }
 
     if (!res?.winner || res.error) {
       setSpinning(false);
-      setEmailError(res?.error || "No prizes are available right now.");
+      setEmailError(res?.error || t("spin.noPrizes"));
       return;
     }
 
@@ -185,7 +187,7 @@ export default function SpinWheel() {
       setSpinning(false);
       setResult(winnerRef.current);
       setLocked(true);
-      setEmailError("This email has already played — here's your code.");
+      setEmailError(t("spin.alreadyPlayedEmail"));
       return;
     }
 
@@ -228,7 +230,7 @@ export default function SpinWheel() {
     const mail = email.trim().toLowerCase();
     setEmailError("");
     if (!EMAIL_RE.test(mail)) {
-      setEmailError("Please enter a valid email address.");
+      setEmailError(t("spin.invalidEmail"));
       return;
     }
     localStorage.setItem(LS_EMAIL, mail);
@@ -246,7 +248,7 @@ export default function SpinWheel() {
       {/* ── Mobile: rounded "Spin & Win" banner floating above the bottom nav ── */}
       {!bannerClosed && (
         <motion.div
-          className="sm:hidden fixed left-3 right-3 z-40 flex items-center gap-2.5 rounded-2xl pl-3 pr-2 py-2.5 text-white overflow-hidden"
+          className="sm:hidden fixed left-3 right-3 z-40 flex items-center gap-2.5 rounded-2xl ps-3 pe-2 py-2.5 text-white overflow-hidden"
           style={{
             bottom: "calc(var(--bottom-stack) + var(--cart-bar-space) + 8px)",
             background: "linear-gradient(90deg, #f97316 0%, #db2777 55%, #7c3aed 100%)",
@@ -259,7 +261,7 @@ export default function SpinWheel() {
           {/* Main tap target — opens the wheel */}
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-2.5 flex-1 min-w-0 text-left"
+            className="flex items-center gap-2.5 flex-1 min-w-0 text-start"
             aria-label={settings.button_label}
           >
             {/* Spinning wheel icon */}
@@ -274,8 +276,8 @@ export default function SpinWheel() {
             </span>
 
             <span className="flex-1 min-w-0 leading-tight">
-              <span className="block font-extrabold text-sm">Spin &amp; Win</span>
-              <span className="block text-white/85 text-[11px] truncate">Exciting prizes await you!</span>
+              <span className="block font-extrabold text-sm">{t("spin.bannerTitle")}</span>
+              <span className="block text-white/85 text-[11px] truncate">{t("spin.bannerSubtitle")}</span>
             </span>
           </button>
 
@@ -285,14 +287,14 @@ export default function SpinWheel() {
             className="flex items-center gap-1 bg-white text-[13px] font-bold px-3.5 py-1.5 rounded-full shrink-0"
             style={{ color: "#7c3aed" }}
           >
-            Spin Now
+            {t("spin.spinNow")}
             <ChevronRight size={15} strokeWidth={2.6} />
           </button>
 
           {/* Close */}
           <button
             onClick={() => setBannerClosed(true)}
-            aria-label="Dismiss Spin & Win"
+            aria-label={t("spin.dismiss")}
             className="w-6 h-6 flex items-center justify-center rounded-full text-white/80 hover:bg-white/20 shrink-0"
           >
             <X size={15} />
@@ -303,7 +305,7 @@ export default function SpinWheel() {
       {/* ── Desktop: floating button (bottom-left) ─────────────────────── */}
       <motion.button
         onClick={() => setOpen(true)}
-        className="hidden sm:flex fixed bottom-6 left-6 z-50 items-center gap-2 rounded-full text-white shadow-xl shadow-orange-500/40 pl-2 pr-4 py-2 overflow-hidden"
+        className="hidden sm:flex fixed bottom-6 start-6 z-50 items-center gap-2 rounded-full text-white shadow-xl shadow-orange-500/40 ps-2 pe-4 py-2 overflow-hidden"
         style={{ background: "linear-gradient(135deg, #f97316 0%, #db2777 60%, #7c3aed 100%)" }}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -350,8 +352,8 @@ export default function SpinWheel() {
             >
               <button
                 onClick={() => !spinning && setOpen(false)}
-                className="absolute top-3 right-3 z-30 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 transition-colors"
-                aria-label="Close"
+                className="absolute top-3 end-3 z-30 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 transition-colors"
+                aria-label={t("common.close")}
               >
                 <X size={18} />
               </button>
@@ -483,16 +485,16 @@ export default function SpinWheel() {
 
                 {/* ── State area ──────────────────────────────── */}
                 {spinning ? (
-                  <p className="text-sm font-semibold text-amber-200 animate-pulse">Good luck… 🤞</p>
+                  <p className="text-sm font-semibold text-amber-200 animate-pulse">{t("spin.goodLuck")}</p>
                 ) : needEmail ? (
                   <form onSubmit={submitEmail} className="space-y-2">
-                    <p className="text-xs text-white/70">Enter your email to unlock your spin</p>
+                    <p className="text-xs text-white/70">{t("spin.emailPrompt")}</p>
                     <input
                       type="email"
                       required
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
-                      placeholder="you@email.com"
+                      placeholder={t("spin.emailPlaceholder")}
                       className="w-full px-4 py-3 rounded-xl border border-white/20 bg-white/10 text-white placeholder-white/40 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
                     />
                     {emailError && <p className="text-xs text-amber-300">{emailError}</p>}
@@ -501,7 +503,7 @@ export default function SpinWheel() {
                       className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
                       style={{ background: "linear-gradient(135deg, #f97316, #db2777)" }}
                     >
-                      Unlock &amp; Spin 🎯
+                      {t("spin.unlock")}
                     </button>
                   </form>
                 ) : result && !spinning ? (
@@ -517,7 +519,7 @@ export default function SpinWheel() {
                         {result.code}
                         {copied ? <Check size={15} /> : <Copy size={15} />}
                       </button>
-                      <p className="text-[11px] text-white/60 mt-2">Use this code at checkout</p>
+                      <p className="text-[11px] text-white/60 mt-2">{t("spin.useCode")}</p>
                     </div>
                   ) : (
                     <div className="rounded-2xl bg-white/10 border border-white/15 p-4">
@@ -525,13 +527,11 @@ export default function SpinWheel() {
                     </div>
                   )
                 ) : locked ? (
-                  <p className="text-xs text-white/60">
-                    You&apos;ve already spun. Come back later for another chance!
-                  </p>
+                  <p className="text-xs text-white/60">{t("spin.alreadySpun")}</p>
                 ) : emailError ? (
                   <p className="text-xs text-amber-300">{emailError}</p>
                 ) : (
-                  <p className="text-xs text-white/60">Tap the centre to spin! 🎉</p>
+                  <p className="text-xs text-white/60">{t("spin.tapCentre")}</p>
                 )}
               </div>
             </motion.div>

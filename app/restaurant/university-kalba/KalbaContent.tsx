@@ -24,6 +24,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,34 @@ const DIETARY_TAGS: Record<string, string> = {
   contains_cheese: "🧀",
 };
 
+/**
+ * Copy on this page is admin-managed, but the seeded values — and the defaults
+ * used when a row is missing entirely — are ours. Mapping those exact strings
+ * to dictionary keys means a branch that has never been edited still reads in
+ * Arabic, while anything the admin has actually rewritten shows as typed.
+ */
+const SEEDED_COPY: Record<string, string> = {
+  "Two in One University Kalba": "kalba.heroName",
+  "Near University of Kalba, Kalba": "kalba.heroLocation",
+  "Made for Students,": "kalba.bannerTitle",
+  "Loved by Everyone!": "kalba.bannerHighlight",
+  "Great food. Better prices. Right on campus.": "kalba.bannerSubtitle",
+  "Student Friendly": "kalba.chips.pricingLine1",
+  Pricing: "kalba.chips.pricingLine2",
+  "Breakfast from": "kalba.chips.breakfastLine1",
+  "Lunch Combos from": "kalba.chips.lunchLine1",
+  Free: "kalba.chips.wifiLine1",
+  WiFi: "kalba.chips.wifiLine2",
+  "Study & Chill": "kalba.study.title",
+  "The perfect place to eat, study and hangout.": "kalba.study.subtitle",
+  "Visit Store": "kalba.study.button",
+  "Free WiFi": "kalba.study.wifi",
+  "Charging Points": "kalba.study.charging",
+  "Indoor Seating": "kalba.study.seating",
+  "Group Tables": "kalba.study.groupTables",
+  "Open Late": "kalba.study.openLate",
+};
+
 interface Props {
   hero: KalbaHero;
   banner: KalbaBanner;
@@ -144,11 +173,12 @@ interface CouponData {
 // ─── Components ─────────────────────────────────────────────────────────────
 
 function BranchLogo({ logoUrl }: { logoUrl?: string }) {
+  const { t } = useTranslation();
   return (
     <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-gray-900 flex flex-col items-center justify-center shrink-0 border-2 border-yellow-400 shadow-md overflow-hidden">
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="Branch logo" className="w-full h-full object-cover" />
+        <img src={logoUrl} alt={t("buffet.branchLogoAlt")} className="w-full h-full object-cover" />
       ) : (
         <>
           <svg viewBox="0 0 28 16" className="w-7 h-4 mb-0.5" fill="none">
@@ -237,6 +267,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
   discountAmount: number;
   finalPrice: number;
 }) {
+  const { t, tp } = useTranslation();
   const [couponInput, setCouponInput] = useState("");
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
 
@@ -244,21 +275,28 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
     const orderLines = inCart
       .map((i) => `• ${i.name} x${cartQty[i.id]} (${i.priceLabel})`)
       .join("\n");
-    const typeLabel = type === "pickup" ? "Pickup 🏃" : "Delivery 🛵";
     const lines = [
-      `Hi! I'd like to place a ${type === "pickup" ? "PICKUP" : "DELIVERY"} order at ${restaurantName}.`,
+      t("kalba.wa.order", {
+        type: type === "pickup" ? t("kalba.wa.pickupWord") : t("kalba.wa.deliveryWord"),
+        restaurant: restaurantName,
+      }),
       "",
-      orderLines || "• (no items selected)",
+      orderLines || t("kalba.wa.noItems"),
       "",
-      `Party Size: ${members} member${members !== 1 ? "s" : ""}`,
+      t("kalba.wa.party", { party: tp("common.members", members) }),
     ];
     if (appliedCoupon && discountAmount > 0) {
-      lines.push(`Coupon: ${appliedCoupon.code} (−AED ${discountAmount})`);
-      lines.push(`Total: AED ${finalPrice}`);
+      lines.push(t("kalba.wa.coupon", { code: appliedCoupon.code, amount: discountAmount }));
+      lines.push(t("kalba.wa.total", { total: finalPrice }));
     } else {
-      lines.push(`Total: AED ${totalPrice}`);
+      lines.push(t("kalba.wa.total", { total: totalPrice }));
     }
-    lines.push("", `Order Type: ${typeLabel}`);
+    lines.push(
+      "",
+      t("kalba.wa.orderType", {
+        type: type === "pickup" ? t("kalba.wa.pickupLabel") : t("kalba.wa.deliveryLabel"),
+      }),
+    );
     return `https://wa.me/${whatsapp}?text=${encodeURIComponent(lines.join("\n"))}`;
   }
 
@@ -273,6 +311,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
         type: "kalba",
         table_section: restaurantName,
         guests: members,
+        // Kept in English: this row is read by staff in the admin panel.
         notes: `${type === "pickup" ? "Pickup" : "Delivery"} order · ${itemsText || "(no items)"} · Total: AED ${total}`,
         status: "pending",
       }),
@@ -289,12 +328,12 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
         <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
           <div className="flex items-center gap-2">
             <ShoppingCart className="w-5 h-5 text-orange-500" />
-            <h2 className="text-base font-extrabold text-gray-900">Your Cart</h2>
+            <h2 className="text-base font-extrabold text-gray-900">{t("kalba.cart.title")}</h2>
             {totalQty > 0 && (
               <span className="bg-orange-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">{totalQty}</span>
             )}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors">
+          <button onClick={onClose} aria-label={t("common.close")} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
@@ -305,33 +344,36 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
             <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] text-gray-500">Order Total</p>
-                  <p className="text-sm font-extrabold text-gray-900">{totalQty} item{totalQty !== 1 ? "s" : ""}</p>
+                  <p className="text-[11px] text-gray-500">{t("kalba.cart.orderTotal")}</p>
+                  <p className="text-sm font-extrabold text-gray-900">{tp("common.items", totalQty)}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   {discountAmount > 0 ? (
                     <>
-                      <p className="text-xs text-gray-400 line-through">AED {totalPrice}</p>
-                      <p className="text-lg font-extrabold text-orange-500">AED {finalPrice}</p>
+                      <p className="text-xs text-gray-400 line-through">{t("common.price", { amount: totalPrice })}</p>
+                      <p className="text-lg font-extrabold text-orange-500">{t("common.price", { amount: finalPrice })}</p>
                     </>
                   ) : (
-                    <p className="text-lg font-extrabold text-orange-500">AED {totalPrice}</p>
+                    <p className="text-lg font-extrabold text-orange-500">{t("common.price", { amount: totalPrice })}</p>
                   )}
                 </div>
               </div>
               {discountAmount > 0 && appliedCoupon && (
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
                   <span className="text-[11px] text-green-600 font-semibold">
-                    ✓ {appliedCoupon.code} — {appliedCoupon.discount_type === "percentage" ? `${appliedCoupon.discount_value}% off` : `AED ${appliedCoupon.discount_value} off`}
+                    ✓ {appliedCoupon.code} —{" "}
+                    {appliedCoupon.discount_type === "percentage"
+                      ? t("kalba.cart.percentOff", { value: appliedCoupon.discount_value })
+                      : t("kalba.cart.amountOff", { value: appliedCoupon.discount_value })}
                   </span>
-                  <span className="text-[11px] text-green-600 font-bold">−AED {discountAmount}</span>
+                  <span className="text-[11px] text-green-600 font-bold">{t("kalba.cart.discount", { amount: discountAmount })}</span>
                 </div>
               )}
             </div>
           ) : (
             <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center">
-              <p className="text-sm text-gray-400">Your cart is empty</p>
-              <p className="text-[11px] text-gray-300 mt-0.5">Add items from Popular Around Campus</p>
+              <p className="text-sm text-gray-400">{t("kalba.cart.emptyTitle")}</p>
+              <p className="text-[11px] text-gray-300 mt-0.5">{t("kalba.cart.emptyHint")}</p>
             </div>
           )}
         </div>
@@ -342,8 +384,8 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-gray-500" />
               <div>
-                <p className="text-[11px] text-gray-500 leading-none">Party Size</p>
-                <p className="text-xs font-bold text-gray-800 mt-0.5">{members} member{members !== 1 ? "s" : ""}</p>
+                <p className="text-[11px] text-gray-500 leading-none">{t("kalba.cart.partySize")}</p>
+                <p className="text-xs font-bold text-gray-800 mt-0.5">{tp("common.members", members)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -369,14 +411,14 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
                 <span className="text-green-500 text-base">✓</span>
                 <div>
                   <p className="text-xs font-extrabold text-green-700">{appliedCoupon.code}</p>
-                  <p className="text-[10px] text-green-600 leading-tight">{appliedCoupon.description || "Discount applied"}</p>
+                  <p className="text-[10px] text-green-600 leading-tight">{appliedCoupon.description || t("kalba.cart.couponApplied")}</p>
                 </div>
               </div>
               <button
                 onClick={onRemoveCoupon}
-                className="text-[11px] text-gray-400 hover:text-red-500 font-semibold transition-colors ml-2 shrink-0"
+                className="text-[11px] text-gray-400 hover:text-red-500 font-semibold transition-colors ms-2 shrink-0"
               >
-                Remove
+                {t("common.remove")}
               </button>
             </div>
           ) : (
@@ -387,7 +429,8 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                   onKeyDown={(e) => e.key === "Enter" && couponInput.trim() && onApplyCoupon(couponInput.trim())}
-                  placeholder="Coupon code"
+                  placeholder={t("kalba.cart.couponPlaceholder")}
+                  dir="ltr"
                   className="flex-1 px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
                 <button
@@ -396,7 +439,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
                   className="px-4 py-2.5 rounded-xl text-white text-sm font-bold disabled:opacity-40 transition-opacity shrink-0"
                   style={{ background: "#ea580c" }}
                 >
-                  {couponLoading ? "..." : "Apply"}
+                  {couponLoading ? "…" : t("common.apply")}
                 </button>
               </div>
               {couponError && (
@@ -411,8 +454,8 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
           {inCart.length === 0 ? (
             <div className="py-8 text-center">
               <ShoppingCart className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-              <p className="text-sm text-gray-400">No items yet</p>
-              <p className="text-[11px] text-gray-300 mt-0.5">Tap Add on any item to build your order</p>
+              <p className="text-sm text-gray-400">{t("kalba.cart.noItems")}</p>
+              <p className="text-[11px] text-gray-300 mt-0.5">{t("kalba.cart.noItemsHint")}</p>
             </div>
           ) : (
             inCart.map((item) => (
@@ -432,7 +475,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
               className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl font-extrabold text-sm border-2 hover:bg-orange-50 transition-colors"
               style={{ borderColor: "#ea580c", color: "#ea580c" }}
             >
-              🏃 Pickup
+              {t("kalba.cart.pickup")}
             </a>
             <a
               href={buildWaUrl("delivery")}
@@ -442,7 +485,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
               className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
               style={{ background: "#ea580c" }}
             >
-              🛵 Delivery
+              {t("kalba.cart.delivery")}
             </a>
           </div>
         </div>
@@ -454,6 +497,9 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
 // ─── Main export ────────────────────────────────────────────────────────────
 
 export default function KalbaContent({ hero, banner, categories, popular, study, deals, specials }: Props) {
+  const { t, tp, tMaybe } = useTranslation();
+  /** Translates our own seeded copy; passes admin-written text straight through. */
+  const copy = (value: string) => (value ? tMaybe(SEEDED_COPY[value] ?? "", value) : value);
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [members, setMembers] = useState(1);
@@ -483,7 +529,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
       id: s.id,
       name: s.name,
       image_url: s.image_url,
-      priceLabel: s.price_text || "See price",
+      priceLabel: s.price_text || t("kalba.cart.seePrice"),
       numericPrice: parseNumericPrice(s.price_text),
     })),
   ];
@@ -524,15 +570,15 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         setAppliedCoupon(data.coupon);
         setCouponError("");
       } else {
-        setCouponError(data.error || "Invalid coupon code");
+        setCouponError(data.error || t("kalba.cart.invalidCoupon"));
         setAppliedCoupon(null);
       }
     } catch {
-      setCouponError("Could not validate coupon. Try again.");
+      setCouponError(t("kalba.cart.couponFailed"));
     } finally {
       setCouponLoading(false);
     }
-  }, [totalPrice]);
+  }, [totalPrice, t]);
 
   return (
     <>
@@ -543,7 +589,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <h1 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight truncate">
-              {hero.name}
+              {copy(hero.name)}
             </h1>
             <span className="shrink-0 w-[18px] h-[18px] sm:w-5 sm:h-5 rounded-full bg-yellow-400 flex items-center justify-center">
               <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />
@@ -552,7 +598,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           <a href={hero.maps_url} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-500 mt-0.5 hover:text-[#ea580c] transition-colors">
             <MapPin size={13} className="text-[#ea580c] shrink-0" />
-            {hero.location}
+            {copy(hero.location)}
           </a>
           <div className="flex items-center gap-1 sm:gap-1.5 mt-1 flex-wrap">
             <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400 shrink-0" />
@@ -565,9 +611,9 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           </div>
           <div className="flex items-center gap-1.5 mt-1">
             <span className={`text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 rounded-full ${hero.is_open ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-              {hero.is_open ? "Open" : "Closed"}
+              {hero.is_open ? t("common.open") : t("common.closed")}
             </span>
-            <span className="text-[10px] sm:text-xs text-gray-400">· Closes {hero.closes_at}</span>
+            <span className="text-[10px] sm:text-xs text-gray-400">{t("common.closesAt", { time: hero.closes_at })}</span>
           </div>
           </div>
         </div>
@@ -580,12 +626,12 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           style={{ background: "linear-gradient(110deg, #fdf3ea 0%, #fae3d1 55%, #f5d2b8 100%)" }}>
           <div className="flex-1 px-5 pt-6 pb-5 sm:p-10 flex flex-col justify-center">
             <h2 className="text-[1.6rem] sm:text-3xl lg:text-4xl font-extrabold leading-[1.15] text-gray-900">
-              {banner.title}
+              {copy(banner.title)}
               <br />
-              <span style={{ color: "#ea580c" }}>{banner.title_highlight}</span>
+              <span style={{ color: "#ea580c" }}>{copy(banner.title_highlight)}</span>
             </h2>
             <p className="text-[13px] sm:text-sm text-gray-600 mt-2 mb-5">
-              {banner.subtitle}
+              {copy(banner.subtitle)}
             </p>
             {banner.chips.length > 0 && (
               <div className="grid grid-cols-4 gap-2 max-w-md">
@@ -593,9 +639,9 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                   <div key={i} className="bg-white rounded-xl px-1.5 py-2.5 text-center shadow-sm">
                     <span className="text-lg sm:text-xl leading-none">{c.emoji}</span>
                     <p className="text-[9px] sm:text-[10px] font-semibold text-gray-600 mt-1 leading-tight">
-                      {c.line1}
+                      {copy(c.line1)}
                       <br />
-                      <span className="font-extrabold text-gray-900">{c.line2}</span>
+                      <span className="font-extrabold text-gray-900">{copy(c.line2)}</span>
                     </p>
                   </div>
                 ))}
@@ -606,7 +652,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             <div className="relative w-full h-44 mt-1 sm:mt-0 sm:h-auto sm:w-[45%] lg:w-[40%] sm:[border-radius:10rem_0_0_2.5rem] sm:overflow-hidden">
               <Image
                 src={banner.image_url}
-                alt={hero.name}
+                alt={copy(hero.name)}
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 100vw, 45vw"
@@ -641,7 +687,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         {/* Popular Around Campus */}
         {popular.length > 0 && (
           <section className="mt-7">
-            <SectionHeader title="Popular Around Campus" action="View All"
+            <SectionHeader title={t("kalba.popularTitle")} action={t("common.viewAll")}
               href="/restaurant/university-kalba/menu" internal />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {popular.map((p) => {
@@ -656,9 +702,9 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw" />
                       )}
-                      <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white z-10"
+                      <span className="absolute top-2 start-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white z-10"
                         style={{ background: "#ea580c" }}>
-                        AED {p.price}
+                        {t("common.price", { amount: p.price })}
                       </span>
                       <FavoriteButton
                         itemKey={`menu:${p.id}`}
@@ -666,7 +712,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                         imageUrl={p.image_url}
                         href="/restaurant/university-kalba/menu"
                         subtitle={`AED ${p.price}`}
-                        className="absolute top-2 right-2 w-7 h-7 z-10"
+                        className="absolute top-2 end-2 w-7 h-7 z-10"
                       />
                     </div>
                     <div className="px-3 pt-2.5 pb-3">
@@ -700,7 +746,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                           className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
                         >
                           <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          <span className="text-[10px] sm:text-xs font-semibold">Add</span>
+                          <span className="text-[10px] sm:text-xs font-semibold">{t("common.add")}</span>
                         </button>
                       ) : (
                         <div className="flex items-center justify-between">
@@ -731,20 +777,20 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             <div className="relative h-44 sm:h-auto sm:w-[38%] lg:w-[30%] rounded-2xl overflow-hidden shrink-0">
               <Image
                 src={study.image_url}
-                alt={study.title}
+                alt={copy(study.title)}
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 100vw, 38vw"
               />
             </div>
           )}
-          <div className="flex-1 py-1 sm:py-4 px-1 sm:pr-4">
+          <div className="flex-1 py-1 sm:py-4 px-1 sm:pe-4">
             <div className="flex items-center gap-2 mb-1">
               <GraduationCap size={20} className="text-gray-900" />
-              <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">{study.title}</h2>
+              <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">{copy(study.title)}</h2>
             </div>
             <p className="text-[13px] text-gray-500 mb-5">
-              {study.subtitle}
+              {copy(study.subtitle)}
             </p>
             {study.features.length > 0 && (
               <div className="flex flex-wrap gap-x-5 sm:gap-x-7 gap-y-4 mb-6">
@@ -755,7 +801,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                       <span className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center">
                         <FeatureIcon size={18} className="text-gray-700" />
                       </span>
-                      <span className="text-[10px] font-medium text-gray-600 leading-tight">{f.label}</span>
+                      <span className="text-[10px] font-medium text-gray-600 leading-tight">{copy(f.label)}</span>
                     </div>
                   );
                 })}
@@ -764,7 +810,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             <a href={hero.maps_url} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-white text-sm font-bold transition hover:opacity-90"
               style={{ background: "#ea580c" }}>
-              {study.button_text} <ChevronRight size={15} />
+              {copy(study.button_text) || t("kalba.study.button")} <ChevronRight size={15} />
             </a>
           </div>
         </section>
@@ -772,7 +818,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         {/* Daily Deals */}
         {deals.length > 0 && (
           <section className="mt-7">
-            <SectionHeader title="Daily Deals" />
+            <SectionHeader title={t("kalba.dealsTitle")} />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {deals.map((d) => (
                 <div key={d.id} className="rounded-2xl p-4 flex flex-col items-center text-center"
@@ -792,8 +838,8 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         {/* University Specials */}
         {specials.length > 0 && (
           <section className="mt-7">
-            <SectionHeader title="University Specials" action="View All"
-              href={waUrl(`Hi! I'd like to know more about your university specials at ${hero.name}.`)} />
+            <SectionHeader title={t("kalba.specialsTitle")} action={t("common.viewAll")}
+              href={waUrl(t("kalba.wa.specials", { restaurant: copy(hero.name) }))} />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {specials.map((s) => {
                 const qty = cartQty[s.id] ?? 0;
@@ -834,7 +880,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                           className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
                         >
                           <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          <span className="text-[10px] sm:text-xs font-semibold">Add</span>
+                          <span className="text-[10px] sm:text-xs font-semibold">{t("common.add")}</span>
                         </button>
                       ) : (
                         <div className="flex items-center justify-between">
@@ -871,30 +917,30 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
             {totalQty > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{totalQty}</span>
+              <span className="absolute -top-1 -end-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{totalQty}</span>
             )}
           </div>
           <div>
-            <p className="text-xs text-gray-500 leading-none">{totalQty} item{totalQty !== 1 ? "s" : ""}</p>
+            <p className="text-xs text-gray-500 leading-none">{tp("common.items", totalQty)}</p>
             <p className="text-sm font-extrabold text-gray-900 leading-tight">
-              {totalQty > 0 ? `AED ${totalPrice}` : "Cart is empty"}
+              {totalQty > 0 ? t("common.price", { amount: totalPrice }) : t("kalba.cart.barEmpty")}
             </p>
           </div>
-          <button onClick={() => setCartOpen(true)} className="ml-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
-            View Cart <span>→</span>
+          <button onClick={() => setCartOpen(true)} className="ms-auto text-white text-sm font-bold px-5 py-2.5 rounded-xl shrink-0 flex items-center gap-2" style={{ background: "#ea580c" }}>
+            {t("kalba.cart.viewCart")} <span className="rtl-flip inline-block">→</span>
           </button>
         </div>
       </div>
 
       {/* Desktop floating cart */}
-      <div className="hidden sm:flex fixed bottom-6 right-6 z-40">
+      <div className="hidden sm:flex fixed bottom-6 end-6 z-40">
         <button onClick={() => setCartOpen(true)} className="flex items-center gap-3 text-white font-bold px-5 py-3.5 rounded-2xl shadow-xl text-sm sm:text-base" style={{ background: "#ea580c" }}>
           <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
           <span>
-            {totalQty} item{totalQty !== 1 ? "s" : ""}
-            {totalQty > 0 ? ` · AED ${totalPrice}` : ""}
+            {tp("common.items", totalQty)}
+            {totalQty > 0 ? ` · ${t("common.price", { amount: totalPrice })}` : ""}
           </span>
-          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>View Cart</span>
+          <span className="bg-white font-bold text-xs sm:text-sm px-3 py-1 rounded-full" style={{ color: "#ea580c" }}>{t("kalba.cart.viewCart")}</span>
         </button>
       </div>
 
@@ -910,7 +956,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}
-          restaurantName={hero.name}
+          restaurantName={copy(hero.name)}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}
           onRemoveCoupon={() => { setAppliedCoupon(null); setCouponError(""); }}

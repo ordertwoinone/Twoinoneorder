@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export interface OfferItem {
   id: string;
@@ -36,6 +37,7 @@ function isLightHex(color?: string | null): boolean {
 }
 
 export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
+  const { t } = useTranslation();
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -85,7 +87,7 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
         {/* Offer badge */}
         {o.badge_text && (
           <span
-            className="absolute top-1.5 left-1.5 sm:top-3 sm:left-3 text-[8px] sm:text-[10px] font-extrabold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full leading-none z-10 text-white shadow-sm max-w-[calc(100%-12px)] truncate"
+            className="absolute top-1.5 start-1.5 sm:top-3 sm:start-3 text-[8px] sm:text-[10px] font-extrabold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full leading-none z-10 text-white shadow-sm max-w-[calc(100%-12px)] truncate"
             style={{ background: o.badge_color || "#ea580c" }}
           >
             {o.badge_text}
@@ -94,7 +96,7 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
 
         {/* Slide counter */}
         {multi && (
-          <span className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-black/45 text-white leading-none z-10">
+          <span className="absolute top-1.5 end-1.5 sm:top-3 sm:end-3 text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-black/45 text-white leading-none z-10 force-ltr">
             {idx + 1}/{items.length}
           </span>
         )}
@@ -127,8 +129,8 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
         </div>
 
         <div className="flex items-center mt-auto pt-2 sm:pt-3">
-          <div className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-1.5 px-1.5 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm overflow-hidden">
-            <span className="truncate">{o.cta_text || "Order Now"}</span>
+          <div className="w-full sm:w-auto sm:ms-auto flex items-center justify-center gap-1.5 px-1.5 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm overflow-hidden">
+            <span className="truncate">{o.cta_text || t("common.orderNow")}</span>
             <ArrowRight size={13} strokeWidth={2.5} className="hidden sm:block shrink-0 group-hover:translate-x-0.5 transition-transform duration-200" />
           </div>
         </div>
@@ -157,18 +159,18 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
         <>
           <button
             type="button"
-            aria-label="Previous offer"
+            aria-label={t("home.previousOffer")}
             onClick={() => go(-1)}
-            className="absolute left-4 sm:left-5 top-[50px] sm:top-[92px] -translate-y-1/2 z-20 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute start-4 sm:start-5 top-[50px] sm:top-[92px] -translate-y-1/2 z-20 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
             <ChevronLeft size={15} strokeWidth={2.5} className="sm:hidden" />
             <ChevronLeft size={17} strokeWidth={2.5} className="hidden sm:block" />
           </button>
           <button
             type="button"
-            aria-label="Next offer"
+            aria-label={t("home.nextOffer")}
             onClick={() => go(1)}
-            className="absolute right-4 sm:right-5 top-[50px] sm:top-[92px] -translate-y-1/2 z-20 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute end-4 sm:end-5 top-[50px] sm:top-[92px] -translate-y-1/2 z-20 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
             <ChevronRight size={15} strokeWidth={2.5} className="sm:hidden" />
             <ChevronRight size={17} strokeWidth={2.5} className="hidden sm:block" />

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, MapPin, Plus, Trash2, Loader2, LogIn, X, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 interface Address {
   id: string;
@@ -16,10 +17,13 @@ interface Address {
   is_default: boolean;
 }
 
-const EMPTY = { label: "Home", address: "", area: "", city: "", phone: "", is_default: false };
+/* The label is a free-text field the customer can overwrite, so the default is
+   seeded from the dictionary once the component mounts. */
+const EMPTY = { label: "", address: "", area: "", city: "", phone: "", is_default: false };
 
 export default function AddressesClient() {
   const supabase = createClient();
+  const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
   const [rows, setRows] = useState<Address[]>([]);
@@ -76,21 +80,21 @@ export default function AddressesClient() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <Link href="/account" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 mb-4 transition-colors">
-        <ChevronLeft size={16} /> Back to Account
+        <ChevronLeft size={16} /> {t("orders.backToAccount")}
       </Link>
 
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-extrabold text-gray-900">Saved Addresses</h1>
+        <h1 className="text-2xl font-extrabold text-gray-900">{t("addresses.title")}</h1>
         {user && (
           <button
-            onClick={() => { setForm({ ...EMPTY }); setShowForm(true); }}
+            onClick={() => { setForm({ ...EMPTY, label: t("addresses.defaultLabel") }); setShowForm(true); }}
             className="inline-flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white text-[13px] font-bold px-3.5 py-2 rounded-full transition-colors"
           >
-            <Plus size={15} /> Add
+            <Plus size={15} /> {t("addresses.addButton")}
           </button>
         )}
       </div>
-      <p className="text-sm text-gray-500 mb-6">Manage your delivery locations.</p>
+      <p className="text-sm text-gray-500 mb-6">{t("addresses.subtitle")}</p>
 
       {checking ? (
         <div className="py-16 flex justify-center"><Loader2 className="animate-spin text-orange-500" size={24} /></div>
@@ -99,17 +103,17 @@ export default function AddressesClient() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-50 flex items-center justify-center">
             <LogIn size={26} className="text-orange-400" />
           </div>
-          <h2 className="text-lg font-extrabold text-gray-900 mb-1">Sign in to manage addresses</h2>
-          <p className="text-sm text-gray-500 mb-5">Log in to save your delivery locations.</p>
-          <Link href="/account" className="inline-flex bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">Sign in</Link>
+          <h2 className="text-lg font-extrabold text-gray-900 mb-1">{t("addresses.signInTitle")}</h2>
+          <p className="text-sm text-gray-500 mb-5">{t("addresses.signInSub")}</p>
+          <Link href="/account" className="inline-flex bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold px-5 py-2.5 rounded-full transition-colors">{t("common.signIn")}</Link>
         </div>
       ) : rows.length === 0 ? (
         <div className="text-center py-16">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-orange-50 flex items-center justify-center">
             <MapPin size={26} className="text-orange-400" />
           </div>
-          <h2 className="text-lg font-extrabold text-gray-900 mb-1">No saved addresses</h2>
-          <p className="text-sm text-gray-500">Add an address to speed up your bookings & orders.</p>
+          <h2 className="text-lg font-extrabold text-gray-900 mb-1">{t("addresses.emptyTitle")}</h2>
+          <p className="text-sm text-gray-500">{t("addresses.emptySub")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -121,19 +125,19 @@ export default function AddressesClient() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-gray-900">{a.label}</p>
-                  {a.is_default && <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Default</span>}
+                  {a.is_default && <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">{t("addresses.default")}</span>}
                 </div>
                 <p className="text-[13px] text-gray-600 mt-0.5">{a.address}</p>
                 <p className="text-[12px] text-gray-400">{[a.area, a.city].filter(Boolean).join(", ")}</p>
-                {a.phone && <p className="text-[12px] text-gray-400 mt-0.5">{a.phone}</p>}
+                {a.phone && <p className="text-[12px] text-gray-400 mt-0.5 force-ltr">{a.phone}</p>}
                 <div className="flex items-center gap-3 mt-2">
                   {!a.is_default && (
                     <button onClick={() => makeDefault(a.id)} className="text-[12px] font-semibold text-orange-600 hover:underline inline-flex items-center gap-1">
-                      <Star size={12} /> Set default
+                      <Star size={12} /> {t("addresses.setDefault")}
                     </button>
                   )}
                   <button onClick={() => handleDelete(a.id)} className="text-[12px] font-semibold text-red-500 hover:underline inline-flex items-center gap-1">
-                    <Trash2 size={12} /> Delete
+                    <Trash2 size={12} /> {t("common.delete")}
                   </button>
                 </div>
               </div>
@@ -151,24 +155,24 @@ export default function AddressesClient() {
             className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-3"
           >
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-lg font-extrabold text-gray-900">Add address</h3>
+              <h3 className="text-lg font-extrabold text-gray-900">{t("addresses.modalTitle")}</h3>
               <button type="button" onClick={() => setShowForm(false)} className="p-1 text-gray-400 hover:text-gray-700"><X size={20} /></button>
             </div>
 
-            <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="Label (Home, Office…)" className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-            <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required placeholder="Building / street address *" className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            <input value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder={t("addresses.labelPlaceholder")} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required placeholder={t("addresses.addressPlaceholder")} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             <div className="grid grid-cols-2 gap-3">
-              <input value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="Area" className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
-              <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="City" className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              <input value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder={t("addresses.areaPlaceholder")} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder={t("addresses.cityPlaceholder")} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
-            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="Phone" className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t("addresses.phonePlaceholder")} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input type="checkbox" checked={form.is_default} onChange={(e) => setForm({ ...form, is_default: e.target.checked })} className="accent-orange-600" />
-              Set as default address
+              {t("addresses.setDefaultCheckbox")}
             </label>
 
             <button type="submit" disabled={saving} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-bold bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-70">
-              {saving && <Loader2 size={15} className="animate-spin" />} Save address
+              {saving && <Loader2 size={15} className="animate-spin" />} {t("addresses.saveButton")}
             </button>
           </form>
         </div>

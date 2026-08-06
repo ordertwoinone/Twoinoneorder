@@ -4,24 +4,27 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { BannerSlide } from "./HeroBanner";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 const AUTOPLAY_MS = 4500;
 
-// Shown when no mobile banner is configured in the admin panel, so the page
-// never renders an empty hero.
+/* Shown when no mobile banner is configured in the admin panel, so the page
+   never renders an empty hero. Its copy is blank on purpose — the component
+   fills it from the dictionary, so the built-in hero speaks the visitor's
+   language while an admin-authored banner reads exactly as entered. */
+const FALLBACK_ID = "fallback";
 const FALLBACK: BannerSlide = {
-  id: "fallback",
+  id: FALLBACK_ID,
   tag: "",
-  headline_orange: "Four Restaurants.",
-  headline_black: "One Easy Order.",
-  subtitle:
-    "Arabic, Indian, Chinese, Turkish, Shawarma, Pastries, Karak & more – delivered to your door.",
-  cta_text: "Order Now",
+  headline_orange: "",
+  headline_black: "",
+  subtitle: "",
+  cta_text: "",
   cta_href: "/#restaurants",
   bg_color: "#1d3d2f",
   accent_color: "#f5b32c",
   food_image_url: "/hero/slide-1.png",
-  food_alt: "Shawarma, karak tea, sandwiches, samosas and more",
+  food_alt: "",
   sort_order: 0,
 };
 
@@ -49,6 +52,7 @@ function isLight(color?: string | null): boolean {
  * in page.tsx overlaps the bottom edge of this banner.
  */
 export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide[] }) {
+  const { t } = useTranslation();
   const list = slides.length > 0 ? slides : [FALLBACK];
   const [current, setCurrent] = useState(0);
 
@@ -61,7 +65,19 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
   }, [next, list.length]);
 
   // Guard against the active slide index outliving a shorter list.
-  const s = list[Math.min(current, list.length - 1)];
+  const raw = list[Math.min(current, list.length - 1)];
+  // Only the built-in slide takes its words from the dictionary.
+  const s: BannerSlide =
+    raw.id === FALLBACK_ID
+      ? {
+          ...raw,
+          headline_orange: t("home.hero.headline1"),
+          headline_black: t("home.hero.headline2"),
+          subtitle: t("home.hero.subtitle"),
+          cta_text: t("common.orderNow"),
+          food_alt: t("home.hero.foodAlt"),
+        }
+      : raw;
   const href = s.cta_href || "#";
   const external = /^https?:\/\//.test(href);
 
@@ -74,7 +90,7 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
 
   const cta = (
     <>
-      {s.cta_text || "Order Now"}
+      {s.cta_text || t("common.orderNow")}
       <ArrowRight size={15} strokeWidth={2.6} />
     </>
   );
@@ -95,7 +111,7 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
         {/* Food image — right side, bleeding off the edge. The wrapper carries
             the drift so it doesn't fight the image's own slide-change fade. */}
         {s.food_image_url && (
-          <div className="hero-float absolute right-[-8px] top-0 bottom-0 w-[48%] pointer-events-none">
+          <div className="hero-float absolute end-[-8px] top-0 bottom-0 w-[48%] pointer-events-none">
             <Image
               key={s.id}
               src={s.food_image_url}
@@ -110,7 +126,7 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
 
         {/* Text — keyed on the slide so the copy re-enters line by line every
             time the banner rotates, instead of swapping in place. */}
-        <div key={s.id} className="relative z-10 pl-5 pr-[42%] pt-5 pb-10">
+        <div key={s.id} className="relative z-10 ps-5 pe-[42%] pt-5 pb-10">
           {s.tag && (
             <span
               className="rise-in inline-block text-[9px] font-extrabold tracking-wider px-2 py-0.5 rounded-full mb-2"
@@ -162,7 +178,7 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
                 <button
                   key={slide.id}
                   onClick={() => setCurrent(i)}
-                  aria-label={`Banner ${i + 1}`}
+                  aria-label={t("home.bannerAria", { number: i + 1 })}
                   className="rounded-full transition-all duration-300"
                   style={{
                     width: i === current ? 16 : 5,

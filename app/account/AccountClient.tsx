@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { useTranslation } from "@/lib/i18n/useTranslation";
+import { LOCALE_META } from "@/lib/i18n/config";
 
 function GoogleIcon() {
   return (
@@ -20,8 +22,9 @@ function GoogleIcon() {
   );
 }
 
-export default function AccountClient() {
+export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { logoUrl?: string }) {
   const supabase = createClient();
+  const { t, locale } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -73,7 +76,7 @@ export default function AccountClient() {
         },
       });
       if (error) setError(error.message);
-      else setInfo("Check your inbox to confirm your email, then sign in.");
+      else setInfo(t("account.confirmEmail"));
     }
     setBusy(false);
   }
@@ -95,16 +98,20 @@ export default function AccountClient() {
   // ── Logged in — account details ──────────────────────────
   if (user) {
     const meta = user.user_metadata || {};
-    const displayName = meta.full_name || meta.name || user.email?.split("@")[0] || "Guest";
+    const displayName = meta.full_name || meta.name || user.email?.split("@")[0] || t("account.guest");
     const avatar = meta.avatar_url || meta.picture || "";
     const joined = user.created_at
-      ? new Date(user.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+      ? new Date(user.created_at).toLocaleDateString(LOCALE_META[locale].htmlLang, {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
       : "";
 
     const rows = [
-      { icon: ShoppingBag, label: "My Orders", sub: "Track & reorder", href: "/account/orders" },
-      { icon: Heart, label: "Favourites", sub: "Saved restaurants & dishes", href: "/account/favourites" },
-      { icon: MapPin, label: "Saved Addresses", sub: "Manage delivery locations", href: "/account/addresses" },
+      { icon: ShoppingBag, label: t("account.rowOrders"), sub: t("account.rowOrdersSub"), href: "/account/orders" },
+      { icon: Heart, label: t("account.rowFavourites"), sub: t("account.rowFavouritesSub"), href: "/account/favourites" },
+      { icon: MapPin, label: t("account.rowAddresses"), sub: t("account.rowAddressesSub"), href: "/account/addresses" },
     ];
 
     return (
@@ -124,8 +131,10 @@ export default function AccountClient() {
             </div>
             <div className="min-w-0">
               <h1 className="text-xl font-extrabold text-gray-900 truncate">{displayName}</h1>
-              <p className="text-[13px] text-gray-600 truncate">{user.email}</p>
-              {joined && <p className="text-[11px] text-gray-400 mt-0.5">Member since {joined}</p>}
+              <p className="text-[13px] text-gray-600 truncate force-ltr">{user.email}</p>
+              {joined && (
+                <p className="text-[11px] text-gray-400 mt-0.5">{t("account.memberSince", { date: joined })}</p>
+              )}
             </div>
           </div>
 
@@ -151,7 +160,7 @@ export default function AccountClient() {
           className="w-full mt-4 flex items-center justify-center gap-2 py-3 rounded-2xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
         >
           <LogOut size={16} />
-          Log out
+          {t("common.logOut")}
         </button>
       </div>
     );
@@ -162,15 +171,15 @@ export default function AccountClient() {
     <div className="max-w-sm mx-auto px-4 py-8">
       <div className="flex justify-center mb-5">
         <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white shadow-sm flex items-center justify-center">
-          <Image src="/logos/two-in-one.png" alt="Two In One" width={44} height={44} className="object-contain" />
+          <Image src={logoUrl} alt={t("common.brand")} width={44} height={44} className="object-contain" />
         </div>
       </div>
 
       <h1 className="text-2xl font-extrabold text-gray-900 text-center mb-1">
-        {mode === "signin" ? "Welcome back" : "Create account"}
+        {mode === "signin" ? t("account.welcomeBack") : t("account.createAccount")}
       </h1>
       <p className="text-sm text-gray-500 text-center mb-6">
-        {mode === "signin" ? "Sign in to view your account" : "Join Two In One in seconds"}
+        {mode === "signin" ? t("account.signInSub") : t("account.signUpSub")}
       </p>
 
       {/* Google */}
@@ -179,13 +188,13 @@ export default function AccountClient() {
         className="w-full flex items-center justify-center gap-2.5 py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors"
       >
         <GoogleIcon />
-        Continue with Google
+        {t("account.continueGoogle")}
       </button>
 
       {/* Divider */}
       <div className="flex items-center gap-3 my-5">
         <span className="flex-1 h-px bg-gray-100" />
-        <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">or</span>
+        <span className="text-[11px] text-gray-400 font-medium uppercase tracking-wide">{t("common.or")}</span>
         <span className="flex-1 h-px bg-gray-100" />
       </div>
 
@@ -193,40 +202,42 @@ export default function AccountClient() {
       <form onSubmit={handleEmail} className="space-y-3.5">
         {mode === "signup" && (
           <div className="relative">
-            <UserIcon size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <UserIcon size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              placeholder="Full name"
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+              placeholder={t("account.namePlaceholder")}
+              className="w-full ps-10 pe-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
             />
           </div>
         )}
 
         <div className="relative">
-          <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Mail size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            placeholder="Email address"
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+            placeholder={t("account.emailPlaceholder")}
+            dir="ltr"
+            className="w-full ps-10 pe-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
           />
         </div>
 
         <div className="relative">
-          <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Lock size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            placeholder="Password"
-            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+            placeholder={t("account.passwordPlaceholder")}
+            dir="ltr"
+            className="w-full ps-10 pe-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
           />
         </div>
 
@@ -244,18 +255,18 @@ export default function AccountClient() {
           style={{ background: "#ea580c" }}
         >
           {busy && <Loader2 size={15} className="animate-spin" />}
-          {mode === "signin" ? "Sign in" : "Create account"}
+          {mode === "signin" ? t("common.signIn") : t("account.createAccount")}
         </button>
       </form>
 
       {/* Toggle */}
       <p className="text-center text-sm text-gray-500 mt-5">
-        {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+        {mode === "signin" ? t("account.noAccount") : t("account.haveAccount")}
         <button
           onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(""); setInfo(""); }}
           className="font-bold text-orange-600 hover:underline"
         >
-          {mode === "signin" ? "Sign up" : "Sign in"}
+          {mode === "signin" ? t("common.signUp") : t("common.signIn")}
         </button>
       </p>
     </div>

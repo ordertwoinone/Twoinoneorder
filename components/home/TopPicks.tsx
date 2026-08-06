@@ -3,26 +3,37 @@ import { Plus } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { stagger } from "@/lib/stagger";
+import { T } from "@/lib/i18n/T";
+import TopPickSubtitle from "./TopPickSubtitle";
 
 /** Normalised shape every source table is mapped into. */
 interface Pick {
   key: string;
   name: string;
-  price: string | null;
+  /** `currency: true` means "wrap in the AED pattern for the active language". */
+  price: { amount: string; currency: boolean } | null;
   imageUrl: string;
   href: string;
+  /** Dictionary key when the label is ours, otherwise plain admin text. */
+  subtitleKey: string | null;
   subtitle: string;
   order: number;
   sortOrder: number;
 }
 
-/** "12" / 12 / "AED 12" → "AED 12.00"; free text is passed through as-is. */
-function formatPrice(raw: string | number | null | undefined): string | null {
+/**
+ * "12" / 12 / "AED 12" → "12.00", which the client then renders with the
+ * currency on the correct side for the language. Free text that carries no
+ * usable number is passed through untouched.
+ */
+function formatPrice(raw: string | number | null | undefined): Pick["price"] {
   if (raw === null || raw === undefined || raw === "") return null;
   const text = String(raw).trim();
   const n = parseFloat(text.replace(/aed/i, "").replace(/,/g, "").trim());
-  if (!Number.isFinite(n) || n <= 0) return /\d/.test(text) ? text : null;
-  return `AED ${n.toFixed(2)}`;
+  if (!Number.isFinite(n) || n <= 0) {
+    return /\d/.test(text) ? { amount: text, currency: false } : null;
+  }
+  return { amount: n.toFixed(2), currency: true };
 }
 
 /** An embedded to-one relation comes back as an object, or an array in some shapes. */
@@ -76,6 +87,7 @@ async function getPicks(): Promise<Pick[]> {
       price: formatPrice(r.price),
       imageUrl: r.image_url,
       href: "/restaurant/buffet",
+      subtitleKey: "home.subtitles.buffetMenu",
       subtitle: "Buffet menu",
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
@@ -86,6 +98,7 @@ async function getPicks(): Promise<Pick[]> {
       price: null,
       imageUrl: r.image_url,
       href: "/restaurant/buffet",
+      subtitleKey: r.tag ? null : "home.subtitles.buffetDish",
       subtitle: r.tag || "Buffet dish",
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
@@ -96,6 +109,7 @@ async function getPicks(): Promise<Pick[]> {
       price: formatPrice(r.price),
       imageUrl: r.image_url,
       href: "/restaurant/university-kalba",
+      subtitleKey: "home.subtitles.universityKalba",
       subtitle: "University Kalba",
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
@@ -106,6 +120,7 @@ async function getPicks(): Promise<Pick[]> {
       price: formatPrice(r.price_text),
       imageUrl: r.image_url,
       href: "/restaurant/university-kalba",
+      subtitleKey: "home.subtitles.universityKalba",
       subtitle: "University Kalba",
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
@@ -117,6 +132,7 @@ async function getPicks(): Promise<Pick[]> {
       imageUrl: r.image_url,
       // Straight to the item on the restaurant's own ordering site.
       href: r.product_url || "#",
+      subtitleKey: restaurantName(r.restaurants) ? null : "home.subtitles.orderNow",
       subtitle: restaurantName(r.restaurants) ?? "Order now",
       order: r.top_picks_order ?? 0,
       sortOrder: 0,
@@ -139,17 +155,21 @@ export default async function TopPicks() {
     <section className="py-4">
       <div className="max-w-7xl mx-auto">
         <div className="px-4 mb-3">
-          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Top Picks For You</h2>
-          <p className="text-[11px] text-gray-400 mt-0.5">Handpicked favourites from our kitchens</p>
+          <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">
+            <T k="home.topPicksTitle" />
+          </h2>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            <T k="home.topPicksSubtitle" />
+          </p>
         </div>
 
         {/* Mobile: horizontal swipe strip. Desktop: even grid. */}
         {/* Mobile: two rows that scroll sideways — grid-flow-col fills top to
             bottom, then moves to the next column, with each column sized so
-            three sit in view. scroll-pl-4 matches the px-4 inset (see
+            three sit in view. scroll-ps-4 matches the px-4 inset (see
             HomeCategories: snapping otherwise pulls the first card flush to the
             screen edge). sm+: a plain single-row grid. */}
-        <div className="grid grid-flow-col grid-rows-2 auto-cols-[calc((100vw-3.5rem)/3)] gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-pl-4 sm:grid-flow-row sm:grid-rows-none sm:auto-cols-auto sm:grid-cols-4 lg:grid-cols-5 sm:gap-4 sm:overflow-visible">
+        <div className="grid grid-flow-col grid-rows-2 auto-cols-[calc((100vw-3.5rem)/3)] gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-ps-4 sm:grid-flow-row sm:grid-rows-none sm:auto-cols-auto sm:grid-cols-4 lg:grid-cols-5 sm:gap-4 sm:overflow-visible">
           {picks.map((p, i) => (
             <div
               key={p.key}
@@ -176,7 +196,11 @@ export default async function TopPicks() {
                 </h3>
                 <div className="flex items-center justify-between gap-1 mt-1.5">
                   <span className="text-[11px] sm:text-[12px] font-extrabold truncate" style={{ color: "#ea580c" }}>
-                    {p.price ?? p.subtitle}
+                    <TopPickSubtitle
+                      price={p.price}
+                      subtitleKey={p.subtitleKey}
+                      subtitle={p.subtitle}
+                    />
                   </span>
                   <span
                     aria-hidden
@@ -199,7 +223,7 @@ export default async function TopPicks() {
                 href={p.href}
                 subtitle={p.subtitle}
                 size={13}
-                className="absolute top-1.5 right-1.5 w-7 h-7 z-20"
+                className="absolute top-1.5 end-1.5 w-7 h-7 z-20"
               />
             </div>
           ))}

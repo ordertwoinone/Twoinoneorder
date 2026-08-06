@@ -5,6 +5,9 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import BookingForm from "@/components/catering/BookingForm";
+import { T } from "@/lib/i18n/T";
+import PageMeta from "@/lib/i18n/PageMeta";
+import type { TranslationKey } from "@/lib/i18n/types";
 
 export const metadata: Metadata = {
   title: "Catering Booking",
@@ -13,10 +16,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "/catering" },
 };
 
-const HIGHLIGHTS = [
-  { icon: Users,          title: "10–5000 Guests", sub: "Any event size" },
-  { icon: UtensilsCrossed, title: "4 Cuisines",     sub: "Arabic, Indian & more" },
-  { icon: CalendarCheck,  title: "2-Hour Reply",    sub: "Fast confirmation" },
+const HIGHLIGHTS: { icon: typeof Users; titleKey: TranslationKey; subKey: TranslationKey }[] = [
+  { icon: Users,           titleKey: "catering.highlightGuestsTitle",   subKey: "catering.highlightGuestsSub" },
+  { icon: UtensilsCrossed, titleKey: "catering.highlightCuisinesTitle", subKey: "catering.highlightCuisinesSub" },
+  { icon: CalendarCheck,   titleKey: "catering.highlightReplyTitle",    subKey: "catering.highlightReplySub" },
 ];
 
 const FOOD_BUBBLES = ["🥘", "🍛", "🫓", "🧆", "🍢", "🍰"];
@@ -24,6 +27,7 @@ const FOOD_BUBBLES = ["🥘", "🍛", "🫓", "🧆", "🍢", "🍰"];
 export default function CateringPage() {
   return (
     <>
+      <PageMeta titleKey="catering.metaTitle" descriptionKey="catering.metaDescription" />
       <Navbar />
 
       <main className="bg-white pb-20 sm:pb-8">
@@ -40,29 +44,27 @@ export default function CateringPage() {
                   style={{ color: "#ea580c", border: "1.5px solid #ea580c", background: "#ea580c10" }}
                 >
                   <Star size={12} className="fill-orange-500 stroke-orange-500" />
-                  Catering Service
+                  <T k="catering.badge" />
                 </span>
 
                 <h1 className="text-2xl sm:text-4xl font-black leading-tight text-gray-900 mb-3">
-                  Catering for{" "}
-                  <span style={{ color: "#ea580c" }}>Every Occasion</span>
+                  <T k="catering.title" />{" "}
+                  <span style={{ color: "#ea580c" }}><T k="catering.titleHighlight" /></span>
                 </h1>
                 <p className="text-gray-600 text-[13px] sm:text-[15px] leading-relaxed max-w-md">
-                  From weddings to corporate lunches — authentic food from all four
-                  restaurants, delivered to your event. Fill the form and our team
-                  replies within 2 hours.
+                  <T k="catering.subtitle" />
                 </p>
 
                 {/* Highlights */}
                 <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-3 max-w-md">
-                  {HIGHLIGHTS.map(({ icon: Icon, title, sub }) => (
+                  {HIGHLIGHTS.map(({ icon: Icon, titleKey, subKey }) => (
                     <div
-                      key={title}
+                      key={titleKey}
                       className="bg-white/70 backdrop-blur-sm rounded-2xl px-2 py-3 text-center shadow-sm border border-white"
                     >
                       <Icon size={18} className="mx-auto mb-1.5 text-orange-500" />
-                      <p className="text-[11px] sm:text-[12px] font-extrabold text-gray-900 leading-tight">{title}</p>
-                      <p className="text-[9px] sm:text-[10px] text-gray-500 leading-tight mt-0.5">{sub}</p>
+                      <p className="text-[11px] sm:text-[12px] font-extrabold text-gray-900 leading-tight"><T k={titleKey} /></p>
+                      <p className="text-[9px] sm:text-[10px] text-gray-500 leading-tight mt-0.5"><T k={subKey} /></p>
                     </div>
                   ))}
                 </div>
@@ -106,15 +108,15 @@ export default function CateringPage() {
               className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-orange-600 mb-5 transition-colors"
             >
               <ChevronLeft size={16} />
-              Back to Home
+              <T k="catering.backHome" />
             </Link>
 
             <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 sm:p-8">
               <h2 className="text-xl font-extrabold text-gray-900 mb-1.5">
-                Catering Enquiry
+                <T k="catering.formTitle" />
               </h2>
               <p className="text-sm text-gray-500 mb-7">
-                We&apos;ll send your details via WhatsApp for a fast reply.
+                <T k="catering.formSubtitle" />
               </p>
               <BookingForm />
             </div>

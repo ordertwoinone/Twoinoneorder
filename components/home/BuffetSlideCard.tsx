@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Star, ArrowRight, Tag, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export interface BuffetItem {
   id: string;
@@ -16,6 +17,7 @@ export interface BuffetItem {
 }
 
 export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
+  const { t } = useTranslation();
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -63,13 +65,13 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
             </div>
 
             {/* Label */}
-            <span className="absolute top-3 left-3 text-[10px] font-extrabold px-2.5 py-1 rounded-full leading-none z-10 bg-white text-orange-600 shadow-sm">
-              🔥 Buffet Highlights
+            <span className="absolute top-3 start-3 text-[10px] font-extrabold px-2.5 py-1 rounded-full leading-none z-10 bg-white text-orange-600 shadow-sm">
+              {t("home.buffetHighlightsLabel")}
             </span>
 
             {/* Slide counter */}
             {multi && (
-              <span className="absolute top-3 right-3 text-[10px] font-bold px-2 py-1 rounded-full bg-black/45 text-white leading-none z-10">
+              <span className="absolute top-3 end-3 text-[10px] font-bold px-2 py-1 rounded-full bg-black/45 text-white leading-none z-10 force-ltr">
                 {idx + 1}/{items.length}
               </span>
             )}
@@ -101,7 +103,7 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
               <div className="flex items-center gap-2 sm:gap-3 mt-0.5">
                 <span className="flex items-center gap-1 text-[11px] sm:text-[12px] text-orange-50 font-medium">
                   <Tag size={11} className="text-orange-200" />
-                  from <strong className="text-white">AED {b.price}</strong>
+                  {t("common.from")} <strong className="text-white">{t("common.price", { amount: b.price })}</strong>
                 </span>
                 <span className="flex items-center gap-1 text-[11px] sm:text-[12px] text-orange-50 font-medium">
                   <Star size={11} className="fill-yellow-300 stroke-yellow-300" />
@@ -111,8 +113,8 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
             </div>
 
             <div className="flex items-center mt-auto pt-2.5 sm:pt-3">
-              <div className="w-full sm:w-auto sm:ml-auto flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 rounded-full text-[12px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm">
-                Book Now
+              <div className="w-full sm:w-auto sm:ms-auto flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 sm:py-1.5 rounded-full text-[12px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm">
+                {t("common.bookNow")}
                 <ArrowRight size={13} strokeWidth={2.5} className="group-hover:translate-x-0.5 transition-transform duration-200" />
               </div>
             </div>
@@ -125,17 +127,17 @@ export default function BuffetSlideCard({ items }: { items: BuffetItem[] }) {
         <>
           <button
             type="button"
-            aria-label="Previous"
+            aria-label={t("common.previous")}
             onClick={() => go(-1)}
-            className="absolute left-4 sm:left-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute start-4 sm:start-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
             <ChevronLeft size={17} strokeWidth={2.5} />
           </button>
           <button
             type="button"
-            aria-label="Next"
+            aria-label={t("common.next")}
             onClick={() => go(1)}
-            className="absolute right-4 sm:right-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
+            className="absolute end-4 sm:end-5 top-[64px] sm:top-[92px] -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 shadow-md border border-gray-100 flex items-center justify-center text-gray-700 hover:bg-white hover:scale-110 active:scale-95 transition-all"
           >
             <ChevronRight size={17} strokeWidth={2.5} />
           </button>

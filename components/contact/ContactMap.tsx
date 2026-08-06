@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MapPin, ArrowUpRight } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import { useTranslation } from "@/lib/i18n/useTranslation";
 
 export interface ContactLocation {
   id: string;
@@ -22,6 +23,7 @@ const PIN_HTML = `
   </div>`;
 
 export default function ContactMap({ locations }: { locations: ContactLocation[] }) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
@@ -60,7 +62,7 @@ export default function ContactMap({ locations }: { locations: ContactLocation[]
                <p style="font-size:11px;color:#6b7280;margin:0 0 6px">${loc.address || ""}</p>
                <a href="${loc.maps_url || `https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`}"
                   target="_blank" rel="noopener noreferrer"
-                  style="font-size:11px;font-weight:700;color:#ea580c;text-decoration:none">Open in Maps →</a>
+                  style="font-size:11px;font-weight:700;color:#ea580c;text-decoration:none">${t("common.openInMaps")} →</a>
              </div>`
           );
         marker.on("click", () => setActiveId(loc.id));
@@ -83,7 +85,7 @@ export default function ContactMap({ locations }: { locations: ContactLocation[]
         markersRef.current = {};
       }
     };
-  }, [locations]);
+  }, [locations, t]);
 
   function focusLocation(loc: ContactLocation) {
     setActiveId(loc.id);
@@ -136,7 +138,7 @@ export default function ContactMap({ locations }: { locations: ContactLocation[]
           rel="noopener noreferrer"
           className="shrink-0 flex items-center gap-1 text-[12px] font-semibold text-orange-600 hover:text-orange-700"
         >
-          Open in Maps <ArrowUpRight size={13} />
+          {t("common.openInMaps")} <ArrowUpRight size={13} />
         </a>
       </div>
     </div>

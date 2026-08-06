@@ -10,17 +10,13 @@ export interface CateringEnquiry {
 
 const WHATSAPP_NUMBER = "971522305216";
 
-export function buildWhatsAppUrl(enquiry: CateringEnquiry): string {
-  const message = `*New Catering Enquiry from Two In One UAE*
-
-👤 *Name:* ${enquiry.name}
-📞 *Phone:* ${enquiry.phone}
-🎉 *Event:* ${enquiry.eventType}
-👥 *Guests:* ${enquiry.guests}
-📅 *Date:* ${enquiry.date}
-⏰ *Time:* ${enquiry.timeSlot}${enquiry.notes ? `\n📝 *Notes:* ${enquiry.notes}` : ""}
-
-_Sent via Two In One UAE website_`;
-
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+/**
+ * The caller supplies the already-translated lines — the customer sends this
+ * message from their own WhatsApp, so it reads in whichever language they are
+ * browsing in. See cateringForm.wa.* in the dictionaries.
+ */
+export function buildWhatsAppUrl(lines: string[]): string {
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    lines.filter(Boolean).join("\n"),
+  )}`;
 }
