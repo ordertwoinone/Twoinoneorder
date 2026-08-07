@@ -2,16 +2,22 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Card {
   id: string;
   title: string;
+  title_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   description: string;
+  description_ar: string;
   emoji: string;
   image_url: string;
   badge: string;
+  badge_ar: string;
   button_text: string;
+  button_text_ar: string;
   href: string;
   accent_color: string;
   bg_from: string;
@@ -22,12 +28,17 @@ interface Card {
 
 const EMPTY: Omit<Card, "id"> = {
   title: "",
+  title_ar: "",
   subtitle: "",
+  subtitle_ar: "",
   description: "",
+  description_ar: "",
   emoji: "🍽️",
   image_url: "",
   badge: "",
+  badge_ar: "",
   button_text: "Learn More",
+  button_text_ar: "",
   href: "/",
   accent_color: "#ea580c",
   bg_from: "#fff8f2",
@@ -261,30 +272,61 @@ export default function HomepageCardsAdmin() {
                     className="w-full px-2 py-2.5 rounded-lg border border-gray-200 text-2xl text-center focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title</label>
-                  <input type="text" value={modal.data.title} onChange={(e) => set("title", e.target.value)} className={inputCls} placeholder="Book a Table" />
+                  <BilingualField
+                    label="Title"
+                    value={modal.data.title}
+                    valueAr={modal.data.title_ar ?? ""}
+                    onChange={(v) => set("title", v)}
+                    onChangeAr={(v) => set("title_ar", v)}
+                    placeholder="Book a Table"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle <span className="font-normal text-gray-400">(accent-colored label above title)</span></label>
-                <input type="text" value={modal.data.subtitle} onChange={(e) => set("subtitle", e.target.value)} className={inputCls} placeholder="Reserve Your Spot" />
+                <BilingualField
+                  label={<>Subtitle <span className="font-normal text-gray-400">(accent-colored label above title)</span></>}
+                  value={modal.data.subtitle}
+                  valueAr={modal.data.subtitle_ar ?? ""}
+                  onChange={(v) => set("subtitle", v)}
+                  onChangeAr={(v) => set("subtitle_ar", v)}
+                  placeholder="Reserve Your Spot"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
-                <textarea value={modal.data.description} onChange={(e) => set("description", e.target.value)}
-                  className={`${inputCls} resize-none`} rows={2} placeholder="Short description shown on the card" />
+                <BilingualField
+                  label="Description"
+                  value={modal.data.description}
+                  valueAr={modal.data.description_ar ?? ""}
+                  onChange={(v) => set("description", v)}
+                  onChangeAr={(v) => set("description_ar", v)}
+                  placeholder="Short description shown on the card"
+                  multiline
+                  rows={2}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Badge <span className="font-normal text-gray-400">(top-left chip)</span></label>
-                  <input type="text" value={modal.data.badge} onChange={(e) => set("badge", e.target.value)} className={inputCls} placeholder="🍽️ Dine In" />
+                  <BilingualField
+                    label={<>Badge <span className="font-normal text-gray-400">(top-left chip)</span></>}
+                    value={modal.data.badge}
+                    valueAr={modal.data.badge_ar ?? ""}
+                    onChange={(v) => set("badge", v)}
+                    onChangeAr={(v) => set("badge_ar", v)}
+                    placeholder="🍽️ Dine In"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Button Text</label>
-                  <input type="text" value={modal.data.button_text} onChange={(e) => set("button_text", e.target.value)} className={inputCls} placeholder="Book Now" />
+                  <BilingualField
+                    label="Button Text"
+                    value={modal.data.button_text}
+                    valueAr={modal.data.button_text_ar ?? ""}
+                    onChange={(v) => set("button_text", v)}
+                    onChangeAr={(v) => set("button_text_ar", v)}
+                    placeholder="Book Now"
+                  />
                 </div>
               </div>
 

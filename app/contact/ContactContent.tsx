@@ -4,6 +4,7 @@ import { Star, MapPin, MessageCircle, Mail, Clock, ChevronRight } from "lucide-r
 import ContactQuickActions from "@/components/contact/ContactQuickActions";
 import ContactMap, { ContactLocation } from "@/components/contact/ContactMap";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalized } from "@/lib/i18n/localized";
 
 export interface ContactSettings {
   logo: string;
@@ -19,6 +20,14 @@ export interface ContactSettings {
   headingHighlight: string | null;
   subheading: string | null;
   hours: string | null;
+  /* Arabic twins from admin → Contact Details; blank falls back to English. */
+  restaurantNameAr: string | null;
+  reviewsAr: string | null;
+  locationLabelAr: string | null;
+  headingAr: string | null;
+  headingHighlightAr: string | null;
+  subheadingAr: string | null;
+  hoursAr: string | null;
 }
 
 export default function ContactContent({
@@ -29,15 +38,20 @@ export default function ContactContent({
   locations: ContactLocation[];
 }) {
   const { t } = useTranslation();
+  const localized = useLocalized();
 
-  const restaurantName = settings.restaurantName || t("contact.defaultRestaurantName");
+  /* Arabic typed in admin wins, then the English column, then our own copy. */
+  const field = (en: string | null, ar: string | null, fallback: string) =>
+    localized(en, ar) || fallback;
+
+  const restaurantName = field(settings.restaurantName, settings.restaurantNameAr, t("contact.defaultRestaurantName"));
   const rating = settings.rating || "4.8";
-  const reviews = settings.reviews || t("contact.defaultReviews");
-  const locationLabel = settings.locationLabel || t("contact.defaultLocation");
-  const heading = settings.heading || t("contact.defaultHeading");
-  const headingHighlight = settings.headingHighlight || t("contact.defaultHeadingHighlight");
-  const subheading = settings.subheading || t("contact.defaultSubheading");
-  const hours = settings.hours || t("contact.defaultHours");
+  const reviews = field(settings.reviews, settings.reviewsAr, t("contact.defaultReviews"));
+  const locationLabel = field(settings.locationLabel, settings.locationLabelAr, t("contact.defaultLocation"));
+  const heading = field(settings.heading, settings.headingAr, t("contact.defaultHeading"));
+  const headingHighlight = field(settings.headingHighlight, settings.headingHighlightAr, t("contact.defaultHeadingHighlight"));
+  const subheading = field(settings.subheading, settings.subheadingAr, t("contact.defaultSubheading"));
+  const hours = field(settings.hours, settings.hoursAr, t("contact.defaultHours"));
 
   // Phone, Save Contact and Location cards intentionally omitted (per design).
   const methods = [

@@ -2,36 +2,48 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface CampusPromo {
   id?: string;
   title: string;
+  title_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   description: string;
+  description_ar: string;
   badge: string;
+  badge_ar: string;
   image_url: string;
   button_text: string;
+  button_text_ar: string;
   perk1: string;
+  perk1_ar: string;
   perk2: string;
+  perk2_ar: string;
   perk3: string;
+  perk3_ar: string;
   is_active: boolean;
 }
 
 const DEFAULTS: CampusPromo = {
   title: "Two in One University Kalba",
+  title_ar: "",
   subtitle: "Made for Students, Loved by Everyone!",
+  subtitle_ar: "",
   description: "Student-friendly prices · Fresh food · Free WiFi",
+  description_ar: "",
   badge: "🎓 On Campus",
+  badge_ar: "",
   image_url: "",
   button_text: "View Menu",
-  perk1: "Student Prices",
-  perk2: "Free WiFi",
-  perk3: "Open Late",
+  button_text_ar: "",
+  perk1: "Student Prices", perk1_ar: "",
+  perk2: "Free WiFi", perk2_ar: "",
+  perk3: "Open Late", perk3_ar: "",
   is_active: true,
 };
 
-const inputCls =
-  "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 export default function CampusPromoAdmin() {
   const [form, setForm] = useState<CampusPromo>(DEFAULTS);
@@ -128,66 +140,56 @@ export default function CampusPromoAdmin() {
           <h2 className="text-sm font-semibold text-gray-700">Text Content</h2>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Badge (top label)
-            </label>
-            <input
-              type="text"
+            <BilingualField
+              label="Badge (top label)"
               value={form.badge}
-              onChange={(e) => set("badge", e.target.value)}
-              className={inputCls}
+              valueAr={form.badge_ar ?? ""}
+              onChange={(v) => set("badge", v)}
+              onChangeAr={(v) => set("badge_ar", v)}
               placeholder="🎓 On Campus"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Title
-            </label>
-            <input
-              type="text"
+            <BilingualField
+              label="Title"
               value={form.title}
-              onChange={(e) => set("title", e.target.value)}
-              className={inputCls}
+              valueAr={form.title_ar ?? ""}
+              onChange={(v) => set("title", v)}
+              onChangeAr={(v) => set("title_ar", v)}
               placeholder="Two in One University Kalba"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Subtitle (orange highlight line)
-            </label>
-            <input
-              type="text"
+            <BilingualField
+              label="Subtitle (orange highlight line)"
               value={form.subtitle}
-              onChange={(e) => set("subtitle", e.target.value)}
-              className={inputCls}
+              valueAr={form.subtitle_ar ?? ""}
+              onChange={(v) => set("subtitle", v)}
+              onChangeAr={(v) => set("subtitle_ar", v)}
               placeholder="Made for Students, Loved by Everyone!"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Description
-            </label>
-            <input
-              type="text"
+            <BilingualField
+              label="Description"
               value={form.description}
-              onChange={(e) => set("description", e.target.value)}
-              className={inputCls}
+              valueAr={form.description_ar ?? ""}
+              onChange={(v) => set("description", v)}
+              onChangeAr={(v) => set("description_ar", v)}
               placeholder="Student-friendly prices · Fresh food · Free WiFi"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Button Text
-            </label>
-            <input
-              type="text"
+            <BilingualField
+              label="Button Text"
               value={form.button_text}
-              onChange={(e) => set("button_text", e.target.value)}
-              className={inputCls}
+              valueAr={form.button_text_ar ?? ""}
+              onChange={(v) => set("button_text", v)}
+              onChangeAr={(v) => set("button_text_ar", v)}
               placeholder="View Menu"
             />
           </div>
@@ -197,18 +199,15 @@ export default function CampusPromoAdmin() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-700">Perk Chips (3 highlights)</h2>
           {(["perk1", "perk2", "perk3"] as const).map((key, i) => (
-            <div key={key}>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Perk {i + 1}
-              </label>
-              <input
-                type="text"
-                value={form[key]}
-                onChange={(e) => set(key, e.target.value)}
-                className={inputCls}
-                placeholder={["Student Prices", "Free WiFi", "Open Late"][i]}
-              />
-            </div>
+            <BilingualField
+              key={key}
+              label={`Perk ${i + 1}`}
+              value={form[key]}
+              valueAr={form[`${key}_ar` as const] ?? ""}
+              onChange={(v) => set(key, v)}
+              onChangeAr={(v) => set(`${key}_ar` as keyof CampusPromo, v)}
+              placeholder={["Student Prices", "Free WiFi", "Open Late"][i]}
+            />
           ))}
         </div>
 

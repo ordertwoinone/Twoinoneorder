@@ -3,11 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin, ArrowUpRight } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalizedField } from "@/lib/i18n/localized";
 
 export interface ContactLocation {
   id: string;
   name: string;
+  name_ar?: string | null;
   address: string;
+  address_ar?: string | null;
   latitude: number;
   longitude: number;
   maps_url: string;
@@ -24,6 +27,7 @@ const PIN_HTML = `
 
 export default function ContactMap({ locations }: { locations: ContactLocation[] }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const containerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef = useRef<any>(null);
@@ -58,8 +62,8 @@ export default function ContactMap({ locations }: { locations: ContactLocation[]
           .addTo(map)
           .bindPopup(
             `<div style="font-family:system-ui,sans-serif;min-width:140px">
-               <p style="font-weight:800;font-size:13px;color:#111;margin:0 0 2px">${loc.name}</p>
-               <p style="font-size:11px;color:#6b7280;margin:0 0 6px">${loc.address || ""}</p>
+               <p style="font-weight:800;font-size:13px;color:#111;margin:0 0 2px">${pick(loc, "name")}</p>
+               <p style="font-size:11px;color:#6b7280;margin:0 0 6px">${pick(loc, "address") || ""}</p>
                <a href="${loc.maps_url || `https://www.google.com/maps/search/?api=1&query=${loc.latitude},${loc.longitude}`}"
                   target="_blank" rel="noopener noreferrer"
                   style="font-size:11px;font-weight:700;color:#ea580c;text-decoration:none">${t("common.openInMaps")} →</a>
@@ -85,7 +89,7 @@ export default function ContactMap({ locations }: { locations: ContactLocation[]
         markersRef.current = {};
       }
     };
-  }, [locations, t]);
+  }, [locations, t, pick]);
 
   function focusLocation(loc: ContactLocation) {
     setActiveId(loc.id);
@@ -116,7 +120,7 @@ export default function ContactMap({ locations }: { locations: ContactLocation[]
               }`}
             >
               <MapPin size={12} />
-              {loc.name}
+              {pick(loc, "name")}
             </button>
           );
         })}
@@ -129,8 +133,8 @@ export default function ContactMap({ locations }: { locations: ContactLocation[]
       <div className="flex items-center gap-2.5 px-4 py-3 border-t border-gray-100">
         <MapPin size={16} className="text-orange-500 shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-gray-900 truncate">{active.name}</p>
-          <p className="text-[12px] text-gray-500 truncate">{active.address}</p>
+          <p className="text-sm font-bold text-gray-900 truncate">{pick(active, "name")}</p>
+          <p className="text-[12px] text-gray-500 truncate">{pick(active, "address")}</p>
         </div>
         <a
           href={active.maps_url || `https://www.google.com/maps/search/?api=1&query=${active.latitude},${active.longitude}`}

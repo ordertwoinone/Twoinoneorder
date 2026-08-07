@@ -647,6 +647,15 @@ const ar: Dictionary = {
     },
     popularTitle: "الأكثر طلبًا في الحرم الجامعي",
     dealsTitle: "عروض يومية",
+    days: {
+      Monday: "الإثنين",
+      Tuesday: "الثلاثاء",
+      Wednesday: "الأربعاء",
+      Thursday: "الخميس",
+      Friday: "الجمعة",
+      Saturday: "السبت",
+      Sunday: "الأحد",
+    },
     specialsTitle: "عروض الجامعة",
     study: {
       title: "ادرس واسترخِ",

@@ -121,11 +121,14 @@ ALTER TABLE buffet_menu_sections
 ALTER TABLE buffet_menu_items
   ADD COLUMN IF NOT EXISTS name_ar text;
 
--- hours / cuisines stay jsonb; their Arabic text lives inside each element.
+-- `hours` stays as it is: its Arabic lives inside each row (label_ar, time_ar).
+-- `cuisines` is a flat list of strings with nowhere to put a twin, so it gets a
+-- parallel list; the admin editor adds and removes from both together.
 ALTER TABLE buffet_about
   ADD COLUMN IF NOT EXISTS about_title_ar text,
   ADD COLUMN IF NOT EXISTS about_text_ar  text,
-  ADD COLUMN IF NOT EXISTS location_ar    text;
+  ADD COLUMN IF NOT EXISTS location_ar    text,
+  ADD COLUMN IF NOT EXISTS cuisines_ar    jsonb DEFAULT '[]'::jsonb;
 
 ALTER TABLE buffet_reviews
   ADD COLUMN IF NOT EXISTS name_ar      text,

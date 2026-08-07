@@ -623,6 +623,15 @@ const en = {
     },
     popularTitle: "Popular Around Campus",
     dealsTitle: "Daily Deals",
+    days: {
+      Monday: "Monday",
+      Tuesday: "Tuesday",
+      Wednesday: "Wednesday",
+      Thursday: "Thursday",
+      Friday: "Friday",
+      Saturday: "Saturday",
+      Sunday: "Sunday",
+    },
     specialsTitle: "University Specials",
     study: {
       title: "Study & Chill",

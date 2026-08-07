@@ -3,25 +3,39 @@ import { useEffect, useState } from "react";
 import { Save, MessageSquare, Image as ImageIcon, MapPin } from "lucide-react";
 import Link from "next/link";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 const CONTACT_FIELDS = [
   "contact_restaurant_name",
+  "contact_restaurant_name_ar",
   "contact_location_label",
+  "contact_location_label_ar",
   "contact_rating",
   "contact_reviews",
+  "contact_reviews_ar",
   "contact_hero_image_url",
   "contact_heading",
+  "contact_heading_ar",
   "contact_heading_highlight",
+  "contact_heading_highlight_ar",
   "contact_subheading",
+  "contact_subheading_ar",
   "contact_hours",
+  "contact_hours_ar",
 ] as const;
 
 type ContactForm = Record<(typeof CONTACT_FIELDS)[number], string> & { id?: string };
 
 const EMPTY: ContactForm = {
-  contact_restaurant_name: "", contact_location_label: "", contact_rating: "",
-  contact_reviews: "", contact_hero_image_url: "", contact_heading: "",
-  contact_heading_highlight: "", contact_subheading: "", contact_hours: "",
+  contact_restaurant_name: "", contact_restaurant_name_ar: "",
+  contact_location_label: "", contact_location_label_ar: "",
+  contact_rating: "",
+  contact_reviews: "", contact_reviews_ar: "",
+  contact_hero_image_url: "",
+  contact_heading: "", contact_heading_ar: "",
+  contact_heading_highlight: "", contact_heading_highlight_ar: "",
+  contact_subheading: "", contact_subheading_ar: "",
+  contact_hours: "", contact_hours_ar: "",
 };
 
 const inputCls =
@@ -94,12 +108,33 @@ export default function ContactDetailsAdmin() {
         </div>
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Restaurant Name" value={form.contact_restaurant_name} onChange={(v) => handleField("contact_restaurant_name", v)} placeholder="Two in One Restaurant" />
-            <Field label="Location Label" value={form.contact_location_label} onChange={(v) => handleField("contact_location_label", v)} placeholder="Al Nahda, Fujairah, Dubai" />
+            <BilingualField
+              label="Restaurant Name"
+              value={form.contact_restaurant_name}
+              valueAr={form.contact_restaurant_name_ar ?? ""}
+              onChange={(v) => handleField("contact_restaurant_name", v)}
+              onChangeAr={(v) => handleField("contact_restaurant_name_ar", v)}
+              placeholder="Two in One Restaurant"
+            />
+            <BilingualField
+              label="Location Label"
+              value={form.contact_location_label}
+              valueAr={form.contact_location_label_ar ?? ""}
+              onChange={(v) => handleField("contact_location_label", v)}
+              onChangeAr={(v) => handleField("contact_location_label_ar", v)}
+              placeholder="Al Nahda, Fujairah, Dubai"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Rating" value={form.contact_rating} onChange={(v) => handleField("contact_rating", v)} placeholder="4.8" />
-            <Field label="Reviews Label" value={form.contact_reviews} onChange={(v) => handleField("contact_reviews", v)} placeholder="2.3K+ Reviews" />
+            <BilingualField
+              label="Reviews Label"
+              value={form.contact_reviews}
+              valueAr={form.contact_reviews_ar ?? ""}
+              onChange={(v) => handleField("contact_reviews", v)}
+              onChangeAr={(v) => handleField("contact_reviews_ar", v)}
+              placeholder="2.3K+ Reviews"
+            />
           </div>
           <ImageUploadField label="Hero Food Image" value={form.contact_hero_image_url} onChange={(v) => handleField("contact_hero_image_url", v)} folder="contact" />
         </div>
@@ -113,14 +148,43 @@ export default function ContactDetailsAdmin() {
         </div>
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Heading" value={form.contact_heading} onChange={(v) => handleField("contact_heading", v)} placeholder="Get in" />
-            <Field label="Heading Highlight (orange)" value={form.contact_heading_highlight} onChange={(v) => handleField("contact_heading_highlight", v)} placeholder="Touch" />
+            <BilingualField
+              label="Heading"
+              value={form.contact_heading}
+              valueAr={form.contact_heading_ar ?? ""}
+              onChange={(v) => handleField("contact_heading", v)}
+              onChangeAr={(v) => handleField("contact_heading_ar", v)}
+              placeholder="Get in"
+            />
+            <BilingualField
+              label="Heading Highlight (orange)"
+              value={form.contact_heading_highlight}
+              valueAr={form.contact_heading_highlight_ar ?? ""}
+              onChange={(v) => handleField("contact_heading_highlight", v)}
+              onChangeAr={(v) => handleField("contact_heading_highlight_ar", v)}
+              placeholder="Touch"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subheading</label>
-            <textarea value={form.contact_subheading || ""} onChange={(e) => handleField("contact_subheading", e.target.value)} rows={3} placeholder="We're here to help with orders, catering…" className={`${inputCls} resize-y`} />
+            <BilingualField
+              label="Subheading"
+              value={form.contact_subheading || ""}
+              valueAr={form.contact_subheading_ar ?? ""}
+              onChange={(v) => handleField("contact_subheading", v)}
+              onChangeAr={(v) => handleField("contact_subheading_ar", v)}
+              placeholder="We're here to help with orders, catering…"
+              multiline
+              rows={3}
+            />
           </div>
-          <Field label="Opening Hours" value={form.contact_hours} onChange={(v) => handleField("contact_hours", v)} placeholder="Every day · 9:00 AM – 11:00 PM" />
+          <BilingualField
+            label="Opening Hours"
+            value={form.contact_hours}
+            valueAr={form.contact_hours_ar ?? ""}
+            onChange={(v) => handleField("contact_hours", v)}
+            onChangeAr={(v) => handleField("contact_hours_ar", v)}
+            placeholder="Every day · 9:00 AM – 11:00 PM"
+          />
         </div>
       </div>
 

@@ -16,6 +16,7 @@ import {
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalizedField } from "@/lib/i18n/localized";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
 
@@ -414,6 +415,7 @@ export default function MenuContent({
 }) {
   const searchParams = useSearchParams();
   const { t, tp } = useTranslation();
+  const pick = useLocalizedField();
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [members, setMembers] = useState(1);
@@ -434,7 +436,7 @@ export default function MenuContent({
 
   const cartItems: CartItem[] = popular.map((p) => ({
     id: p.id,
-    name: p.name,
+    name: pick(p, "name"),
     image_url: p.image_url,
     priceLabel: t("common.price", { amount: p.price }),
     numericPrice: parseFloat(p.price) || 0,
@@ -495,9 +497,9 @@ export default function MenuContent({
 
   const filtered = useMemo(() => {
     return popular.filter((p) => {
-      const matchesSearch =
-        search.trim() === "" ||
-        p.name.toLowerCase().includes(search.toLowerCase());
+      // Search matches either language, so an Arabic query finds Arabic names.
+      const haystack = `${p.name} ${p.name_ar ?? ""}`.toLowerCase();
+      const matchesSearch = search.trim() === "" || haystack.includes(search.toLowerCase());
       const matchesCategory =
         activeCategory === "all" || p.category_id === activeCategory;
       return matchesSearch && matchesCategory;
@@ -620,7 +622,7 @@ export default function MenuContent({
                 }
               >
                 <span>{c.emoji}</span>
-                {c.label}
+                {pick(c, "label")}
               </button>
             ))}
           </div>
@@ -629,7 +631,7 @@ export default function MenuContent({
         {/* Results count */}
         <p className="mt-5 text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
           {tp("common.items", filtered.length)}
-          {activeCategoryLabel && ` · ${activeCategoryLabel.emoji} ${activeCategoryLabel.label}`}
+          {activeCategoryLabel && ` · ${activeCategoryLabel.emoji} ${pick(activeCategoryLabel, "label")}`}
           {search && t("menuPage.resultsFor", { query: search })}
         </p>
 
@@ -675,7 +677,7 @@ export default function MenuContent({
                     {p.image_url ? (
                       <Image
                         src={p.image_url}
-                        alt={p.name}
+                        alt={pick(p, "name")}
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-105"
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -702,7 +704,7 @@ export default function MenuContent({
                   </div>
                   <div className="px-3 pt-2.5 pb-3">
                     <h3 className="text-gray-900 font-extrabold text-[13px] leading-tight mb-1 min-h-[2.2em]">
-                      {p.name}
+                      {pick(p, "name")}
                     </h3>
                     {(p.tags ?? []).length > 0 && (
                       <div className="flex flex-wrap gap-0.5 mb-1.5">
@@ -724,7 +726,7 @@ export default function MenuContent({
                       </span>
                       <span className="flex items-center gap-0.5 text-gray-400">
                         <Clock size={9} />
-                        {p.time_text}
+                        {pick(p, "time_text")}
                       </span>
                     </div>
                     <div className="h-px bg-gray-100 mb-2" />

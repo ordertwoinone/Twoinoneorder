@@ -2,11 +2,14 @@
 import { useEffect, useState } from "react";
 import { Save, Globe, Phone, MapPin, Share2, RefreshCw, BarChart3 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Settings {
   id: string;
   site_name: string;
+  site_name_ar: string;
   tagline: string;
+  tagline_ar: string;
   logo_url: string;
   favicon_url: string;
   og_image_url: string;
@@ -16,8 +19,11 @@ interface Settings {
   tiktok_url: string;
   whatsapp_number: string;
   address: string;
+  address_ar: string;
   city: string;
+  city_ar: string;
   country: string;
+  country_ar: string;
   email: string;
   phone: string;
   meta_pixel_id: string;
@@ -27,9 +33,11 @@ interface Settings {
 }
 
 const EMPTY: Omit<Settings, "id"> = {
-  site_name: "", tagline: "", logo_url: "", favicon_url: "", og_image_url: "",
+  site_name: "",
+  site_name_ar: "", tagline: "", tagline_ar: "", logo_url: "", favicon_url: "", og_image_url: "",
   facebook_url: "", instagram_url: "", twitter_url: "", tiktok_url: "",
-  whatsapp_number: "", address: "", city: "", country: "UAE", email: "", phone: "",
+  whatsapp_number: "", address: "", address_ar: "", city: "", city_ar: "",
+  country: "UAE", country_ar: "", email: "", phone: "",
   meta_pixel_id: "", ga_measurement_id: "", gtm_id: "", head_scripts: "",
 };
 
@@ -143,8 +151,22 @@ export default function SettingsAdmin() {
       {/* Brand */}
       <Section icon={Globe} title="Brand">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Site Name" value={form.site_name} onChange={(v) => handleField("site_name", v)} placeholder="Two In One UAE" />
-          <Field label="Tagline" value={form.tagline} onChange={(v) => handleField("tagline", v)} placeholder="4 Restaurants. One Destination." />
+          <BilingualField
+            label="Site Name"
+            value={form.site_name}
+            valueAr={form.site_name_ar ?? ""}
+            onChange={(v) => handleField("site_name", v)}
+            onChangeAr={(v) => handleField("site_name_ar", v)}
+            placeholder="Two In One UAE"
+          />
+          <BilingualField
+            label="Tagline"
+            value={form.tagline}
+            valueAr={form.tagline_ar ?? ""}
+            onChange={(v) => handleField("tagline", v)}
+            onChangeAr={(v) => handleField("tagline_ar", v)}
+            placeholder="4 Restaurants. One Destination."
+          />
         </div>
         <ImageUploadField label="Logo" value={form.logo_url} onChange={(v) => handleField("logo_url", v)} folder="brand" />
         <ImageUploadField label="Favicon (.ico or .png)" value={form.favicon_url} onChange={(v) => handleField("favicon_url", v)} folder="brand" />
@@ -172,10 +194,31 @@ export default function SettingsAdmin() {
 
       {/* Address */}
       <Section icon={MapPin} title="Address">
-        <Field label="Street Address" value={form.address} onChange={(v) => handleField("address", v)} placeholder="Al Nahda, Dubai" />
+        <BilingualField
+          label="Street Address"
+          value={form.address}
+          valueAr={form.address_ar ?? ""}
+          onChange={(v) => handleField("address", v)}
+          onChangeAr={(v) => handleField("address_ar", v)}
+          placeholder="Al Nahda, Dubai"
+        />
         <div className="grid grid-cols-2 gap-4">
-          <Field label="City" value={form.city} onChange={(v) => handleField("city", v)} placeholder="Dubai" />
-          <Field label="Country" value={form.country} onChange={(v) => handleField("country", v)} placeholder="UAE" />
+          <BilingualField
+            label="City"
+            value={form.city}
+            valueAr={form.city_ar ?? ""}
+            onChange={(v) => handleField("city", v)}
+            onChangeAr={(v) => handleField("city_ar", v)}
+            placeholder="Dubai"
+          />
+          <BilingualField
+            label="Country"
+            value={form.country}
+            valueAr={form.country_ar ?? ""}
+            onChange={(v) => handleField("country", v)}
+            onChangeAr={(v) => handleField("country_ar", v)}
+            placeholder="UAE"
+          />
         </div>
       </Section>
 

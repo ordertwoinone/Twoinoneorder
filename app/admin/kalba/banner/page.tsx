@@ -8,6 +8,9 @@ interface Chip {
   emoji: string;
   line1: string;
   line2: string;
+  /* Arabic sits beside its English twin so the pair can never drift apart. */
+  line1_ar?: string;
+  line2_ar?: string;
 }
 
 interface KalbaBanner {
@@ -175,10 +178,21 @@ export default function KalbaBannerAdmin() {
                 <div key={i} className="flex gap-2 items-start">
                   <input type="text" value={chip.emoji} onChange={(e) => handleChip(i, "emoji", e.target.value)}
                     className="w-14 px-2 py-2.5 rounded-lg border border-gray-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="🎓" />
-                  <input type="text" value={chip.line1} onChange={(e) => handleChip(i, "line1", e.target.value)}
-                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Top line (e.g. Breakfast from)" />
-                  <input type="text" value={chip.line2} onChange={(e) => handleChip(i, "line2", e.target.value)}
-                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Bold line (e.g. AED 5)" />
+                  {/* English above, Arabic below. Blank Arabic falls back. */}
+                  <div className="flex-1 space-y-1.5">
+                    <input type="text" value={chip.line1} onChange={(e) => handleChip(i, "line1", e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Top line (e.g. Breakfast from)" />
+                    <input type="text" value={chip.line1_ar ?? ""} onChange={(e) => handleChip(i, "line1_ar", e.target.value)}
+                      dir="rtl" lang="ar" style={{ fontFamily: "var(--font-ar), inherit" }}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-orange-50/30 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="السطر العلوي (اختياري)" />
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <input type="text" value={chip.line2} onChange={(e) => handleChip(i, "line2", e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Bold line (e.g. AED 5)" />
+                    <input type="text" value={chip.line2_ar ?? ""} onChange={(e) => handleChip(i, "line2_ar", e.target.value)}
+                      dir="rtl" lang="ar" style={{ fontFamily: "var(--font-ar), inherit" }}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-orange-50/30 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="السطر الغامق (اختياري)" />
+                  </div>
                   <button type="button" onClick={() => removeChip(i)}
                     className="w-9 h-9 mt-0.5 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0">
                     <Trash2 size={14} />

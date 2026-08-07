@@ -7,6 +7,8 @@ import BilingualField from "@/components/admin/BilingualField";
 interface StudyFeature {
   icon: string;
   label: string;
+  /* Arabic sits beside its English twin so the pair can never drift apart. */
+  label_ar?: string;
 }
 
 interface KalbaStudy {
@@ -181,8 +183,13 @@ export default function KalbaStudyAdmin() {
                     className="w-44 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
                     {ICON_OPTIONS.map((icon) => <option key={icon} value={icon}>{icon}</option>)}
                   </select>
-                  <input type="text" value={feature.label} onChange={(e) => handleFeature(i, "label", e.target.value)}
-                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Free WiFi" />
+                  <div className="flex-1 space-y-1.5">
+                    <input type="text" value={feature.label} onChange={(e) => handleFeature(i, "label", e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Free WiFi" />
+                    <input type="text" value={feature.label_ar ?? ""} onChange={(e) => handleFeature(i, "label_ar", e.target.value)}
+                      dir="rtl" lang="ar" style={{ fontFamily: "var(--font-ar), inherit" }}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-orange-50/30 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="بالعربية (اختياري)" />
+                  </div>
                   <button type="button" onClick={() => removeFeature(i)}
                     className="w-9 h-9 mt-0.5 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0">
                     <Trash2 size={14} />

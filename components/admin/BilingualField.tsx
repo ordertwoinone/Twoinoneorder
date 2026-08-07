@@ -16,7 +16,7 @@ const inputCls =
   "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 interface Props {
-  label: string;
+  label: React.ReactNode;
   value: string;
   valueAr: string;
   onChange: (v: string) => void;
@@ -24,6 +24,8 @@ interface Props {
   placeholder?: string;
   placeholderAr?: string;
   hint?: string;
+  /** id of a <datalist> to suggest from. English side only. */
+  listId?: string;
   /** Renders a textarea instead of a single-line input. */
   multiline?: boolean;
   rows?: number;
@@ -38,6 +40,7 @@ export default function BilingualField({
   placeholder,
   placeholderAr,
   hint,
+  listId,
   multiline = false,
   rows = 3,
 }: Props) {
@@ -68,6 +71,7 @@ export default function BilingualField({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               placeholder={placeholder}
+              list={listId}
               className={`${inputCls} pr-8`}
             />
           )}

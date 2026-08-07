@@ -1,13 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Save, Star } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Review {
   id: string;
   name: string;
+  name_ar: string;
   rating: number;
   text: string;
+  text_ar: string;
   date_text: string;
+  date_text_ar: string;
   sort_order: number;
   is_active: boolean;
 }
@@ -16,12 +20,16 @@ interface Summary {
   id?: string;
   rating: string;
   rating_count: string;
+  rating_count_ar: string;
   tab_count: string;
+  tab_count_ar: string;
   bar5: number; bar4: number; bar3: number; bar2: number; bar1: number;
 }
 
 const EMPTY_REVIEW: Omit<Review, "id"> = {
-  name: "", rating: 5, text: "", date_text: "", sort_order: 0, is_active: true,
+  name: "",
+  name_ar: "", rating: 5, text: "", text_ar: "", date_text: "", date_text_ar: "",
+  sort_order: 0, is_active: true,
 };
 
 const inputCls =
@@ -114,12 +122,24 @@ export default function BuffetReviewsAdmin() {
               <input value={summary.rating} onChange={(e) => setS("rating", e.target.value)} className={inputCls} placeholder="4.6" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Ratings count</label>
-              <input value={summary.rating_count} onChange={(e) => setS("rating_count", e.target.value)} className={inputCls} placeholder="2,100+" />
+              <BilingualField
+                label="Ratings count"
+                value={summary.rating_count}
+                valueAr={summary.rating_count_ar ?? ""}
+                onChange={(v) => setS("rating_count", v)}
+                onChangeAr={(v) => setS("rating_count_ar", v)}
+                placeholder="2,100+"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tab label count</label>
-              <input value={summary.tab_count} onChange={(e) => setS("tab_count", e.target.value)} className={inputCls} placeholder="2.1K+" />
+              <BilingualField
+                label="Tab label count"
+                value={summary.tab_count}
+                valueAr={summary.tab_count_ar ?? ""}
+                onChange={(v) => setS("tab_count", v)}
+                onChangeAr={(v) => setS("tab_count_ar", v)}
+                placeholder="2.1K+"
+              />
             </div>
           </div>
           <div>
@@ -181,12 +201,24 @@ export default function BuffetReviewsAdmin() {
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name *</label>
-                  <input value={modal.data.name} onChange={(e) => field("name", e.target.value)} className={inputCls} placeholder="Ahmed Al-Rashidi" />
+                  <BilingualField
+                    label="Name *"
+                    value={modal.data.name}
+                    valueAr={modal.data.name_ar ?? ""}
+                    onChange={(v) => field("name", v)}
+                    onChangeAr={(v) => field("name_ar", v)}
+                    placeholder="Ahmed Al-Rashidi"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Date text</label>
-                  <input value={modal.data.date_text} onChange={(e) => field("date_text", e.target.value)} className={inputCls} placeholder="2 days ago" />
+                  <BilingualField
+                    label="Date text"
+                    value={modal.data.date_text}
+                    valueAr={modal.data.date_text_ar ?? ""}
+                    onChange={(v) => field("date_text", v)}
+                    onChangeAr={(v) => field("date_text_ar", v)}
+                    placeholder="2 days ago"
+                  />
                 </div>
               </div>
               <div>
@@ -200,8 +232,16 @@ export default function BuffetReviewsAdmin() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Review text</label>
-                <textarea value={modal.data.text} onChange={(e) => field("text", e.target.value)} rows={3} className={`${inputCls} resize-y`} placeholder="What the customer said…" />
+                <BilingualField
+                  label="Review text"
+                  value={modal.data.text}
+                  valueAr={modal.data.text_ar ?? ""}
+                  onChange={(v) => field("text", v)}
+                  onChangeAr={(v) => field("text_ar", v)}
+                  placeholder="What the customer said…"
+                  multiline
+                  rows={3}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

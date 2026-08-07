@@ -1,16 +1,23 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Plus, Trash2, ToggleLeft, ToggleRight, Save, Disc3, GripVertical, Mail, Download, Settings2, RefreshCw, Info } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Settings {
   id: string;
   is_enabled: boolean;
   title: string;
+  title_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   button_label: string;
+  button_label_ar: string;
   spin_label: string;
+  spin_label_ar: string;
   win_message: string;
+  win_message_ar: string;
   lose_message: string;
+  lose_message_ar: string;
   cooldown_hours: number;
   require_email: boolean;
 }
@@ -18,6 +25,7 @@ interface Settings {
 interface Segment {
   id: string;
   label: string;
+  label_ar: string;
   code: string;
   color: string;
   weight: number;
@@ -39,6 +47,7 @@ interface Entry {
 
 const BLANK_SEGMENT: Omit<Segment, "id"> = {
   label: "",
+  label_ar: "",
   code: "",
   color: "#ea580c",
   weight: 1,
@@ -260,35 +269,71 @@ export default function SpinWheelAdmin() {
         <div className="px-5 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Popup Title</label>
-              <input value={settings.title} onChange={(e) => setSetting("title", e.target.value)} className={inputCls} placeholder="Spin & Win!" />
+              <BilingualField
+                label="Popup Title"
+                value={settings.title}
+                valueAr={settings.title_ar ?? ""}
+                onChange={(v) => setSetting("title", v)}
+                onChangeAr={(v) => setSetting("title_ar", v)}
+                placeholder="Spin & Win!"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Floating Button Text</label>
-              <input value={settings.button_label} onChange={(e) => setSetting("button_label", e.target.value)} className={inputCls} placeholder="Spin & Win" />
+              <BilingualField
+                label="Floating Button Text"
+                value={settings.button_label}
+                valueAr={settings.button_label_ar ?? ""}
+                onChange={(v) => setSetting("button_label", v)}
+                onChangeAr={(v) => setSetting("button_label_ar", v)}
+                placeholder="Spin & Win"
+              />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-            <input value={settings.subtitle} onChange={(e) => setSetting("subtitle", e.target.value)} className={inputCls} placeholder="Try your luck and grab an exclusive offer" />
+            <BilingualField
+              label="Subtitle"
+              value={settings.subtitle}
+              valueAr={settings.subtitle_ar ?? ""}
+              onChange={(v) => setSetting("subtitle", v)}
+              onChangeAr={(v) => setSetting("subtitle_ar", v)}
+              placeholder="Try your luck and grab an exclusive offer"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Win Message</label>
-              <input value={settings.win_message} onChange={(e) => setSetting("win_message", e.target.value)} className={inputCls} placeholder="Congratulations! You won" />
+              <BilingualField
+                label="Win Message"
+                value={settings.win_message}
+                valueAr={settings.win_message_ar ?? ""}
+                onChange={(v) => setSetting("win_message", v)}
+                onChangeAr={(v) => setSetting("win_message_ar", v)}
+                placeholder="Congratulations! You won"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">No-Win Message</label>
-              <input value={settings.lose_message} onChange={(e) => setSetting("lose_message", e.target.value)} className={inputCls} placeholder="Better luck next time" />
+              <BilingualField
+                label="No-Win Message"
+                value={settings.lose_message}
+                valueAr={settings.lose_message_ar ?? ""}
+                onChange={(v) => setSetting("lose_message", v)}
+                onChangeAr={(v) => setSetting("lose_message_ar", v)}
+                placeholder="Better luck next time"
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Centre Button Text</label>
-              <input value={settings.spin_label} onChange={(e) => setSetting("spin_label", e.target.value)} className={inputCls} placeholder="SPIN" />
+              <BilingualField
+                label="Centre Button Text"
+                value={settings.spin_label}
+                valueAr={settings.spin_label_ar ?? ""}
+                onChange={(v) => setSetting("spin_label", v)}
+                onChangeAr={(v) => setSetting("spin_label_ar", v)}
+                placeholder="SPIN"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -358,8 +403,14 @@ export default function SpinWheelAdmin() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 mb-5">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Label *</label>
-              <input value={form.label} onChange={(e) => segField("label", e.target.value)} className={inputCls} placeholder="e.g. 10% OFF" />
+              <BilingualField
+                label="Label *"
+                value={form.label}
+                valueAr={form.label_ar ?? ""}
+                onChange={(v) => segField("label", v)}
+                onChangeAr={(v) => segField("label_ar", v)}
+                placeholder="e.g. 10% OFF"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Prize Code</label>

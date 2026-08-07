@@ -7,6 +7,7 @@ import BilingualField from "@/components/admin/BilingualField";
 interface Restaurant {
   id: string;
   name: string;
+  name_ar: string;
   slug: string;
   cuisine: string[];
   logo_url: string;
@@ -31,7 +32,7 @@ interface Restaurant {
 }
 
 const EMPTY: Omit<Restaurant, "id" | "created_at"> = {
-  name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
+  name: "", name_ar: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
   rating: 4.5, delivery_time: "20-30 min", delivery_time_ar: "", url: "", badge: null, badge_ar: "", offer_text: "", offer_text_ar: "", sort_order: 0,
   is_active: true, free_delivery: false,
   badge_bg_color: "", badge_text_color: "", offer_bg_color: "", offer_text_color: "",
@@ -357,11 +358,16 @@ export default function RestaurantsAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name *</label>
-                <input type="text" value={modal.data.name}
-                  onChange={(e) => { handleField("name", e.target.value); if (modal.mode === "add") handleField("slug", slugify(e.target.value)); }}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="Restaurant name" />
+                <BilingualField
+                  label="Name *"
+                  value={modal.data.name}
+                  valueAr={modal.data.name_ar ?? ""}
+                  // The slug is built from the English name only — it is part of
+                  // the URL, so it must stay stable and ASCII.
+                  onChange={(v) => { handleField("name", v); if (modal.mode === "add") handleField("slug", slugify(v)); }}
+                  onChangeAr={(v) => handleField("name_ar", v)}
+                  placeholder="Restaurant name"
+                />
               </div>
 
               <div>
@@ -421,21 +427,30 @@ export default function RestaurantsAdmin() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Badge</label>
-                  <input type="text" list="badge-suggestions" value={modal.data.badge || ""}
-                    onChange={(e) => handleField("badge", e.target.value || null)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Best Seller" />
+                  <BilingualField
+                    label="Badge"
+                    value={modal.data.badge || ""}
+                    valueAr={modal.data.badge_ar ?? ""}
+                    // Blank clears the badge entirely, so it goes back as null.
+                    onChange={(v) => handleField("badge", v || null)}
+                    onChangeAr={(v) => handleField("badge_ar", v)}
+                    placeholder="Best Seller"
+                    listId="badge-suggestions"
+                  />
                   <datalist id="badge-suggestions">
                     {BADGE_SUGGESTIONS.map((b) => <option key={b} value={b} />)}
                   </datalist>
                   <p className="text-[11px] text-gray-400 mt-1">Type anything — new badges are allowed.</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Offer</label>
-                  <input type="text" value={modal.data.offer_text || ""} onChange={(e) => handleField("offer_text", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="30% OFF ALL ITEMS" />
+                  <BilingualField
+                    label="Offer"
+                    value={modal.data.offer_text || ""}
+                    valueAr={modal.data.offer_text_ar ?? ""}
+                    onChange={(v) => handleField("offer_text", v)}
+                    onChangeAr={(v) => handleField("offer_text_ar", v)}
+                    placeholder="30% OFF ALL ITEMS"
+                  />
                   <p className="text-[11px] text-gray-400 mt-1">Blank hides the pill.</p>
                 </div>
               </div>

@@ -25,46 +25,63 @@ import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalized, useLocalizedField } from "@/lib/i18n/localized";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface KalbaHero {
   name: string;
+  name_ar?: string | null;
   location: string;
+  location_ar?: string | null;
   maps_url: string;
   whatsapp: string;
   rating: string;
   rating_count: string;
+  rating_count_ar?: string | null;
   delivery_time: string;
+  delivery_time_ar?: string | null;
   delivery_fee: string;
+  delivery_fee_ar?: string | null;
   is_open: boolean;
   closes_at: string;
+  closes_at_ar?: string | null;
   student_title: string;
+  student_title_ar?: string | null;
   student_subtitle: string;
+  student_subtitle_ar?: string | null;
   student_button: string;
+  student_button_ar?: string | null;
   logo_url?: string;
 }
 
 export interface KalbaBanner {
   title: string;
+  title_ar?: string | null;
   title_highlight: string;
+  title_highlight_ar?: string | null;
   subtitle: string;
+  subtitle_ar?: string | null;
   image_url: string;
-  chips: { emoji: string; line1: string; line2: string }[];
+  /* Arabic for a chip lives beside it, so the pair can never drift apart. */
+  chips: { emoji: string; line1: string; line2: string; line1_ar?: string; line2_ar?: string }[];
 }
 
 export interface KalbaCategory {
   id: string;
   emoji: string;
   label: string;
+  label_ar?: string | null;
 }
 
 export interface KalbaPopularItem {
   id: string;
   name: string;
+  name_ar?: string | null;
   price: string;
   rating: string;
   time_text: string;
+  time_text_ar?: string | null;
   image_url: string;
   category_id?: string | null;
   tags?: string[] | null;
@@ -72,17 +89,23 @@ export interface KalbaPopularItem {
 
 export interface KalbaStudy {
   title: string;
+  title_ar?: string | null;
   subtitle: string;
+  subtitle_ar?: string | null;
   image_url: string;
   button_text: string;
-  features: { icon: string; label: string }[];
+  button_text_ar?: string | null;
+  features: { icon: string; label: string; label_ar?: string }[];
 }
 
 export interface KalbaDailyDeal {
   id: string;
   day: string;
+  day_ar?: string | null;
   title: string;
+  title_ar?: string | null;
   description: string;
+  description_ar?: string | null;
   emoji: string;
   bg_color: string;
   day_color: string;
@@ -91,8 +114,11 @@ export interface KalbaDailyDeal {
 export interface KalbaSpecial {
   id: string;
   name: string;
+  name_ar?: string | null;
   description: string;
+  description_ar?: string | null;
   price_text: string;
+  price_text_ar?: string | null;
   image_url: string;
   category_id?: string | null;
   tags?: string[] | null;
@@ -498,8 +524,17 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
 
 export default function KalbaContent({ hero, banner, categories, popular, study, deals, specials }: Props) {
   const { t, tp, tMaybe } = useTranslation();
-  /** Translates our own seeded copy; passes admin-written text straight through. */
-  const copy = (value: string) => (value ? tMaybe(SEEDED_COPY[value] ?? "", value) : value);
+  const localized = useLocalized();
+  const pick = useLocalizedField();
+  /**
+   * Arabic typed in admin wins. Failing that, our own seeded English copy is
+   * looked up in the dictionary, and anything genuinely custom passes through.
+   */
+  const copy = (value: string, arabic?: string | null) => {
+    const chosen = localized(value, arabic);
+    if (chosen !== value) return chosen;
+    return value ? tMaybe(SEEDED_COPY[value] ?? "", value) : value;
+  };
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [members, setMembers] = useState(1);
@@ -520,16 +555,16 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
   const allCartItems: CartItem[] = [
     ...popular.map((p) => ({
       id: p.id,
-      name: p.name,
+      name: pick(p, "name"),
       image_url: p.image_url,
       priceLabel: `AED ${p.price}`,
       numericPrice: parseFloat(p.price) || 0,
     })),
     ...specials.map((s) => ({
       id: s.id,
-      name: s.name,
+      name: pick(s, "name"),
       image_url: s.image_url,
-      priceLabel: s.price_text || t("kalba.cart.seePrice"),
+      priceLabel: pick(s, "price_text") || t("kalba.cart.seePrice"),
       numericPrice: parseNumericPrice(s.price_text),
     })),
   ];
@@ -589,7 +624,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <h1 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight truncate">
-              {copy(hero.name)}
+              {copy(hero.name, hero.name_ar)}
             </h1>
             <span className="shrink-0 w-[18px] h-[18px] sm:w-5 sm:h-5 rounded-full bg-yellow-400 flex items-center justify-center">
               <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />
@@ -598,22 +633,22 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           <a href={hero.maps_url} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-500 mt-0.5 hover:text-[#ea580c] transition-colors">
             <MapPin size={13} className="text-[#ea580c] shrink-0" />
-            {copy(hero.location)}
+            {copy(hero.location, hero.location_ar)}
           </a>
           <div className="flex items-center gap-1 sm:gap-1.5 mt-1 flex-wrap">
             <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400 shrink-0" />
             <span className="text-xs sm:text-sm font-semibold text-gray-800">{hero.rating}</span>
-            <span className="text-xs sm:text-sm text-gray-400">({hero.rating_count})</span>
+            <span className="text-xs sm:text-sm text-gray-400">({pick(hero, "rating_count")})</span>
             <span className="text-gray-300 text-xs">·</span>
-            <span className="text-xs sm:text-sm text-gray-500">{hero.delivery_time}</span>
+            <span className="text-xs sm:text-sm text-gray-500">{pick(hero, "delivery_time")}</span>
             <span className="text-gray-300 text-xs">·</span>
-            <span className="text-xs sm:text-sm text-gray-500">{hero.delivery_fee}</span>
+            <span className="text-xs sm:text-sm text-gray-500">{pick(hero, "delivery_fee")}</span>
           </div>
           <div className="flex items-center gap-1.5 mt-1">
             <span className={`text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 rounded-full ${hero.is_open ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
               {hero.is_open ? t("common.open") : t("common.closed")}
             </span>
-            <span className="text-[10px] sm:text-xs text-gray-400">{t("common.closesAt", { time: hero.closes_at })}</span>
+            <span className="text-[10px] sm:text-xs text-gray-400">{t("common.closesAt", { time: pick(hero, "closes_at") })}</span>
           </div>
           </div>
         </div>
@@ -626,12 +661,12 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           style={{ background: "linear-gradient(110deg, #fdf3ea 0%, #fae3d1 55%, #f5d2b8 100%)" }}>
           <div className="flex-1 px-5 pt-6 pb-5 sm:p-10 flex flex-col justify-center">
             <h2 className="text-[1.6rem] sm:text-3xl lg:text-4xl font-extrabold leading-[1.15] text-gray-900">
-              {copy(banner.title)}
+              {copy(banner.title, banner.title_ar)}
               <br />
-              <span style={{ color: "#ea580c" }}>{copy(banner.title_highlight)}</span>
+              <span style={{ color: "#ea580c" }}>{copy(banner.title_highlight, banner.title_highlight_ar)}</span>
             </h2>
             <p className="text-[13px] sm:text-sm text-gray-600 mt-2 mb-5">
-              {copy(banner.subtitle)}
+              {copy(banner.subtitle, banner.subtitle_ar)}
             </p>
             {banner.chips.length > 0 && (
               <div className="grid grid-cols-4 gap-2 max-w-md">
@@ -639,9 +674,9 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                   <div key={i} className="bg-white rounded-xl px-1.5 py-2.5 text-center shadow-sm">
                     <span className="text-lg sm:text-xl leading-none">{c.emoji}</span>
                     <p className="text-[9px] sm:text-[10px] font-semibold text-gray-600 mt-1 leading-tight">
-                      {copy(c.line1)}
+                      {copy(c.line1, c.line1_ar)}
                       <br />
-                      <span className="font-extrabold text-gray-900">{copy(c.line2)}</span>
+                      <span className="font-extrabold text-gray-900">{copy(c.line2, c.line2_ar)}</span>
                     </p>
                   </div>
                 ))}
@@ -652,7 +687,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             <div className="relative w-full h-44 mt-1 sm:mt-0 sm:h-auto sm:w-[45%] lg:w-[40%] sm:[border-radius:10rem_0_0_2.5rem] sm:overflow-hidden">
               <Image
                 src={banner.image_url}
-                alt={copy(hero.name)}
+                alt={copy(hero.name, hero.name_ar)}
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 100vw, 45vw"
@@ -676,7 +711,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                     {c.emoji}
                   </span>
                   <span className="text-[10.5px] sm:text-[11.5px] font-semibold text-gray-700 text-center leading-tight w-16">
-                    {c.label}
+                    {pick(c, "label")}
                   </span>
                 </Link>
               ))}
@@ -717,7 +752,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                     </div>
                     <div className="px-3 pt-2.5 pb-3">
                       <h3 className="text-gray-900 font-extrabold text-[12.5px] leading-tight mb-1 min-h-[2em]">
-                        {p.name}
+                        {pick(p, "name")}
                       </h3>
                       {(p.tags ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-0.5 mb-1.5">
@@ -736,7 +771,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                         </span>
                         <span className="flex items-center gap-0.5 text-gray-400">
                           <Clock size={9} />
-                          {p.time_text}
+                          {pick(p, "time_text")}
                         </span>
                       </div>
                       <div className="h-px bg-gray-100 my-1.5" />
@@ -777,7 +812,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             <div className="relative h-44 sm:h-auto sm:w-[38%] lg:w-[30%] rounded-2xl overflow-hidden shrink-0">
               <Image
                 src={study.image_url}
-                alt={copy(study.title)}
+                alt={copy(study.title, study.title_ar)}
                 fill
                 className="object-cover"
                 sizes="(max-width: 640px) 100vw, 38vw"
@@ -787,10 +822,10 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           <div className="flex-1 py-1 sm:py-4 px-1 sm:pe-4">
             <div className="flex items-center gap-2 mb-1">
               <GraduationCap size={20} className="text-gray-900" />
-              <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">{copy(study.title)}</h2>
+              <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">{copy(study.title, study.title_ar)}</h2>
             </div>
             <p className="text-[13px] text-gray-500 mb-5">
-              {copy(study.subtitle)}
+              {copy(study.subtitle, study.subtitle_ar)}
             </p>
             {study.features.length > 0 && (
               <div className="flex flex-wrap gap-x-5 sm:gap-x-7 gap-y-4 mb-6">
@@ -801,7 +836,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                       <span className="w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center">
                         <FeatureIcon size={18} className="text-gray-700" />
                       </span>
-                      <span className="text-[10px] font-medium text-gray-600 leading-tight">{copy(f.label)}</span>
+                      <span className="text-[10px] font-medium text-gray-600 leading-tight">{copy(f.label, f.label_ar)}</span>
                     </div>
                   );
                 })}
@@ -810,7 +845,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
             <a href={hero.maps_url} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-white text-sm font-bold transition hover:opacity-90"
               style={{ background: "#ea580c" }}>
-              {copy(study.button_text) || t("kalba.study.button")} <ChevronRight size={15} />
+              {copy(study.button_text, study.button_text_ar) || t("kalba.study.button")} <ChevronRight size={15} />
             </a>
           </div>
         </section>
@@ -824,11 +859,11 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                 <div key={d.id} className="rounded-2xl p-4 flex flex-col items-center text-center"
                   style={{ background: d.bg_color }}>
                   <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: d.day_color }}>
-                    {d.day}
+                    {tMaybe(`kalba.days.${d.day}`, pick(d, "day"))}
                   </p>
-                  <p className="text-[13px] font-extrabold text-gray-900 mt-0.5">{d.title}</p>
+                  <p className="text-[13px] font-extrabold text-gray-900 mt-0.5">{pick(d, "title")}</p>
                   <span className="text-3xl my-3">{d.emoji}</span>
-                  <p className="text-[11.5px] font-semibold text-gray-600">{d.description}</p>
+                  <p className="text-[11.5px] font-semibold text-gray-600">{pick(d, "description")}</p>
                 </div>
               ))}
             </div>
@@ -839,7 +874,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
         {specials.length > 0 && (
           <section className="mt-7">
             <SectionHeader title={t("kalba.specialsTitle")} action={t("common.viewAll")}
-              href={waUrl(t("kalba.wa.specials", { restaurant: copy(hero.name) }))} />
+              href={waUrl(t("kalba.wa.specials", { restaurant: copy(hero.name, hero.name_ar) }))} />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {specials.map((s) => {
                 const qty = cartQty[s.id] ?? 0;
@@ -857,7 +892,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                     <div className="px-3 pt-2.5 pb-3">
                       <h3 className="flex items-center gap-1 text-gray-900 font-extrabold text-[12.5px] leading-tight">
                         <GraduationCap size={13} className="text-[#ea580c] shrink-0" />
-                        {s.name}
+                        {pick(s, "name")}
                       </h3>
                       {(s.tags ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-0.5 mt-1">
@@ -869,9 +904,9 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                           })}
                         </div>
                       )}
-                      <p className="text-gray-400 text-[10.5px] mt-1 mb-1.5 leading-snug">{s.description}</p>
+                      <p className="text-gray-400 text-[10.5px] mt-1 mb-1.5 leading-snug">{pick(s, "description")}</p>
                       {s.price_text && (
-                        <p className="text-[11px] font-extrabold mb-1.5" style={{ color: "#ea580c" }}>{s.price_text}</p>
+                        <p className="text-[11px] font-extrabold mb-1.5" style={{ color: "#ea580c" }}>{pick(s, "price_text")}</p>
                       )}
                       <div className="h-px bg-gray-100 my-1.5" />
                       {qty === 0 ? (
@@ -956,7 +991,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}
-          restaurantName={copy(hero.name)}
+          restaurantName={copy(hero.name, hero.name_ar)}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}
           onRemoveCoupon={() => { setAppliedCoupon(null); setCouponError(""); }}

@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Plus, Trash2, ToggleLeft, ToggleRight, ChevronDown, ChevronUp } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Coupon {
   id: string;
   code: string;
   description: string;
+  description_ar: string;
   discount_type: "percentage" | "fixed";
   discount_value: number;
   min_order_amount: number;
@@ -24,6 +26,7 @@ interface SelectableItem {
 const BLANK: Omit<Coupon, "id"> = {
   code: "",
   description: "",
+  description_ar: "",
   discount_type: "percentage",
   discount_value: 10,
   min_order_amount: 0,
@@ -166,12 +169,12 @@ export default function KalbaCouponsAdmin() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
-              <input
-                type="text"
+              <BilingualField
+                label="Description"
                 value={form.description}
-                onChange={(e) => field("description", e.target.value)}
-                className={inputCls}
+                valueAr={form.description_ar ?? ""}
+                onChange={(v) => field("description", v)}
+                onChangeAr={(v) => field("description_ar", v)}
                 placeholder="e.g. 20% student discount"
               />
             </div>
