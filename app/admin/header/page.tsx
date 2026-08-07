@@ -34,6 +34,9 @@ export default function HeaderAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  /* The toggle needs a column that is added by a hand-run migration. If it is
+     not there yet the switch would appear to do nothing, so say so plainly. */
+  const [toggleReady, setToggleReady] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -43,6 +46,7 @@ export default function HeaderAdmin() {
         HEADER_FIELDS.forEach((k) => { next[k] = data[k] ?? ""; });
         // Missing column (migration not run) reads as "shown", matching the site.
         next.header_logo_enabled = data.header_logo_enabled !== false;
+        setToggleReady("header_logo_enabled" in data);
         setForm(next);
         setLoading(false);
       });
@@ -169,13 +173,20 @@ export default function HeaderAdmin() {
               <p className="text-[11px] text-gray-400 mt-0.5">
                 Off hides the mark on every page and the name moves to the start of the bar.
               </p>
+              {!toggleReady && (
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mt-2">
+                  Run <code className="font-mono">supabase/header_logo_toggle.sql</code> in the
+                  Supabase SQL editor to switch this on — there is nowhere to save it until then.
+                </p>
+              )}
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={form.header_logo_enabled}
+              disabled={!toggleReady}
               onClick={() => handleField("header_logo_enabled", !form.header_logo_enabled)}
-              className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${
+              className={`relative w-12 h-7 rounded-full shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 form.header_logo_enabled ? "bg-orange-500" : "bg-gray-300"
               }`}
             >

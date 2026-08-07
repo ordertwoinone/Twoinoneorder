@@ -12,6 +12,7 @@ import {
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalized, useLocalizedField, useLocalizedList } from "@/lib/i18n/localized";
 import type { TranslationKey } from "@/lib/i18n/types";
 
 const DIETARY_TAGS: Record<string, TranslationKey> = {
@@ -26,11 +27,16 @@ const DIETARY_TAGS: Record<string, TranslationKey> = {
 interface BuffetBanner {
   id: string;
   title: string;
+  title_ar?: string | null;
   title_highlight: string;
+  title_highlight_ar?: string | null;
   subtitle: string;
+  subtitle_ar?: string | null;
   price: string;
   price_label: string;
+  price_label_ar?: string | null;
   cta_text: string;
+  cta_text_ar?: string | null;
   bg_color: string;
   accent_color: string;
   image_url: string;
@@ -40,35 +46,48 @@ interface WhyChooseFeature {
   id: string;
   icon_name: string;
   label: string;
+  label_ar?: string | null;
   sub_label: string;
+  sub_label_ar?: string | null;
 }
 
 interface BuffetTiming {
   id: string;
   label: string;
+  label_ar?: string | null;
   time_range: string;
+  time_range_ar?: string | null;
   price: string;
   price_label: string;
+  price_label_ar?: string | null;
   theme: "orange" | "violet" | "pink";
 }
 
 interface PopularDish {
   id: string;
   name: string;
+  name_ar?: string | null;
   tag: string;
+  tag_ar?: string | null;
   image_url: string;
   is_veg: boolean;
 }
 
 interface BuffetHero {
   restaurant_name: string;
+  restaurant_name_ar?: string | null;
   cuisine: string;
+  cuisine_ar?: string | null;
   rating: string;
   rating_count: string;
+  rating_count_ar?: string | null;
   delivery_time: string;
+  delivery_time_ar?: string | null;
   delivery_fee: string;
+  delivery_fee_ar?: string | null;
   is_open: boolean;
   closes_at: string;
+  closes_at_ar?: string | null;
   cover_image_url: string;
   logo_url?: string;
 }
@@ -77,6 +96,7 @@ interface MenuItemDB {
   id: string;
   section_id: string;
   name: string;
+  name_ar?: string | null;
   image_url: string;
   price: number;
   is_veg: boolean;
@@ -92,6 +112,7 @@ interface MenuSectionDB {
   id: string;
   category_id: string;
   title: string;
+  title_ar?: string | null;
   icon_name: string;
   sort_order: number;
   is_active: boolean;
@@ -100,10 +121,15 @@ interface MenuSectionDB {
 
 interface BuffetAbout {
   about_title: string;
+  about_title_ar?: string | null;
   about_text: string;
+  about_text_ar?: string | null;
   location: string;
-  hours: { label: string; time: string }[];
+  location_ar?: string | null;
+  /* Arabic for a row lives beside it, so the two can never drift apart. */
+  hours: { label: string; time: string; label_ar?: string; time_ar?: string }[];
   cuisines: string[];
+  cuisines_ar?: string[] | null;
 }
 
 interface BuffetPhoto {
@@ -114,15 +140,20 @@ interface BuffetPhoto {
 interface BuffetReview {
   id: string;
   name: string;
+  name_ar?: string | null;
   rating: number;
   text: string;
+  text_ar?: string | null;
   date_text: string;
+  date_text_ar?: string | null;
 }
 
 interface BuffetReviewSummary {
   rating: string;
   rating_count: string;
+  rating_count_ar?: string | null;
   tab_count: string;
+  tab_count_ar?: string | null;
   bar5: number;
   bar4: number;
   bar3: number;
@@ -282,6 +313,7 @@ function BuffetMenuTab({
   onQtyChange: (itemId: string, qty: number) => void;
 }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const totalItems = menuSections.reduce((n, s) => n + s.buffet_menu_items.filter((i) => i.is_active).length, 0);
 
   return (
@@ -313,14 +345,14 @@ function BuffetMenuTab({
                   <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                     <div className="flex items-center gap-1 sm:gap-2">
                       <cfg.Icon className={`w-3.5 h-3.5 sm:w-5 sm:h-5 shrink-0 ${selected ? "text-orange-500" : cfg.iconCls}`} />
-                      <span className={`text-[10px] sm:text-sm lg:text-base font-bold leading-tight ${selected ? "text-orange-700" : "text-gray-800"}`}>{timing.label}</span>
+                      <span className={`text-[10px] sm:text-sm lg:text-base font-bold leading-tight ${selected ? "text-orange-700" : "text-gray-800"}`}>{pick(timing, "label")}</span>
                     </div>
                     {selected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-orange-500 shrink-0" />}
                   </div>
-                  <p className="text-[9px] sm:text-xs lg:text-sm text-gray-500 mb-2 sm:mb-3">{timing.time_range}</p>
+                  <p className="text-[9px] sm:text-xs lg:text-sm text-gray-500 mb-2 sm:mb-3">{pick(timing, "time_range")}</p>
                   <p className={`text-[11px] sm:text-base lg:text-lg font-extrabold ${selected ? "text-orange-600" : cfg.priceCls}`}>
                     {timing.price}
-                    <span className="text-[9px] sm:text-xs font-normal text-gray-400 ms-1">{timing.price_label}</span>
+                    <span className="text-[9px] sm:text-xs font-normal text-gray-400 ms-1">{pick(timing, "price_label")}</span>
                   </p>
                 </div>
               </button>
@@ -346,7 +378,7 @@ function BuffetMenuTab({
         return (
           <div key={section.id} id={`menu-section-${section.id}`} className="scroll-mt-32">
             <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{section.title}</h3>
+              <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900">{pick(section, "title")}</h3>
               <span className="text-xs sm:text-sm text-gray-500 border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5">
                 {t("buffet.menu.itemsCount", { count: activeItems.length })}
               </span>
@@ -360,7 +392,7 @@ function BuffetMenuTab({
                   <DishCard
                     key={item.id}
                     id={item.id}
-                    name={item.name}
+                    name={pick(item, "name")}
                     img={item.image_url}
                     price={item.price}
                     veg={item.is_veg}
@@ -396,6 +428,7 @@ function OverviewTab({
   dishes:   PopularDish[];
 }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
@@ -417,15 +450,15 @@ function OverviewTab({
           style={{ background: banner.bg_color }}
         >
           <div className="absolute inset-y-0 start-0 flex flex-col justify-center px-4 sm:px-8 lg:px-10 w-[66%] sm:w-[57%]">
-            <p className="font-bold text-gray-900 leading-tight text-[1rem] sm:text-[1.3rem] lg:text-[1.5rem]">{banner.title}</p>
+            <p className="font-bold text-gray-900 leading-tight text-[1rem] sm:text-[1.3rem] lg:text-[1.5rem]">{pick(banner, "title")}</p>
             <p className="font-extrabold leading-tight text-[1rem] sm:text-[1.3rem] lg:text-[1.5rem] mt-0.5 mb-2" style={{ color: banner.accent_color }}>
-              {banner.title_highlight}
+              {pick(banner, "title_highlight")}
             </p>
-            <p className="text-[10px] sm:text-sm text-gray-500 mb-1.5 sm:mb-2">{banner.subtitle}</p>
+            <p className="text-[10px] sm:text-sm text-gray-500 mb-1.5 sm:mb-2">{pick(banner, "subtitle")}</p>
             {banner.price && (
               <p className="font-bold text-xs sm:text-base lg:text-lg mb-2 sm:mb-3" style={{ color: banner.accent_color }}>
                 {banner.price}{" "}
-                <span className="font-normal text-gray-500 text-[10px] sm:text-sm">{banner.price_label}</span>
+                <span className="font-normal text-gray-500 text-[10px] sm:text-sm">{pick(banner, "price_label")}</span>
               </p>
             )}
             <div className="flex items-center gap-2 flex-wrap">
@@ -433,7 +466,7 @@ function OverviewTab({
                 className="shrink-0 text-white font-bold rounded-full text-[10px] sm:text-sm px-3 sm:px-5 py-1.5 sm:py-2.5 hover:opacity-90 transition-opacity"
                 style={{ background: banner.accent_color }}
               >
-                {banner.cta_text} <span className="rtl-flip inline-block">→</span>
+                {pick(banner, "cta_text")} <span className="rtl-flip inline-block">→</span>
               </Link>
               <div className="flex items-start gap-1 sm:gap-1.5 bg-white/90 border border-orange-100 rounded-xl px-1.5 sm:px-2.5 py-1 sm:py-1.5">
                 <Users className="w-3 h-3 sm:w-4 sm:h-4 text-orange-400 mt-px shrink-0" />
@@ -490,8 +523,8 @@ function OverviewTab({
                     <Icon className="w-5 h-5 sm:w-7 sm:h-7 lg:w-9 lg:h-9 text-orange-500" />
                   </div>
                   <div>
-                    <p className="text-[9px] sm:text-sm lg:text-base font-semibold text-gray-800 leading-tight">{f.label}</p>
-                    <p className="hidden sm:block text-xs lg:text-sm text-gray-400 mt-0.5">{f.sub_label}</p>
+                    <p className="text-[9px] sm:text-sm lg:text-base font-semibold text-gray-800 leading-tight">{pick(f, "label")}</p>
+                    <p className="hidden sm:block text-xs lg:text-sm text-gray-400 mt-0.5">{pick(f, "sub_label")}</p>
                   </div>
                 </div>
               );
@@ -521,10 +554,10 @@ function OverviewTab({
                     <cfg.Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${cfg.iconCls}`} />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-bold text-gray-900 text-[11px] sm:text-base leading-tight">{timing.label}</p>
-                    <p className="text-gray-500 text-[9px] sm:text-xs mt-0.5 leading-tight">{timing.time_range}</p>
+                    <p className="font-bold text-gray-900 text-[11px] sm:text-base leading-tight">{pick(timing, "label")}</p>
+                    <p className="text-gray-500 text-[9px] sm:text-xs mt-0.5 leading-tight">{pick(timing, "time_range")}</p>
                     <p className={`font-bold text-[11px] sm:text-base mt-1 leading-tight ${cfg.priceCls}`}>
-                      {timing.price} <span className="font-normal text-gray-400 text-[9px] sm:text-xs">{timing.price_label}</span>
+                      {timing.price} <span className="font-normal text-gray-400 text-[9px] sm:text-xs">{pick(timing, "price_label")}</span>
                     </p>
                   </div>
                 </div>
@@ -554,6 +587,7 @@ function OverviewTab({
 
 function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   if (dishes.length === 0) return null;
   return (
     <div>
@@ -567,12 +601,12 @@ function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
         {dishes.map((dish) => (
           <div key={dish.id} className="shrink-0 w-32 sm:w-auto">
             <div className="w-full h-32 sm:h-40 lg:h-48 rounded-2xl mb-2 relative overflow-hidden bg-gray-100">
-              <img src={dish.image_url} alt={dish.name} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={dish.image_url} alt={pick(dish, "name")} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/10" />
-              <span className="absolute top-2 start-2 bg-red-500 text-white text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full leading-tight z-10">{dish.tag}</span>
+              <span className="absolute top-2 start-2 bg-red-500 text-white text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full leading-tight z-10">{pick(dish, "tag")}</span>
               <span className="absolute bottom-2 end-2 z-10"><VegBadge veg={dish.is_veg} /></span>
             </div>
-            <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 text-center leading-tight">{dish.name}</p>
+            <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-800 text-center leading-tight">{pick(dish, "name")}</p>
           </div>
         ))}
       </div>
@@ -584,15 +618,21 @@ function PopularDishesSection({ dishes }: { dishes: PopularDish[] }) {
 
 function AboutTab({ about }: { about: BuffetAbout | null }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
+  const localized = useLocalized();
+  const localizedList = useLocalizedList();
   if (!about) return null;
   const hours = Array.isArray(about.hours) ? about.hours : [];
-  const cuisines = Array.isArray(about.cuisines) ? about.cuisines : [];
+  const cuisines = localizedList(
+    Array.isArray(about.cuisines) ? about.cuisines : [],
+    Array.isArray(about.cuisines_ar) ? about.cuisines_ar : null,
+  );
   return (
     <div className="grid sm:grid-cols-2 gap-5 sm:gap-6">
       <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8">
-        <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3">{about.about_title}</h3>
+        <h3 className="text-sm sm:text-base lg:text-lg font-extrabold text-gray-900 mb-3">{pick(about, "about_title")}</h3>
         <p className="text-sm sm:text-base text-gray-500 leading-relaxed whitespace-pre-line">
-          {about.about_text}
+          {pick(about, "about_text")}
         </p>
       </div>
       <div className="rounded-2xl border border-gray-100 p-5 sm:p-6 lg:p-8 space-y-3 sm:space-y-4">
@@ -600,7 +640,7 @@ function AboutTab({ about }: { about: BuffetAbout | null }) {
         {about.location && (
           <div className="flex items-start gap-2.5">
             <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0 mt-0.5" />
-            <p className="text-sm sm:text-base text-gray-600">{about.location}</p>
+            <p className="text-sm sm:text-base text-gray-600">{pick(about, "location")}</p>
           </div>
         )}
         {hours.length > 0 && (
@@ -608,7 +648,11 @@ function AboutTab({ about }: { about: BuffetAbout | null }) {
             <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500 shrink-0 mt-0.5" />
             <div className="text-sm sm:text-base text-gray-600 space-y-0.5">
               {hours.map((h, i) => (
-                <p key={i}>{h.label}{h.label && h.time ? ": " : ""}{h.time}</p>
+                <p key={i}>
+                  {localized(h.label, h.label_ar)}
+                  {h.label && h.time ? ": " : ""}
+                  {localized(h.time, h.time_ar)}
+                </p>
               ))}
             </div>
           </div>
@@ -648,6 +692,7 @@ function PhotosTab({ photos }: { photos: BuffetPhoto[] }) {
 
 function ReviewsTab({ summary, reviews }: { summary: BuffetReviewSummary | null; reviews: BuffetReview[] }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const bars = summary ? [summary.bar5, summary.bar4, summary.bar3, summary.bar2, summary.bar1] : [0, 0, 0, 0, 0];
   const ratingNum = summary ? Math.round(parseFloat(summary.rating) || 0) : 0;
   return (
@@ -659,7 +704,7 @@ function ReviewsTab({ summary, reviews }: { summary: BuffetReviewSummary | null;
             <div className="flex gap-0.5 justify-center mt-2">
               {[1,2,3,4,5].map((i) => <Star key={i} className={`w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ${i<=ratingNum?"fill-yellow-400 text-yellow-400":"fill-gray-200 text-gray-200"}`} />)}
             </div>
-            <p className="text-xs sm:text-sm lg:text-base text-gray-400 mt-1.5">{summary.rating_count} {t("common.ratings")}</p>
+            <p className="text-xs sm:text-sm lg:text-base text-gray-400 mt-1.5">{pick(summary, "rating_count")} {t("common.ratings")}</p>
           </div>
           <div className="flex-1 space-y-2 sm:space-y-3">
             {[5,4,3,2,1].map((n) => (
@@ -680,18 +725,18 @@ function ReviewsTab({ summary, reviews }: { summary: BuffetReviewSummary | null;
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
-                    <span className="font-extrabold text-sm sm:text-base" style={{ color: "#ea580c" }}>{r.name.charAt(0)}</span>
+                    <span className="font-extrabold text-sm sm:text-base" style={{ color: "#ea580c" }}>{pick(r, "name").charAt(0)}</span>
                   </div>
                   <div>
-                    <p className="text-sm sm:text-base font-semibold text-gray-900">{r.name}</p>
-                    <p className="text-xs sm:text-sm text-gray-400">{r.date_text}</p>
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">{pick(r, "name")}</p>
+                    <p className="text-xs sm:text-sm text-gray-400">{pick(r, "date_text")}</p>
                   </div>
                 </div>
                 <div className="flex gap-0.5">
                   {[1,2,3,4,5].map((i) => <Star key={i} className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${i<=r.rating?"fill-yellow-400 text-yellow-400":"fill-gray-200 text-gray-200"}`} />)}
                 </div>
               </div>
-              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{r.text}</p>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{pick(r, "text")}</p>
             </div>
           ))}
         </div>
@@ -743,6 +788,7 @@ function CartModal({
   whatsapp: string;
 }) {
   const { t, tp } = useTranslation();
+  const pick = useLocalizedField();
   const [step, setStep] = useState<"cart" | "details">("cart");
   const [form, setForm] = useState({ name: "", phone: "", date: "", notes: "" });
   const [errors, setErrors] = useState<{ name?: string; phone?: string; date?: string }>({});
@@ -866,12 +912,12 @@ function CartModal({
             <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
               <div>
                 <p className="text-[11px] text-gray-500">{t("buffet.cart.selectedSession")}</p>
-                <p className="text-sm font-extrabold text-gray-900">{selectedTiming.label}</p>
-                <p className="text-[11px] text-gray-400">{selectedTiming.time_range}</p>
+                <p className="text-sm font-extrabold text-gray-900">{pick(selectedTiming, "label")}</p>
+                <p className="text-[11px] text-gray-400">{pick(selectedTiming, "time_range")}</p>
               </div>
               <p className="text-lg font-extrabold text-orange-500">
                 {selectedTiming.price}
-                <span className="text-[11px] font-normal text-gray-400 ms-1">{selectedTiming.price_label}</span>
+                <span className="text-[11px] font-normal text-gray-400 ms-1">{pick(selectedTiming, "price_label")}</span>
               </p>
             </div>
           ) : (
@@ -1091,6 +1137,7 @@ const TABS: { id: Tab; labelKey: TranslationKey }[] = [
 
 export default function BuffetContent({ hero, banners, features, timings, dishes, menuSections, about, photos, reviewSummary, reviews, whatsapp }: Props) {
   const { t, tp } = useTranslation();
+  const pick = useLocalizedField();
   const h = hero ?? {
     restaurant_name: t("buffet.heroName"),
     cuisine: t("buffet.heroCuisine"),
@@ -1223,26 +1270,26 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
             <div className="shrink-0"><DomeLogo size="lg" logoUrl={h.logo_url} /></div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight truncate">{h.restaurant_name}</h1>
+                <h1 className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight truncate">{pick(h, "restaurant_name")}</h1>
                 <span className="shrink-0 w-[18px] h-[18px] sm:w-5 sm:h-5 rounded-full bg-yellow-400 flex items-center justify-center">
                   <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" strokeWidth={3} />
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{h.cuisine}</p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{pick(h, "cuisine")}</p>
               <div className="flex items-center gap-1 sm:gap-1.5 mt-1 flex-wrap">
                 <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400 shrink-0" />
                 <span className="text-xs sm:text-sm font-semibold text-gray-800">{h.rating}</span>
-                <span className="text-xs sm:text-sm text-gray-400">({h.rating_count})</span>
+                <span className="text-xs sm:text-sm text-gray-400">({pick(h, "rating_count")})</span>
                 <span className="text-gray-300 text-xs">·</span>
-                <span className="text-xs sm:text-sm text-gray-500">{h.delivery_time}</span>
+                <span className="text-xs sm:text-sm text-gray-500">{pick(h, "delivery_time")}</span>
                 <span className="text-gray-300 text-xs">·</span>
-                <span className="text-xs sm:text-sm text-gray-500">{h.delivery_fee}</span>
+                <span className="text-xs sm:text-sm text-gray-500">{pick(h, "delivery_fee")}</span>
               </div>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className={`text-[10px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 rounded-full ${h.is_open ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
                   {h.is_open ? t("common.open") : t("common.closed")}
                 </span>
-                <span className="text-[10px] sm:text-xs text-gray-400">{t("common.closesAt", { time: h.closes_at })}</span>
+                <span className="text-[10px] sm:text-xs text-gray-400">{t("common.closesAt", { time: pick(h, "closes_at") })}</span>
               </div>
             </div>
           </div>
@@ -1303,7 +1350,7 @@ export default function BuffetContent({ hero, banners, features, timings, dishes
                 }`}
               >
                 {tab.id === "reviews" && reviewSummary?.tab_count
-                  ? t("buffet.tabs.reviewsCount", { count: reviewSummary.tab_count })
+                  ? t("buffet.tabs.reviewsCount", { count: pick(reviewSummary, "tab_count") })
                   : t(tab.labelKey)}
               </button>
             ))}
