@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalizedField } from "@/lib/i18n/localized";
 
 export interface HomepageCardData {
   id: string;
@@ -16,6 +17,12 @@ export interface HomepageCardData {
   badge: string;
   button_text: string;
   href: string;
+  /* Arabic twins from admin → Homepage Cards; blank falls back to English. */
+  title_ar?: string | null;
+  subtitle_ar?: string | null;
+  description_ar?: string | null;
+  badge_ar?: string | null;
+  button_text_ar?: string | null;
   accent_color: string;
   bg_from: string;
   bg_to: string;
@@ -36,16 +43,20 @@ export default function HomepageCard({
   wrapperStyle?: CSSProperties;
 }) {
   const { tMaybe } = useTranslation();
-  const field = (name: string, value: string) =>
-    card.i18nPrefix ? tMaybe(`${card.i18nPrefix}${name}`, value) : value;
+  const pick = useLocalizedField();
+  /* Arabic typed in admin wins; the built-in cards then fall back to their
+     dictionary copy, and everything else to the English column. */
+  const field = (name: string, key: "title" | "subtitle" | "description" | "badge" | "button_text") => {
+    const arabic = pick(card, key);
+    if (arabic !== card[key]) return arabic;
+    return card.i18nPrefix ? tMaybe(`${card.i18nPrefix}${name}`, card[key]) : card[key];
+  };
 
-  const title = field("Title", card.title);
-  const subtitle = field("Subtitle", card.subtitle);
-  const description = field("Description", card.description);
-  const badge = field("Badge", card.badge);
-  const buttonText = card.i18nPrefix
-    ? tMaybe(`${card.i18nPrefix}Button`, card.button_text)
-    : card.button_text;
+  const title = field("Title", "title");
+  const subtitle = field("Subtitle", "subtitle");
+  const description = field("Description", "description");
+  const badge = field("Badge", "badge");
+  const buttonText = field("Button", "button_text");
 
   const isExternal = card.href?.startsWith("http");
 

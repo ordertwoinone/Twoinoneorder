@@ -2,39 +2,58 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface KalbaHero {
   id?: string;
   name: string;
+  name_ar: string;
   location: string;
+  location_ar: string;
   maps_url: string;
   whatsapp: string;
   rating: string;
   rating_count: string;
+  rating_count_ar: string;
   delivery_time: string;
+  delivery_time_ar: string;
   delivery_fee: string;
+  delivery_fee_ar: string;
   is_open: boolean;
   closes_at: string;
+  closes_at_ar: string;
   student_title: string;
+  student_title_ar: string;
   student_subtitle: string;
+  student_subtitle_ar: string;
   student_button: string;
+  student_button_ar: string;
   logo_url: string;
 }
 
 const DEFAULTS: KalbaHero = {
   name: "Two in One University Kalba",
+  name_ar: "",
   location: "Near University of Kalba, Kalba",
+  location_ar: "",
   maps_url: "https://www.google.com/maps/search/?api=1&query=University+City+Kalba+Sharjah",
   whatsapp: "971522305216",
   rating: "4.6",
   rating_count: "500+",
+  rating_count_ar: "",
   delivery_time: "15–25 min",
+  delivery_time_ar: "",
   delivery_fee: "Free delivery",
+  delivery_fee_ar: "",
   is_open: true,
   closes_at: "12:00 AM",
+  closes_at_ar: "",
   student_title: "Are you a student?",
+  student_title_ar: "",
   student_subtitle: "Unlock exclusive student deals & discounts",
+  student_subtitle_ar: "",
   student_button: "Verify Student",
+  student_button_ar: "",
   logo_url: "",
 };
 
@@ -115,12 +134,24 @@ export default function KalbaInfoAdmin() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-700">Branch Info</h2>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Branch Name</label>
-            <input type="text" value={form.name} onChange={(e) => handleField("name", e.target.value)} className={inputCls} placeholder="Two in One University Kalba" />
+            <BilingualField
+              label="Branch Name"
+              value={form.name}
+              valueAr={form.name_ar ?? ""}
+              onChange={(v) => handleField("name", v)}
+              onChangeAr={(v) => handleField("name_ar", v)}
+              placeholder="Two in One University Kalba"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Location Label</label>
-            <input type="text" value={form.location} onChange={(e) => handleField("location", e.target.value)} className={inputCls} placeholder="Near University of Kalba, Kalba" />
+            <BilingualField
+              label="Location Label"
+              value={form.location}
+              valueAr={form.location_ar ?? ""}
+              onChange={(v) => handleField("location", v)}
+              onChangeAr={(v) => handleField("location_ar", v)}
+              placeholder="Near University of Kalba, Kalba"
+            />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">Google Maps URL</label>
@@ -141,18 +172,36 @@ export default function KalbaInfoAdmin() {
               <input type="text" value={form.rating} onChange={(e) => handleField("rating", e.target.value)} className={inputCls} placeholder="4.6" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Rating Count</label>
-              <input type="text" value={form.rating_count} onChange={(e) => handleField("rating_count", e.target.value)} className={inputCls} placeholder="500+" />
+              <BilingualField
+                label="Rating Count"
+                value={form.rating_count}
+                valueAr={form.rating_count_ar ?? ""}
+                onChange={(v) => handleField("rating_count", v)}
+                onChangeAr={(v) => handleField("rating_count_ar", v)}
+                placeholder="500+"
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Delivery Time</label>
-              <input type="text" value={form.delivery_time} onChange={(e) => handleField("delivery_time", e.target.value)} className={inputCls} placeholder="15–25 min" />
+              <BilingualField
+                label="Delivery Time"
+                value={form.delivery_time}
+                valueAr={form.delivery_time_ar ?? ""}
+                onChange={(v) => handleField("delivery_time", v)}
+                onChangeAr={(v) => handleField("delivery_time_ar", v)}
+                placeholder="15–25 min"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Delivery Fee</label>
-              <input type="text" value={form.delivery_fee} onChange={(e) => handleField("delivery_fee", e.target.value)} className={inputCls} placeholder="Free delivery" />
+              <BilingualField
+                label="Delivery Fee"
+                value={form.delivery_fee}
+                valueAr={form.delivery_fee_ar ?? ""}
+                onChange={(v) => handleField("delivery_fee", v)}
+                onChangeAr={(v) => handleField("delivery_fee_ar", v)}
+                placeholder="Free delivery"
+              />
             </div>
           </div>
         </div>
@@ -174,8 +223,14 @@ export default function KalbaInfoAdmin() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Closes At</label>
-              <input type="text" value={form.closes_at} onChange={(e) => handleField("closes_at", e.target.value)} className={inputCls} placeholder="12:00 AM" />
+              <BilingualField
+                label="Closes At"
+                value={form.closes_at}
+                valueAr={form.closes_at_ar ?? ""}
+                onChange={(v) => handleField("closes_at", v)}
+                onChangeAr={(v) => handleField("closes_at_ar", v)}
+                placeholder="12:00 AM"
+              />
             </div>
           </div>
         </div>
@@ -183,16 +238,34 @@ export default function KalbaInfoAdmin() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-700">Student Banner (bottom of page)</h2>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title</label>
-            <input type="text" value={form.student_title} onChange={(e) => handleField("student_title", e.target.value)} className={inputCls} placeholder="Are you a student?" />
+            <BilingualField
+              label="Title"
+              value={form.student_title}
+              valueAr={form.student_title_ar ?? ""}
+              onChange={(v) => handleField("student_title", v)}
+              onChangeAr={(v) => handleField("student_title_ar", v)}
+              placeholder="Are you a student?"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-            <input type="text" value={form.student_subtitle} onChange={(e) => handleField("student_subtitle", e.target.value)} className={inputCls} placeholder="Unlock exclusive student deals & discounts" />
+            <BilingualField
+              label="Subtitle"
+              value={form.student_subtitle}
+              valueAr={form.student_subtitle_ar ?? ""}
+              onChange={(v) => handleField("student_subtitle", v)}
+              onChangeAr={(v) => handleField("student_subtitle_ar", v)}
+              placeholder="Unlock exclusive student deals & discounts"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Button Text</label>
-            <input type="text" value={form.student_button} onChange={(e) => handleField("student_button", e.target.value)} className={inputCls} placeholder="Verify Student" />
+            <BilingualField
+              label="Button Text"
+              value={form.student_button}
+              valueAr={form.student_button_ar ?? ""}
+              onChange={(v) => handleField("student_button", v)}
+              onChangeAr={(v) => handleField("student_button_ar", v)}
+              placeholder="Verify Student"
+            />
           </div>
         </div>
       </div>

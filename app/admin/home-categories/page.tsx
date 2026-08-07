@@ -1,10 +1,12 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, GripVertical, ExternalLink } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Category {
   id: string;
   name: string;
+  name_ar: string;
   emoji: string;
   image_url: string;
   href: string;
@@ -15,6 +17,7 @@ interface Category {
 
 const EMPTY: Omit<Category, "id"> = {
   name: "",
+  name_ar: "",
   emoji: "🍽️",
   image_url: "",
   href: "",
@@ -310,7 +313,7 @@ export default function HomeCategoriesAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               {/* Emoji + name row */}
-              <div className="grid grid-cols-[72px_1fr] gap-3">
+              <div className="grid grid-cols-[72px_1fr] gap-3 items-start">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     Emoji
@@ -323,18 +326,14 @@ export default function HomeCategoriesAdmin() {
                     placeholder="🍽️"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Name
-                  </label>
-                  <input
-                    type="text"
-                    value={modal.data.name}
-                    onChange={(e) => handleField("name", e.target.value)}
-                    className={inputCls}
-                    placeholder="e.g. Arabic"
-                  />
-                </div>
+                <BilingualField
+                  label="Name"
+                  value={modal.data.name}
+                  valueAr={modal.data.name_ar ?? ""}
+                  onChange={(v) => handleField("name", v)}
+                  onChangeAr={(v) => handleField("name_ar", v)}
+                  placeholder="e.g. Arabic"
+                />
               </div>
 
               {/* Image URL */}

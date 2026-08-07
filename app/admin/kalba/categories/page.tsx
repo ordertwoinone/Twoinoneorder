@@ -1,11 +1,13 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Category {
   id: string;
   emoji: string;
   label: string;
+  label_ar: string;
   sort_order: number;
   is_active: boolean;
 }
@@ -13,6 +15,7 @@ interface Category {
 const EMPTY: Omit<Category, "id"> = {
   emoji: "🍔",
   label: "",
+  label_ar: "",
   sort_order: 0,
   is_active: true,
 };
@@ -146,8 +149,14 @@ export default function KalbaCategoriesAdmin() {
                     className="w-full px-2 py-2.5 rounded-lg border border-gray-200 text-base text-center focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="🍔" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Label</label>
-                  <input type="text" value={modal.data.label} onChange={(e) => handleField("label", e.target.value)} className={inputCls} placeholder="Burgers" />
+                  <BilingualField
+                    label="Label"
+                    value={modal.data.label}
+                    valueAr={modal.data.label_ar ?? ""}
+                    onChange={(v) => handleField("label", v)}
+                    onChangeAr={(v) => handleField("label_ar", v)}
+                    placeholder="Burgers"
+                  />
                 </div>
               </div>
 

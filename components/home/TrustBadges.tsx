@@ -6,7 +6,7 @@ async function getData(): Promise<{ phone: string; badges: Badge[] }> {
     supabaseAdmin.from("site_settings").select("phone").single(),
     supabaseAdmin
       .from("trust_badges")
-      .select("emoji, title, subtitle, detail, is_call")
+      .select("emoji, title, title_ar, subtitle, subtitle_ar, detail, detail_ar, is_call")
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
   ]);

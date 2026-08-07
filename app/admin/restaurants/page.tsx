@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Search, Star, Clock, ChevronUp, ChevronDown } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Restaurant {
   id: string;
@@ -13,9 +14,12 @@ interface Restaurant {
   background_image_url: string;
   rating: number;
   delivery_time: string;
+  delivery_time_ar: string;
   url: string;
   badge: string | null;
+  badge_ar: string;
   offer_text: string | null;
+  offer_text_ar: string;
   free_delivery: boolean;
   badge_bg_color: string;
   badge_text_color: string;
@@ -28,7 +32,7 @@ interface Restaurant {
 
 const EMPTY: Omit<Restaurant, "id" | "created_at"> = {
   name: "", slug: "", cuisine: [], logo_url: "", food_image_url: "", background_image_url: "",
-  rating: 4.5, delivery_time: "20-30 min", url: "", badge: null, offer_text: "", sort_order: 0,
+  rating: 4.5, delivery_time: "20-30 min", delivery_time_ar: "", url: "", badge: null, badge_ar: "", offer_text: "", offer_text_ar: "", sort_order: 0,
   is_active: true, free_delivery: false,
   badge_bg_color: "", badge_text_color: "", offer_bg_color: "", offer_text_color: "",
 };
@@ -385,10 +389,14 @@ export default function RestaurantsAdmin() {
                     className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Delivery Time</label>
-                  <input type="text" value={modal.data.delivery_time} onChange={(e) => handleField("delivery_time", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="20-30 min" />
+                  <BilingualField
+                    label="Delivery Time"
+                    value={modal.data.delivery_time}
+                    valueAr={modal.data.delivery_time_ar ?? ""}
+                    onChange={(v) => handleField("delivery_time", v)}
+                    onChangeAr={(v) => handleField("delivery_time_ar", v)}
+                    placeholder="20-30 min"
+                  />
                 </div>
               </div>
 

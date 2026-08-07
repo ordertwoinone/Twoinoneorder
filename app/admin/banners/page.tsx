@@ -2,19 +2,26 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Banner {
   id: string;
   tag: string;
+  tag_ar: string;
   headline_orange: string;
+  headline_orange_ar: string;
   headline_black: string;
+  headline_black_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   cta_text: string;
+  cta_text_ar: string;
   cta_href: string;
   bg_color: string;
   accent_color: string;
   food_image_url: string;
   food_alt: string;
+  food_alt_ar: string;
   sort_order: number;
   is_active: boolean;
   platform: "mobile" | "web";
@@ -22,15 +29,21 @@ interface Banner {
 
 const EMPTY: Omit<Banner, "id"> = {
   tag: "",
+  tag_ar: "",
   headline_orange: "",
+  headline_orange_ar: "",
   headline_black: "",
+  headline_black_ar: "",
   subtitle: "",
+  subtitle_ar: "",
   cta_text: "Order Now",
+  cta_text_ar: "",
   cta_href: "",
   bg_color: "#fff8f2",
   accent_color: "#ea580c",
   food_image_url: "",
   food_alt: "",
+  food_alt_ar: "",
   sort_order: 0,
   is_active: true,
   platform: "mobile",
@@ -200,10 +213,14 @@ export default function BannersAdmin() {
               {/* Both layouts render the tag, headlines, subtitle and colours. */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tag / Brand</label>
-                  <input type="text" value={modal.data.tag} onChange={(e) => handleField("tag", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="FALAFEL AL NILE" />
+                  <BilingualField
+                    label="Tag / Brand"
+                    value={modal.data.tag}
+                    valueAr={modal.data.tag_ar ?? ""}
+                    onChange={(v) => handleField("tag", v)}
+                    onChangeAr={(v) => handleField("tag_ar", v)}
+                    placeholder="FALAFEL AL NILE"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sort Order</label>
@@ -216,36 +233,50 @@ export default function BannersAdmin() {
                 {/* Web accents the first line, mobile the second — label them
                     so it is clear which one picks up the accent colour. */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    {isWeb ? "Headline (colored)" : "Headline line 1"}
-                  </label>
-                  <input type="text" value={modal.data.headline_orange} onChange={(e) => handleField("headline_orange", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder={isWeb ? "20% EXTRA" : "Four Restaurants."} />
+                  <BilingualField
+                    label={isWeb ? "Headline (colored)" : "Headline line 1"}
+                    value={modal.data.headline_orange}
+                    valueAr={modal.data.headline_orange_ar ?? ""}
+                    onChange={(v) => handleField("headline_orange", v)}
+                    onChangeAr={(v) => handleField("headline_orange_ar", v)}
+                    placeholder={isWeb ? "20% EXTRA" : "Four Restaurants."}
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    {isWeb ? "Headline (black)" : "Headline line 2 (colored)"}
-                  </label>
-                  <input type="text" value={modal.data.headline_black} onChange={(e) => handleField("headline_black", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder={isWeb ? "DISCOUNT" : "One Easy Order."} />
+                  <BilingualField
+                    label={isWeb ? "Headline (black)" : "Headline line 2 (colored)"}
+                    value={modal.data.headline_black}
+                    valueAr={modal.data.headline_black_ar ?? ""}
+                    onChange={(v) => handleField("headline_black", v)}
+                    onChangeAr={(v) => handleField("headline_black_ar", v)}
+                    placeholder={isWeb ? "DISCOUNT" : "One Easy Order."}
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-                <textarea value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} rows={2}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
-                  placeholder="Description text..." />
+                <BilingualField
+                  label="Subtitle"
+                  value={modal.data.subtitle}
+                  valueAr={modal.data.subtitle_ar ?? ""}
+                  onChange={(v) => handleField("subtitle", v)}
+                  onChangeAr={(v) => handleField("subtitle_ar", v)}
+                  placeholder="Description text..."
+                  multiline
+                  rows={2}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Button Text</label>
-                  <input type="text" value={modal.data.cta_text} onChange={(e) => handleField("cta_text", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Order Now" />
+                  <BilingualField
+                    label="Button Text"
+                    value={modal.data.cta_text}
+                    valueAr={modal.data.cta_text_ar ?? ""}
+                    onChange={(v) => handleField("cta_text", v)}
+                    onChangeAr={(v) => handleField("cta_text_ar", v)}
+                    placeholder="Order Now"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Banner Link</label>
@@ -292,10 +323,14 @@ export default function BannersAdmin() {
               />
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Image Alt Text</label>
-                <input type="text" value={modal.data.food_alt} onChange={(e) => handleField("food_alt", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="Descriptive alt text" />
+                <BilingualField
+                  label="Image Alt Text"
+                  value={modal.data.food_alt}
+                  valueAr={modal.data.food_alt_ar ?? ""}
+                  onChange={(v) => handleField("food_alt", v)}
+                  onChangeAr={(v) => handleField("food_alt_ar", v)}
+                  placeholder="Descriptive alt text"
+                />
               </div>
 
               <div>

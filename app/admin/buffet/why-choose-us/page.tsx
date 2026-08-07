@@ -1,12 +1,15 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface WhyChooseItem {
   id: string;
   icon_name: string;
   label: string;
+  label_ar: string;
   sub_label: string;
+  sub_label_ar: string;
   sort_order: number;
   is_active: boolean;
 }
@@ -14,7 +17,9 @@ interface WhyChooseItem {
 const EMPTY: Omit<WhyChooseItem, "id"> = {
   icon_name: "Star",
   label: "",
+  label_ar: "",
   sub_label: "",
+  sub_label_ar: "",
   sort_order: 0,
   is_active: true,
 };
@@ -181,16 +186,24 @@ export default function WhyChooseUsAdmin() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Label</label>
-                  <input type="text" value={modal.data.label} onChange={(e) => handleField("label", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="100+ Dishes" />
+                  <BilingualField
+                    label="Label"
+                    value={modal.data.label}
+                    valueAr={modal.data.label_ar ?? ""}
+                    onChange={(v) => handleField("label", v)}
+                    onChangeAr={(v) => handleField("label_ar", v)}
+                    placeholder="100+ Dishes"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sub Label</label>
-                  <input type="text" value={modal.data.sub_label} onChange={(e) => handleField("sub_label", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Per Session" />
+                  <BilingualField
+                    label="Sub Label"
+                    value={modal.data.sub_label}
+                    valueAr={modal.data.sub_label_ar ?? ""}
+                    onChange={(v) => handleField("sub_label", v)}
+                    onChangeAr={(v) => handleField("sub_label_ar", v)}
+                    placeholder="Per Session"
+                  />
                 </div>
               </div>
 

@@ -4,9 +4,12 @@ import type { CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalized } from "@/lib/i18n/localized";
 
 export interface CategoryTileData {
   name: string;
+  /** Arabic name from admin → Cuisine Categories. Blank falls back to English. */
+  nameAr?: string | null;
   imageUrl: string;
   href: string;
 }
@@ -29,7 +32,10 @@ export default function CategoryTile({
   style?: CSSProperties;
 }) {
   const { tMaybe } = useTranslation();
-  const label = tMaybe(`home.categories.${cat.name}`, cat.name);
+  const localized = useLocalized();
+  // An Arabic name typed in admin wins; otherwise fall back to the dictionary
+  // translation of the ten built-in cuisines, then to the English text.
+  const label = localized(tMaybe(`home.categories.${cat.name}`, cat.name), cat.nameAr);
   const isExternal = cat.href?.startsWith("http");
 
   const inner = (

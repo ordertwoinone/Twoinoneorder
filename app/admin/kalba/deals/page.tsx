@@ -1,12 +1,15 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface DailyDeal {
   id: string;
   day: string;
   title: string;
+  title_ar: string;
   description: string;
+  description_ar: string;
   emoji: string;
   bg_color: string;
   day_color: string;
@@ -17,7 +20,9 @@ interface DailyDeal {
 const EMPTY: Omit<DailyDeal, "id"> = {
   day: "Monday",
   title: "",
+  title_ar: "",
   description: "",
+  description_ar: "",
   emoji: "🍔",
   bg_color: "#ecfdf5",
   day_color: "#16a34a",
@@ -179,13 +184,25 @@ export default function KalbaDealsAdmin() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title</label>
-                <input type="text" value={modal.data.title} onChange={(e) => handleField("title", e.target.value)} className={inputCls} placeholder="Burger Day" />
+                <BilingualField
+                  label="Title"
+                  value={modal.data.title}
+                  valueAr={modal.data.title_ar ?? ""}
+                  onChange={(v) => handleField("title", v)}
+                  onChangeAr={(v) => handleField("title_ar", v)}
+                  placeholder="Burger Day"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Deal Text</label>
-                <input type="text" value={modal.data.description} onChange={(e) => handleField("description", e.target.value)} className={inputCls} placeholder="Up to 25% OFF" />
+                <BilingualField
+                  label="Deal Text"
+                  value={modal.data.description}
+                  valueAr={modal.data.description_ar ?? ""}
+                  onChange={(v) => handleField("description", v)}
+                  onChangeAr={(v) => handleField("description_ar", v)}
+                  placeholder="Up to 25% OFF"
+                />
               </div>
 
               <div>

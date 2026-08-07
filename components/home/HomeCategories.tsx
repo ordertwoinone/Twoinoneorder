@@ -6,6 +6,7 @@ import CategoryTile from "./CategoryTile";
 interface HomeCategory {
   id: string;
   name: string;
+  name_ar?: string | null;
   emoji: string;
   image_url: string;
   href: string;
@@ -50,6 +51,7 @@ async function getCategories(platform: "mobile" | "web"): Promise<HomeCategory[]
 function toTile(cat: HomeCategory) {
   return {
     name: cat.name,
+    nameAr: cat.name_ar,
     imageUrl:
       cat.image_url || FALLBACK.find((f) => f.name === cat.name)?.image_url || FALLBACK[0].image_url,
     href: cat.href,

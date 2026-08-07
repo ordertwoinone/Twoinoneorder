@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Save, Plus, Trash2 } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface StudyFeature {
   icon: string;
@@ -11,17 +12,23 @@ interface StudyFeature {
 interface KalbaStudy {
   id?: string;
   title: string;
+  title_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   image_url: string;
   button_text: string;
+  button_text_ar: string;
   features: StudyFeature[];
 }
 
 const DEFAULTS: KalbaStudy = {
   title: "Study & Chill",
+  title_ar: "",
   subtitle: "The perfect place to eat, study and hangout.",
+  subtitle_ar: "",
   image_url: "",
   button_text: "Visit Store",
+  button_text_ar: "",
   features: [],
 };
 
@@ -30,7 +37,6 @@ const ICON_OPTIONS = [
   "Clock", "Star", "GraduationCap", "Coffee", "BookOpen", "Zap", "Music",
 ];
 
-const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 export default function KalbaStudyAdmin() {
   const [form, setForm] = useState<KalbaStudy>(DEFAULTS);
@@ -115,16 +121,34 @@ export default function KalbaStudyAdmin() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
           <h2 className="text-sm font-semibold text-gray-700">Text</h2>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title</label>
-            <input type="text" value={form.title} onChange={(e) => handleField("title", e.target.value)} className={inputCls} placeholder="Study & Chill" />
+            <BilingualField
+              label="Title"
+              value={form.title}
+              valueAr={form.title_ar ?? ""}
+              onChange={(v) => handleField("title", v)}
+              onChangeAr={(v) => handleField("title_ar", v)}
+              placeholder="Study & Chill"
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-            <input type="text" value={form.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} className={inputCls} placeholder="The perfect place to eat, study and hangout." />
+            <BilingualField
+              label="Subtitle"
+              value={form.subtitle}
+              valueAr={form.subtitle_ar ?? ""}
+              onChange={(v) => handleField("subtitle", v)}
+              onChangeAr={(v) => handleField("subtitle_ar", v)}
+              placeholder="The perfect place to eat, study and hangout."
+            />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Button Text</label>
-            <input type="text" value={form.button_text} onChange={(e) => handleField("button_text", e.target.value)} className={inputCls} placeholder="Visit Store" />
+            <BilingualField
+              label="Button Text"
+              value={form.button_text}
+              valueAr={form.button_text_ar ?? ""}
+              onChange={(v) => handleField("button_text", v)}
+              onChangeAr={(v) => handleField("button_text_ar", v)}
+              placeholder="Visit Store"
+            />
           </div>
         </div>
 

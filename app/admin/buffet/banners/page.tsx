@@ -2,15 +2,21 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface BuffetBanner {
   id: string;
   title: string;
+  title_ar: string;
   title_highlight: string;
+  title_highlight_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   price: string;
   price_label: string;
+  price_label_ar: string;
   cta_text: string;
+  cta_text_ar: string;
   bg_color: string;
   accent_color: string;
   image_url: string;
@@ -20,11 +26,16 @@ interface BuffetBanner {
 
 const EMPTY: Omit<BuffetBanner, "id"> = {
   title: "",
+  title_ar: "",
   title_highlight: "",
+  title_highlight_ar: "",
   subtitle: "",
+  subtitle_ar: "",
   price: "",
   price_label: "/ person",
+  price_label_ar: "",
   cta_text: "Book a Table",
+  cta_text_ar: "",
   bg_color: "#FFF5EE",
   accent_color: "#ea580c",
   image_url: "",
@@ -175,24 +186,38 @@ export default function BuffetBannersAdmin() {
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title (normal)</label>
-                  <input type="text" value={modal.data.title} onChange={(e) => handleField("title", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="All you can eat," />
+                  <BilingualField
+                    label="Title (normal)"
+                    value={modal.data.title}
+                    valueAr={modal.data.title_ar ?? ""}
+                    onChange={(v) => handleField("title", v)}
+                    onChangeAr={(v) => handleField("title_ar", v)}
+                    placeholder="All you can eat,"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title (highlighted)</label>
-                  <input type="text" value={modal.data.title_highlight} onChange={(e) => handleField("title_highlight", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Endless choices!" />
+                  <BilingualField
+                    label="Title (highlighted)"
+                    value={modal.data.title_highlight}
+                    valueAr={modal.data.title_highlight_ar ?? ""}
+                    onChange={(v) => handleField("title_highlight", v)}
+                    onChangeAr={(v) => handleField("title_highlight_ar", v)}
+                    placeholder="Endless choices!"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-                <textarea value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} rows={2}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
-                  placeholder="Enjoy 100+ dishes..." />
+                <BilingualField
+                  label="Subtitle"
+                  value={modal.data.subtitle}
+                  valueAr={modal.data.subtitle_ar ?? ""}
+                  onChange={(v) => handleField("subtitle", v)}
+                  onChangeAr={(v) => handleField("subtitle_ar", v)}
+                  placeholder="Enjoy 100+ dishes..."
+                  multiline
+                  rows={2}
+                />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
@@ -203,16 +228,24 @@ export default function BuffetBannersAdmin() {
                     placeholder="KD 6.900" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Price Label</label>
-                  <input type="text" value={modal.data.price_label} onChange={(e) => handleField("price_label", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="/ person" />
+                  <BilingualField
+                    label="Price Label"
+                    value={modal.data.price_label}
+                    valueAr={modal.data.price_label_ar ?? ""}
+                    onChange={(v) => handleField("price_label", v)}
+                    onChangeAr={(v) => handleField("price_label_ar", v)}
+                    placeholder="/ person"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">CTA Text</label>
-                  <input type="text" value={modal.data.cta_text} onChange={(e) => handleField("cta_text", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Book a Table" />
+                  <BilingualField
+                    label="CTA Text"
+                    value={modal.data.cta_text}
+                    valueAr={modal.data.cta_text_ar ?? ""}
+                    onChange={(v) => handleField("cta_text", v)}
+                    onChangeAr={(v) => handleField("cta_text_ar", v)}
+                    placeholder="Book a Table"
+                  />
                 </div>
               </div>
 

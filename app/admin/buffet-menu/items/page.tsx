@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Star, Clock } from "lucide-react";
 import TopPicksField from "@/components/admin/TopPicksField";
 import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface MenuSection {
   id: string;
@@ -20,6 +21,7 @@ interface MenuItem {
   id: string;
   section_id: string;
   name: string;
+  name_ar: string;
   image_url: string;
   price: number;
   is_veg: boolean;
@@ -37,6 +39,7 @@ interface MenuItem {
 const EMPTY: Omit<MenuItem, "id" | "buffet_menu_sections"> = {
   section_id: "",
   name: "",
+  name_ar: "",
   image_url: "",
   price: 0,
   is_veg: false,
@@ -282,9 +285,14 @@ export default function MenuItemsAdmin() {
             </div>
             <div className="px-6 py-5 space-y-4 overflow-y-auto">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name</label>
-                <input type="text" value={modal.data.name} onChange={(e) => handleField("name", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Chicken Tikka" />
+                <BilingualField
+                  label="Name"
+                  value={modal.data.name}
+                  valueAr={modal.data.name_ar ?? ""}
+                  onChange={(v) => handleField("name", v)}
+                  onChangeAr={(v) => handleField("name_ar", v)}
+                  placeholder="Chicken Tikka"
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Section</label>

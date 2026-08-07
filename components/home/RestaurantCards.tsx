@@ -3,6 +3,7 @@ import { Star, Clock, Bike } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { stagger } from "@/lib/stagger";
 import { T } from "@/lib/i18n/T";
+import { L } from "@/lib/i18n/localized";
 
 /* Fallback palettes, used when a restaurant carries no colours of its own.
    Anything outside these four names lands on the neutral grey. */
@@ -27,15 +28,20 @@ const OFFER_FALLBACK = { bg: "#FEF3C7", text: "#8A6100" };
 interface Restaurant {
   id: string;
   name: string;
+  name_ar: string | null;
   cuisine: string[];
+  cuisine_ar: string[] | null;
   logo_url: string;
   food_image_url: string;
   background_image_url: string | null;
   rating: number;
   delivery_time: string;
+  delivery_time_ar: string | null;
   url: string;
   badge: string | null;
+  badge_ar: string | null;
   offer_text: string | null;
+  offer_text_ar: string | null;
   free_delivery: boolean | null;
   badge_bg_color: string | null;
   badge_text_color: string | null;
@@ -58,6 +64,10 @@ function pillColors(
 
 const BASE_COLUMNS =
   "id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text";
+/* Added by supabase/arabic_translations.sql. Queried separately from the
+   colour columns so a database that has run one migration but not the other
+   still renders. */
+const ARABIC_COLUMNS = "name_ar, cuisine_ar, delivery_time_ar, badge_ar, offer_text_ar";
 /* Added by supabase/restaurant_card_colors.sql and restaurant_free_delivery.sql. */
 const EXTRA_COLUMNS =
   "free_delivery, badge_bg_color, badge_text_color, offer_bg_color, offer_text_color";
@@ -73,25 +83,47 @@ function query(columns: string) {
     .order("created_at", { ascending: false });
 }
 
+const BLANK_ARABIC = {
+  name_ar: null,
+  cuisine_ar: null,
+  delivery_time_ar: null,
+  badge_ar: null,
+  offer_text_ar: null,
+};
+
+const BLANK_EXTRAS = {
+  free_delivery: null,
+  badge_bg_color: null,
+  badge_text_color: null,
+  offer_bg_color: null,
+  offer_text_color: null,
+};
+
 /**
  * PostgREST rejects the whole select if one column is unknown, so a database
- * that has not run the latest migration would blank the entire section. Fall
- * back to the columns that have always existed and let the cards render with
- * their default colours instead.
+ * that has not run the latest migration would blank the entire section. Ask for
+ * everything first, then step down a tier at a time — a site that has run the
+ * colour migration but not the Arabic one still renders its cards, just without
+ * the translations.
  */
 async function getRestaurants(): Promise<Restaurant[]> {
-  const full = await query(`${BASE_COLUMNS}, ${EXTRA_COLUMNS}`);
+  const full = await query(`${BASE_COLUMNS}, ${EXTRA_COLUMNS}, ${ARABIC_COLUMNS}`);
   if (!full.error) return (full.data as unknown as Restaurant[]) ?? [];
+
+  const noArabic = await query(`${BASE_COLUMNS}, ${EXTRA_COLUMNS}`);
+  if (!noArabic.error) {
+    return ((noArabic.data as unknown as Restaurant[]) ?? []).map((r) => ({
+      ...BLANK_ARABIC,
+      ...r,
+    }));
+  }
 
   const base = await query(BASE_COLUMNS);
   if (base.error || !base.data?.length) return [];
   return (base.data as unknown as Restaurant[]).map((r) => ({
+    ...BLANK_ARABIC,
+    ...BLANK_EXTRAS,
     ...r,
-    free_delivery: null,
-    badge_bg_color: null,
-    badge_text_color: null,
-    offer_bg_color: null,
-    offer_text_color: null,
   }));
 }
 
@@ -155,7 +187,7 @@ export default async function RestaurantCards() {
 
                 <div className="flex-1 min-w-0">
                   <h3 className="text-gray-900 font-extrabold text-[16px] leading-snug">
-                    {r.name}
+                    <L en={r.name} ar={r.name_ar} />
                   </h3>
 
                   {/* Rating and delivery time share a line. */}
@@ -167,7 +199,7 @@ export default async function RestaurantCards() {
                     <span className="text-gray-300">·</span>
                     <span className="flex items-center gap-1 whitespace-nowrap">
                       <Clock size={12} />
-                      {r.delivery_time}
+                      <L en={r.delivery_time} ar={r.delivery_time_ar} />
                     </span>
                   </div>
 
@@ -184,7 +216,14 @@ export default async function RestaurantCards() {
                           {r.cuisine?.length > 0 && <span className="text-gray-300">·</span>}
                         </>
                       )}
-                      {r.cuisine?.length > 0 && <span>{r.cuisine.join(", ")}</span>}
+                      {r.cuisine?.length > 0 && (
+                        <span>
+                          <L
+                            en={r.cuisine.join(", ")}
+                            ar={r.cuisine_ar?.length ? r.cuisine_ar.join("، ") : null}
+                          />
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -201,7 +240,7 @@ export default async function RestaurantCards() {
                             BADGE_PILL[badgeLabel] || BADGE_PILL_FALLBACK,
                           )}
                         >
-                          {badgeLabel}
+                          <L en={badgeLabel} ar={r.badge_ar} />
                         </span>
                       )}
                       {r.offer_text?.trim() && (
@@ -209,7 +248,7 @@ export default async function RestaurantCards() {
                           className="text-[9px] font-bold px-1.5 py-0.5 rounded-md min-w-0 truncate leading-relaxed"
                           style={pillColors(r.offer_bg_color, r.offer_text_color, OFFER_FALLBACK)}
                         >
-                          {r.offer_text}
+                          <L en={r.offer_text} ar={r.offer_text_ar} />
                         </span>
                       )}
                     </div>
@@ -265,7 +304,7 @@ export default async function RestaurantCards() {
                         BADGE_STYLE[badgeLabel] || BADGE_FALLBACK,
                       )}
                     >
-                      {badgeLabel}
+                      <L en={badgeLabel} ar={r.badge_ar} />
                     </span>
                   )}
 
@@ -287,16 +326,19 @@ export default async function RestaurantCards() {
                 {/* Info */}
                 <div className="px-3 pt-2.5 pb-3">
                   <h3 className="text-gray-900 font-extrabold text-sm leading-tight mb-0.5 truncate">
-                    {r.name}
+                    <L en={r.name} ar={r.name_ar} />
                   </h3>
                   <p className="text-gray-400 text-[11px] truncate mb-2.5">
-                    {r.cuisine?.join(", ")}
+                    <L
+                      en={r.cuisine?.join(", ")}
+                      ar={r.cuisine_ar?.length ? r.cuisine_ar.join("، ") : null}
+                    />
                   </p>
 
                   <div className="flex items-center justify-between gap-1">
                     <span className="flex items-center gap-1 text-gray-500 text-[11px] font-medium whitespace-nowrap">
                       <Clock size={11} />
-                      {r.delivery_time}
+                      <L en={r.delivery_time} ar={r.delivery_time_ar} />
                     </span>
                     <span
                       className="flex items-center gap-0.5 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-md shrink-0"

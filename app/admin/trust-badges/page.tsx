@@ -1,20 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Phone } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Badge {
   id: string;
   emoji: string;
   title: string;
+  title_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   detail: string;
+  detail_ar: string;
   is_call: boolean;
   sort_order: number;
   is_active: boolean;
 }
 
 const EMPTY: Omit<Badge, "id"> = {
-  emoji: "⭐", title: "", subtitle: "", detail: "",
+  emoji: "⭐", title: "", title_ar: "", subtitle: "", subtitle_ar: "", detail: "", detail_ar: "",
   is_call: false, sort_order: 0, is_active: true,
 };
 
@@ -142,22 +146,39 @@ export default function TrustBadgesAdmin() {
                   <input type="text" value={modal.data.emoji} onChange={(e) => handleField("emoji", e.target.value)} className={`${inputCls} text-center text-xl`} placeholder="🛵" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title *</label>
-                  <input type="text" value={modal.data.title} onChange={(e) => handleField("title", e.target.value)} className={inputCls} placeholder="Fast Delivery" />
+                  <BilingualField
+                    label="Title *"
+                    value={modal.data.title}
+                    valueAr={modal.data.title_ar ?? ""}
+                    onChange={(v) => handleField("title", v)}
+                    onChangeAr={(v) => handleField("title_ar", v)}
+                    placeholder="Fast Delivery"
+                  />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-                <input type="text" value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} className={inputCls} placeholder="15–40 min" />
+                <BilingualField
+                  label="Subtitle"
+                  value={modal.data.subtitle}
+                  valueAr={modal.data.subtitle_ar ?? ""}
+                  onChange={(v) => handleField("subtitle", v)}
+                  onChangeAr={(v) => handleField("subtitle_ar", v)}
+                  placeholder="15–40 min"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Popup Detail</label>
-                <textarea value={modal.data.detail} onChange={(e) => handleField("detail", e.target.value)} rows={4}
-                  className={`${inputCls} resize-y`}
+                <BilingualField
+                  label="Popup Detail"
+                  value={modal.data.detail}
+                  valueAr={modal.data.detail_ar ?? ""}
+                  onChange={(v) => handleField("detail", v)}
+                  onChangeAr={(v) => handleField("detail_ar", v)}
                   placeholder="The text shown when the card is tapped…"
-                  disabled={modal.data.is_call} />
+                  multiline
+                  rows={4}
+                />
                 <p className="text-[11px] text-gray-400 mt-1.5">Shown in the popup. Ignored when “Tap to call” is on.</p>
               </div>
 

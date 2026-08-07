@@ -1,11 +1,13 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface MenuSection {
   id: string;
   category_id: string;
   title: string;
+  title_ar: string;
   icon_name: string;
   sort_order: number;
   is_active: boolean;
@@ -15,6 +17,7 @@ interface MenuSection {
 const EMPTY: Omit<MenuSection, "id" | "buffet_menu_items"> = {
   category_id: "",
   title: "",
+  title_ar: "",
   icon_name: "Utensils",
   sort_order: 0,
   is_active: true,
@@ -164,9 +167,14 @@ export default function MenuSectionsAdmin() {
             <div className="px-6 py-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title</label>
-                  <input type="text" value={modal.data.title} onChange={(e) => handleField("title", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" placeholder="Starters" />
+                  <BilingualField
+                    label="Title"
+                    value={modal.data.title}
+                    valueAr={modal.data.title_ar ?? ""}
+                    onChange={(v) => handleField("title", v)}
+                    onChangeAr={(v) => handleField("title_ar", v)}
+                    placeholder="Starters"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category ID (slug)</label>

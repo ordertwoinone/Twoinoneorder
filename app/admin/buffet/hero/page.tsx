@@ -2,30 +2,43 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface BuffetHero {
   id?: string;
   restaurant_name: string;
+  restaurant_name_ar: string;
   cuisine: string;
+  cuisine_ar: string;
   rating: string;
   rating_count: string;
+  rating_count_ar: string;
   delivery_time: string;
+  delivery_time_ar: string;
   delivery_fee: string;
+  delivery_fee_ar: string;
   is_open: boolean;
   closes_at: string;
+  closes_at_ar: string;
   cover_image_url: string;
   logo_url: string;
 }
 
 const DEFAULTS: BuffetHero = {
   restaurant_name: "Buffet By Two In One",
+  restaurant_name_ar: "",
   cuisine: "Buffet · International",
+  cuisine_ar: "",
   rating: "4.6",
   rating_count: "2.1K+",
+  rating_count_ar: "",
   delivery_time: "20–30 min",
+  delivery_time_ar: "",
   delivery_fee: "KD 0.600 delivery",
+  delivery_fee_ar: "",
   is_open: true,
   closes_at: "11:30 PM",
+  closes_at_ar: "",
   cover_image_url: "",
   logo_url: "",
 };
@@ -95,23 +108,23 @@ export default function BuffetHeroAdmin() {
           <h2 className="text-sm font-semibold text-gray-700">Restaurant Info</h2>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Restaurant Name</label>
-            <input
-              type="text"
+            <BilingualField
+              label="Restaurant Name"
               value={form.restaurant_name}
-              onChange={(e) => handleField("restaurant_name", e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              valueAr={form.restaurant_name_ar ?? ""}
+              onChange={(v) => handleField("restaurant_name", v)}
+              onChangeAr={(v) => handleField("restaurant_name_ar", v)}
               placeholder="Buffet By Two In One"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Cuisine / Type</label>
-            <input
-              type="text"
+            <BilingualField
+              label="Cuisine / Type"
               value={form.cuisine}
-              onChange={(e) => handleField("cuisine", e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              valueAr={form.cuisine_ar ?? ""}
+              onChange={(v) => handleField("cuisine", v)}
+              onChangeAr={(v) => handleField("cuisine_ar", v)}
               placeholder="Buffet · International"
             />
           </div>
@@ -133,12 +146,12 @@ export default function BuffetHeroAdmin() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Rating Count</label>
-              <input
-                type="text"
+              <BilingualField
+                label="Rating Count"
                 value={form.rating_count}
-                onChange={(e) => handleField("rating_count", e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                valueAr={form.rating_count_ar ?? ""}
+                onChange={(v) => handleField("rating_count", v)}
+                onChangeAr={(v) => handleField("rating_count_ar", v)}
                 placeholder="2.1K+"
               />
             </div>
@@ -146,22 +159,22 @@ export default function BuffetHeroAdmin() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Delivery Time</label>
-              <input
-                type="text"
+              <BilingualField
+                label="Delivery Time"
                 value={form.delivery_time}
-                onChange={(e) => handleField("delivery_time", e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                valueAr={form.delivery_time_ar ?? ""}
+                onChange={(v) => handleField("delivery_time", v)}
+                onChangeAr={(v) => handleField("delivery_time_ar", v)}
                 placeholder="20–30 min"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Delivery Fee</label>
-              <input
-                type="text"
+              <BilingualField
+                label="Delivery Fee"
                 value={form.delivery_fee}
-                onChange={(e) => handleField("delivery_fee", e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                valueAr={form.delivery_fee_ar ?? ""}
+                onChange={(v) => handleField("delivery_fee", v)}
+                onChangeAr={(v) => handleField("delivery_fee_ar", v)}
                 placeholder="KD 0.600 delivery"
               />
             </div>
@@ -193,12 +206,12 @@ export default function BuffetHeroAdmin() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Closes At</label>
-              <input
-                type="text"
+              <BilingualField
+                label="Closes At"
                 value={form.closes_at}
-                onChange={(e) => handleField("closes_at", e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                valueAr={form.closes_at_ar ?? ""}
+                onChange={(v) => handleField("closes_at", v)}
+                onChangeAr={(v) => handleField("closes_at_ar", v)}
                 placeholder="11:30 PM"
               />
             </div>

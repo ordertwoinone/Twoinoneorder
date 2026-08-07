@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import TopPicksField from "@/components/admin/TopPicksField";
 import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Category {
   id: string;
@@ -14,8 +15,11 @@ interface Category {
 interface Special {
   id: string;
   name: string;
+  name_ar: string;
   description: string;
+  description_ar: string;
   price_text: string;
+  price_text_ar: string;
   image_url: string;
   sort_order: number;
   is_active: boolean;
@@ -34,8 +38,11 @@ const DIETARY_TAGS = [
 
 const EMPTY: Omit<Special, "id"> = {
   name: "",
+  name_ar: "",
   description: "",
+  description_ar: "",
   price_text: "",
+  price_text_ar: "",
   image_url: "",
   sort_order: 0,
   is_active: true,
@@ -223,8 +230,14 @@ export default function KalbaSpecialsAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name</label>
-                <input type="text" value={modal.data.name} onChange={(e) => handleField("name", e.target.value)} className={inputCls} placeholder="Exam Week Combo" />
+                <BilingualField
+                  label="Name"
+                  value={modal.data.name}
+                  valueAr={modal.data.name_ar ?? ""}
+                  onChange={(v) => handleField("name", v)}
+                  onChangeAr={(v) => handleField("name_ar", v)}
+                  placeholder="Exam Week Combo"
+                />
               </div>
 
               <div>
@@ -257,13 +270,25 @@ export default function KalbaSpecialsAdmin() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Description</label>
-                <input type="text" value={modal.data.description} onChange={(e) => handleField("description", e.target.value)} className={inputCls} placeholder="Power up your study sessions" />
+                <BilingualField
+                  label="Description"
+                  value={modal.data.description}
+                  valueAr={modal.data.description_ar ?? ""}
+                  onChange={(v) => handleField("description", v)}
+                  onChangeAr={(v) => handleField("description_ar", v)}
+                  placeholder="Power up your study sessions"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Price Text</label>
-                <input type="text" value={modal.data.price_text} onChange={(e) => handleField("price_text", e.target.value)} className={inputCls} placeholder="From AED 15" />
+                <BilingualField
+                  label="Price Text"
+                  value={modal.data.price_text}
+                  valueAr={modal.data.price_text_ar ?? ""}
+                  onChange={(v) => handleField("price_text", v)}
+                  onChangeAr={(v) => handleField("price_text_ar", v)}
+                  placeholder="From AED 15"
+                />
                 <p className="text-[11px] text-gray-400 mt-1">Leave empty to show an &quot;Order Now&quot; button instead of a price.</p>
               </div>
 

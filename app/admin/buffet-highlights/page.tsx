@@ -2,15 +2,19 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Star } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Highlight {
   id: string;
   name: string;
+  name_ar: string;
   cuisine: string;
+  cuisine_ar: string;
   price: number;
   rating: number;
   reviews: number;
   badge: string;
+  badge_ar: string;
   badge_color: string;
   image_url: string;
   href: string;
@@ -20,11 +24,14 @@ interface Highlight {
 
 const EMPTY: Omit<Highlight, "id"> = {
   name: "",
+  name_ar: "",
   cuisine: "",
+  cuisine_ar: "",
   price: 39,
   rating: 4.5,
   reviews: 0,
   badge: "NEW",
+  badge_ar: "",
   badge_color: "#7c3aed",
   image_url: "",
   href: "/restaurant/buffet",
@@ -181,23 +188,23 @@ export default function BuffetHighlightsAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name *</label>
-                <input
-                  type="text"
+                <BilingualField
+                  label="Name *"
                   value={modal.data.name}
-                  onChange={(e) => handleField("name", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  valueAr={modal.data.name_ar ?? ""}
+                  onChange={(v) => handleField("name", v)}
+                  onChangeAr={(v) => handleField("name_ar", v)}
                   placeholder="Two in One Buffet"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Cuisine</label>
-                <input
-                  type="text"
+                <BilingualField
+                  label="Cuisine"
                   value={modal.data.cuisine}
-                  onChange={(e) => handleField("cuisine", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  valueAr={modal.data.cuisine_ar ?? ""}
+                  onChange={(v) => handleField("cuisine", v)}
+                  onChangeAr={(v) => handleField("cuisine_ar", v)}
                   placeholder="Arabic, Indian, Continental"
                 />
               </div>
@@ -251,12 +258,12 @@ export default function BuffetHighlightsAdmin() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Badge Text</label>
-                  <input
-                    type="text"
+                  <BilingualField
+                    label="Badge Text"
                     value={modal.data.badge}
-                    onChange={(e) => handleField("badge", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    valueAr={modal.data.badge_ar ?? ""}
+                    onChange={(v) => handleField("badge", v)}
+                    onChangeAr={(v) => handleField("badge_ar", v)}
                     placeholder="NEW"
                   />
                 </div>

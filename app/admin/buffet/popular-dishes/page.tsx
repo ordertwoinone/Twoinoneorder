@@ -4,11 +4,14 @@ import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import TopPicksField from "@/components/admin/TopPicksField";
 import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface PopularDish {
   id: string;
   name: string;
+  name_ar: string;
   tag: string;
+  tag_ar: string;
   image_url: string;
   is_veg: boolean;
   sort_order: number;
@@ -19,7 +22,9 @@ interface PopularDish {
 
 const EMPTY: Omit<PopularDish, "id"> = {
   name: "",
+  name_ar: "",
   tag: "",
+  tag_ar: "",
   image_url: "",
   is_veg: false,
   sort_order: 0,
@@ -181,17 +186,25 @@ export default function PopularDishesAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Dish Name</label>
-                <input type="text" value={modal.data.name} onChange={(e) => handleField("name", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="Grilled Salmon" />
+                <BilingualField
+                  label="Dish Name"
+                  value={modal.data.name}
+                  valueAr={modal.data.name_ar ?? ""}
+                  onChange={(v) => handleField("name", v)}
+                  onChangeAr={(v) => handleField("name_ar", v)}
+                  placeholder="Grilled Salmon"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tag</label>
-                <input type="text" value={modal.data.tag} onChange={(e) => handleField("tag", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="Chef's Special" />
+                <BilingualField
+                  label="Tag"
+                  value={modal.data.tag}
+                  valueAr={modal.data.tag_ar ?? ""}
+                  onChange={(v) => handleField("tag", v)}
+                  onChangeAr={(v) => handleField("tag_ar", v)}
+                  placeholder="Chef's Special"
+                />
                 <div className="flex gap-1.5 flex-wrap mt-2">
                   {TAG_SUGGESTIONS.map((t) => (
                     <button key={t} type="button" onClick={() => handleField("tag", t)}

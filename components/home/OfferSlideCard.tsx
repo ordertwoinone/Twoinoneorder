@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalizedField } from "@/lib/i18n/localized";
 
 export interface OfferItem {
   id: string;
@@ -13,6 +14,11 @@ export interface OfferItem {
   title: string;
   subtitle: string;
   cta_text: string;
+  /* Arabic twins from admin → Offers; blank falls back to English. */
+  badge_text_ar?: string | null;
+  title_ar?: string | null;
+  subtitle_ar?: string | null;
+  cta_text_ar?: string | null;
   cta_href: string;
   image_url: string;
   card_color?: string | null;
@@ -38,6 +44,7 @@ function isLightHex(color?: string | null): boolean {
 
 export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -90,7 +97,7 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
             className="absolute top-1.5 start-1.5 sm:top-3 sm:start-3 text-[8px] sm:text-[10px] font-extrabold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full leading-none z-10 text-white shadow-sm max-w-[calc(100%-12px)] truncate"
             style={{ background: o.badge_color || "#ea580c" }}
           >
-            {o.badge_text}
+            {pick(o, "badge_text")}
           </span>
         )}
 
@@ -122,15 +129,15 @@ export default function OfferSlideCard({ items }: { items: OfferItem[] }) {
       {/* Content */}
       <div className="px-2 pt-2 pb-2.5 sm:px-4 sm:pt-3 sm:pb-4 flex flex-col flex-1 gap-1 sm:gap-1.5">
         <div key={`${o.id}-info`} className="hc-fade-soft flex flex-col gap-1 sm:gap-1.5 flex-1">
-          <h3 className="font-extrabold text-[11px] sm:text-base leading-tight truncate" style={{ color: titleColor }}>{o.title}</h3>
+          <h3 className="font-extrabold text-[11px] sm:text-base leading-tight truncate" style={{ color: titleColor }}>{pick(o, "title")}</h3>
           {o.subtitle && (
-            <p className="text-[9px] sm:text-[12px] leading-snug sm:leading-relaxed line-clamp-2" style={{ color: subtitleColor }}>{o.subtitle}</p>
+            <p className="text-[9px] sm:text-[12px] leading-snug sm:leading-relaxed line-clamp-2" style={{ color: subtitleColor }}>{pick(o, "subtitle")}</p>
           )}
         </div>
 
         <div className="flex items-center mt-auto pt-2 sm:pt-3">
           <div className="w-full sm:w-auto sm:ms-auto flex items-center justify-center gap-1.5 px-1.5 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-[13px] font-bold bg-white text-orange-600 transition-all duration-200 group-hover:gap-2.5 shadow-sm overflow-hidden">
-            <span className="truncate">{o.cta_text || t("common.orderNow")}</span>
+            <span className="truncate">{pick(o, "cta_text") || t("common.orderNow")}</span>
             <ArrowRight size={13} strokeWidth={2.5} className="hidden sm:block shrink-0 group-hover:translate-x-0.5 transition-transform duration-200" />
           </div>
         </div>

@@ -9,6 +9,13 @@ export interface BannerSlide {
   headline_black: string;
   subtitle: string;
   cta_text: string;
+  /* Arabic twins from admin → Hero Banners; blank falls back to English. */
+  tag_ar?: string | null;
+  headline_orange_ar?: string | null;
+  headline_black_ar?: string | null;
+  subtitle_ar?: string | null;
+  cta_text_ar?: string | null;
+  food_alt_ar?: string | null;
   cta_href: string;
   bg_color: string;
   accent_color: string;

@@ -2,14 +2,19 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Offer {
   id: string;
   badge_text: string;
+  badge_text_ar: string;
   badge_color: string;
   title: string;
+  title_ar: string;
   subtitle: string;
+  subtitle_ar: string;
   cta_text: string;
+  cta_text_ar: string;
   cta_href: string;
   image_url: string;
   bg_color: string;
@@ -21,8 +26,10 @@ interface Offer {
 const DEFAULT_GRADIENT = "linear-gradient(150deg,#f97316 0%,#db2777 58%,#7c3aed 100%)";
 
 const EMPTY: Omit<Offer, "id"> = {
-  badge_text: "", badge_color: "#16a34a", title: "", subtitle: "",
-  cta_text: "Order Now", cta_href: "", image_url: "",
+  badge_text: "",
+  badge_text_ar: "", badge_color: "#16a34a", title: "", title_ar: "", subtitle: "", subtitle_ar: "",
+  cta_text: "Order Now",
+  cta_text_ar: "", cta_href: "", image_url: "",
   bg_color: "#ffffff", card_color: "", sort_order: 0, is_active: true,
 };
 
@@ -141,23 +148,37 @@ export default function OffersAdmin() {
             </div>
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Title *</label>
-                <input type="text" value={modal.data.title} onChange={(e) => handleField("title", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="On Full Menu" />
+                <BilingualField
+                  label="Title *"
+                  value={modal.data.title}
+                  valueAr={modal.data.title_ar ?? ""}
+                  onChange={(v) => handleField("title", v)}
+                  onChangeAr={(v) => handleField("title_ar", v)}
+                  placeholder="On Full Menu"
+                />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Subtitle</label>
-                <textarea value={modal.data.subtitle} onChange={(e) => handleField("subtitle", e.target.value)} rows={2}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
-                  placeholder="Description..." />
+                <BilingualField
+                  label="Subtitle"
+                  value={modal.data.subtitle}
+                  valueAr={modal.data.subtitle_ar ?? ""}
+                  onChange={(v) => handleField("subtitle", v)}
+                  onChangeAr={(v) => handleField("subtitle_ar", v)}
+                  placeholder="Description..."
+                  multiline
+                  rows={2}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Badge Text</label>
-                  <input type="text" value={modal.data.badge_text} onChange={(e) => handleField("badge_text", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Up to 50% OFF" />
+                  <BilingualField
+                    label="Badge Text"
+                    value={modal.data.badge_text}
+                    valueAr={modal.data.badge_text_ar ?? ""}
+                    onChange={(v) => handleField("badge_text", v)}
+                    onChangeAr={(v) => handleField("badge_text_ar", v)}
+                    placeholder="Up to 50% OFF"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Badge Color</label>
@@ -171,10 +192,14 @@ export default function OffersAdmin() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">CTA Text</label>
-                  <input type="text" value={modal.data.cta_text} onChange={(e) => handleField("cta_text", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="Order Now" />
+                  <BilingualField
+                    label="CTA Text"
+                    value={modal.data.cta_text}
+                    valueAr={modal.data.cta_text_ar ?? ""}
+                    onChange={(v) => handleField("cta_text", v)}
+                    onChangeAr={(v) => handleField("cta_text_ar", v)}
+                    placeholder="Order Now"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">CTA Link</label>

@@ -5,17 +5,23 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { stagger } from "@/lib/stagger";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalizedField } from "@/lib/i18n/localized";
 
 export interface Badge {
   emoji: string;
   title: string;
   subtitle: string;
   detail: string;
+  /* Arabic twins from admin → Trust Badges; blank falls back to English. */
+  title_ar?: string | null;
+  subtitle_ar?: string | null;
+  detail_ar?: string | null;
   is_call?: boolean;
 }
 
 export default function TrustBadgesClient({ phone, badges }: { phone: string; badges: Badge[] }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const [active, setActive] = useState<Badge | null>(null);
   const [mounted, setMounted] = useState(false);
   const telHref = `tel:${phone.replace(/\s+/g, "")}`;
@@ -41,8 +47,8 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
                 style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)", animationDelay: `${stagger(i)}ms` }}
               >
                 <span className="text-xl sm:text-3xl mb-1.5 sm:mb-2">{b.emoji}</span>
-                <p className="text-[10px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
-                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.subtitle}</p>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-800 leading-tight">{pick(b, "title")}</p>
+                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{pick(b, "subtitle")}</p>
               </a>
             ) : (
               <button
@@ -52,8 +58,8 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
                 style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.06)", animationDelay: `${stagger(i)}ms` }}
               >
                 <span className="text-xl sm:text-3xl mb-1.5 sm:mb-2">{b.emoji}</span>
-                <p className="text-[10px] sm:text-xs font-bold text-gray-800 leading-tight">{b.title}</p>
-                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{b.subtitle}</p>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-800 leading-tight">{pick(b, "title")}</p>
+                <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight mt-0.5">{pick(b, "subtitle")}</p>
               </button>
             )
           )}
@@ -81,9 +87,9 @@ export default function TrustBadgesClient({ phone, badges }: { phone: string; ba
             <div className="w-16 h-16 mx-auto rounded-2xl bg-orange-50 flex items-center justify-center text-4xl mb-4">
               {active.emoji}
             </div>
-            <h3 className="text-lg font-extrabold text-gray-900 mb-1">{active.title}</h3>
-            <p className="text-[12px] font-semibold text-orange-500 uppercase tracking-wide mb-3">{active.subtitle}</p>
-            <p className="text-[13px] text-gray-500 leading-relaxed">{active.detail}</p>
+            <h3 className="text-lg font-extrabold text-gray-900 mb-1">{pick(active, "title")}</h3>
+            <p className="text-[12px] font-semibold text-orange-500 uppercase tracking-wide mb-3">{pick(active, "subtitle")}</p>
+            <p className="text-[13px] text-gray-500 leading-relaxed">{pick(active, "detail")}</p>
 
             <button
               onClick={() => setActive(null)}

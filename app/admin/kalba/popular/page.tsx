@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import TopPicksField from "@/components/admin/TopPicksField";
 import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Category {
   id: string;
@@ -14,9 +15,11 @@ interface Category {
 interface PopularItem {
   id: string;
   name: string;
+  name_ar: string;
   price: string;
   rating: string;
   time_text: string;
+  time_text_ar: string;
   image_url: string;
   sort_order: number;
   is_active: boolean;
@@ -35,9 +38,11 @@ const DIETARY_TAGS = [
 
 const EMPTY: Omit<PopularItem, "id"> = {
   name: "",
+  name_ar: "",
   price: "",
   rating: "4.5",
   time_text: "15–20 min",
+  time_text_ar: "",
   image_url: "",
   sort_order: 0,
   is_active: true,
@@ -224,8 +229,14 @@ export default function KalbaPopularAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Item Name</label>
-                <input type="text" value={modal.data.name} onChange={(e) => handleField("name", e.target.value)} className={inputCls} placeholder="Student Breakfast Box" />
+                <BilingualField
+                  label="Item Name"
+                  value={modal.data.name}
+                  valueAr={modal.data.name_ar ?? ""}
+                  onChange={(v) => handleField("name", v)}
+                  onChangeAr={(v) => handleField("name_ar", v)}
+                  placeholder="Student Breakfast Box"
+                />
               </div>
 
               <div>
@@ -267,8 +278,14 @@ export default function KalbaPopularAdmin() {
                   <input type="text" value={modal.data.rating} onChange={(e) => handleField("rating", e.target.value)} className={inputCls} placeholder="4.6" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Time</label>
-                  <input type="text" value={modal.data.time_text} onChange={(e) => handleField("time_text", e.target.value)} className={inputCls} placeholder="15–20 min" />
+                  <BilingualField
+                    label="Time"
+                    value={modal.data.time_text}
+                    valueAr={modal.data.time_text_ar ?? ""}
+                    onChange={(v) => handleField("time_text", v)}
+                    onChangeAr={(v) => handleField("time_text_ar", v)}
+                    placeholder="15–20 min"
+                  />
                 </div>
               </div>
 

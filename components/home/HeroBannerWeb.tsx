@@ -5,12 +5,14 @@ import Image from "next/image";
 import Link from "next/link";
 import type { BannerSlide } from "./HeroBanner";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalizedField } from "@/lib/i18n/localized";
 
 const AUTOPLAY_MS = 4500;
 
 // Desktop/web hero — the original slideshow design (text panel + food image).
 export default function HeroBannerWeb({ slides }: { slides: BannerSlide[] }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -25,7 +27,16 @@ export default function HeroBannerWeb({ slides }: { slides: BannerSlide[] }) {
 
   if (!slides.length) return null;
 
-  const s = slides[current];
+  const raw = slides[current];
+  const s = {
+    ...raw,
+    tag: pick(raw, "tag"),
+    headline_orange: pick(raw, "headline_orange"),
+    headline_black: pick(raw, "headline_black"),
+    subtitle: pick(raw, "subtitle"),
+    cta_text: pick(raw, "cta_text"),
+    food_alt: pick(raw, "food_alt"),
+  };
   const href = s.cta_href || "#";
   const external = /^https?:\/\//.test(href);
 

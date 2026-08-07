@@ -1,13 +1,17 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface BuffetTiming {
   id: string;
   label: string;
+  label_ar: string;
   time_range: string;
+  time_range_ar: string;
   price: string;
   price_label: string;
+  price_label_ar: string;
   theme: "orange" | "violet" | "pink";
   sort_order: number;
   is_active: boolean;
@@ -15,9 +19,12 @@ interface BuffetTiming {
 
 const EMPTY: Omit<BuffetTiming, "id"> = {
   label: "",
+  label_ar: "",
   time_range: "",
+  time_range_ar: "",
   price: "",
   price_label: "/ person",
+  price_label_ar: "",
   theme: "orange",
   sort_order: 0,
   is_active: true,
@@ -166,17 +173,25 @@ export default function BuffetTimingsAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Label</label>
-                <input type="text" value={modal.data.label} onChange={(e) => handleField("label", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="Lunch Buffet" />
+                <BilingualField
+                  label="Label"
+                  value={modal.data.label}
+                  valueAr={modal.data.label_ar ?? ""}
+                  onChange={(v) => handleField("label", v)}
+                  onChangeAr={(v) => handleField("label_ar", v)}
+                  placeholder="Lunch Buffet"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Time Range</label>
-                <input type="text" value={modal.data.time_range} onChange={(e) => handleField("time_range", e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                  placeholder="12:00 PM – 4:00 PM" />
+                <BilingualField
+                  label="Time Range"
+                  value={modal.data.time_range}
+                  valueAr={modal.data.time_range_ar ?? ""}
+                  onChange={(v) => handleField("time_range", v)}
+                  onChangeAr={(v) => handleField("time_range_ar", v)}
+                  placeholder="12:00 PM – 4:00 PM"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -187,10 +202,14 @@ export default function BuffetTimingsAdmin() {
                     placeholder="KD 6.900" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">Price Label</label>
-                  <input type="text" value={modal.data.price_label} onChange={(e) => handleField("price_label", e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    placeholder="/ person" />
+                  <BilingualField
+                    label="Price Label"
+                    value={modal.data.price_label}
+                    valueAr={modal.data.price_label_ar ?? ""}
+                    onChange={(v) => handleField("price_label", v)}
+                    onChangeAr={(v) => handleField("price_label_ar", v)}
+                    placeholder="/ person"
+                  />
                 </div>
               </div>
 

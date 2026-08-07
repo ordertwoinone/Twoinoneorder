@@ -2,22 +2,27 @@
 import { useEffect, useState } from "react";
 import { Save, Type, Image as ImageIcon } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
+import BilingualField from "@/components/admin/BilingualField";
 
 const HEADER_FIELDS = [
   "header_title",
+  "header_title_ar",
   "header_title_highlight",
+  "header_title_highlight_ar",
   "header_tagline",
+  "header_tagline_ar",
   "header_logo_url",
 ] as const;
 
 type HeaderForm = Record<(typeof HEADER_FIELDS)[number], string> & { id?: string };
 
 const EMPTY: HeaderForm = {
-  header_title: "", header_title_highlight: "", header_tagline: "", header_logo_url: "",
+  header_title: "", header_title_ar: "",
+  header_title_highlight: "", header_title_highlight_ar: "",
+  header_tagline: "", header_tagline_ar: "",
+  header_logo_url: "",
 };
 
-const inputCls =
-  "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-400 transition";
 
 export default function HeaderAdmin() {
   const [form, setForm] = useState<HeaderForm>({ ...EMPTY });
@@ -106,17 +111,35 @@ export default function HeaderAdmin() {
         <div className="px-6 py-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name (dark)</label>
-              <input value={form.header_title} onChange={(e) => handleField("header_title", e.target.value)} placeholder="TWOINONE" className={inputCls} />
+              <BilingualField
+                label="Name (dark)"
+                value={form.header_title}
+                valueAr={form.header_title_ar ?? ""}
+                onChange={(v) => handleField("header_title", v)}
+                onChangeAr={(v) => handleField("header_title_ar", v)}
+                placeholder="TWOINONE"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name Highlight (orange)</label>
-              <input value={form.header_title_highlight} onChange={(e) => handleField("header_title_highlight", e.target.value)} placeholder="ORDER" className={inputCls} />
+              <BilingualField
+                label="Name Highlight (orange)"
+                value={form.header_title_highlight}
+                valueAr={form.header_title_highlight_ar ?? ""}
+                onChange={(v) => handleField("header_title_highlight", v)}
+                onChangeAr={(v) => handleField("header_title_highlight_ar", v)}
+                placeholder="ORDER"
+              />
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Tagline</label>
-            <input value={form.header_tagline} onChange={(e) => handleField("header_tagline", e.target.value)} placeholder="Good Food, One Click Away" className={inputCls} />
+            <BilingualField
+              label="Tagline"
+              value={form.header_tagline}
+              valueAr={form.header_tagline_ar ?? ""}
+              onChange={(v) => handleField("header_tagline", v)}
+              onChangeAr={(v) => handleField("header_tagline_ar", v)}
+              placeholder="Good Food, One Click Away"
+            />
             <p className="text-[11px] text-gray-400 mt-1.5">Shown small under the name. Leave blank to hide it. The header prints the name exactly as typed — type it in capitals if you want capitals.</p>
           </div>
         </div>

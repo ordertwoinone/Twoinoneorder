@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import type { BannerSlide } from "./HeroBanner";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalizedField } from "@/lib/i18n/localized";
 
 const AUTOPLAY_MS = 4500;
 
@@ -53,6 +54,7 @@ function isLight(color?: string | null): boolean {
  */
 export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide[] }) {
   const { t } = useTranslation();
+  const pick = useLocalizedField();
   const list = slides.length > 0 ? slides : [FALLBACK];
   const [current, setCurrent] = useState(0);
 
@@ -77,7 +79,15 @@ export default function HeroBannerMobile({ slides = [] }: { slides?: BannerSlide
           cta_text: t("common.orderNow"),
           food_alt: t("home.hero.foodAlt"),
         }
-      : raw;
+      : {
+          ...raw,
+          tag: pick(raw, "tag"),
+          headline_orange: pick(raw, "headline_orange"),
+          headline_black: pick(raw, "headline_black"),
+          subtitle: pick(raw, "subtitle"),
+          cta_text: pick(raw, "cta_text"),
+          food_alt: pick(raw, "food_alt"),
+        };
   const href = s.cta_href || "#";
   const external = /^https?:\/\//.test(href);
 

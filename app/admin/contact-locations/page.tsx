@@ -1,11 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, MapPin } from "lucide-react";
+import BilingualField from "@/components/admin/BilingualField";
 
 interface Location {
   id: string;
   name: string;
+  name_ar: string;
   address: string;
+  address_ar: string;
   latitude: number;
   longitude: number;
   maps_url: string;
@@ -14,7 +17,8 @@ interface Location {
 }
 
 const EMPTY: Omit<Location, "id"> = {
-  name: "", address: "", latitude: 0, longitude: 0,
+  name: "",
+  name_ar: "", address: "", address_ar: "", latitude: 0, longitude: 0,
   maps_url: "", sort_order: 0, is_active: true,
 };
 
@@ -144,13 +148,25 @@ export default function ContactLocationsAdmin() {
 
             <div className="px-6 py-5 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Restaurant Name *</label>
-                <input type="text" value={modal.data.name} onChange={(e) => handleField("name", e.target.value)} className={inputCls} placeholder="Two in One Turkish Restaurant" />
+                <BilingualField
+                  label="Restaurant Name *"
+                  value={modal.data.name}
+                  valueAr={modal.data.name_ar ?? ""}
+                  onChange={(v) => handleField("name", v)}
+                  onChangeAr={(v) => handleField("name_ar", v)}
+                  placeholder="Two in One Turkish Restaurant"
+                />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">Address</label>
-                <input type="text" value={modal.data.address} onChange={(e) => handleField("address", e.target.value)} className={inputCls} placeholder="Kalba, Sharjah" />
+                <BilingualField
+                  label="Address"
+                  value={modal.data.address}
+                  valueAr={modal.data.address_ar ?? ""}
+                  onChange={(v) => handleField("address", v)}
+                  onChangeAr={(v) => handleField("address_ar", v)}
+                  placeholder="Kalba, Sharjah"
+                />
               </div>
 
               <div>
