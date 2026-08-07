@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
+import { insertRow, updateRow } from "@/lib/admin-write";
 
 export async function GET() {
   const { data, error } = await supabaseAdminLive
@@ -27,18 +28,9 @@ export async function PUT(request: Request) {
 
   let result;
   if (existing?.id) {
-    result = await supabaseAdminLive
-      .from("buffet_hero")
-      .update({ ...body, updated_at: new Date().toISOString() })
-      .eq("id", existing.id)
-      .select()
-      .single();
+    result = await updateRow("buffet_hero", existing.id, body);
   } else {
-    result = await supabaseAdminLive
-      .from("buffet_hero")
-      .insert([body])
-      .select()
-      .single();
+    result = await insertRow("buffet_hero", body);
   }
 
   if (result.error) return NextResponse.json({ error: result.error.message }, { status: 500 });

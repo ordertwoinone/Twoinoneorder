@@ -3,15 +3,11 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
+import { updateRow } from "@/lib/admin-write";
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const body = await request.json();
-  const { data, error } = await supabaseAdminLive
-    .from("restaurants")
-    .update({ ...body, updated_at: new Date().toISOString() })
-    .eq("id", params.id)
-    .select()
-    .single();
+  const { data, error } = await updateRow("restaurants", params.id, body);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   revalidatePath("/");

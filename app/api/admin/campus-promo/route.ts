@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
+import { insertRow } from "@/lib/admin-write";
 
 export async function GET() {
   const { data, error } = await supabaseAdminLive
@@ -35,11 +36,7 @@ export async function PUT(request: Request) {
       .select()
       .single();
   } else {
-    result = await supabaseAdminLive
-      .from("campus_promo")
-      .insert([body])
-      .select()
-      .single();
+    result = await insertRow("campus_promo", body);
   }
 
   if (result.error) {

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
+import { updateRow } from "@/lib/admin-write";
 
 export async function GET() {
   const { data, error } = await supabaseAdminLive
@@ -19,12 +20,7 @@ export async function PUT(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id, created_at: _created_at, ...fields } = body;
 
-  const { data, error } = await supabaseAdminLive
-    .from("site_settings")
-    .update({ ...fields, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select()
-    .single();
+  const { data, error } = await updateRow("site_settings", id, fields);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   // The header reads these settings on every page, so purge the whole tree
