@@ -14,13 +14,18 @@ const HEADER_FIELDS = [
   "header_logo_url",
 ] as const;
 
-type HeaderForm = Record<(typeof HEADER_FIELDS)[number], string> & { id?: string };
+/* Kept apart from HEADER_FIELDS because it is a boolean, not text. */
+type HeaderForm = Record<(typeof HEADER_FIELDS)[number], string> & {
+  id?: string;
+  header_logo_enabled: boolean;
+};
 
 const EMPTY: HeaderForm = {
   header_title: "", header_title_ar: "",
   header_title_highlight: "", header_title_highlight_ar: "",
   header_tagline: "", header_tagline_ar: "",
   header_logo_url: "",
+  header_logo_enabled: true,
 };
 
 
@@ -36,12 +41,14 @@ export default function HeaderAdmin() {
       .then((data) => {
         const next: HeaderForm = { ...EMPTY, id: data.id };
         HEADER_FIELDS.forEach((k) => { next[k] = data[k] ?? ""; });
+        // Missing column (migration not run) reads as "shown", matching the site.
+        next.header_logo_enabled = data.header_logo_enabled !== false;
         setForm(next);
         setLoading(false);
       });
   }, []);
 
-  function handleField(key: string, value: string) {
+  function handleField(key: string, value: string | boolean) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -80,12 +87,14 @@ export default function HeaderAdmin() {
       <div className="bg-white rounded-xl border border-gray-200 px-6 py-5 mb-5">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Preview</p>
         <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={form.header_logo_url || "/logos/two-in-one.png"}
-            alt=""
-            className="w-10 h-10 object-contain shrink-0"
-          />
+          {form.header_logo_enabled && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={form.header_logo_url || "/logos/two-in-one.png"}
+              alt=""
+              className="w-10 h-10 object-contain shrink-0"
+            />
+          )}
           <div className="min-w-0">
             <p className="font-brand text-[14px] font-extrabold leading-none tracking-tight truncate">
               <span className="text-gray-900">{form.header_title || "TWOINONE"}</span>
@@ -151,7 +160,33 @@ export default function HeaderAdmin() {
           <ImageIcon size={16} className="text-gray-500" />
           <h2 className="text-sm font-semibold text-gray-700">Logo</h2>
         </div>
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 space-y-5">
+          {/* Show / hide. The uploaded image is kept either way, so switching
+              it back on does not mean uploading again. */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold text-gray-700">Show logo in the header</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Off hides the mark on every page and the name moves to the start of the bar.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.header_logo_enabled}
+              onClick={() => handleField("header_logo_enabled", !form.header_logo_enabled)}
+              className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${
+                form.header_logo_enabled ? "bg-orange-500" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                  form.header_logo_enabled ? "left-6" : "left-1"
+                }`}
+              />
+            </button>
+          </div>
+
           <ImageUploadField
             label="Header Logo"
             value={form.header_logo_url}

@@ -66,13 +66,13 @@ export default function SearchBar() {
 
           {/* Animated stand-in for the placeholder — a native one can't
               animate, so the input's is left empty and this sits in its
-              place. Purely decorative: it never swallows a tap. */}
+              place. Just the rotating dish, with no leading word in front of
+              it. Purely decorative: it never swallows a tap. */}
           {!query && (
             <div
-              className="absolute start-12 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[15px] text-gray-400 pointer-events-none select-none"
+              className="absolute start-12 top-1/2 -translate-y-1/2 flex items-center text-[15px] text-gray-400 pointer-events-none select-none"
               aria-hidden="true"
             >
-              <span>{t("search.prefix")}</span>
               <span className="relative block h-[22px] leading-[22px] overflow-hidden">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.span

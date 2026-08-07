@@ -102,7 +102,6 @@ const en = {
 
   search: {
     label: "Search dishes and restaurants",
-    prefix: "Search",
     terms: ["shawarma", "biryani", "falafel", "karak chai", "samosa", "grills"],
     clear: "Clear search",
     noResults: 'No results for "{query}"',
