@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Download } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -71,6 +72,12 @@ export default function PwaProvider({
   siteName?: string;
 }) {
   const { t, tList } = useTranslation();
+  const pathname = usePathname();
+  /* The admin panel installs as its own app, off its own manifest — this card
+     would offer the customer app, with customer wording, to someone standing
+     in the admin panel. The service worker still registers below, since the
+     admin app needs it for order notifications. */
+  const inAdmin = pathname?.startsWith("/admin") ?? false;
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -173,6 +180,9 @@ export default function PwaProvider({
       : iosBrowser === "safari"
         ? "pwa.iosSafari"
         : "pwa.iosOther";
+
+  // Nothing to offer inside the admin panel; the worker is already registered.
+  if (inAdmin) return null;
 
   return (
     <>

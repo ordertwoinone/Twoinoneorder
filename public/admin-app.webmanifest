@@ -1,0 +1,26 @@
+{
+  "id": "/admin-app",
+  "name": "Two In One Admin",
+  "short_name": "TIO Admin",
+  "description": "Live orders, bookings and content for Two In One UAE.",
+  "start_url": "/admin?source=pwa",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "lang": "en-AE",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/icons/admin-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/admin-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Live Orders", "short_name": "Orders", "url": "/admin/live-orders" },
+    { "name": "Bookings", "short_name": "Bookings", "url": "/admin/bookings" }
+  ]
+}

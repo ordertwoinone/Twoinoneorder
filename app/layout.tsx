@@ -76,6 +76,11 @@ export async function generateMetadata(): Promise<Metadata> {
     // do work — app/sitemap.ts for crawlers, and I18nProvider for the rendered
     // DOM, both pointing at `?lang=` URLs.
     alternates: { canonical: "/" },
+    /* Explicit rather than the app/manifest.ts convention: that one is injected
+       into every page in the app, admin included, and a nested layout cannot
+       override it — which is exactly what the admin panel needs to do to
+       install as its own app. */
+    manifest: "/manifest.webmanifest",
     icons: {
       icon: favicon,
       shortcut: favicon,
