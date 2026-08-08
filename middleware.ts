@@ -25,6 +25,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isLoginPage = pathname === "/admin";
 
+  /* The admin API answers with customer names, phone numbers and email
+     addresses, and edits rows — it needs the same session the screens do.
+     A JSON 401 rather than the redirect, since these are fetch() callers. */
+  if (pathname.startsWith("/api/admin") && !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   if (pathname.startsWith("/admin") && !isLoginPage && !user) {
     return NextResponse.redirect(new URL("/admin", request.url));
   }
@@ -36,4 +43,4 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ["/admin", "/admin/:path*"] };
+export const config = { matcher: ["/admin", "/admin/:path*", "/api/admin/:path*"] };
