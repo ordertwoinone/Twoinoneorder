@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 // Returns the bookings belonging to the currently logged-in user.
 export async function GET() {
@@ -11,7 +11,10 @@ export async function GET() {
 
   if (!user) return NextResponse.json({ bookings: [] });
 
-  const { data, error } = await supabaseAdmin
+  /* supabaseAdminLive, not supabaseAdmin: the cacheable client answers this
+     from Next's data cache, so a booking the admin panel has since confirmed
+     keeps reading "pending" on the customer's own orders page. */
+  const { data, error } = await supabaseAdminLive
     .from("bookings")
     .select("id, type, table_id, table_section, seats, guest_name, date, time, guests, notes, status, created_at")
     .eq("user_id", user.id)

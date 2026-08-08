@@ -74,7 +74,8 @@ export default function OrdersClient() {
       setUser(data.user ?? null);
       if (data.user) {
         try {
-          const res = await fetch("/api/my-bookings");
+          // no-store so a status the admin panel has just changed shows here.
+          const res = await fetch("/api/my-bookings", { cache: "no-store" });
           const json = await res.json();
           setBookings(json.bookings || []);
         } catch { /* ignore */ }

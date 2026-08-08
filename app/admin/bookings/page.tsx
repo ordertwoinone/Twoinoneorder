@@ -1,6 +1,12 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { Trash2, RefreshCw } from "lucide-react";
+import { Trash2, RefreshCw, UserRound } from "lucide-react";
+
+interface Account {
+  name: string;
+  email: string;
+  avatarUrl: string;
+}
 
 interface Booking {
   id: string;
@@ -17,6 +23,8 @@ interface Booking {
   notes: string;
   status: string;
   created_at: string;
+  /** The signed-in account behind the booking, when there was one. */
+  account?: Account | null;
 }
 
 const TYPE_META: Record<string, { label: string; chip: string }> = {
@@ -52,23 +60,40 @@ export default function BookingsAdmin() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/admin/bookings");
-    setBookings(await res.json());
+    const res = await fetch("/api/admin/bookings", { cache: "no-store" });
+    const data = await res.json();
+    setBookings(Array.isArray(data) ? data : []);
     setLoading(false);
   }
 
   useEffect(() => { load(); }, []);
 
+  /**
+   * The customer reads this status on their own orders page, so a write that
+   * quietly failed would leave them looking at "pending" forever — show the row
+   * as saving, and put the old value back if the request did not land.
+   */
   async function updateStatus(id: string, status: string) {
-    await fetch(`/api/admin/bookings/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+    const previous = bookings.find((b) => b.id === id)?.status;
     setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status } : b));
+    setSavingId(id);
+    try {
+      const res = await fetch(`/api/admin/bookings/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+    } catch {
+      setBookings((prev) => prev.map((b) => b.id === id ? { ...b, status: previous ?? b.status } : b));
+      alert("Could not update the status. Please try again.");
+    } finally {
+      setSavingId(null);
+    }
   }
 
   async function handleDelete() {
@@ -111,6 +136,7 @@ export default function BookingsAdmin() {
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Guest</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Account</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Details</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date & Time</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Guests</th>
@@ -121,9 +147,9 @@ export default function BookingsAdmin() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading…</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">Loading…</td></tr>
             ) : bookings.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">No bookings yet.</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">No bookings yet.</td></tr>
             ) : bookings.map((b) => {
               const t = b.type || "table";
               return (
@@ -136,6 +162,26 @@ export default function BookingsAdmin() {
                 <td className="px-4 py-3">
                   <p className="font-semibold text-gray-900">{b.guest_name || "—"}</p>
                   <p className="text-xs text-gray-400">{b.phone || ""}</p>
+                </td>
+                <td className="px-4 py-3">
+                  {b.account ? (
+                    <div className="flex items-center gap-2">
+                      {b.account.avatarUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={b.account.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" referrerPolicy="no-referrer" />
+                      ) : (
+                        <span className="w-7 h-7 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center shrink-0">
+                          <UserRound size={13} />
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-800 truncate max-w-[150px]">{b.account.name || "—"}</p>
+                        <p className="text-xs text-gray-400 truncate max-w-[150px]">{b.account.email}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400">Guest checkout</span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   {b.table_id ? (
@@ -156,8 +202,9 @@ export default function BookingsAdmin() {
                 <td className="px-4 py-3">
                   <select
                     value={b.status}
+                    disabled={savingId === b.id}
                     onChange={(e) => updateStatus(b.id, e.target.value)}
-                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-500"}`}
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60 ${STATUS_COLORS[b.status] ?? "bg-gray-100 text-gray-500"}`}
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s} className="bg-white text-gray-800 font-normal text-sm">{s.charAt(0).toUpperCase() + s.slice(1)}</option>
