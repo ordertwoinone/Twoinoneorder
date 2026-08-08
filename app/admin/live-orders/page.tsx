@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   RefreshCw, Volume2, VolumeX, AlertTriangle, Store, Phone, Clock,
-  CalendarClock, StickyNote, BellRing,
+  CalendarClock, StickyNote, BellRing, X, Wifi, WifiOff,
 } from "lucide-react";
 
 /* ── Shapes as take.app returns them ─────────────────────────────────────── */
@@ -31,10 +31,28 @@ interface Order {
   schedule?: string | null;
 }
 
-const REFRESH_MS = 30_000;
-
 /** How long a just-arrived order keeps its ring. */
 const NEW_ORDER_MS = 60_000;
+
+/** How long a toast stays up before it slides away on its own. */
+const TOAST_MS = 12_000;
+
+/** Live connection state, as the header pill reports it. */
+type Connection = "connecting" | "live" | "offline";
+
+/** One frame off the SSE stream. */
+interface LiveEvent {
+  isNew: boolean;
+  event: string;
+  order: Order;
+}
+
+interface Toast {
+  key: number;
+  orderNumber: string;
+  storeName: string;
+  total: string;
+}
 
 const ORDER_STATUSES = ["draft", "pending", "confirmed", "completed", "cancelled"];
 const PAYMENT_STATUSES = ["pending", "paid", "refunded"];
@@ -98,10 +116,16 @@ export default function LiveOrdersAdmin() {
 
   const [soundOn, setSoundOn] = useState(false);
   const [newIds, setNewIds] = useState<string[]>([]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [connection, setConnection] = useState<Connection>("connecting");
 
-  // Ids carried across refreshes so only genuinely unseen orders count as new.
-  const seenIds = useRef<Set<string> | null>(null);
+  // Ids of every order already on screen, so a webhook for an order we are
+  // showing reads as an update rather than an arrival.
+  const seenIds = useRef<Set<string>>(new Set());
   const audioCtx = useRef<AudioContext | null>(null);
+  // The live handler is rebuilt whenever sound is toggled; the stream must not
+  // be, so it reads the newest handler through a ref instead of a dependency.
+  const onLiveOrder = useRef<(payload: LiveEvent) => void>(() => {});
 
   /* A short two-tone chime, synthesised so the page carries no audio asset.
      Browsers only allow this after a gesture — the Sound button is that
@@ -153,39 +177,80 @@ export default function LiveOrdersAdmin() {
 
       const incoming: Order[] = Array.isArray(body.orders) ? body.orders : [];
 
-      // First load only fills the set — every order would otherwise be "new".
-      if (seenIds.current === null) {
-        seenIds.current = new Set(incoming.map((o) => o.id));
-      } else {
-        const fresh = incoming.filter((o) => !seenIds.current!.has(o.id));
-        fresh.forEach((o) => seenIds.current!.add(o.id));
-        if (fresh.length > 0) {
-          const ids = fresh.map((o) => o.id);
-          setNewIds((prev) => [...prev, ...ids]);
-          if (soundOn) chime();
-          window.setTimeout(
-            () => setNewIds((prev) => prev.filter((id) => !ids.includes(id))),
-            NEW_ORDER_MS,
-          );
-        }
-      }
+      // Everything loaded here is already known — only the webhook announces
+      // arrivals from now on.
+      seenIds.current = new Set(incoming.map((o) => o.id));
 
       setOrders(incoming);
-      setError("");
+      // A warning means the merchant API failed but stored orders came through.
+      setError(typeof body.warning === "string" ? body.warning : "");
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load orders.");
     } finally {
       setLoading(false);
     }
-  }, [orderStatus, paymentStatus, fulfillmentStatus, fromDate, soundOn, chime]);
+  }, [orderStatus, paymentStatus, fulfillmentStatus, fromDate]);
 
-  // Reload on any filter change, then keep polling while the screen is open.
+  // The list is loaded once on open and again whenever a filter changes; live
+  // changes arrive on the stream below rather than on a timer.
+  useEffect(() => { load(); }, [load]);
+
+  /* An order pushed from the webhook. Replaces the row when we already have it,
+     otherwise drops it in at the top and announces it. */
+  const handleLiveOrder = useCallback(({ order, isNew }: LiveEvent) => {
+    if (!order?.id) return;
+
+    setOrders((prev) => {
+      const rest = prev.filter((o) => o.id !== order.id);
+      return [order, ...rest].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    });
+    setLastUpdated(new Date());
+
+    const firstTime = isNew && !seenIds.current.has(order.id);
+    seenIds.current.add(order.id);
+    if (!firstTime) return;
+
+    setNewIds((prev) => [...prev, order.id]);
+    window.setTimeout(
+      () => setNewIds((prev) => prev.filter((id) => id !== order.id)),
+      NEW_ORDER_MS,
+    );
+
+    const key = Date.now() + Math.random();
+    setToasts((prev) => [
+      ...prev,
+      {
+        key,
+        orderNumber: order.number || order.name || order.id.slice(0, 8),
+        storeName: order.store?.name || "Unknown store",
+        total: money(order.total_amount, order.currency),
+      },
+    ]);
+    window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.key !== key)), TOAST_MS);
+
+    if (soundOn) chime();
+  }, [soundOn, chime]);
+
+  useEffect(() => { onLiveOrder.current = handleLiveOrder; }, [handleLiveOrder]);
+
+  /* The live connection. EventSource reconnects on its own after a drop or the
+     platform's response cap, so this is opened once for the life of the screen
+     — filters are applied to what is already in state, not re-subscribed. */
   useEffect(() => {
-    load();
-    const timer = window.setInterval(load, REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [load]);
+    const source = new EventSource("/api/admin/takeapp/stream");
+
+    source.addEventListener("ready", () => setConnection("live"));
+    source.addEventListener("order", (e) => {
+      try {
+        onLiveOrder.current(JSON.parse((e as MessageEvent).data) as LiveEvent);
+      } catch { /* a malformed frame must not take the stream down */ }
+    });
+    source.onopen = () => setConnection("live");
+    source.onerror = () => setConnection((prev) => (prev === "live" ? "offline" : "connecting"));
+
+    return () => source.close();
+  }, []);
 
   const stores = useMemo(
     () => Array.from(new Set(orders.map((o) => o.store?.name).filter(Boolean) as string[])).sort(),
@@ -226,14 +291,47 @@ export default function LiveOrdersAdmin() {
 
   return (
     <div className="p-4 sm:p-8">
+
+      {/* Toasts — one per order the webhook has just announced */}
+      <div className="fixed top-4 end-4 z-50 flex flex-col gap-2 w-[290px] pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.key}
+            className="pointer-events-auto bg-white rounded-xl shadow-lg border border-orange-200 p-3.5 flex items-start gap-3 pop-in"
+          >
+            <span className="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+              <BellRing size={16} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-gray-900">New order #{toast.orderNumber}</p>
+              <p className="text-xs text-gray-500 truncate">{toast.storeName}</p>
+              <p className="text-xs font-bold text-orange-600 mt-0.5">{toast.total}</p>
+            </div>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((t) => t.key !== toast.key))}
+              className="text-gray-300 hover:text-gray-500 shrink-0"
+              aria-label="Dismiss"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
           <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">take.app</p>
           <h1 className="text-2xl font-semibold text-gray-900">Live Orders</h1>
-          <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-2">
-            <span className="relative flex w-2 h-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-70 animate-ping" />
-              <span className="relative inline-flex rounded-full w-2 h-2 bg-green-500" />
+          <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+              connection === "live"
+                ? "bg-green-100 text-green-700"
+                : connection === "connecting"
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-red-100 text-red-600"
+            }`}>
+              {connection === "offline" ? <WifiOff size={11} /> : <Wifi size={11} />}
+              {connection === "live" ? "Live" : connection === "connecting" ? "Connecting" : "Reconnecting"}
             </span>
             {shown.length} order{shown.length !== 1 ? "s" : ""} · {pendingCount} pending
             {lastUpdated && <span className="text-gray-400">· updated {clockTime(lastUpdated.toISOString())}</span>}
