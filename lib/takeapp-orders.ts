@@ -62,15 +62,30 @@ export class TakeAppError extends Error {
   }
 }
 
-function apiKey(): string {
-  const key = process.env.TAKEAPP_API_KEY;
-  if (!key) {
-    throw new TakeAppError(
-      500,
-      "TAKEAPP_API_KEY is not set. Add it to .env.local (and to the hosting environment) and restart.",
-    );
-  }
-  return key;
+/**
+ * The tokens to pull orders with, one per store.
+ *
+ * A take.app token is bound to a single store — /api/v2/me returns one store,
+ * and list-orders has no store filter — so four restaurants means four tokens.
+ * They can be listed in TAKEAPP_API_KEYS, comma or newline separated;
+ * TAKEAPP_API_KEY stays valid as the single-store spelling of the same thing.
+ */
+export function apiKeys(): string[] {
+  const many = (process.env.TAKEAPP_API_KEYS ?? "")
+    .split(/[\s,]+/)
+    .map((k) => k.trim())
+    .filter(Boolean);
+
+  const one = (process.env.TAKEAPP_API_KEY ?? "").trim();
+  const all = one ? [one, ...many] : many;
+
+  // Same token listed twice would double every order it returns.
+  return Array.from(new Set(all));
+}
+
+/** Enough of a token to name it in an error without printing the secret. */
+export function keyLabel(key: string): string {
+  return `…${key.slice(-4)}`;
 }
 
 /** take.app caps `limit` at 100; anything higher is rejected outright. */
@@ -99,7 +114,15 @@ export function buildOrdersUrl(query: OrderQuery): string {
  * tell "your key is wrong" apart from "take.app is down" — a live-order board
  * that silently shows nothing is worse than one showing why.
  */
-export async function fetchOrders(query: OrderQuery = {}): Promise<OrdersPage> {
+export async function fetchOrders(query: OrderQuery = {}, key?: string): Promise<OrdersPage> {
+  const token = key ?? apiKeys()[0];
+  if (!token) {
+    throw new TakeAppError(
+      500,
+      "No take.app token is set. Add TAKEAPP_API_KEYS (one token per store) to the hosting environment.",
+    );
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 20_000);
 
@@ -107,7 +130,7 @@ export async function fetchOrders(query: OrderQuery = {}): Promise<OrdersPage> {
   try {
     res = await fetch(buildOrdersUrl(query), {
       headers: {
-        Authorization: `Bearer ${apiKey()}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/json",
       },
       cache: "no-store",
@@ -138,4 +161,56 @@ export async function fetchOrders(query: OrderQuery = {}): Promise<OrdersPage> {
     hasMore: Boolean(payload?.has_more),
     nextCursor: payload?.next_cursor ?? null,
   };
+}
+
+export interface MergedOrders {
+  orders: TakeAppOrder[];
+  /** One line per store token that could not be read. */
+  warnings: string[];
+}
+
+/**
+ * Every store's orders in one list.
+ *
+ * Each token is asked separately and the results merged, because the API has no
+ * way to ask for more than one store at once. A store that fails is reported
+ * rather than thrown: three restaurants' orders on screen beats none because
+ * the fourth token expired.
+ *
+ * Cursor paging is deliberately not carried through here — a cursor belongs to
+ * one store's list and means nothing to the others.
+ */
+export async function fetchAllStoreOrders(query: OrderQuery = {}): Promise<MergedOrders> {
+  const keys = apiKeys();
+  if (keys.length === 0) {
+    return {
+      orders: [],
+      warnings: ["No take.app token is set. Add TAKEAPP_API_KEYS to the hosting environment."],
+    };
+  }
+
+  const settled = await Promise.allSettled(
+    keys.map((key) => fetchOrders({ ...query, cursor: undefined }, key)),
+  );
+
+  const orders: TakeAppOrder[] = [];
+  const warnings: string[] = [];
+  const seen = new Set<string>();
+
+  settled.forEach((result, i) => {
+    if (result.status === "rejected") {
+      const reason = result.reason instanceof Error ? result.reason.message : "could not be read";
+      warnings.push(`Store token ${keyLabel(keys[i])}: ${reason}`);
+      return;
+    }
+    result.value.orders.forEach((order) => {
+      const id = String(order.id);
+      if (seen.has(id)) return;
+      seen.add(id);
+      orders.push(order);
+    });
+  });
+
+  orders.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  return { orders, warnings };
 }
