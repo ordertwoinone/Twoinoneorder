@@ -4,19 +4,28 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Star, Clock, MapPin } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { useLocalized } from "@/lib/i18n/localized";
 
 export interface KalbaPromoContent {
   title: string;
+  titleAr: string | null;
   subtitle: string;
+  subtitleAr: string | null;
   description: string;
+  descriptionAr: string | null;
   badge: string;
+  badgeAr: string | null;
   image_url: string;
   button_text: string;
-  perks: string[];
+  buttonTextAr: string | null;
+  perks: { en: string; ar: string | null }[];
   rating: string;
   ratingCount: string;
+  ratingCountAr: string | null;
   deliveryTime: string;
+  deliveryTimeAr: string | null;
   location: string;
+  locationAr: string | null;
   isOpen: boolean;
 }
 
@@ -38,7 +47,17 @@ const SEEDED_COPY: Record<string, string> = {
 
 export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }) {
   const { t, tMaybe } = useTranslation();
-  const copy = (value: string) => (value ? tMaybe(SEEDED_COPY[value] ?? "", value) : value);
+  const localized = useLocalized();
+  /**
+   * Arabic typed in admin wins. Only when there is none does the seeded English
+   * fall back to its dictionary copy — which is all this used to do, so a promo
+   * translated in admin still read in English.
+   */
+  const copy = (value: string, arabic?: string | null) => {
+    const chosen = localized(value, arabic);
+    if (chosen !== value) return chosen;
+    return value ? tMaybe(SEEDED_COPY[value] ?? "", value) : value;
+  };
 
   return (
     <section className="py-4 px-4">
@@ -87,7 +106,7 @@ export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }
                     className="text-[11px] font-extrabold px-3 py-1 rounded-full text-white"
                     style={{ background: "#ea580c" }}
                   >
-                    {copy(promo.badge)}
+                    {copy(promo.badge, promo.badgeAr)}
                   </span>
                 )}
                 <span
@@ -105,14 +124,14 @@ export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }
               <div className="mb-3">
                 <h3 className="text-gray-900 font-extrabold leading-tight"
                   style={{ fontSize: "clamp(20px, 4vw, 30px)" }}>
-                  {copy(promo.title)}
+                  {copy(promo.title, promo.titleAr)}
                 </h3>
                 {promo.subtitle && (
                   <p
                     className="font-extrabold leading-tight mt-1"
                     style={{ fontSize: "clamp(13px, 2.5vw, 18px)", color: "#ea580c" }}
                   >
-                    {copy(promo.subtitle)}
+                    {copy(promo.subtitle, promo.subtitleAr)}
                   </p>
                 )}
               </div>
@@ -120,7 +139,7 @@ export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }
               {/* Location */}
               <div className="flex items-center gap-1.5 mb-4">
                 <MapPin size={12} className="text-orange-400 shrink-0" />
-                <p className="text-gray-500 text-[11px]">{copy(promo.location)}</p>
+                <p className="text-gray-500 text-[11px]">{copy(promo.location, promo.locationAr)}</p>
               </div>
 
               {/* Perk chips */}
@@ -128,11 +147,11 @@ export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }
                 <div className="flex flex-wrap gap-2 mb-5">
                   {promo.perks.map((p) => (
                     <span
-                      key={p}
+                      key={p.en}
                       className="text-[11px] font-semibold px-3 py-1 rounded-full bg-white border border-orange-200 text-gray-700"
                       style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
                     >
-                      {copy(p)}
+                      {copy(p.en, p.ar)}
                     </span>
                   ))}
                 </div>
@@ -143,17 +162,17 @@ export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }
                 <span className="flex items-center gap-1 text-[11px] font-semibold text-gray-700">
                   <Star size={11} className="fill-yellow-400 stroke-yellow-400" />
                   {promo.rating}
-                  <span className="text-gray-400 font-normal">({promo.ratingCount})</span>
+                  <span className="text-gray-400 font-normal">({copy(promo.ratingCount, promo.ratingCountAr)})</span>
                 </span>
                 <span className="text-gray-300">·</span>
                 <span className="flex items-center gap-1 text-[11px] text-gray-500">
                   <Clock size={10} />
-                  {promo.deliveryTime}
+                  {copy(promo.deliveryTime, promo.deliveryTimeAr)}
                 </span>
                 {promo.description && (
                   <>
                     <span className="text-gray-300 hidden sm:block">·</span>
-                    <span className="text-[11px] text-gray-500 hidden sm:block">{copy(promo.description)}</span>
+                    <span className="text-[11px] text-gray-500 hidden sm:block">{copy(promo.description, promo.descriptionAr)}</span>
                   </>
                 )}
               </div>
@@ -167,7 +186,7 @@ export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }
                   boxShadow: "0 4px 16px rgba(234,88,12,0.35)",
                 }}
               >
-                {copy(promo.button_text) || t("common.viewMenu")}
+                {copy(promo.button_text, promo.buttonTextAr) || t("common.viewMenu")}
                 <ArrowRight size={15} />
               </Link>
             </div>
@@ -187,7 +206,7 @@ export default function KalbaPromoClient({ promo }: { promo: KalbaPromoContent }
                   />
                   <Image
                     src={promo.image_url}
-                    alt={copy(promo.title)}
+                    alt={copy(promo.title, promo.titleAr)}
                     fill
                     className="object-cover"
                     sizes="(max-width: 640px) 100vw, 42vw"

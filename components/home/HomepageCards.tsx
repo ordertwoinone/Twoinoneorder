@@ -67,9 +67,13 @@ async function getCards(): Promise<HomepageCardRow[]> {
 }
 
 async function getOffers(): Promise<OfferItem[]> {
+  // `*` rather than a column list — the Arabic twins were missing from it, so
+  // the card never had the translations to show, and a database that has not
+  // run arabic_translations.sql yet would reject the whole select for naming
+  // columns it does not have.
   const { data } = await supabaseAdmin
     .from("offers")
-    .select("id, badge_text, badge_color, title, subtitle, cta_text, cta_href, image_url, card_color")
+    .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
   return data || [];

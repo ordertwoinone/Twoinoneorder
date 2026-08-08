@@ -2,6 +2,7 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { T } from "@/lib/i18n/T";
+import { L } from "@/lib/i18n/localized";
 
 interface Offer {
   id: string;
@@ -13,12 +14,19 @@ interface Offer {
   cta_href: string;
   image_url: string;
   bg_color: string;
+  /* Arabic twins from admin → Offers; blank falls back to English. */
+  badge_text_ar?: string | null;
+  title_ar?: string | null;
+  subtitle_ar?: string | null;
+  cta_text_ar?: string | null;
 }
 
 async function getOffers(): Promise<Offer[]> {
+  // `*` keeps the Arabic twins coming through without naming columns a
+  // database that has not run arabic_translations.sql would reject.
   const { data, error } = await supabaseAdmin
     .from("offers")
-    .select("id, badge_text, badge_color, title, subtitle, cta_text, cta_href, image_url, bg_color")
+    .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
@@ -60,19 +68,19 @@ export default async function OffersBanner() {
                     className="inline-block text-white text-[11px] font-bold px-3 py-1 rounded-full mb-2 w-fit"
                     style={{ background: offer.badge_color || "#ea580c" }}
                   >
-                    {offer.badge_text}
+                    <L en={offer.badge_text} ar={offer.badge_text_ar} />
                   </span>
                 )}
 
                 {/* Title */}
                 <h3 className="text-gray-900 font-extrabold text-base leading-tight mb-1">
-                  {offer.title}
+                  <L en={offer.title} ar={offer.title_ar} />
                 </h3>
 
                 {/* Subtitle */}
                 {offer.subtitle && (
                   <p className="text-gray-400 text-[11px] leading-relaxed mb-3 line-clamp-2">
-                    {offer.subtitle}
+                    <L en={offer.subtitle} ar={offer.subtitle_ar} />
                   </p>
                 )}
 
@@ -81,7 +89,7 @@ export default async function OffersBanner() {
                   className="inline-flex items-center gap-1.5 self-start px-4 py-1.5 rounded-full text-white text-[12px] font-bold transition-all group-hover:gap-2.5"
                   style={{ background: "#ea580c" }}
                 >
-                  {offer.cta_text || <T k="common.orderNow" />}
+                  {offer.cta_text ? <L en={offer.cta_text} ar={offer.cta_text_ar} /> : <T k="common.orderNow" />}
                   <ArrowRight size={12} />
                 </div>
               </div>

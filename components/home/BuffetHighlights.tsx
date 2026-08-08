@@ -4,6 +4,7 @@ import { Star, Tag } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { T } from "@/lib/i18n/T";
+import { L } from "@/lib/i18n/localized";
 import Price from "@/components/ui/Price";
 
 interface Highlight {
@@ -17,6 +18,10 @@ interface Highlight {
   badge_color: string;
   image_url: string;
   href: string;
+  /* Arabic twins from admin → Buffet Highlights; blank falls back to English. */
+  name_ar?: string | null;
+  cuisine_ar?: string | null;
+  badge_ar?: string | null;
 }
 
 async function getHighlights(): Promise<Highlight[]> {
@@ -67,7 +72,7 @@ export default async function BuffetHighlights() {
                       className="absolute top-2 start-2 text-[10px] font-bold px-2.5 py-1 rounded-full text-white leading-none"
                       style={{ background: b.badge_color || "#ea580c" }}
                     >
-                      {b.badge}
+                      <L en={b.badge} ar={b.badge_ar} />
                     </span>
                   )}
                 </div>
@@ -79,9 +84,9 @@ export default async function BuffetHighlights() {
                 {/* Name + cuisine */}
                 <Link href={b.href} className="block">
                   <h3 className="font-bold text-gray-900 text-[14px] sm:text-[17px] leading-tight">
-                    {b.name}
+                    <L en={b.name} ar={b.name_ar} />
                   </h3>
-                  <p className="text-gray-400 text-[11px] sm:text-[13px] mt-0.5">{b.cuisine}</p>
+                  <p className="text-gray-400 text-[11px] sm:text-[13px] mt-0.5"><L en={b.cuisine} ar={b.cuisine_ar} /></p>
                 </Link>
 
                 {/* Stats chips */}

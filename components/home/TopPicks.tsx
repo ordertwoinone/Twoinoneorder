@@ -4,12 +4,15 @@ import FavoriteButton from "@/components/ui/FavoriteButton";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { stagger } from "@/lib/stagger";
 import { T } from "@/lib/i18n/T";
+import { L } from "@/lib/i18n/localized";
 import TopPickSubtitle from "./TopPickSubtitle";
 
 /** Normalised shape every source table is mapped into. */
 interface Pick {
   key: string;
   name: string;
+  /** Admin's Arabic twin of `name`, when there is one. */
+  nameAr: string | null;
   /** `currency: true` means "wrap in the AED pattern for the active language". */
   price: { amount: string; currency: boolean } | null;
   imageUrl: string;
@@ -17,6 +20,8 @@ interface Pick {
   /** Dictionary key when the label is ours, otherwise plain admin text. */
   subtitleKey: string | null;
   subtitle: string;
+  /** Arabic twin of an admin-entered subtitle (a dish tag, a restaurant name). */
+  subtitleAr: string | null;
   order: number;
   sortOrder: number;
 }
@@ -37,9 +42,9 @@ function formatPrice(raw: string | number | null | undefined): Pick["price"] {
 }
 
 /** An embedded to-one relation comes back as an object, or an array in some shapes. */
-function restaurantName(relation: unknown): string | null {
+function restaurantName(relation: unknown, field: "name" | "name_ar" = "name"): string | null {
   const row = Array.isArray(relation) ? relation[0] : relation;
-  const name = (row as { name?: unknown } | null)?.name;
+  const name = (row as Record<string, unknown> | null)?.[field];
   return typeof name === "string" && name ? name : null;
 }
 
@@ -53,29 +58,29 @@ async function getPicks(): Promise<Pick[]> {
   const [menuItems, buffetDishes, kalbaPopular, kalbaSpecials, imported] = await Promise.all([
     supabaseAdmin
       .from("buffet_menu_items")
-      .select("id, name, image_url, price, sort_order, top_picks_order")
+      .select("*")
       .eq("is_active", true)
       .eq("show_in_top_picks", true),
     supabaseAdmin
       .from("buffet_popular_dishes")
-      .select("id, name, image_url, tag, sort_order, top_picks_order")
+      .select("*")
       .eq("is_active", true)
       .eq("show_in_top_picks", true),
     supabaseAdmin
       .from("kalba_popular_items")
-      .select("id, name, image_url, price, sort_order, top_picks_order")
+      .select("*")
       .eq("is_active", true)
       .eq("show_in_top_picks", true),
     supabaseAdmin
       .from("kalba_specials")
-      .select("id, name, image_url, price_text, sort_order, top_picks_order")
+      .select("*")
       .eq("is_active", true)
       .eq("show_in_top_picks", true),
     // Items imported from the restaurants' ordering storefronts. These are the
     // only source with a real per-item order link.
     supabaseAdmin
       .from("restaurant_menu_items")
-      .select("id, name, image_url, price, product_url, top_picks_order, restaurants(name)")
+      .select("*, restaurants(name, name_ar)")
       .eq("is_available", true)
       .eq("show_in_top_picks", true),
   ]);
@@ -84,56 +89,66 @@ async function getPicks(): Promise<Pick[]> {
     ...(menuItems.data ?? []).map((r) => ({
       key: `buffetmenu:${r.id}`,
       name: r.name,
+      nameAr: r.name_ar ?? null,
       price: formatPrice(r.price),
       imageUrl: r.image_url,
       href: "/restaurant/buffet",
       subtitleKey: "home.subtitles.buffetMenu",
       subtitle: "Buffet menu",
+      subtitleAr: null,
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
     ...(buffetDishes.data ?? []).map((r) => ({
       key: `buffetdish:${r.id}`,
       name: r.name,
+      nameAr: r.name_ar ?? null,
       price: null,
       imageUrl: r.image_url,
       href: "/restaurant/buffet",
       subtitleKey: r.tag ? null : "home.subtitles.buffetDish",
       subtitle: r.tag || "Buffet dish",
+      subtitleAr: r.tag_ar ?? null,
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
     ...(kalbaPopular.data ?? []).map((r) => ({
       key: `kalbapopular:${r.id}`,
       name: r.name,
+      nameAr: r.name_ar ?? null,
       price: formatPrice(r.price),
       imageUrl: r.image_url,
       href: "/restaurant/university-kalba",
       subtitleKey: "home.subtitles.universityKalba",
       subtitle: "University Kalba",
+      subtitleAr: null,
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
     ...(kalbaSpecials.data ?? []).map((r) => ({
       key: `kalbaspecial:${r.id}`,
       name: r.name,
+      nameAr: r.name_ar ?? null,
       price: formatPrice(r.price_text),
       imageUrl: r.image_url,
       href: "/restaurant/university-kalba",
       subtitleKey: "home.subtitles.universityKalba",
       subtitle: "University Kalba",
+      subtitleAr: null,
       order: r.top_picks_order ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
     ...(imported.data ?? []).map((r) => ({
       key: `menuitem:${r.id}`,
       name: r.name,
+      nameAr: r.name_ar ?? null,
       price: formatPrice(r.price),
       imageUrl: r.image_url,
       // Straight to the item on the restaurant's own ordering site.
       href: r.product_url || "#",
       subtitleKey: restaurantName(r.restaurants) ? null : "home.subtitles.orderNow",
       subtitle: restaurantName(r.restaurants) ?? "Order now",
+      subtitleAr: restaurantName(r.restaurants, "name_ar"),
       order: r.top_picks_order ?? 0,
       sortOrder: 0,
     })),
@@ -192,7 +207,7 @@ export default async function TopPicks() {
 
               <div className="px-2 pt-2 pb-2.5 sm:px-2.5">
                 <h3 className="text-gray-900 font-bold text-[11px] sm:text-[12px] leading-snug line-clamp-2 min-h-[2.4em]">
-                  {p.name}
+                  <L en={p.name} ar={p.nameAr} />
                 </h3>
                 <div className="flex items-center justify-between gap-1 mt-1.5">
                   <span className="text-[11px] sm:text-[12px] font-extrabold truncate" style={{ color: "#ea580c" }}>
@@ -200,6 +215,7 @@ export default async function TopPicks() {
                       price={p.price}
                       subtitleKey={p.subtitleKey}
                       subtitle={p.subtitle}
+                      subtitleAr={p.subtitleAr}
                     />
                   </span>
                   <span
