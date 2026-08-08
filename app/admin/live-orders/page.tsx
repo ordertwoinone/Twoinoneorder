@@ -1,8 +1,9 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   RefreshCw, Volume2, VolumeX, AlertTriangle, Store, Phone, Clock,
   CalendarClock, StickyNote, BellRing, X, Wifi, WifiOff,
+  Search, SlidersHorizontal, Download, ChevronDown,
 } from "lucide-react";
 
 /* ── Shapes as take.app returns them ─────────────────────────────────────── */
@@ -57,6 +58,16 @@ interface Toast {
 const ORDER_STATUSES = ["draft", "pending", "confirmed", "completed", "cancelled"];
 const PAYMENT_STATUSES = ["pending", "paid", "refunded"];
 const FULFILLMENT_STATUSES = ["unfulfilled", "ready", "fulfilled"];
+
+/** The statuses worth a dot in the header tally, in the order they appear. */
+const TALLY_STATUSES = ["pending", "confirmed", "completed", "cancelled"];
+
+const STATUS_DOTS: Record<string, string> = {
+  pending:   "bg-yellow-400",
+  confirmed: "bg-blue-500",
+  completed: "bg-green-500",
+  cancelled: "bg-red-500",
+};
 
 const ORDER_CHIPS: Record<string, string> = {
   draft:     "bg-gray-100 text-gray-600",
@@ -118,6 +129,10 @@ export default function LiveOrdersAdmin() {
   const [newIds, setNewIds] = useState<string[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [connection, setConnection] = useState<Connection>("connecting");
+  const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  /** The row whose items are showing; one at a time keeps the table scannable. */
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Ids of every order already on screen, so a webhook for an order we are
   // showing reads as an update rather than an arrival.
@@ -259,37 +274,72 @@ export default function LiveOrdersAdmin() {
     [orders],
   );
 
+  /* Filters the API cannot apply — the store, the upper date bound and the
+     search — are applied here, over what is already in state. */
   const shown = useMemo(() => {
     const cutoff = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
-    return orders.filter((o) => {
-      if (store && o.store?.name !== store) return false;
-      if (cutoff && new Date(o.created_at).getTime() > cutoff) return false;
-      return true;
-    });
-  }, [orders, store, toDate]);
+    const needle = search.trim().toLowerCase();
+    return orders
+      .filter((o) => {
+        if (store && o.store?.name !== store) return false;
+        if (cutoff && new Date(o.created_at).getTime() > cutoff) return false;
+        if (needle) {
+          const haystack = `${o.number} ${o.name} ${o.id} ${o.customer?.name ?? ""} ${o.customer?.phone ?? ""}`.toLowerCase();
+          if (!haystack.includes(needle)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  }, [orders, store, toDate, search]);
 
-  // Grouped by restaurant, each group newest first.
-  const groups = useMemo(() => {
-    const map = new Map<string, Order[]>();
-    shown.forEach((o) => {
-      const key = o.store?.name || "Unknown store";
-      map.set(key, [...(map.get(key) ?? []), o]);
-    });
-    return Array.from(map.entries())
-      .map(([name, rows]) => [
-        name,
-        [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at)),
-      ] as const)
-      .sort((a, b) => a[0].localeCompare(b[0]));
+  const counts = useMemo(() => {
+    const tally: Record<string, number> = {};
+    shown.forEach((o) => { tally[o.order_status] = (tally[o.order_status] ?? 0) + 1; });
+    return tally;
   }, [shown]);
 
-  const pendingCount = shown.filter((o) => o.order_status === "pending").length;
   const newCount = shown.filter((o) => newIds.includes(o.id)).length;
 
   function resetFilters() {
     setOrderStatus(""); setPaymentStatus(""); setFulfillmentStatus("");
-    setFromDate(""); setToDate(""); setStore("");
+    setFromDate(""); setToDate(""); setStore(""); setSearch("");
   }
+
+  /* The report is what is on screen, filters and all — downloading something
+     other than what you are looking at would be a surprise. */
+  function downloadReport() {
+    const header = [
+      "Order ID", "Placed", "Restaurant", "Order status", "Payment", "Fulfilment",
+      "Customer", "Phone", "Items", "Total", "Currency", "Note",
+    ];
+    const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const rows = shown.map((o) => [
+      o.number || o.name || o.id,
+      o.created_at,
+      o.store?.name ?? "",
+      o.order_status,
+      o.payment_status,
+      o.fulfillment_status,
+      o.customer?.name ?? "",
+      o.customer?.phone ?? "",
+      (o.line_items ?? []).map((i) => `${i.quantity}x ${i.name}`).join(" | "),
+      ((o.total_amount ?? 0) / 100).toFixed(2),
+      o.currency || "AED",
+      o.remark ?? "",
+    ].map(escape).join(","));
+
+    const blob = new Blob([[header.map(escape).join(","), ...rows].join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const filtersOn = Boolean(orderStatus || paymentStatus || fulfillmentStatus || fromDate || toDate || store || search);
 
   return (
     <div className="p-4 sm:p-8">
@@ -320,10 +370,11 @@ export default function LiveOrdersAdmin() {
         ))}
       </div>
 
+      {/* Heading, live pill and the status tally */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
           <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">take.app</p>
-          <h1 className="text-2xl font-semibold text-gray-900">Live Orders</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Order History</h1>
           <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${
               connection === "live"
@@ -335,12 +386,22 @@ export default function LiveOrdersAdmin() {
               {connection === "offline" ? <WifiOff size={11} /> : <Wifi size={11} />}
               {connection === "live" ? "Live" : connection === "connecting" ? "Connecting" : "Reconnecting"}
             </span>
-            {shown.length} order{shown.length !== 1 ? "s" : ""} · {pendingCount} pending
+            {shown.length} order{shown.length !== 1 ? "s" : ""}
             {lastUpdated && <span className="text-gray-400">· updated {clockTime(lastUpdated.toISOString())}</span>}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* One dot per status with its count, the way the partner dashboards show it */}
+          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-4 py-2">
+            {TALLY_STATUSES.map((status) => (
+              <span key={status} className="flex items-center gap-1.5" title={status}>
+                <span className={`w-2.5 h-2.5 rounded-full ${STATUS_DOTS[status]}`} />
+                <span className="text-[13px] font-bold text-gray-700">{counts[status] ?? 0}</span>
+              </span>
+            ))}
+          </div>
+
           <button
             onClick={toggleSound}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border transition ${
@@ -378,105 +439,153 @@ export default function LiveOrdersAdmin() {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-gray-700">Restaurant</span>
-          <select value={store} onChange={(e) => setStore(e.target.value)} className={selectCls}>
-            <option value="">All restaurants</option>
+      {/* Toolbar */}
+      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 mb-4 flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200">
+          <Store size={14} className="text-gray-400 shrink-0" />
+          <select value={store} onChange={(e) => setStore(e.target.value)} className="text-sm bg-transparent focus:outline-none">
+            <option value="">All restaurants ({stores.length})</option>
             {stores.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-gray-700">Order status</span>
-          <select value={orderStatus} onChange={(e) => setOrderStatus(e.target.value)} className={`${selectCls} capitalize`}>
-            <option value="">Any</option>
-            {ORDER_STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
-          </select>
-        </label>
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition ${
+            filtersOn ? "border-orange-300 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          <SlidersHorizontal size={14} /> Filters{filtersOn ? " · on" : ""}
+        </button>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-gray-700">Payment</span>
-          <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={`${selectCls} capitalize`}>
-            <option value="">Any</option>
-            {PAYMENT_STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-gray-700">Fulfilment</span>
-          <select value={fulfillmentStatus} onChange={(e) => setFulfillmentStatus(e.target.value)} className={`${selectCls} capitalize`}>
-            <option value="">Any</option>
-            {FULFILLMENT_STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-gray-700">From</span>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className={selectCls} />
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-gray-700">To</span>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className={selectCls} />
+        <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 flex-1 min-w-[200px]">
+          <Search size={14} className="text-gray-400 shrink-0" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Order ID, customer or phone"
+            className="text-sm bg-transparent focus:outline-none w-full"
+          />
         </label>
 
         <button
-          onClick={resetFilters}
-          className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition"
+          onClick={downloadReport}
+          disabled={shown.length === 0}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
         >
-          Clear
+          <Download size={14} /> Download report
         </button>
       </div>
 
-      {/* Orders, grouped by restaurant */}
-      {loading && orders.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center text-gray-400 text-sm">Loading orders…</div>
-      ) : groups.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center text-gray-400 text-sm">
-          {error ? "Nothing to show while the feed is failing." : "No orders match these filters."}
+      {filtersOpen && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-gray-700">Order status</span>
+            <select value={orderStatus} onChange={(e) => setOrderStatus(e.target.value)} className={`${selectCls} capitalize`}>
+              <option value="">Any</option>
+              {ORDER_STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-gray-700">Payment</span>
+            <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={`${selectCls} capitalize`}>
+              <option value="">Any</option>
+              {PAYMENT_STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-gray-700">Fulfilment</span>
+            <select value={fulfillmentStatus} onChange={(e) => setFulfillmentStatus(e.target.value)} className={`${selectCls} capitalize`}>
+              <option value="">Any</option>
+              {FULFILLMENT_STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-gray-700">From</span>
+            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className={selectCls} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-gray-700">To</span>
+            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className={selectCls} />
+          </label>
+          <button onClick={resetFilters} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition">
+            Clear
+          </button>
         </div>
-      ) : (
-        <div className="space-y-8">
-          {groups.map(([storeName, rows]) => (
-            <section key={storeName}>
-              <div className="flex items-center gap-2 mb-3">
-                <Store size={15} className="text-orange-500" />
-                <h2 className="text-base font-semibold text-gray-900">{storeName}</h2>
-                <span className="text-xs font-semibold text-gray-400">
-                  {rows.length} order{rows.length !== 1 ? "s" : ""}
-                </span>
-              </div>
+      )}
 
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {rows.map((o) => {
-                  const isNew = newIds.includes(o.id);
-                  const isPending = o.order_status === "pending";
-                  return (
-                    <article
-                      key={o.id}
-                      className={`bg-white rounded-xl border p-4 transition ${
-                        isNew
-                          ? "border-orange-400 ring-2 ring-orange-300 animate-pulse"
-                          : isPending
-                            ? "border-yellow-300 bg-yellow-50/40"
-                            : "border-gray-200"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-extrabold text-gray-900 truncate">#{o.number || o.name || o.id.slice(0, 8)}</p>
-                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                            <Clock size={11} /> {clockTime(o.created_at)} · {sinceLabel(o.created_at)}
-                          </p>
-                        </div>
-                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full capitalize shrink-0 ${ORDER_CHIPS[o.order_status] ?? "bg-gray-100 text-gray-600"}`}>
-                          {o.order_status}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+      {/* The orders themselves */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order ID</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Restaurant</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Payment</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subtotal</th>
+              <th className="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && orders.length === 0 ? (
+              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading orders…</td></tr>
+            ) : shown.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="text-center py-16 text-gray-400 text-sm">
+                  {error ? "Nothing to show while the feed is failing." : "No orders match these filters."}
+                </td>
+              </tr>
+            ) : shown.map((o) => {
+              const isNew = newIds.includes(o.id);
+              const open = expandedId === o.id;
+              const items = o.line_items ?? [];
+              const itemCount = items.reduce((n, i) => n + (i.quantity ?? 0), 0);
+              return (
+                <Fragment key={o.id}>
+                  <tr
+                    onClick={() => setExpandedId(open ? null : o.id)}
+                    className={`border-b border-gray-100 cursor-pointer transition-colors ${
+                      isNew
+                        ? "bg-orange-50 ring-1 ring-inset ring-orange-300"
+                        : o.order_status === "pending"
+                          ? "bg-yellow-50/50 hover:bg-yellow-50"
+                          : "hover:bg-gray-50"
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wide ${ORDER_CHIPS[o.order_status] ?? "bg-gray-100 text-gray-600"}`}>
+                        {o.order_status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-gray-900">{o.number || o.name || o.id.slice(0, 10)}</p>
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <Clock size={10} /> {clockTime(o.created_at)} · {sinceLabel(o.created_at)}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 max-w-[220px]">
+                      <p className="font-medium text-gray-800 truncate">{o.store?.name || "—"}</p>
+                      {o.store?.alias && <p className="text-xs text-gray-400 truncate">{o.store.alias}</p>}
+                    </td>
+                    <td className="px-4 py-3 max-w-[180px]">
+                      <p className="text-gray-700 truncate">{o.customer?.name || "—"}</p>
+                      {o.customer?.phone && (
+                        <a
+                          href={`tel:${o.customer.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs text-gray-400 hover:text-orange-600 flex items-center gap-1"
+                        >
+                          <Phone size={10} /> <span dir="ltr">{o.customer.phone}</span>
+                        </a>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{itemCount || "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1 items-start">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${PAYMENT_CHIPS[o.payment_status] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
                           {o.payment_status || "—"}
                         </span>
@@ -484,65 +593,66 @@ export default function LiveOrdersAdmin() {
                           {o.fulfillment_status || "—"}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-extrabold text-gray-900 whitespace-nowrap">
+                      {money(o.total_amount, o.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-gray-300">
+                      <ChevronDown size={15} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+                    </td>
+                  </tr>
 
-                      {(o.customer?.name || o.customer?.phone) && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <p className="text-sm font-semibold text-gray-800">{o.customer?.name || "—"}</p>
-                          {o.customer?.phone && (
-                            <a href={`tel:${o.customer.phone}`} className="text-xs text-gray-500 hover:text-orange-600 flex items-center gap-1 mt-0.5">
-                              <Phone size={11} /> <span dir="ltr">{o.customer.phone}</span>
-                            </a>
-                          )}
+                  {open && (
+                    <tr className="border-b border-gray-100 bg-gray-50/60">
+                      <td colSpan={8} className="px-4 py-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items</p>
+                            <ul className="space-y-1.5">
+                              {items.map((item, i) => (
+                                <li key={i} className="flex items-start justify-between gap-3">
+                                  <span className="min-w-0">
+                                    <span className="font-semibold text-gray-700">{item.quantity}×</span>{" "}
+                                    <span className="text-gray-700">{item.name}</span>
+                                    {(item.options ?? []).length > 0 && (
+                                      <span className="block text-[11px] text-gray-400">
+                                        {(item.options ?? [])
+                                          .map((opt) => [opt.name, opt.value].filter(Boolean).join(": "))
+                                          .filter(Boolean)
+                                          .join(" · ")}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="text-xs text-gray-500 shrink-0">{money(item.price * item.quantity, o.currency)}</span>
+                                </li>
+                              ))}
+                              {items.length === 0 && <li className="text-xs text-gray-400">No items on this order.</li>}
+                            </ul>
+                          </div>
+
+                          <div className="space-y-2">
+                            {o.schedule && (
+                              <p className="text-[12px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                                <CalendarClock size={12} className="shrink-0" /> {o.schedule}
+                              </p>
+                            )}
+                            {o.remark && (
+                              <p className="text-[12px] text-gray-600 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
+                                <StickyNote size={12} className="shrink-0 mt-0.5" /> {o.remark}
+                              </p>
+                            )}
+                            <p className="text-[11px] text-gray-400">Order reference: {o.id}</p>
+                          </div>
                         </div>
-                      )}
-
-                      <ul className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
-                        {(o.line_items ?? []).map((item, i) => (
-                          <li key={i} className="flex items-start justify-between gap-2 text-sm">
-                            <span className="min-w-0">
-                              <span className="font-semibold text-gray-700">{item.quantity}×</span>{" "}
-                              <span className="text-gray-700">{item.name}</span>
-                              {(item.options ?? []).length > 0 && (
-                                <span className="block text-[11px] text-gray-400">
-                                  {(item.options ?? [])
-                                    .map((opt) => [opt.name, opt.value].filter(Boolean).join(": "))
-                                    .filter(Boolean)
-                                    .join(" · ")}
-                                </span>
-                              )}
-                            </span>
-                            <span className="text-xs text-gray-500 shrink-0">{money(item.price * item.quantity, o.currency)}</span>
-                          </li>
-                        ))}
-                        {(o.line_items ?? []).length === 0 && (
-                          <li className="text-xs text-gray-400">No items on this order.</li>
-                        )}
-                      </ul>
-
-                      {o.schedule && (
-                        <p className="mt-2.5 text-[11px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1 flex items-center gap-1">
-                          <CalendarClock size={11} className="shrink-0" /> {o.schedule}
-                        </p>
-                      )}
-
-                      {o.remark && (
-                        <p className="mt-2 text-[11px] text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 flex items-start gap-1">
-                          <StickyNote size={11} className="shrink-0 mt-0.5" /> {o.remark}
-                        </p>
-                      )}
-
-                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                        <span className="text-xs text-gray-400">Total</span>
-                        <span className="text-base font-extrabold text-gray-900">{money(o.total_amount, o.currency)}</span>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
