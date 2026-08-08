@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -123,6 +124,14 @@ export interface KalbaSpecial {
   category_id?: string | null;
   tags?: string[] | null;
 }
+
+/* Softens both ends of the deal ticker so badges slide in and out rather than
+   being chopped off at the card edge. */
+const EDGE_FADE =
+  "linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%)";
+
+/** Badges the ticker needs before one pass is wider than any screen it runs on. */
+const TICKER_MIN_BADGES = 12;
 
 const DIETARY_TAGS: Record<string, string> = {
   veg: "🥗",
@@ -522,7 +531,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
 
 // ─── Main export ────────────────────────────────────────────────────────────
 
-export default function KalbaContent({ hero, banner, categories, popular, study, deals, specials }: Props) {
+export default function KalbaContent({ hero, banner, popular, study, deals, specials }: Props) {
   const { t, tp, tMaybe } = useTranslation();
   const localized = useLocalized();
   const pick = useLocalizedField();
@@ -545,8 +554,18 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
   // Keep the install prompt from landing on the cart bar.
   useBottomBarSpace();
 
-  const waUrl = (text: string) =>
-    `https://wa.me/${hero.whatsapp}?text=${encodeURIComponent(text)}`;
+  /**
+   * The ticker repeats the deals until one pass is wide enough to cover a desktop
+   * viewport, then repeats that whole run once more — the CSS shifts the track by
+   * half its width, so the two halves have to be identical for a seamless loop.
+   * Speed follows the length, so a short list doesn't race past.
+   */
+  const [dealTicker, dealTickerSeconds] = useMemo(() => {
+    if (deals.length === 0) return [[] as KalbaDailyDeal[], 0] as const;
+    const passes = Math.max(1, Math.ceil(TICKER_MIN_BADGES / deals.length));
+    const run = Array.from({ length: passes }, () => deals).flat();
+    return [[...run, ...run], run.length * 2.6] as const;
+  }, [deals]);
 
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
@@ -683,37 +702,30 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
               </div>
             )}
           </div>
-          {banner.image_url && (
-            <div className="relative w-full h-44 mt-1 sm:mt-0 sm:h-auto sm:w-[45%] lg:w-[40%] sm:[border-radius:10rem_0_0_2.5rem] sm:overflow-hidden">
-              <Image
-                src={banner.image_url}
-                alt={copy(hero.name, hero.name_ar)}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 100vw, 45vw"
-              />
-              {/* Mobile: soften the top edge so the photo blends into the banner */}
-              <div className="absolute inset-x-0 top-0 h-14 pointer-events-none sm:hidden"
-                style={{ background: "linear-gradient(to bottom, #fae3d1 0%, rgba(250,227,209,0) 100%)" }} />
-            </div>
-          )}
         </div>
 
-        {/* Categories */}
-        {categories.length > 0 && (
-          <div className="mt-5 rounded-3xl border border-gray-100 px-3 py-4 sm:px-6"
-            style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-            <div className="flex gap-4 sm:gap-2 overflow-x-auto sm:overflow-visible sm:justify-between [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {categories.map((c) => (
-                <Link key={c.id} href={`/restaurant/university-kalba/menu?category=${c.id}`}
-                  className="flex flex-col items-center gap-1.5 shrink-0 group">
-                  <span className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-2xl sm:text-3xl bg-orange-50 group-hover:bg-orange-100 transition-colors">
-                    {c.emoji}
+        {/* Daily deals ticker */}
+        {deals.length > 0 && (
+          <div className="mt-5 rounded-3xl border border-gray-100 py-3 overflow-hidden"
+            style={{
+              boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+              WebkitMaskImage: EDGE_FADE,
+              maskImage: EDGE_FADE,
+            }}>
+            <div className="marquee-track" style={{ "--marquee-duration": `${dealTickerSeconds}s` } as CSSProperties}>
+              {dealTicker.map((d, i) => (
+                <span key={i} aria-hidden={i >= dealTicker.length / 2}
+                  className="flex items-center gap-1.5 shrink-0 me-2.5 rounded-full ps-2.5 pe-3.5 py-1.5 border border-black/[0.04]"
+                  style={{ background: d.bg_color }}>
+                  <span className="text-base leading-none">{d.emoji}</span>
+                  <span className="text-[9.5px] font-bold uppercase tracking-wide leading-none"
+                    style={{ color: d.day_color }}>
+                    {tMaybe(`kalba.days.${d.day}`, pick(d, "day"))}
                   </span>
-                  <span className="text-[10.5px] sm:text-[11.5px] font-semibold text-gray-700 text-center leading-tight w-16">
-                    {pick(c, "label")}
+                  <span className="text-[11.5px] font-extrabold text-gray-900 leading-none whitespace-nowrap">
+                    {pick(d, "title")}
                   </span>
-                </Link>
+                </span>
               ))}
             </div>
           </div>
@@ -866,75 +878,6 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                   <p className="text-[11.5px] font-semibold text-gray-600">{pick(d, "description")}</p>
                 </div>
               ))}
-            </div>
-          </section>
-        )}
-
-        {/* University Specials */}
-        {specials.length > 0 && (
-          <section className="mt-7">
-            <SectionHeader title={t("kalba.specialsTitle")} action={t("common.viewAll")}
-              href={waUrl(t("kalba.wa.specials", { restaurant: copy(hero.name, hero.name_ar) }))} />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {specials.map((s) => {
-                const qty = cartQty[s.id] ?? 0;
-                return (
-                  <div key={s.id}
-                    className="bg-white rounded-2xl overflow-hidden border border-gray-100 group transition-shadow hover:shadow-md"
-                    style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-                    <div className="relative h-28 sm:h-32">
-                      {s.image_url && (
-                        <Image src={s.image_url} alt={s.name} fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw" />
-                      )}
-                    </div>
-                    <div className="px-3 pt-2.5 pb-3">
-                      <h3 className="flex items-center gap-1 text-gray-900 font-extrabold text-[12.5px] leading-tight">
-                        <GraduationCap size={13} className="text-[#ea580c] shrink-0" />
-                        {pick(s, "name")}
-                      </h3>
-                      {(s.tags ?? []).length > 0 && (
-                        <div className="flex flex-wrap gap-0.5 mt-1">
-                          {(s.tags ?? []).map((t) => {
-                            const dt = DIETARY_TAGS[t];
-                            return dt ? (
-                              <span key={t} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
-                      <p className="text-gray-400 text-[10.5px] mt-1 mb-1.5 leading-snug">{pick(s, "description")}</p>
-                      {s.price_text && (
-                        <p className="text-[11px] font-extrabold mb-1.5" style={{ color: "#ea580c" }}>{pick(s, "price_text")}</p>
-                      )}
-                      <div className="h-px bg-gray-100 my-1.5" />
-                      {qty === 0 ? (
-                        <button
-                          onClick={() => handleQtyChange(s.id, 1)}
-                          className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
-                        >
-                          <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          <span className="text-[10px] sm:text-xs font-semibold">{t("common.add")}</span>
-                        </button>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <button
-                            onClick={() => handleQtyChange(s.id, Math.max(0, qty - 1))}
-                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
-                          >−</button>
-                          <span className="text-xs sm:text-sm font-bold text-gray-900">{qty}</span>
-                          <button
-                            onClick={() => handleQtyChange(s.id, qty + 1)}
-                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
-                            style={{ background: "#ea580c" }}
-                          >+</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </section>
         )}

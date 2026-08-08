@@ -347,6 +347,39 @@ canvas {
 }
 
 
+/* ── Auto-scrolling badge strip (marquee) ─────────────────────────────────────
+   The track holds the badges twice over, so shifting it by half its own width
+   lands on an identical frame and the loop never shows a seam. In RTL the flex
+   row starts flush right and overflows leftwards, so the shift has to go the
+   other way — same effect, mirrored with the rest of the layout. */
+@keyframes marqueeShiftStart {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes marqueeShiftEnd {
+  from { transform: translateX(0); }
+  to   { transform: translateX(50%); }
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marqueeShiftStart var(--marquee-duration, 30s) linear infinite;
+  will-change: transform;
+}
+[dir="rtl"] .marquee-track {
+  animation-name: marqueeShiftEnd;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
 /* ── App-like mobile utilities ────────────────────────────────────────────── */
 
 @layer utilities {
