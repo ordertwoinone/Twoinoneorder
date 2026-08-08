@@ -8,7 +8,7 @@ import {
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, CalendarCheck, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
-  Disc3, ShieldCheck, Phone, PanelTop, UsersRound,
+  Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -20,6 +20,7 @@ type NavItem =
 
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+  { label: "Live Orders", href: "/admin/live-orders", icon: Radio },
   { label: "Restaurant Menus", href: "/admin/restaurant-menu", icon: BookOpen },
   {
     label: "Homepage",
