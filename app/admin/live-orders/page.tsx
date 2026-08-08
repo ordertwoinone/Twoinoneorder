@@ -173,7 +173,9 @@ export default function LiveOrdersAdmin() {
     try {
       const res = await fetch(`/api/admin/takeapp/orders?${params}`, { cache: "no-store" });
       const body = await res.json();
-      if (!res.ok) throw new Error(body?.error || `Request failed (${res.status})`);
+      // The reason travels as `warning` when stored orders came through anyway,
+      // and as `error` when nothing did — show whichever is there.
+      if (!res.ok) throw new Error(body?.error || body?.warning || `Request failed (${res.status})`);
 
       const incoming: Order[] = Array.isArray(body.orders) ? body.orders : [];
 

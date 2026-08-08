@@ -49,7 +49,9 @@ export async function GET(request: Request) {
     // Stored orders are better than nothing, so they go out with the warning
     // rather than the request failing outright.
     return NextResponse.json(
-      { orders: storedOrders, hasMore: false, nextCursor: null, warning: message },
+      // `error` as well as `warning`: with stored orders this is a warning
+      // beside a working board, without them it is the whole story.
+      { orders: storedOrders, hasMore: false, nextCursor: null, warning: message, error: message },
       { status: storedOrders.length > 0 ? 200 : status, headers: { "Cache-Control": "no-store" } },
     );
   }
