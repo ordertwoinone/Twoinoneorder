@@ -32,6 +32,9 @@ interface Order {
   schedule?: string | null;
 }
 
+/** The safety-net refresh, under the webhook stream. */
+const REFRESH_MS = 30_000;
+
 /** How long a just-arrived order keeps its ring. */
 const NEW_ORDER_MS = 60_000;
 
@@ -137,6 +140,8 @@ export default function LiveOrdersAdmin() {
   // Ids of every order already on screen, so a webhook for an order we are
   // showing reads as an update rather than an arrival.
   const seenIds = useRef<Set<string>>(new Set());
+  /** False until the first list has been loaded and taken as the baseline. */
+  const seededRef = useRef(false);
   const audioCtx = useRef<AudioContext | null>(null);
   // The live handler is rebuilt whenever sound is toggled; the stream must not
   // be, so it reads the newest handler through a ref instead of a dependency.
@@ -177,56 +182,14 @@ export default function LiveOrdersAdmin() {
     }
   }
 
-  const load = useCallback(async () => {
-    const params = new URLSearchParams({ limit: "100" });
-    if (orderStatus) params.set("order_status", orderStatus);
-    if (paymentStatus) params.set("payment_status", paymentStatus);
-    if (fulfillmentStatus) params.set("fulfillment_status", fulfillmentStatus);
-    // The API filters from a date; "to" is applied below, where we have the rows.
-    if (fromDate) params.set("created_after", new Date(`${fromDate}T00:00:00`).toISOString());
-
-    try {
-      const res = await fetch(`/api/admin/takeapp/orders?${params}`, { cache: "no-store" });
-      const body = await res.json();
-      // The reason travels as `warning` when stored orders came through anyway,
-      // and as `error` when nothing did — show whichever is there.
-      if (!res.ok) throw new Error(body?.error || body?.warning || `Request failed (${res.status})`);
-
-      const incoming: Order[] = Array.isArray(body.orders) ? body.orders : [];
-
-      // Everything loaded here is already known — only the webhook announces
-      // arrivals from now on.
-      seenIds.current = new Set(incoming.map((o) => o.id));
-
-      setOrders(incoming);
-      // A warning means the merchant API failed but stored orders came through.
-      setError(typeof body.warning === "string" ? body.warning : "");
-      setLastUpdated(new Date());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load orders.");
-    } finally {
-      setLoading(false);
-    }
-  }, [orderStatus, paymentStatus, fulfillmentStatus, fromDate]);
-
-  // The list is loaded once on open and again whenever a filter changes; live
-  // changes arrive on the stream below rather than on a timer.
-  useEffect(() => { load(); }, [load]);
-
-  /* An order pushed from the webhook. Replaces the row when we already have it,
-     otherwise drops it in at the top and announces it. */
-  const handleLiveOrder = useCallback(({ order, isNew }: LiveEvent) => {
-    if (!order?.id) return;
-
-    setOrders((prev) => {
-      const rest = prev.filter((o) => o.id !== order.id);
-      return [order, ...rest].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-    });
-    setLastUpdated(new Date());
-
-    const firstTime = isNew && !seenIds.current.has(order.id);
+  /**
+   * Announces an order nobody has seen yet: the ring, the toast and the chime.
+   * Shared by both routes in, and guarded by `seenIds`, so an order that
+   * arrives on the stream and again on the next refresh is announced once.
+   */
+  const announce = useCallback((order: Order) => {
+    if (!order?.id || seenIds.current.has(order.id)) return;
     seenIds.current.add(order.id);
-    if (!firstTime) return;
 
     setNewIds((prev) => [...prev, order.id]);
     window.setTimeout(
@@ -248,6 +211,72 @@ export default function LiveOrdersAdmin() {
 
     if (soundOn) chime();
   }, [soundOn, chime]);
+
+  const load = useCallback(async () => {
+    const params = new URLSearchParams({ limit: "100" });
+    if (orderStatus) params.set("order_status", orderStatus);
+    if (paymentStatus) params.set("payment_status", paymentStatus);
+    if (fulfillmentStatus) params.set("fulfillment_status", fulfillmentStatus);
+    // The API filters from a date; "to" is applied below, where we have the rows.
+    if (fromDate) params.set("created_after", new Date(`${fromDate}T00:00:00`).toISOString());
+
+    try {
+      const res = await fetch(`/api/admin/takeapp/orders?${params}`, { cache: "no-store" });
+      const body = await res.json();
+      // The reason travels as `warning` when stored orders came through anyway,
+      // and as `error` when nothing did — show whichever is there.
+      if (!res.ok) throw new Error(body?.error || body?.warning || `Request failed (${res.status})`);
+
+      const incoming: Order[] = Array.isArray(body.orders) ? body.orders : [];
+
+      /* The first load is the baseline — announcing all of it would be a wall
+         of toasts for orders that are hours old. Every refresh after that
+         announces whatever is new, which is what makes the alert survive a
+         webhook that is not configured yet or a stream that has dropped. */
+      if (!seededRef.current) {
+        seededRef.current = true;
+        seenIds.current = new Set(incoming.map((o) => o.id));
+      } else {
+        incoming.forEach(announce);
+      }
+
+      setOrders(incoming);
+      // A warning means the merchant API failed but stored orders came through.
+      setError(typeof body.warning === "string" ? body.warning : "");
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load orders.");
+    } finally {
+      setLoading(false);
+    }
+  }, [orderStatus, paymentStatus, fulfillmentStatus, fromDate, announce]);
+
+  /* Loaded on open, on every filter change, and on a timer.
+     The webhook stream is what makes an order appear the second it is placed;
+     this refresh is the safety net under it — it covers a webhook that has not
+     been set up, a delivery that failed, and a stream that dropped without the
+     browser noticing. An order that both routes bring in is announced once. */
+  useEffect(() => {
+    load();
+    const timer = window.setInterval(load, REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [load]);
+
+  /* An order pushed from the webhook. Replaces the row when we already have it,
+     otherwise drops it in at the top and announces it. */
+  const handleLiveOrder = useCallback(({ order, isNew }: LiveEvent) => {
+    if (!order?.id) return;
+
+    setOrders((prev) => {
+      const rest = prev.filter((o) => o.id !== order.id);
+      return [order, ...rest].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    });
+    setLastUpdated(new Date());
+
+    // An update to an order already on screen is not an arrival.
+    if (isNew) announce(order);
+    else seenIds.current.add(order.id);
+  }, [announce]);
 
   useEffect(() => { onLiveOrder.current = handleLiveOrder; }, [handleLiveOrder]);
 
@@ -388,6 +417,7 @@ export default function LiveOrdersAdmin() {
             </span>
             {shown.length} order{shown.length !== 1 ? "s" : ""}
             {lastUpdated && <span className="text-gray-400">· updated {clockTime(lastUpdated.toISOString())}</span>}
+            <span className="text-gray-400">· rechecks every {REFRESH_MS / 1000}s</span>
           </p>
         </div>
 
