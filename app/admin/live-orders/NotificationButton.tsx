@@ -114,19 +114,21 @@ export default function NotificationButton() {
 
   if (state === "unsupported") {
     return (
-      <span className="text-[11px] text-gray-400 max-w-[220px]">
+      <span className="text-[11px] text-gray-400 sm:max-w-[220px]">
         This browser cannot do notifications. On iPhone, add the app to the Home Screen first.
       </span>
     );
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    /* The row shares the header's wrapping line, so it must not force its own:
+       full width on a phone, only as wide as its buttons from sm up. */
+    <div className="flex flex-col gap-1 w-full sm:w-auto">
       <div className="flex items-center gap-2">
         {state === "on" && (
           <button
             onClick={sendTest}
-            className="px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition"
+            className="px-3 h-11 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition shrink-0"
           >
             Test
           </button>
@@ -134,7 +136,7 @@ export default function NotificationButton() {
         <button
           onClick={state === "on" ? disable : enable}
           disabled={state === "working" || state === "checking" || state === "blocked"}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border transition disabled:opacity-60 ${
+          className={`flex flex-1 sm:flex-none items-center justify-center gap-2 px-4 h-11 rounded-lg text-sm font-semibold border transition disabled:opacity-60 ${
             state === "on"
               ? "bg-green-50 border-green-200 text-green-700"
               : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -158,11 +160,11 @@ export default function NotificationButton() {
       </div>
 
       {state === "blocked" && (
-        <span className="text-[11px] text-gray-400 max-w-[240px] text-right">
+        <span className="text-[11px] text-gray-400 sm:max-w-[240px] sm:text-right">
           Blocked in the browser settings for this site — allow notifications there, then reload.
         </span>
       )}
-      {note && <span className="text-[11px] text-gray-400 max-w-[240px] text-right">{note}</span>}
+      {note && <span className="text-[11px] text-gray-400 sm:max-w-[240px] sm:text-right">{note}</span>}
     </div>
   );
 }

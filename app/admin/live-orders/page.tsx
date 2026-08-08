@@ -375,7 +375,10 @@ export default function LiveOrdersAdmin() {
     <div className="p-4 sm:p-8">
 
       {/* Toasts — one per order the webhook has just announced */}
-      <div className="fixed top-4 end-4 z-50 flex flex-col gap-2 w-[290px] pointer-events-none">
+      <div
+        className="fixed end-3 sm:end-4 z-50 flex flex-col gap-2 w-[290px] max-w-[calc(100vw-1.5rem)] pointer-events-none"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 1rem)" }}
+      >
         {toasts.map((toast) => (
           <div
             key={toast.key}
@@ -418,13 +421,13 @@ export default function LiveOrdersAdmin() {
             </span>
             {shown.length} order{shown.length !== 1 ? "s" : ""}
             {lastUpdated && <span className="text-gray-400">· updated {clockTime(lastUpdated.toISOString())}</span>}
-            <span className="text-gray-400">· rechecks every {REFRESH_MS / 1000}s</span>
+            <span className="text-gray-400 hidden sm:inline">· rechecks every {REFRESH_MS / 1000}s</span>
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* One dot per status with its count, the way the partner dashboards show it */}
-          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-4 py-2">
+          <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-full px-4 py-2 h-11">
             {TALLY_STATUSES.map((status) => (
               <span key={status} className="flex items-center gap-1.5" title={status}>
                 <span className={`w-2.5 h-2.5 rounded-full ${STATUS_DOTS[status]}`} />
@@ -437,7 +440,7 @@ export default function LiveOrdersAdmin() {
 
           <button
             onClick={toggleSound}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border transition ${
+            className={`flex items-center justify-center gap-2 px-4 h-11 rounded-lg text-sm font-semibold border transition flex-1 sm:flex-none ${
               soundOn
                 ? "bg-orange-50 border-orange-200 text-orange-700"
                 : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -448,7 +451,7 @@ export default function LiveOrdersAdmin() {
           </button>
           <button
             onClick={() => load()}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition"
+            className="flex items-center justify-center gap-2 px-4 h-11 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition flex-1 sm:flex-none"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
           </button>
@@ -473,10 +476,10 @@ export default function LiveOrdersAdmin() {
       )}
 
       {/* Toolbar */}
-      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3 mb-4 flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200">
+      <div className="bg-white rounded-xl border border-gray-200 px-3 sm:px-4 py-3 mb-4 flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 px-3 h-11 rounded-lg border border-gray-200 flex-1 min-w-[180px] sm:flex-none">
           <Store size={14} className="text-gray-400 shrink-0" />
-          <select value={store} onChange={(e) => setStore(e.target.value)} className="text-sm bg-transparent focus:outline-none">
+          <select value={store} onChange={(e) => setStore(e.target.value)} className="text-sm bg-transparent focus:outline-none w-full sm:w-auto">
             <option value="">All restaurants ({stores.length})</option>
             {stores.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -484,14 +487,14 @@ export default function LiveOrdersAdmin() {
 
         <button
           onClick={() => setFiltersOpen((v) => !v)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition ${
+          className={`flex items-center justify-center gap-2 px-3 h-11 rounded-lg border text-sm font-medium transition shrink-0 ${
             filtersOn ? "border-orange-300 bg-orange-50 text-orange-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
           }`}
         >
           <SlidersHorizontal size={14} /> Filters{filtersOn ? " · on" : ""}
         </button>
 
-        <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 flex-1 min-w-[200px]">
+        <label className="flex items-center gap-2 px-3 h-11 rounded-lg border border-gray-200 w-full sm:flex-1 sm:w-auto sm:min-w-[200px]">
           <Search size={14} className="text-gray-400 shrink-0" />
           <input
             type="search"
@@ -505,14 +508,14 @@ export default function LiveOrdersAdmin() {
         <button
           onClick={downloadReport}
           disabled={shown.length === 0}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+          className="flex items-center justify-center gap-2 px-4 h-11 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 w-full sm:w-auto"
         >
           <Download size={14} /> Download report
         </button>
       </div>
 
       {filtersOpen && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex flex-wrap items-end gap-3">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold text-gray-700">Order status</span>
             <select value={orderStatus} onChange={(e) => setOrderStatus(e.target.value)} className={`${selectCls} capitalize`}>
@@ -548,8 +551,128 @@ export default function LiveOrdersAdmin() {
         </div>
       )}
 
-      {/* The orders themselves */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
+
+      {/* Phone view — one card per order, tap to open the items */}
+      <div className="sm:hidden space-y-2.5">
+        {loading && orders.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-400 text-sm">Loading orders…</div>
+        ) : shown.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-400 text-sm">
+            {error ? "Nothing to show while the feed is failing." : "No orders match these filters."}
+          </div>
+        ) : shown.map((o) => {
+          const isNew = newIds.includes(o.id);
+          const open = expandedId === o.id;
+          const items = o.line_items ?? [];
+          const itemCount = items.reduce((n, i) => n + (i.quantity ?? 0), 0);
+          return (
+            <div
+              key={o.id}
+              onClick={() => setExpandedId(open ? null : o.id)}
+              className={`bg-white rounded-xl border p-3.5 transition ${
+                isNew
+                  ? "border-orange-400 ring-2 ring-orange-300"
+                  : o.order_status === "pending"
+                    ? "border-yellow-300 bg-yellow-50/50"
+                    : "border-gray-200"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-extrabold text-gray-900 leading-tight">
+                    #{o.number || o.name || o.id.slice(0, 10)}
+                  </p>
+                  <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
+                    <Clock size={10} className="shrink-0" />
+                    <span className="whitespace-nowrap">{clockTime(o.created_at)} · {sinceLabel(o.created_at)}</span>
+                  </p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide shrink-0 ${ORDER_CHIPS[o.order_status] ?? "bg-gray-100 text-gray-600"}`}>
+                  {o.order_status}
+                </span>
+              </div>
+
+              <div className="mt-2.5 flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-gray-800 truncate">{o.store?.name || "—"}</p>
+                  <p className="text-[12px] text-gray-500 truncate">
+                    {o.customer?.name || "—"}
+                    {itemCount > 0 && <span className="text-gray-400"> · {itemCount} item{itemCount !== 1 ? "s" : ""}</span>}
+                  </p>
+                </div>
+                <p className="text-base font-extrabold text-gray-900 whitespace-nowrap shrink-0">
+                  {money(o.total_amount, o.currency)}
+                </p>
+              </div>
+
+              <div className="mt-2.5 flex items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5 min-w-0">
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${PAYMENT_CHIPS[o.payment_status] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
+                    {o.payment_status || "—"}
+                  </span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${FULFILLMENT_CHIPS[o.fulfillment_status] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
+                    {o.fulfillment_status || "—"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {o.customer?.phone && (
+                    <a
+                      href={`tel:${o.customer.phone}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 active:bg-gray-100"
+                      aria-label={`Call ${o.customer.name || "the customer"}`}
+                    >
+                      <Phone size={14} />
+                    </a>
+                  )}
+                  <ChevronDown size={16} className={`text-gray-300 transition-transform ${open ? "rotate-180" : ""}`} />
+                </div>
+              </div>
+
+              {open && (
+                <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                  <ul className="space-y-1.5">
+                    {items.map((item, i) => (
+                      <li key={i} className="flex items-start justify-between gap-3 text-[13px]">
+                        <span className="min-w-0">
+                          <span className="font-semibold text-gray-700">{item.quantity}×</span>{" "}
+                          <span className="text-gray-700">{item.name}</span>
+                          {(item.options ?? []).length > 0 && (
+                            <span className="block text-[11px] text-gray-400">
+                              {(item.options ?? [])
+                                .map((opt) => [opt.name, opt.value].filter(Boolean).join(": "))
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          )}
+                        </span>
+                        <span className="text-[12px] text-gray-500 shrink-0">{money(item.price * item.quantity, o.currency)}</span>
+                      </li>
+                    ))}
+                    {items.length === 0 && <li className="text-[12px] text-gray-400">No items on this order.</li>}
+                  </ul>
+
+                  {o.schedule && (
+                    <p className="text-[12px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                      <CalendarClock size={12} className="shrink-0" /> {o.schedule}
+                    </p>
+                  )}
+                  {o.remark && (
+                    <p className="text-[12px] text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
+                      <StickyNote size={12} className="shrink-0 mt-0.5" /> {o.remark}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* The orders themselves. A phone gets cards: eight columns cannot be read
+          at 390px, and a sideways-scrolling table hides the total — the one
+          number anyone is looking for. */}
+      <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
