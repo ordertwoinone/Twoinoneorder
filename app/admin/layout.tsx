@@ -28,7 +28,11 @@ export const metadata: Metadata = {
     capable: true,
     // What iOS writes under the home-screen icon.
     title: "TIO Admin",
-    statusBarStyle: "black-translucent",
+    /* Not "black-translucent": that hands the status bar's space to the page,
+       and the panel's top bar ends up drawn under the clock with its menu
+       button unreachable. The safe-area padding in AdminShell covers the same
+       ground on Android cutouts. */
+    statusBarStyle: "default",
   },
   // An admin panel has no business in search results.
   robots: { index: false, follow: false, nocache: true },

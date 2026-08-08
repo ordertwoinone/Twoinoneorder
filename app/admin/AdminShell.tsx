@@ -177,18 +177,22 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="min-h-screen bg-[#f6f6f7] lg:flex">
-      {/* Mobile top bar */}
-      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 flex items-center gap-3 px-4 h-14">
+      {/* Mobile top bar. `pt-safe` matters once this is an installed app: the
+          viewport is set to cover the whole screen, so without it the bar draws
+          underneath the clock and the menu button cannot be tapped. */}
+      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 pt-safe">
+        <div className="flex items-center gap-2 px-2 h-14">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
+          className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors shrink-0"
           aria-label="Open menu"
         >
-          <Menu size={20} className="text-gray-700" />
+          <Menu size={22} className="text-gray-700" />
         </button>
-        <div className="flex items-center gap-2">
-          <Image src="/logos/two-in-one.png" alt="Two In One" width={24} height={24} className="object-contain" />
-          <span className="text-sm font-semibold text-gray-900">Admin Panel</span>
+        <div className="flex items-center gap-2 min-w-0">
+          <Image src="/logos/two-in-one.png" alt="Two In One" width={24} height={24} className="object-contain shrink-0" />
+          <span className="text-sm font-semibold text-gray-900 truncate">Admin Panel</span>
+        </div>
         </div>
       </div>
 
@@ -203,7 +207,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3">
+        <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3 pt-safe">
           <div className="w-9 h-9 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
             <Image src="/logos/two-in-one.png" alt="Two In One" width={32} height={32} className="object-contain" />
           </div>
@@ -286,7 +290,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           })}
         </nav>
 
-        <div className="px-3 py-4 border-t border-gray-200">
+        <div className="px-3 py-4 border-t border-gray-200 pb-safe">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
