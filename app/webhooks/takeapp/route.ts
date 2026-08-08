@@ -35,6 +35,25 @@ function svixSecret(secret: string): string {
   return `whsec_${padded}`;
 }
 
+/**
+ * Every signing secret we accept, one per store.
+ *
+ * Each take.app store signs with its own secret, and a delivery carries no hint
+ * of which store sent it until the body has been verified — so a delivery is
+ * checked against each secret in turn and the first that matches wins. List
+ * them in TAKEAPP_WEBHOOK_SECRETS, comma or newline separated;
+ * TAKEAPP_WEBHOOK_SECRET stays valid as the single-store spelling.
+ */
+function webhookSecrets(): string[] {
+  const many = (process.env.TAKEAPP_WEBHOOK_SECRETS ?? "")
+    .split(/[\s,]+/)
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+  const one = (process.env.TAKEAPP_WEBHOOK_SECRET ?? "").trim();
+  return Array.from(new Set(one ? [one, ...many] : many));
+}
+
 /** The event names that carry an order we care about. */
 function isOrderEvent(type: string): boolean {
   return type.toUpperCase().startsWith("ORDER");
@@ -50,9 +69,9 @@ function orderFrom(payload: Record<string, unknown>): TakeAppOrder | null {
 }
 
 export async function POST(request: Request) {
-  const secret = process.env.TAKEAPP_WEBHOOK_SECRET;
-  if (!secret) {
-    console.error("[takeapp webhook] TAKEAPP_WEBHOOK_SECRET is not set");
+  const secrets = webhookSecrets();
+  if (secrets.length === 0) {
+    console.error("[takeapp webhook] no signing secret is set");
     return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
   }
 
@@ -65,12 +84,21 @@ export async function POST(request: Request) {
     "svix-signature": request.headers.get("svix-signature") ?? "",
   };
 
-  let payload: Record<string, unknown>;
-  try {
-    payload = new Webhook(svixSecret(secret)).verify(body, headers) as Record<string, unknown>;
-  } catch (err) {
-    const reason = err instanceof WebhookVerificationError ? err.message : "Invalid signature";
-    console.warn("[takeapp webhook] rejected:", reason);
+  let payload: Record<string, unknown> | null = null;
+  let lastReason = "Invalid signature";
+
+  for (const secret of secrets) {
+    try {
+      payload = new Webhook(svixSecret(secret)).verify(body, headers) as Record<string, unknown>;
+      break;
+    } catch (err) {
+      lastReason = err instanceof WebhookVerificationError ? err.message : "Invalid signature";
+    }
+  }
+
+  if (!payload) {
+    // Every store's secret was tried; none of them signed this body.
+    console.warn(`[takeapp webhook] rejected against ${secrets.length} secret(s):`, lastReason);
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
