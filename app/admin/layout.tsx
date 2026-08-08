@@ -8,15 +8,24 @@ import {
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, CalendarCheck, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
-  Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio,
+  Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
+import { areaForPath, isOwnerOnlyPath } from "@/lib/admin-areas";
 
 type NavChild = { label: string; href: string; icon: LucideIcon };
 type NavItem =
   | { label: string; href: string; icon: LucideIcon }
   | { label: string; icon: LucideIcon; basePath: string; children: NavChild[] };
+
+/** The signed-in member's own access, as /api/admin/me reports it. */
+interface Access {
+  name: string;
+  email: string;
+  areas: string[];
+  isOwner: boolean;
+}
 
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -91,6 +100,7 @@ const NAV: NavItem[] = [
   { label: "Spin & Win",    href: "/admin/spin-wheel", icon: Disc3   },
   { label: "Media Library", href: "/admin/media",     icon: Images   },
   { label: "Settings",      href: "/admin/settings",  icon: Settings },
+  { label: "Admin Team",    href: "/admin/team",      icon: KeyRound },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -100,6 +110,35 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     children.some((c) => pathname.startsWith(c.href));
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [access, setAccess] = useState<Access | null>(null);
+
+  /* The sidebar shows only what this member may open. Middleware is what
+     actually enforces it — hiding a link the server would refuse anyway just
+     saves them the dead end. */
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/me", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((body) => { if (!cancelled) setAccess(body?.member ?? null); })
+      .catch(() => { /* the panel still works; every link simply shows */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  const allowed = (href: string) => {
+    if (!access) return true;            // until it loads, do not flash an empty rail
+    if (access.isOwner) return true;
+    if (isOwnerOnlyPath(href)) return false;
+    const area = areaForPath(href);
+    return area ? access.areas.includes(area.key) : false;
+  };
+
+  const nav: NavItem[] = NAV
+    .map((item) => {
+      if (!("children" in item)) return allowed(item.href) ? item : null;
+      const children = item.children.filter((c) => allowed(c.href));
+      return children.length > 0 ? { ...item, children } : null;
+    })
+    .filter((item): item is NavItem => item !== null);
 
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -127,7 +166,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  if (pathname === "/admin") return <>{children}</>;
+  // The login form and the no-access notice stand on their own.
+  if (pathname === "/admin" || pathname === "/admin/no-access") return <>{children}</>;
 
   async function handleLogout() {
     const supabase = createClient();
@@ -181,7 +221,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             if ("children" in item) {
               const groupActive = isChildActive(item.children);
               const isOpen = open[item.label] ?? false;
