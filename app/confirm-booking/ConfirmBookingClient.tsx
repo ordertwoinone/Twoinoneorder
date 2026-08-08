@@ -51,13 +51,23 @@ export default function ConfirmBookingClient({ whatsapp }: { whatsapp: string })
   const { t, tp, tMaybe, locale } = useTranslation()
   const [booking, setBooking] = useState<PendingBooking | null>(null)
 
+  /* A booking can cover several tables, so the section arrives as a list —
+     translate each name rather than looking the whole string up as one key. */
+  const sectionLabel = (sections: string) =>
+    sections
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => tMaybe(`booking.sections.${s}`, s))
+      .join(' · ')
+
   /* The message is written in whichever language the customer is browsing in —
      it is their own summary being sent from their own WhatsApp. */
   function buildWaUrl(b: PendingBooking) {
     const lines = [
       t('confirm.wa.heading'),
       '',
-      t('confirm.wa.table', { id: b.table_id, section: tMaybe(`booking.sections.${b.table_section}`, b.table_section) }),
+      t('confirm.wa.table', { id: b.table_id, section: sectionLabel(b.table_section) }),
       t('confirm.wa.seats', { seats: b.seats }),
       '',
       t('confirm.wa.name', { name: b.guest_name }),
@@ -155,10 +165,12 @@ export default function ConfirmBookingClient({ whatsapp }: { whatsapp: string })
         <div className="bg-white rounded-2xl shadow-sm mt-3 overflow-hidden">
           <div className="bg-[#E8521A] px-5 py-4">
             <p className="text-white text-[11px] font-semibold uppercase tracking-wider opacity-80">{t('confirm.summaryLabel')}</p>
-            <p className="text-white font-extrabold text-lg mt-0.5">{t('confirm.tableNumber', { id: booking.table_id })}</p>
+            <p className="text-white font-extrabold text-lg mt-0.5">
+              {t(booking.table_id.includes(',') ? 'confirm.tablesNumber' : 'confirm.tableNumber', { id: booking.table_id })}
+            </p>
           </div>
           <div className="p-5 space-y-3">
-            <Row label={t('confirm.rowLocation')} value={tMaybe(`booking.sections.${booking.table_section}`, booking.table_section)} />
+            <Row label={t('confirm.rowLocation')} value={sectionLabel(booking.table_section)} />
             <Row label={t('confirm.rowCapacity')} value={tp('common.seats', Number(String(booking.seats).split('–')[0]) || 0, { count: booking.seats })} />
             <div className="border-t border-gray-100 pt-3 space-y-3">
               <Row label={t('confirm.rowName')} value={booking.guest_name} />

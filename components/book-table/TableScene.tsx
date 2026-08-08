@@ -6,7 +6,7 @@ import { OrbitControls, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useTableStore } from './useTableStore'
 import {
-  TABLES, BookTable, STATUS_COLORS, SELECTED_COLOR,
+  BookTable, STATUS_COLORS, SELECTED_COLOR,
   SECTION_TO_AREA, PLANE_W, PLANE_H,
 } from './tableData'
 
@@ -59,9 +59,9 @@ function SelectionRing({ position }: { position: [number, number, number] }) {
 // ─── Floating table pin ───────────────────────────────────────────
 
 function TablePin({ table }: { table: BookTable }) {
-  const { tableStatuses, selectedTable, activeArea, selectTable } = useTableStore()
-  const status    = tableStatuses[table.id]
-  const isSelected = selectedTable === table.id
+  const { tableStatuses, selectedTables, activeArea, toggleTable } = useTableStore()
+  const status    = tableStatuses[table.id] ?? table.status
+  const isSelected = selectedTables.includes(table.id)
   const inActiveArea = SECTION_TO_AREA[table.section] === activeArea
   const pinColor  = isSelected ? SELECTED_COLOR : STATUS_COLORS[status]
   const clickable = status !== 'booked'
@@ -70,7 +70,7 @@ function TablePin({ table }: { table: BookTable }) {
     <group position={[table.position[0], 0.05, table.position[2]]}>
       <Html position={[0, 0.7, 0]} center distanceFactor={11} zIndexRange={[20, 0]}>
         <button
-          onClick={() => clickable && selectTable(table.id)}
+          onClick={() => clickable && toggleTable(table.id)}
           style={{
             position: 'relative',
             background: pinColor,
@@ -163,7 +163,7 @@ function CameraRig({ viewMode }: { viewMode: ViewMode }) {
 
 // ─── Exported scene ───────────────────────────────────────────────
 
-export default function TableScene({ viewMode }: { viewMode: ViewMode }) {
+export default function TableScene({ viewMode, tables }: { viewMode: ViewMode; tables: BookTable[] }) {
   return (
     <div className="relative w-full h-full">
       <Canvas
@@ -179,7 +179,7 @@ export default function TableScene({ viewMode }: { viewMode: ViewMode }) {
 
         <Suspense fallback={null}>
           <FloorPlanImage />
-          {TABLES.map((t) => <TablePin key={t.id} table={t} />)}
+          {tables.map((t) => <TablePin key={t.id} table={t} />)}
           <CameraRig viewMode={viewMode} />
         </Suspense>
       </Canvas>

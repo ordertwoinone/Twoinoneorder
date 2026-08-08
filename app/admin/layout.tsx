@@ -85,6 +85,7 @@ const NAV: NavItem[] = [
   },
   { label: "Header",        href: "/admin/header",   icon: PanelTop  },
   { label: "Bookings",       href: "/admin/bookings", icon: CalendarCheck },
+  { label: "Table Details", href: "/admin/booking-tables", icon: Armchair },
   { label: "Spin & Win",    href: "/admin/spin-wheel", icon: Disc3   },
   { label: "Media Library", href: "/admin/media",     icon: Images   },
   { label: "Settings",      href: "/admin/settings",  icon: Settings },

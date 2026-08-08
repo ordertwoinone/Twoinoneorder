@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import { useTableStore } from './useTableStore'
-import { TABLES } from './tableData'
+import { TABLES, type BookTable } from './tableData'
 import type { ViewMode } from './TableScene'
 import { useTranslation } from '@/lib/i18n/useTranslation'
+import { useLocalizedField } from '@/lib/i18n/localized'
 import type { TranslationKey } from '@/lib/i18n/types'
 
 function SceneLoading() {
@@ -90,7 +91,13 @@ const LEGEND: { color: string; labelKey: TranslationKey }[] = [
   { color: '#EF4444', labelKey: 'booking.legend.booked'    },
 ]
 
+/** Shown when admin has not put a photo on the table. */
 const TABLE_PHOTO = 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&q=80'
+
+/** "4" → 4, "8–10" → 8. The lower bound is what we can promise. */
+function seatCount(seats: string): number {
+  return Number(String(seats).split('–')[0]) || 0
+}
 
 interface DetailsForm {
   name: string
@@ -107,17 +114,33 @@ const EMPTY_FORM: DetailsForm = {
 
 // ══════════════ Page ══════════════
 
-export default function TableBookingPage() {
+export default function TableBookingPage({ tables }: { tables?: BookTable[] }) {
   const router = useRouter()
   const { t, tp, tMaybe } = useTranslation()
+  const pick = useLocalizedField()
   const [step, setStep] = useState(1)
   const [viewMode, setViewMode] = useState<ViewMode>('3d')
   const [form, setForm] = useState<DetailsForm>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [errors, setErrors] = useState<Partial<DetailsForm>>({})
 
-  const { selectedTable } = useTableStore()
-  const selected = TABLES.find((t) => t.id === selectedTable)
+  // Admin → Book a Table owns the layout; the drawn one stands in until the
+  // booking_tables rows exist.
+  const floorPlan = tables?.length ? tables : TABLES
+
+  const { selectedTables, syncTables, toggleTable } = useTableStore()
+  useEffect(() => { syncTables(floorPlan) }, [floorPlan, syncTables])
+
+  // Selection order is the guest's, so keep it rather than the floor-plan order.
+  const selected = useMemo(
+    () => selectedTables
+      .map((id) => floorPlan.find((tbl) => tbl.id === id))
+      .filter((tbl): tbl is BookTable => Boolean(tbl)),
+    [selectedTables, floorPlan],
+  )
+  const hasSelection = selected.length > 0
+  const totalSeats = selected.reduce((n, tbl) => n + seatCount(tbl.seats), 0)
+  const sections = Array.from(new Set(selected.map((tbl) => tbl.section)))
 
   function handleField(key: keyof DetailsForm, value: string) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -136,14 +159,17 @@ export default function TableBookingPage() {
   }
 
   function handleSubmit() {
-    if (!selected || !validateForm()) return
+    if (!hasSelection || !validateForm()) return
     setSubmitting(true)
 
+    /* One booking can now cover several tables, and the bookings table keeps a
+       single text column for each — so the tables travel as a list and their
+       capacity and minimum spend as totals. */
     const bookingData = {
-      table_id: selected.id,
-      table_section: selected.section,
-      seats: selected.seats,
-      min_spend: selected.minSpend,
+      table_id: selected.map((tbl) => tbl.id).join(', '),
+      table_section: sections.join(', '),
+      seats: selected.length === 1 ? selected[0].seats : String(totalSeats),
+      min_spend: selected.reduce((sum, tbl) => sum + tbl.minSpend, 0),
       guest_name: form.name,
       phone: form.phone,
       date: form.date,
@@ -228,7 +254,7 @@ export default function TableBookingPage() {
 
             {/* 3D Floor Plan */}
             <div className="relative mt-3 rounded-2xl overflow-hidden bg-white border border-gray-100 h-[clamp(300px,42vh,440px)] sm:h-[min(62vh,580px)]">
-              <TableScene viewMode={viewMode} />
+              <TableScene viewMode={viewMode} tables={floorPlan} />
 
               {/* View mode buttons — desktop overlay only */}
               <div className="hidden sm:flex absolute start-3 top-3 flex-col gap-2 z-10">
@@ -266,26 +292,48 @@ export default function TableBookingPage() {
               </div>
             </div>
 
-            {/* Selected table card */}
+            {/* Selected tables — one card per table, details as typed in admin */}
             <div className="bg-white rounded-2xl shadow-sm mt-3 p-3.5 sm:p-4">
-              {selected ? (
-                <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={TABLE_PHOTO} alt={t('booking.tableNumber', { id: selected.id })} loading="lazy" decoding="async" className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h2 className="text-xl font-extrabold mb-2">{t('booking.tableNumber', { id: selected.id })}</h2>
-                    <div className="space-y-1.5 text-[13.5px] text-[#374151]">
-                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.Users /></span>{tp('common.guests', Number(selected.seats.split('–')[0]) || 0, { count: selected.seats })}</p>
-                      <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.MapPin /></span>{tMaybe(`booking.sections.${selected.section}`, selected.section)}</p>
-                      <p className="flex items-center gap-2"><I.Star />{t('booking.bestFor')}</p>
+              {hasSelection ? (
+                <div className="space-y-3">
+                  {selected.map((tbl) => (
+                    <div key={tbl.id} className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={tbl.imageUrl || TABLE_PHOTO}
+                        alt={t('booking.tableNumber', { id: tbl.id })}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full sm:w-40 h-32 object-cover rounded-xl shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-xl font-extrabold mb-2">{t('booking.tableNumber', { id: tbl.id })}</h2>
+                        <div className="space-y-1.5 text-[13.5px] text-[#374151]">
+                          <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.Users /></span>{tp('common.guests', seatCount(tbl.seats), { count: tbl.seats })}</p>
+                          <p className="flex items-center gap-2"><span className="text-[#6B7280]"><I.MapPin /></span>{tMaybe(`booking.sections.${tbl.section}`, tbl.section)}</p>
+                          <p className="flex items-center gap-2"><I.Star />{pick(tbl, 'description') || t('booking.bestFor')}</p>
+                        </div>
+                      </div>
+                      <div className="sm:border-s sm:border-gray-100 sm:ps-5 flex items-center sm:items-stretch justify-end shrink-0">
+                        <button
+                          onClick={() => toggleTable(tbl.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full hover:bg-red-50 group transition-colors"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-green-500 group-hover:bg-red-500 shrink-0 transition-colors" />
+                          <span className="text-[12px] font-semibold text-green-700 group-hover:text-red-600 transition-colors">
+                            <span className="group-hover:hidden">{t('booking.selected')}</span>
+                            <span className="hidden group-hover:inline">{t('booking.removeTable')}</span>
+                          </span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="sm:border-s sm:border-gray-100 sm:ps-5 flex items-center sm:items-stretch justify-end shrink-0">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full">
-                      <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                      <span className="text-[12px] font-semibold text-green-700">{t('booking.selected')}</span>
-                    </div>
-                  </div>
+                  ))}
+
+                  {selected.length > 1 && (
+                    <p className="border-t border-gray-100 pt-3 text-[12.5px] text-[#6B7280]">
+                      {t('booking.multiSummary', { count: selected.length, seats: totalSeats })}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="py-6 text-center">
@@ -298,24 +346,33 @@ export default function TableBookingPage() {
         )}
 
         {/* ── Step 2: Your Details ── */}
-        {step === 2 && selected && (
+        {step === 2 && hasSelection && (
           <>
-            {/* Table summary */}
-            <div className="bg-white rounded-2xl shadow-sm mt-3 p-4 flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={TABLE_PHOTO} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1">
-                <p className="font-extrabold text-[#1A1A1A]">{t('booking.tableNumber', { id: selected.id })}</p>
-                <p className="text-[13px] text-[#6B7280]">
-                  {tMaybe(`booking.sections.${selected.section}`, selected.section)} · {tp('common.seats', Number(selected.seats.split('–')[0]) || 0, { count: selected.seats })}
+            {/* Table summary — one row per selected table */}
+            <div className="bg-white rounded-2xl shadow-sm mt-3 p-4 space-y-3">
+              {selected.map((tbl) => (
+                <div key={tbl.id} className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={tbl.imageUrl || TABLE_PHOTO} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-extrabold text-[#1A1A1A]">{t('booking.tableNumber', { id: tbl.id })}</p>
+                    <p className="text-[13px] text-[#6B7280]">
+                      {tMaybe(`booking.sections.${tbl.section}`, tbl.section)} · {tp('common.seats', seatCount(tbl.seats), { count: tbl.seats })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                    <span className="text-[12px] font-semibold text-green-700">{t('booking.selected')}</span>
+                  </div>
+                </div>
+              ))}
+              {selected.length > 1 && (
+                <p className="border-t border-gray-100 pt-3 text-[12.5px] text-[#6B7280]">
+                  {t('booking.multiSummary', { count: selected.length, seats: totalSeats })}
                 </p>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 rounded-full shrink-0">
-                <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                <span className="text-[12px] font-semibold text-green-700">{t('booking.selected')}</span>
-              </div>
+              )}
             </div>
 
             {/* Details form */}
@@ -421,10 +478,10 @@ export default function TableBookingPage() {
             {step === 1 ? (
               <>
                 <button
-                  disabled={!selected}
+                  disabled={!hasSelection}
                   onClick={() => setStep(2)}
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center transition shadow-sm ${
-                    selected
+                    hasSelection
                       ? 'bg-[#E8521A] text-white hover:bg-[#F97316]'
                       : 'bg-white border border-gray-100 text-[#C5C8CE] cursor-not-allowed'
                   }`}
