@@ -31,7 +31,7 @@ export const ADMIN_AREAS: AdminArea[] = [
     label: "Live Orders",
     hint: "Incoming take.app orders",
     paths: ["/admin/live-orders"],
-    apiPaths: ["/api/admin/takeapp"],
+    apiPaths: ["/api/admin/takeapp", "/api/admin/push"],
   },
   {
     key: "bookings",

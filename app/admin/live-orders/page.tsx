@@ -5,6 +5,7 @@ import {
   CalendarClock, StickyNote, BellRing, X, Wifi, WifiOff,
   Search, SlidersHorizontal, Download, ChevronDown,
 } from "lucide-react";
+import NotificationButton from "./NotificationButton";
 
 /* ── Shapes as take.app returns them ─────────────────────────────────────── */
 
@@ -431,6 +432,8 @@ export default function LiveOrdersAdmin() {
               </span>
             ))}
           </div>
+
+          <NotificationButton />
 
           <button
             onClick={toggleSound}

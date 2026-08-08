@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { Webhook, WebhookVerificationError } from "svix";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { toOrderRow } from "@/lib/takeapp-order-row";
+import { pushToAdmins } from "@/lib/push";
 import type { TakeAppOrder } from "@/lib/takeapp-orders";
 
 /**
@@ -87,6 +88,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, ignored: "no order in payload" });
   }
 
+  /* `select` tells us whether this was an arrival or an update: an order we
+     already had must not ring anyone's phone a second time. */
+  const { data: before } = await supabaseAdminLive
+    .from("takeapp_orders")
+    .select("id")
+    .eq("id", String(order.id))
+    .maybeSingle();
+
   const { error } = await supabaseAdminLive
     .from("takeapp_orders")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,6 +105,25 @@ export async function POST(request: Request) {
     // A 500 asks take.app to deliver it again rather than losing the order.
     console.error("[takeapp webhook] could not store order:", error.message);
     return NextResponse.json({ error: "Could not store order" }, { status: 500 });
+  }
+
+  /* The push is what reaches an admin who has the app closed — the screen's own
+     alert only fires for someone already looking at it. Awaited so the function
+     is not frozen mid-send, but never allowed to fail the delivery: take.app
+     would retry an order we have already stored. */
+  if (!before) {
+    const total = ((order.total_amount ?? 0) / 100).toFixed(2);
+    const store = order.store?.name ? ` · ${order.store.name}` : "";
+    try {
+      await pushToAdmins({
+        title: `New order #${order.number || order.name || order.id}`,
+        body: `${order.currency || "AED"} ${total}${store}`,
+        url: "/admin/live-orders",
+        tag: `order-${order.id}`,
+      });
+    } catch (err) {
+      console.error("[takeapp webhook] push failed:", err instanceof Error ? err.message : err);
+    }
   }
 
   return NextResponse.json({ received: true });
