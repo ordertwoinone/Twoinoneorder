@@ -4,6 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { orderWhatsapp } from "@/lib/whatsapp";
 import JsonLd from "@/components/seo/JsonLd";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { breadcrumbSchema } from "@/lib/seo";
@@ -18,7 +19,7 @@ const DEFAULT_HERO_PARTIAL = {
 };
 
 async function getMenuData() {
-  const [heroRes, catsRes, popularRes] = await Promise.all([
+  const [heroRes, catsRes, popularRes, settingsRes] = await Promise.all([
     supabaseAdmin.from("kalba_hero").select("name, whatsapp").limit(1).single(),
     supabaseAdmin
       .from("kalba_categories")
@@ -30,10 +31,14 @@ async function getMenuData() {
       .select("*")
       .eq("is_active", true)
       .order("sort_order"),
+    supabaseAdmin.from("site_settings").select("whatsapp_number").single(),
   ]);
 
+  const hero = (heroRes.data ?? DEFAULT_HERO_PARTIAL) as Pick<KalbaHero, "name" | "whatsapp">;
+
   return {
-    hero: (heroRes.data ?? DEFAULT_HERO_PARTIAL) as Pick<KalbaHero, "name" | "whatsapp">,
+    // The branch number wins; blank falls back to admin → Settings.
+    hero: { ...hero, whatsapp: orderWhatsapp(hero.whatsapp, settingsRes.data?.whatsapp_number) },
     categories: (catsRes.data ?? []) as KalbaCategory[],
     popular: (popularRes.data ?? []) as KalbaPopularItem[],
   };

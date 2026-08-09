@@ -20,3 +20,16 @@ export function buildWhatsAppUrl(lines: string[]): string {
     lines.filter(Boolean).join("\n"),
   )}`;
 }
+
+/**
+ * The number an order is sent to.
+ *
+ * The branch keeps its own in admin → University Kalba → Branch Info; leaving
+ * that blank falls back to the one number in admin → Settings, so a business
+ * running a single line does not have to remember two places. Digits only:
+ * wa.me rejects a leading "+", and admin fields are typed either way.
+ */
+export function orderWhatsapp(branch?: string | null, site?: string | null): string {
+  const digits = (value?: string | null) => (value ?? "").replace(/\D/g, "");
+  return digits(branch) || digits(site) || "971522305216";
+}

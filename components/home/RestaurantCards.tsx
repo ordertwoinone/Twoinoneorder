@@ -62,27 +62,6 @@ function pillColors(
   };
 }
 
-const BASE_COLUMNS =
-  "id, name, cuisine, logo_url, food_image_url, background_image_url, rating, delivery_time, url, badge, offer_text";
-/* Added by supabase/arabic_translations.sql. Queried separately from the
-   colour columns so a database that has run one migration but not the other
-   still renders. */
-const ARABIC_COLUMNS = "name_ar, cuisine_ar, delivery_time_ar, badge_ar, offer_text_ar";
-/* Added by supabase/restaurant_card_colors.sql and restaurant_free_delivery.sql. */
-const EXTRA_COLUMNS =
-  "free_delivery, badge_bg_color, badge_text_color, offer_bg_color, offer_text_color";
-
-function query(columns: string) {
-  return supabaseAdmin
-    .from("restaurants")
-    .select(columns)
-    .eq("is_active", true)
-    // Position is set by the arrows in admin → Restaurants; newest-first only
-    // breaks ties between rows that share a position.
-    .order("sort_order", { ascending: true })
-    .order("created_at", { ascending: false });
-}
-
 const BLANK_ARABIC = {
   name_ar: null,
   cuisine_ar: null,
@@ -100,27 +79,30 @@ const BLANK_EXTRAS = {
 };
 
 /**
- * PostgREST rejects the whole select if one column is unknown, so a database
- * that has not run the latest migration would blank the entire section. Ask for
- * everything first, then step down a tier at a time — a site that has run the
- * colour migration but not the Arabic one still renders its cards, just without
- * the translations.
+ * Every column the table actually has.
+ *
+ * This used to name its columns and step down a tier at a time when PostgREST
+ * rejected the select. One column missing from the middle tier took the tier
+ * below it down too — which is what happened: `free_delivery` had never been
+ * added, so the query fell all the way to the base columns and the cards lost
+ * their Arabic names and their colours together. `*` cannot fail that way, and
+ * whatever a migration has not added yet simply arrives undefined.
  */
 async function getRestaurants(): Promise<Restaurant[]> {
-  const full = await query(`${BASE_COLUMNS}, ${EXTRA_COLUMNS}, ${ARABIC_COLUMNS}`);
-  if (!full.error) return (full.data as unknown as Restaurant[]) ?? [];
+  const { data, error } = await supabaseAdmin
+    .from("restaurants")
+    .select("*")
+    .eq("is_active", true)
+    // Position is set by the arrows in admin → Restaurants; newest-first only
+    // breaks ties between rows that share a position.
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: false });
 
-  const noArabic = await query(`${BASE_COLUMNS}, ${EXTRA_COLUMNS}`);
-  if (!noArabic.error) {
-    return ((noArabic.data as unknown as Restaurant[]) ?? []).map((r) => ({
-      ...BLANK_ARABIC,
-      ...r,
-    }));
-  }
+  if (error || !data?.length) return [];
 
-  const base = await query(BASE_COLUMNS);
-  if (base.error || !base.data?.length) return [];
-  return (base.data as unknown as Restaurant[]).map((r) => ({
+  // Defaults first, so a column the database does not have reads as absent
+  // rather than undefined at the point of use.
+  return (data as unknown as Restaurant[]).map((r) => ({
     ...BLANK_ARABIC,
     ...BLANK_EXTRAS,
     ...r,

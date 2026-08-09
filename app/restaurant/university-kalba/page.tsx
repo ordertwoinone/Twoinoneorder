@@ -3,6 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { orderWhatsapp } from "@/lib/whatsapp";
 import JsonLd from "@/components/seo/JsonLd";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { SITE_URL, restaurantSchema, breadcrumbSchema } from "@/lib/seo";
@@ -66,7 +67,7 @@ const DEFAULT_STUDY: KalbaStudy = {
 };
 
 async function getKalbaData() {
-  const [heroRes, bannerRes, catsRes, popularRes, studyRes, dealsRes, specialsRes] =
+  const [heroRes, bannerRes, catsRes, popularRes, studyRes, dealsRes, specialsRes, settingsRes] =
     await Promise.all([
       supabaseAdmin.from("kalba_hero").select("*").limit(1).single(),
       supabaseAdmin.from("kalba_banner").select("*").limit(1).single(),
@@ -75,13 +76,17 @@ async function getKalbaData() {
       supabaseAdmin.from("kalba_study").select("*").limit(1).single(),
       supabaseAdmin.from("kalba_daily_deals").select("*").eq("is_active", true).order("sort_order"),
       supabaseAdmin.from("kalba_specials").select("*").eq("is_active", true).order("sort_order"),
+      supabaseAdmin.from("site_settings").select("whatsapp_number").single(),
     ]);
 
   const banner = bannerRes.data ?? DEFAULT_BANNER;
   const study = studyRes.data ?? DEFAULT_STUDY;
 
+  const hero = (heroRes.data ?? DEFAULT_HERO) as KalbaHero;
+
   return {
-    hero: (heroRes.data ?? DEFAULT_HERO) as KalbaHero,
+    // The branch number wins; blank falls back to admin → Settings.
+    hero: { ...hero, whatsapp: orderWhatsapp(hero.whatsapp, settingsRes.data?.whatsapp_number) },
     banner: { ...banner, chips: Array.isArray(banner.chips) ? banner.chips : [] } as KalbaBanner,
     categories: (catsRes.data ?? []) as KalbaCategory[],
     popular: (popularRes.data ?? []) as KalbaPopularItem[],
