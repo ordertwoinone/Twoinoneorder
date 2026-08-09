@@ -45,13 +45,13 @@ function svixSecret(secret: string): string {
  * TAKEAPP_WEBHOOK_SECRET stays valid as the single-store spelling.
  */
 function webhookSecrets(): string[] {
-  const many = (process.env.TAKEAPP_WEBHOOK_SECRETS ?? "")
-    .split(/[\s,]+/)
+  // Both spellings split the same way, for the same reason as apiKeys().
+  const all = [process.env.TAKEAPP_WEBHOOK_SECRET, process.env.TAKEAPP_WEBHOOK_SECRETS]
+    .flatMap((value) => (value ?? "").split(/[\s,]+/))
     .map((v) => v.trim())
     .filter(Boolean);
 
-  const one = (process.env.TAKEAPP_WEBHOOK_SECRET ?? "").trim();
-  return Array.from(new Set(one ? [one, ...many] : many));
+  return Array.from(new Set(all));
 }
 
 /** The event names that carry an order we care about. */

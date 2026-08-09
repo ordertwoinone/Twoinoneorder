@@ -71,13 +71,14 @@ export class TakeAppError extends Error {
  * TAKEAPP_API_KEY stays valid as the single-store spelling of the same thing.
  */
 export function apiKeys(): string[] {
-  const many = (process.env.TAKEAPP_API_KEYS ?? "")
-    .split(/[\s,]+/)
+  /* Both spellings are split the same way. A token never contains a comma or a
+     space, so a list pasted into the singular variable is a list — reading it
+     as one token would send the whole line to take.app and report a single
+     failure named after the last few characters of it. */
+  const all = [process.env.TAKEAPP_API_KEY, process.env.TAKEAPP_API_KEYS]
+    .flatMap((value) => (value ?? "").split(/[\s,]+/))
     .map((k) => k.trim())
     .filter(Boolean);
-
-  const one = (process.env.TAKEAPP_API_KEY ?? "").trim();
-  const all = one ? [one, ...many] : many;
 
   // Same token listed twice would double every order it returns.
   return Array.from(new Set(all));
