@@ -26,7 +26,7 @@ import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { pickupSlots, slotDateValue, slotTimeValue, slotLabel } from "@/lib/pickup-slots";
+import { pickupSlots, slotDateValue, slotTimeValue, slotLabel, type DayHours } from "@/lib/pickup-slots";
 import { useLocalized, useLocalizedField } from "@/lib/i18n/localized";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -35,6 +35,8 @@ export interface KalbaHero {
   name: string;
   /** Minutes the kitchen needs before an order can be collected. */
   pickup_lead_minutes?: number | null;
+  /** The weekly schedule; empty falls back to closes_at. */
+  opening_hours?: DayHours[] | null;
   name_ar?: string | null;
   location: string;
   location_ar?: string | null;
@@ -286,7 +288,7 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
@@ -297,6 +299,9 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   restaurantName: string;
   pickupLeadMinutes: number;
   closesAt: string;
+  openingHours: DayHours[];
+  /** The sudden-close switch from Branch Info. */
+  isOpen: boolean;
   appliedCoupon: CouponData | null;
   onApplyCoupon: (code: string) => Promise<void>;
   onRemoveCoupon: () => void;
@@ -316,8 +321,11 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   /* Rebuilt each time the form opens: a sheet left sitting for twenty minutes
      would otherwise still offer times that have since passed. */
   const slots = useMemo(
-    () => (askingPickup ? pickupSlots(pickupLeadMinutes, new Date(), closesAt) : []),
-    [askingPickup, pickupLeadMinutes, closesAt],
+    () =>
+      askingPickup
+        ? pickupSlots(pickupLeadMinutes, new Date(), { hours: openingHours, closesAt, isOpen })
+        : [],
+    [askingPickup, pickupLeadMinutes, openingHours, closesAt, isOpen],
   );
 
   /* A number worth messaging back on: seven digits is the shortest a UAE
@@ -1070,6 +1078,8 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           whatsapp={hero.whatsapp}
           pickupLeadMinutes={hero.pickup_lead_minutes ?? 30}
           closesAt={hero.closes_at}
+          openingHours={hero.opening_hours ?? []}
+          isOpen={hero.is_open}
           restaurantName={copy(hero.name, hero.name_ar)}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}

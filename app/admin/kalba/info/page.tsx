@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import BilingualField from "@/components/admin/BilingualField";
+import { WEEKDAY_NAMES, type DayHours } from "@/lib/pickup-slots";
 
 interface KalbaHero {
   id?: string;
@@ -23,6 +24,7 @@ interface KalbaHero {
   closes_at: string;
   closes_at_ar: string;
   pickup_lead_minutes: number;
+  opening_hours: DayHours[];
   student_title: string;
   student_title_ar: string;
   student_subtitle: string;
@@ -50,6 +52,7 @@ const DEFAULTS: KalbaHero = {
   closes_at: "12:00 AM",
   closes_at_ar: "",
   pickup_lead_minutes: 30,
+  opening_hours: WEEKDAY_NAMES.map((_, day) => ({ day, closed: false, open: "09:00", close: "23:30" })),
   student_title: "Are you a student?",
   student_title_ar: "",
   student_subtitle: "Unlock exclusive student deals & discounts",
@@ -212,7 +215,9 @@ export default function KalbaInfoAdmin() {
           <h2 className="text-sm font-semibold text-gray-700">Open Status</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Status</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Open right now
+              </label>
               <div className="flex gap-3">
                 <button type="button" onClick={() => handleField("is_open", true)}
                   className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border-2 transition-colors ${form.is_open ? "border-green-400 bg-green-50 text-green-700" : "border-gray-200 text-gray-400 hover:border-gray-300"}`}>
@@ -223,6 +228,10 @@ export default function KalbaInfoAdmin() {
                   Closed
                 </button>
               </div>
+              <p className="text-[11px] text-gray-400 mt-1.5">
+                Shuts the branch on the spot whatever the week below says — use it for an
+                unexpected closure. Pickup stops being offered while it is off.
+              </p>
             </div>
             <div>
               <BilingualField
@@ -234,6 +243,58 @@ export default function KalbaInfoAdmin() {
                 placeholder="12:00 AM"
               />
             </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-gray-700 mb-2">Opening hours</p>
+            <div className="space-y-2">
+              {WEEKDAY_NAMES.map((label, day) => {
+                const row = (form.opening_hours ?? []).find((h) => Number(h.day) === day)
+                  ?? { day, closed: false, open: "09:00", close: "23:30" };
+                const setRow = (patch: Partial<DayHours>) => {
+                  const rest = (form.opening_hours ?? []).filter((h) => Number(h.day) !== day);
+                  handleField(
+                    "opening_hours",
+                    [...rest, { ...row, ...patch }].sort((a, b) => Number(a.day) - Number(b.day)),
+                  );
+                };
+                return (
+                  <div key={day} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+                    <span className="w-24 text-xs font-semibold text-gray-700 shrink-0">{label}</span>
+
+                    <label className="flex items-center gap-1.5 text-[11px] text-gray-500 shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(row.closed)}
+                        onChange={(e) => setRow({ closed: e.target.checked })}
+                        className="accent-orange-500"
+                      />
+                      Closed all day
+                    </label>
+
+                    <div className={`flex items-center gap-2 ms-auto ${row.closed ? "opacity-40 pointer-events-none" : ""}`}>
+                      <input
+                        type="time"
+                        value={row.open ?? ""}
+                        onChange={(e) => setRow({ open: e.target.value })}
+                        className="px-2 py-1.5 rounded-lg border border-gray-200 text-sm"
+                      />
+                      <span className="text-gray-400 text-xs">to</span>
+                      <input
+                        type="time"
+                        value={row.close ?? ""}
+                        onChange={(e) => setRow({ close: e.target.value })}
+                        className="px-2 py-1.5 rounded-lg border border-gray-200 text-sm"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              Pickup times are only offered inside these hours, and not at all on a day marked
+              closed. A closing time after midnight belongs to the next morning.
+            </p>
           </div>
 
           <div>

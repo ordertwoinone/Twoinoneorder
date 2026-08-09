@@ -16,7 +16,7 @@ import {
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { pickupSlots, slotLabel } from "@/lib/pickup-slots";
+import { pickupSlots, slotLabel, type DayHours } from "@/lib/pickup-slots";
 import { useLocalizedField } from "@/lib/i18n/localized";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
@@ -108,6 +108,8 @@ function CartModal({
   restaurantName,
   pickupLeadMinutes,
   closesAt,
+  openingHours,
+  isOpen,
   appliedCoupon,
   onApplyCoupon,
   onRemoveCoupon,
@@ -126,6 +128,9 @@ function CartModal({
   restaurantName: string;
   pickupLeadMinutes: number;
   closesAt: string;
+  openingHours: DayHours[];
+  /** The sudden-close switch from Branch Info. */
+  isOpen: boolean;
   appliedCoupon: CouponData | null;
   onApplyCoupon: (code: string) => Promise<void>;
   onRemoveCoupon: () => void;
@@ -143,8 +148,11 @@ function CartModal({
   /* Rebuilt each time the form opens: a sheet left sitting for twenty minutes
      would otherwise still offer times that have since passed. */
   const slots = useMemo(
-    () => (askingPickup ? pickupSlots(pickupLeadMinutes, new Date(), closesAt) : []),
-    [askingPickup, pickupLeadMinutes, closesAt],
+    () =>
+      askingPickup
+        ? pickupSlots(pickupLeadMinutes, new Date(), { hours: openingHours, closesAt, isOpen })
+        : [],
+    [askingPickup, pickupLeadMinutes, openingHours, closesAt, isOpen],
   );
 
   /* A number worth messaging back on: seven digits is the shortest a UAE
@@ -542,6 +550,8 @@ export default function MenuContent({
   restaurantName,
   pickupLeadMinutes,
   closesAt,
+  openingHours,
+  isOpen,
 }: {
   popular: KalbaPopularItem[];
   categories: KalbaCategory[];
@@ -551,6 +561,8 @@ export default function MenuContent({
   pickupLeadMinutes: number;
   /** When the branch shuts, as typed in Branch Info — no slot goes past it. */
   closesAt: string;
+  openingHours: DayHours[];
+  isOpen: boolean;
 }) {
   const searchParams = useSearchParams();
   const { t, tp } = useTranslation();
@@ -976,6 +988,8 @@ export default function MenuContent({
           whatsapp={whatsapp}
           pickupLeadMinutes={pickupLeadMinutes}
           closesAt={closesAt}
+          openingHours={openingHours}
+          isOpen={isOpen}
           restaurantName={restaurantName}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}

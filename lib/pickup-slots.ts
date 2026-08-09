@@ -7,6 +7,20 @@
  * only contains valid times, there is no invalid choice to reject afterwards.
  */
 
+/** One weekday's trading window, as admin → Branch Info stores it. */
+export interface DayHours {
+  /** 0 = Sunday, matching Date#getDay. */
+  day: number;
+  closed?: boolean;
+  /** 24-hour local time, "09:00". */
+  open?: string;
+  close?: string;
+}
+
+export const WEEKDAY_NAMES = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+];
+
 export const SLOT_STEP_MINUTES = 15;
 
 /** How far ahead the picker lets someone book — six hours at 15-minute steps. */
@@ -22,8 +36,14 @@ export const SLOT_COUNT = 24;
  * A closing hour before 6am belongs to the following morning: a kitchen that
  * shuts at 12:00 AM is open all of this evening, not none of it.
  */
-export function parseClosingTime(closesAt: string | null | undefined, now: Date): Date | null {
-  const text = (closesAt ?? "").trim();
+export function parseTimeOnDay(
+  value: string | null | undefined,
+  now: Date,
+  /* Closing times in the small hours belong to tomorrow; opening times never
+     do — a branch opening at 5am opens this morning. */
+  rollPastMidnight = false,
+): Date | null {
+  const text = (value ?? "").trim();
   if (!text) return null;
 
   const match = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(text);
@@ -37,41 +57,73 @@ export function parseClosingTime(closesAt: string | null | undefined, now: Date)
   if (meridiem === "pm" && hours < 12) hours += 12;
   if (meridiem === "am" && hours === 12) hours = 0;
 
-  const close = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
-  // Closing in the small hours means tomorrow's small hours.
-  if (hours < 6) close.setDate(close.getDate() + 1);
-  return close;
+  const at = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+  if (rollPastMidnight && hours < 6) at.setDate(at.getDate() + 1);
+  return at;
+}
+
+/** A closing time, which may legitimately fall after midnight. */
+export function parseClosingTime(closesAt: string | null | undefined, now: Date): Date | null {
+  return parseTimeOnDay(closesAt, now, true);
+}
+
+/** The schedule row for the day `now` falls on, if the branch has a schedule. */
+export function hoursForDay(hours: DayHours[] | null | undefined, now: Date): DayHours | null {
+  if (!Array.isArray(hours) || hours.length === 0) return null;
+  return hours.find((h) => Number(h.day) === now.getDay()) ?? null;
 }
 
 /**
- * Today's slots only, and never past closing.
+ * Today's slots only, and never outside the day's trading hours.
  *
  * A branch takes collections while it is open today; offering tomorrow morning
  * from tonight's cart means a ticket nobody is on shift to see. Late enough in
  * the evening this returns nothing, which the cart says plainly rather than
  * pretending there is a slot.
  */
+export interface SlotOptions {
+  /** The weekly schedule; an empty or missing one falls back to `closesAt`. */
+  hours?: DayHours[] | null;
+  /** The single closing time, for a branch that has no schedule yet. */
+  closesAt?: string | null;
+  /** The sudden-close switch: off means no collections at all right now. */
+  isOpen?: boolean;
+  count?: number;
+  stepMinutes?: number;
+}
+
 export function pickupSlots(
   leadMinutes: number,
   now: Date = new Date(),
-  closesAt?: string | null,
-  count: number = SLOT_COUNT,
-  stepMinutes: number = SLOT_STEP_MINUTES,
+  options: SlotOptions = {},
 ): Date[] {
+  const { hours, closesAt, isOpen = true, count = SLOT_COUNT, stepMinutes = SLOT_STEP_MINUTES } = options;
+
+  // Shut on the spot beats any schedule — that is the point of the switch.
+  if (!isOpen) return [];
+
+  const today = hoursForDay(hours, now);
+  if (today?.closed) return [];
+
   const step = stepMinutes * 60_000;
   const earliest = now.getTime() + Math.max(0, leadMinutes) * 60_000;
   // Rounded up to the next step, so slots read as clock times rather than 14:37.
   const first = Math.ceil(earliest / step) * step;
 
-  const today = slotDateValue(now);
-  const closing = parseClosingTime(closesAt, now);
+  const day = slotDateValue(now);
+  /* The schedule wins when there is one; closes_at is what a branch that has
+     not filled the week in still has. */
+  const closing = today?.close ? parseClosingTime(today.close, now) : parseClosingTime(closesAt, now);
+  const opening = today?.open ? parseTimeOnDay(today.open, now) : null;
 
   const slots: Date[] = [];
   for (let i = 0; i < count; i++) {
     const at = new Date(first + i * step);
-    if (slotDateValue(at) !== today) break;
+    if (slotDateValue(at) !== day) break;
     // Collecting exactly at closing is fine; a minute later is not.
     if (closing && at.getTime() > closing.getTime()) break;
+    // Before the doors open is nobody there to hand it over.
+    if (opening && at.getTime() < opening.getTime()) continue;
     slots.push(at);
   }
   return slots;

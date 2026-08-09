@@ -20,7 +20,7 @@ const DEFAULT_HERO_PARTIAL = {
 
 async function getMenuData() {
   const [heroRes, catsRes, popularRes, settingsRes] = await Promise.all([
-    supabaseAdmin.from("kalba_hero").select("name, whatsapp, pickup_lead_minutes, closes_at").limit(1).single(),
+    supabaseAdmin.from("kalba_hero").select("name, whatsapp, pickup_lead_minutes, closes_at, opening_hours, is_open").limit(1).single(),
     supabaseAdmin
       .from("kalba_categories")
       .select("*")
@@ -34,7 +34,7 @@ async function getMenuData() {
     supabaseAdmin.from("site_settings").select("whatsapp_number").single(),
   ]);
 
-  const hero = (heroRes.data ?? DEFAULT_HERO_PARTIAL) as Pick<KalbaHero, "name" | "whatsapp" | "pickup_lead_minutes" | "closes_at">;
+  const hero = (heroRes.data ?? DEFAULT_HERO_PARTIAL) as Pick<KalbaHero, "name" | "whatsapp" | "pickup_lead_minutes" | "closes_at" | "opening_hours" | "is_open">;
 
   return {
     // The branch number wins; blank falls back to admin → Settings.
@@ -73,6 +73,8 @@ export default async function KalbaMenuPage() {
             whatsapp={hero.whatsapp}
             pickupLeadMinutes={hero.pickup_lead_minutes ?? 30}
             closesAt={hero.closes_at ?? ""}
+            openingHours={hero.opening_hours ?? []}
+            isOpen={hero.is_open ?? true}
             restaurantName={hero.name}
           />
         </Suspense>
