@@ -33,6 +33,115 @@ interface Order {
   schedule?: string | null;
 }
 
+/** A booking as /api/admin/bookings returns it — the other half of the board. */
+interface Booking {
+  id: string;
+  type: string;
+  table_id: string;
+  table_section: string;
+  seats: string;
+  min_spend: number;
+  guest_name: string;
+  phone: string;
+  date: string;
+  time: string;
+  guests: number;
+  notes: string;
+  status: string;
+  created_at: string;
+  account?: { name: string; email: string; avatarUrl: string } | null;
+}
+
+/**
+ * One row of the board, whichever it came from.
+ *
+ * A table booking and a take.app order are both somebody expecting food at a
+ * time, so they belong in one list — kept apart only by what can be done with
+ * them: a booking's status is ours to change, an order's belongs to take.app.
+ */
+interface Row {
+  key: string;
+  source: "takeapp" | "booking";
+  id: string;
+  number: string;
+  createdAt: string;
+  where: string;
+  whereNote: string;
+  customerName: string;
+  customerPhone: string;
+  status: string;
+  /** Filled for take.app orders only. */
+  paymentStatus?: string;
+  fulfillmentStatus?: string;
+  items: LineItem[];
+  itemCount: number;
+  total: number | null;
+  currency: string;
+  note?: string | null;
+  scheduled?: string | null;
+  /** Booking rows carry the account that placed them, and an editable status. */
+  bookingType?: string;
+  account?: Booking["account"];
+}
+
+const BOOKING_TYPES: Record<string, { label: string; chip: string }> = {
+  table:    { label: "Table",    chip: "bg-orange-100 text-orange-700" },
+  buffet:   { label: "Buffet",   chip: "bg-amber-100 text-amber-700" },
+  catering: { label: "Catering", chip: "bg-purple-100 text-purple-700" },
+  kalba:    { label: "Kalba",    chip: "bg-green-100 text-green-700" },
+};
+
+const BOOKING_STATUSES = ["pending", "confirmed", "cancelled", "completed"];
+
+function orderRow(o: Order): Row {
+  const items = o.line_items ?? [];
+  return {
+    key: `takeapp:${o.id}`,
+    source: "takeapp",
+    id: o.id,
+    number: o.number || o.name || o.id.slice(0, 10),
+    createdAt: o.created_at,
+    where: o.store?.name || "—",
+    whereNote: o.store?.alias || "",
+    customerName: o.customer?.name || "",
+    customerPhone: o.customer?.phone || "",
+    status: o.order_status,
+    paymentStatus: o.payment_status,
+    fulfillmentStatus: o.fulfillment_status,
+    items,
+    itemCount: items.reduce((n, i) => n + (i.quantity ?? 0), 0),
+    total: o.total_amount,
+    currency: o.currency || "AED",
+    note: o.remark,
+    scheduled: o.schedule,
+  };
+}
+
+function bookingRow(b: Booking): Row {
+  const when = [b.date, b.time].filter(Boolean).join(" ");
+  return {
+    key: `booking:${b.id}`,
+    source: "booking",
+    id: b.id,
+    number: b.table_id || b.id.slice(0, 8),
+    createdAt: b.created_at,
+    where: b.table_section || BOOKING_TYPES[b.type]?.label || "—",
+    whereNote: b.seats ? `${b.seats} seats` : "",
+    customerName: b.guest_name || "",
+    customerPhone: b.phone || "",
+    status: b.status || "pending",
+    items: [],
+    itemCount: b.guests ?? 0,
+    // A booking's minimum spend is a floor, not a bill — shown only when set.
+    total: b.min_spend > 0 ? b.min_spend * 100 : null,
+    currency: "AED",
+    note: b.notes,
+    scheduled: when || null,
+    bookingType: b.type || "table",
+    account: b.account ?? null,
+  };
+}
+
 /** The safety-net refresh, under the webhook stream. */
 const REFRESH_MS = 30_000;
 
@@ -123,6 +232,8 @@ const selectCls = "px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white 
 
 export default function LiveOrdersAdmin() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [savingBooking, setSavingBooking] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -193,13 +304,13 @@ export default function LiveOrdersAdmin() {
    * Shared by both routes in, and guarded by `seenIds`, so an order that
    * arrives on the stream and again on the next refresh is announced once.
    */
-  const announce = useCallback((order: Order) => {
-    if (!order?.id || seenIds.current.has(order.id)) return;
-    seenIds.current.add(order.id);
+  const announce = useCallback((row: Row) => {
+    if (!row?.key || seenIds.current.has(row.key)) return;
+    seenIds.current.add(row.key);
 
-    setNewIds((prev) => [...prev, order.id]);
+    setNewIds((prev) => [...prev, row.key]);
     window.setTimeout(
-      () => setNewIds((prev) => prev.filter((id) => id !== order.id)),
+      () => setNewIds((prev) => prev.filter((id) => id !== row.key)),
       NEW_ORDER_MS,
     );
 
@@ -208,9 +319,9 @@ export default function LiveOrdersAdmin() {
       ...prev,
       {
         key,
-        orderNumber: order.number || order.name || order.id.slice(0, 8),
-        storeName: order.store?.name || "Unknown store",
-        total: money(order.total_amount, order.currency),
+        orderNumber: row.number,
+        storeName: row.where,
+        total: row.total === null ? "" : money(row.total, row.currency),
       },
     ]);
     window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.key !== key)), TOAST_MS);
@@ -233,8 +344,17 @@ export default function LiveOrdersAdmin() {
     if (fromDate) params.set("created_after", new Date(`${fromDate}T00:00:00`).toISOString());
 
     try {
-      const res = await fetch(`/api/admin/takeapp/orders?${params}`, { cache: "no-store" });
+      /* Bookings come from our own table and take.app orders from theirs; the
+         board shows them as one list, so they are loaded together. */
+      const [res, bookingsRes] = await Promise.all([
+        fetch(`/api/admin/takeapp/orders?${params}`, { cache: "no-store" }),
+        fetch("/api/admin/bookings", { cache: "no-store" }),
+      ]);
       const body = await res.json();
+
+      const bookingList: Booking[] = bookingsRes.ok
+        ? await bookingsRes.json().then((d) => (Array.isArray(d) ? d : [])).catch(() => [])
+        : [];
       // The reason travels as `warning` when stored orders came through anyway,
       // and as `error` when nothing did — show whichever is there.
       if (!res.ok) throw new Error(body?.error || body?.warning || `Request failed (${res.status})`);
@@ -245,14 +365,16 @@ export default function LiveOrdersAdmin() {
          of toasts for orders that are hours old. Every refresh after that
          announces whatever is new, which is what makes the alert survive a
          webhook that is not configured yet or a stream that has dropped. */
+      const rows = [...incoming.map(orderRow), ...bookingList.map(bookingRow)];
       if (!seededRef.current) {
         seededRef.current = true;
-        seenIds.current = new Set(incoming.map((o) => o.id));
+        seenIds.current = new Set(rows.map((r) => r.key));
       } else {
-        incoming.forEach(announce);
+        rows.forEach(announce);
       }
 
       setOrders(incoming);
+      setBookings(bookingList);
       // A warning means the merchant API failed but stored orders came through.
       setError(typeof body.warning === "string" ? body.warning : "");
       setLastUpdated(new Date());
@@ -286,8 +408,9 @@ export default function LiveOrdersAdmin() {
     setLastUpdated(new Date());
 
     // An update to an order already on screen is not an arrival.
-    if (isNew) announce(order);
-    else seenIds.current.add(order.id);
+    const row = orderRow(order);
+    if (isNew) announce(row);
+    else seenIds.current.add(row.key);
   }, [announce]);
 
   useEffect(() => { onLiveOrder.current = handleLiveOrder; }, [handleLiveOrder]);
@@ -310,9 +433,16 @@ export default function LiveOrdersAdmin() {
     return () => source.close();
   }, []);
 
+  /** Both sources as one list, newest first. */
+  const rows = useMemo(
+    () => [...orders.map(orderRow), ...bookings.map(bookingRow)]
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))),
+    [orders, bookings],
+  );
+
   const stores = useMemo(
-    () => Array.from(new Set(orders.map((o) => o.store?.name).filter(Boolean) as string[])).sort(),
-    [orders],
+    () => Array.from(new Set(rows.map((r) => r.where).filter(Boolean))).sort(),
+    [rows],
   );
 
   /* Filters the API cannot apply — the store, the upper date bound and the
@@ -320,26 +450,53 @@ export default function LiveOrdersAdmin() {
   const shown = useMemo(() => {
     const cutoff = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
     const needle = search.trim().toLowerCase();
-    return orders
-      .filter((o) => {
-        if (store && o.store?.name !== store) return false;
-        if (cutoff && new Date(o.created_at).getTime() > cutoff) return false;
-        if (needle) {
-          const haystack = `${o.number} ${o.name} ${o.id} ${o.customer?.name ?? ""} ${o.customer?.phone ?? ""}`.toLowerCase();
-          if (!haystack.includes(needle)) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-  }, [orders, store, toDate, search]);
+    return rows.filter((r) => {
+      if (store && r.where !== store) return false;
+      if (cutoff && new Date(r.createdAt).getTime() > cutoff) return false;
+      /* The API-side status filters only reach take.app; applying them here as
+         well is what keeps a filtered board consistent across both sources. */
+      if (orderStatus && r.status !== orderStatus) return false;
+      if (paymentStatus && r.source === "takeapp" && r.paymentStatus !== paymentStatus) return false;
+      if (fulfillmentStatus && r.source === "takeapp" && r.fulfillmentStatus !== fulfillmentStatus) return false;
+      if (needle) {
+        const haystack = `${r.number} ${r.id} ${r.customerName} ${r.customerPhone} ${r.where}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    });
+  }, [rows, store, toDate, search, orderStatus, paymentStatus, fulfillmentStatus]);
 
   const counts = useMemo(() => {
     const tally: Record<string, number> = {};
-    shown.forEach((o) => { tally[o.order_status] = (tally[o.order_status] ?? 0) + 1; });
+    shown.forEach((r) => { tally[r.status] = (tally[r.status] ?? 0) + 1; });
     return tally;
   }, [shown]);
 
-  const newCount = shown.filter((o) => newIds.includes(o.id)).length;
+  const newCount = shown.filter((r) => newIds.includes(r.key)).length;
+
+  /**
+   * A booking's status is ours to set, unlike a take.app order's. Written
+   * straight through and rolled back if it does not land — the customer reads
+   * this on their own orders page.
+   */
+  async function updateBookingStatus(id: string, status: string) {
+    const previous = bookings.find((b) => b.id === id)?.status;
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
+    setSavingBooking(id);
+    try {
+      const res = await fetch(`/api/admin/bookings/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+    } catch {
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: previous ?? b.status } : b)));
+      alert("Could not update the status. Please try again.");
+    } finally {
+      setSavingBooking(null);
+    }
+  }
 
   function resetFilters() {
     setOrderStatus(""); setPaymentStatus(""); setFulfillmentStatus("");
@@ -350,26 +507,26 @@ export default function LiveOrdersAdmin() {
      other than what you are looking at would be a surprise. */
   function downloadReport() {
     const header = [
-      "Order ID", "Placed", "Restaurant", "Order status", "Payment", "Fulfilment",
+      "Reference", "Placed", "Where", "Status", "Payment", "Fulfilment",
       "Customer", "Phone", "Items", "Total", "Currency", "Note",
     ];
     const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
-    const rows = shown.map((o) => [
-      o.number || o.name || o.id,
-      o.created_at,
-      o.store?.name ?? "",
-      o.order_status,
-      o.payment_status,
-      o.fulfillment_status,
-      o.customer?.name ?? "",
-      o.customer?.phone ?? "",
-      (o.line_items ?? []).map((i) => `${i.quantity}x ${i.name}`).join(" | "),
-      ((o.total_amount ?? 0) / 100).toFixed(2),
-      o.currency || "AED",
-      o.remark ?? "",
+    const lines = shown.map((r) => [
+      r.number,
+      r.createdAt,
+      r.where,
+      r.status,
+      r.paymentStatus ?? "",
+      r.fulfillmentStatus ?? "",
+      r.customerName,
+      r.customerPhone,
+      r.items.map((i) => `${i.quantity}x ${i.name}`).join(" | "),
+      r.total === null ? "" : (r.total / 100).toFixed(2),
+      r.currency,
+      r.note ?? "",
     ].map(escape).join(","));
 
-    const blob = new Blob([[header.map(escape).join(","), ...rows].join("\n")], {
+    const blob = new Blob([[header.map(escape).join(","), ...lines].join("\n")], {
       type: "text/csv;charset=utf-8;",
     });
     const url = URL.createObjectURL(blob);
@@ -565,75 +722,104 @@ export default function LiveOrdersAdmin() {
       )}
 
 
-      {/* Phone view — one card per order, tap to open the items */}
+      {/* Phone view — one card per order, tap to open the details */}
       <div className="sm:hidden space-y-2.5">
-        {loading && orders.length === 0 ? (
+        {loading && rows.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-400 text-sm">Loading orders…</div>
         ) : shown.length === 0 ? (
           <div className="bg-white rounded-xl border border-gray-200 py-12 text-center text-gray-400 text-sm">
             {error ? "Nothing to show while the feed is failing." : "No orders match these filters."}
           </div>
-        ) : shown.map((o) => {
-          const isNew = newIds.includes(o.id);
-          const open = expandedId === o.id;
-          const items = o.line_items ?? [];
-          const itemCount = items.reduce((n, i) => n + (i.quantity ?? 0), 0);
+        ) : shown.map((r) => {
+          const isNew = newIds.includes(r.key);
+          const open = expandedId === r.key;
           return (
             <div
-              key={o.id}
-              onClick={() => setExpandedId(open ? null : o.id)}
+              key={r.key}
+              onClick={() => setExpandedId(open ? null : r.key)}
               className={`bg-white rounded-xl border p-3.5 transition ${
                 isNew
                   ? "border-orange-400 ring-2 ring-orange-300"
-                  : o.order_status === "pending"
+                  : r.status === "pending"
                     ? "border-yellow-300 bg-yellow-50/50"
                     : "border-gray-200"
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-extrabold text-gray-900 leading-tight">
-                    #{o.number || o.name || o.id.slice(0, 10)}
+                  <p className="font-extrabold text-gray-900 leading-tight flex items-center gap-1.5 flex-wrap">
+                    #{r.number}
+                    {r.source === "booking" && (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase ${BOOKING_TYPES[r.bookingType ?? "table"]?.chip ?? "bg-gray-100 text-gray-600"}`}>
+                        {BOOKING_TYPES[r.bookingType ?? "table"]?.label ?? r.bookingType}
+                      </span>
+                    )}
                   </p>
                   <p className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
                     <Clock size={10} className="shrink-0" />
-                    <span className="whitespace-nowrap">{clockTime(o.created_at)} · {sinceLabel(o.created_at)}</span>
+                    <span className="whitespace-nowrap">{clockTime(r.createdAt)} · {sinceLabel(r.createdAt)}</span>
                   </p>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide shrink-0 ${ORDER_CHIPS[o.order_status] ?? "bg-gray-100 text-gray-600"}`}>
-                  {o.order_status}
-                </span>
+                {r.source === "booking" ? (
+                  <select
+                    value={r.status}
+                    disabled={savingBooking === r.id}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => updateBookingStatus(r.id, e.target.value)}
+                    className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide border-0 shrink-0 disabled:opacity-60 ${ORDER_CHIPS[r.status] ?? "bg-gray-100 text-gray-600"}`}
+                  >
+                    {BOOKING_STATUSES.map((v) => (
+                      <option key={v} value={v} className="bg-white text-gray-800">{v}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide shrink-0 ${ORDER_CHIPS[r.status] ?? "bg-gray-100 text-gray-600"}`}>
+                    {r.status}
+                  </span>
+                )}
               </div>
 
               <div className="mt-2.5 flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-gray-800 truncate">{o.store?.name || "—"}</p>
+                  <p className="text-[13px] font-semibold text-gray-800 truncate">{r.where}</p>
                   <p className="text-[12px] text-gray-500 truncate">
-                    {o.customer?.name || "—"}
-                    {itemCount > 0 && <span className="text-gray-400"> · {itemCount} item{itemCount !== 1 ? "s" : ""}</span>}
+                    {r.customerName || "—"}
+                    {r.itemCount > 0 && (
+                      <span className="text-gray-400"> · {r.itemCount} {r.source === "booking" ? "guests" : "items"}</span>
+                    )}
                   </p>
                 </div>
-                <p className="text-base font-extrabold text-gray-900 whitespace-nowrap shrink-0">
-                  {money(o.total_amount, o.currency)}
-                </p>
+                {r.total !== null && (
+                  <p className="text-base font-extrabold text-gray-900 whitespace-nowrap shrink-0">
+                    {money(r.total, r.currency)}
+                  </p>
+                )}
               </div>
 
               <div className="mt-2.5 flex items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-1.5 min-w-0">
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${PAYMENT_CHIPS[o.payment_status] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
-                    {o.payment_status || "—"}
-                  </span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${FULFILLMENT_CHIPS[o.fulfillment_status] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
-                    {o.fulfillment_status || "—"}
-                  </span>
+                  {r.source === "takeapp" ? (
+                    <>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${PAYMENT_CHIPS[r.paymentStatus ?? ""] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
+                        {r.paymentStatus || "—"}
+                      </span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${FULFILLMENT_CHIPS[r.fulfillmentStatus ?? ""] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
+                        {r.fulfillmentStatus || "—"}
+                      </span>
+                    </>
+                  ) : r.scheduled ? (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                      {r.scheduled}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {o.customer?.phone && (
+                  {r.customerPhone && (
                     <a
-                      href={`tel:${o.customer.phone}`}
+                      href={`tel:${r.customerPhone}`}
                       onClick={(e) => e.stopPropagation()}
                       className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 active:bg-gray-100"
-                      aria-label={`Call ${o.customer.name || "the customer"}`}
+                      aria-label={`Call ${r.customerName || "the customer"}`}
                     >
                       <Phone size={14} />
                     </a>
@@ -644,35 +830,41 @@ export default function LiveOrdersAdmin() {
 
               {open && (
                 <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-                  <ul className="space-y-1.5">
-                    {items.map((item, i) => (
-                      <li key={i} className="flex items-start justify-between gap-3 text-[13px]">
-                        <span className="min-w-0">
-                          <span className="font-semibold text-gray-700">{item.quantity}×</span>{" "}
-                          <span className="text-gray-700">{item.name}</span>
-                          {(item.options ?? []).length > 0 && (
-                            <span className="block text-[11px] text-gray-400">
-                              {(item.options ?? [])
-                                .map((opt) => [opt.name, opt.value].filter(Boolean).join(": "))
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-[12px] text-gray-500 shrink-0">{money(item.price * item.quantity, o.currency)}</span>
-                      </li>
-                    ))}
-                    {items.length === 0 && <li className="text-[12px] text-gray-400">No items on this order.</li>}
-                  </ul>
+                  {r.items.length > 0 && (
+                    <ul className="space-y-1.5">
+                      {r.items.map((item, i) => (
+                        <li key={i} className="flex items-start justify-between gap-3 text-[13px]">
+                          <span className="min-w-0">
+                            <span className="font-semibold text-gray-700">{item.quantity}×</span>{" "}
+                            <span className="text-gray-700">{item.name}</span>
+                            {(item.options ?? []).length > 0 && (
+                              <span className="block text-[11px] text-gray-400">
+                                {(item.options ?? [])
+                                  .map((opt) => [opt.name, opt.value].filter(Boolean).join(": "))
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[12px] text-gray-500 shrink-0">{money(item.price * item.quantity, r.currency)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
-                  {o.schedule && (
-                    <p className="text-[12px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
-                      <CalendarClock size={12} className="shrink-0" /> {o.schedule}
+                  {r.account && (
+                    <p className="text-[12px] text-gray-600">
+                      Account: <span className="font-semibold">{r.account.name || "—"}</span> · {r.account.email}
                     </p>
                   )}
-                  {o.remark && (
+                  {r.scheduled && (
+                    <p className="text-[12px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                      <CalendarClock size={12} className="shrink-0" /> {r.scheduled}
+                    </p>
+                  )}
+                  {r.note && (
                     <p className="text-[12px] text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
-                      <StickyNote size={12} className="shrink-0 mt-0.5" /> {o.remark}
+                      <StickyNote size={12} className="shrink-0 mt-0.5" /> {r.note}
                     </p>
                   )}
                 </div>
@@ -682,25 +874,25 @@ export default function LiveOrdersAdmin() {
         })}
       </div>
 
-      {/* The orders themselves. A phone gets cards: eight columns cannot be read
-          at 390px, and a sideways-scrolling table hides the total — the one
+      {/* The orders themselves. A phone gets cards above: eight columns cannot be
+          read at 390px, and a sideways-scrolling table hides the total — the one
           number anyone is looking for. */}
       <div className="hidden sm:block bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order ID</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Restaurant</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reference</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Where</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Payment</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subtotal</th>
+              <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
-            {loading && orders.length === 0 ? (
+            {loading && rows.length === 0 ? (
               <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading orders…</td></tr>
             ) : shown.length === 0 ? (
               <tr>
@@ -708,63 +900,98 @@ export default function LiveOrdersAdmin() {
                   {error ? "Nothing to show while the feed is failing." : "No orders match these filters."}
                 </td>
               </tr>
-            ) : shown.map((o) => {
-              const isNew = newIds.includes(o.id);
-              const open = expandedId === o.id;
-              const items = o.line_items ?? [];
-              const itemCount = items.reduce((n, i) => n + (i.quantity ?? 0), 0);
+            ) : shown.map((r) => {
+              const isNew = newIds.includes(r.key);
+              const open = expandedId === r.key;
               return (
-                <Fragment key={o.id}>
+                <Fragment key={r.key}>
                   <tr
-                    onClick={() => setExpandedId(open ? null : o.id)}
+                    onClick={() => setExpandedId(open ? null : r.key)}
                     className={`border-b border-gray-100 cursor-pointer transition-colors ${
                       isNew
                         ? "bg-orange-50 ring-1 ring-inset ring-orange-300"
-                        : o.order_status === "pending"
+                        : r.status === "pending"
                           ? "bg-yellow-50/50 hover:bg-yellow-50"
                           : "hover:bg-gray-50"
                     }`}
                   >
                     <td className="px-4 py-3">
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wide ${ORDER_CHIPS[o.order_status] ?? "bg-gray-100 text-gray-600"}`}>
-                        {o.order_status}
-                      </span>
+                      {r.source === "booking" ? (
+                        <select
+                          value={r.status}
+                          disabled={savingBooking === r.id}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => updateBookingStatus(r.id, e.target.value)}
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wide border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60 ${ORDER_CHIPS[r.status] ?? "bg-gray-100 text-gray-600"}`}
+                        >
+                          {BOOKING_STATUSES.map((v) => (
+                            <option key={v} value={v} className="bg-white text-gray-800 font-normal text-sm">{v}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wide ${ORDER_CHIPS[r.status] ?? "bg-gray-100 text-gray-600"}`}>
+                          {r.status}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{o.number || o.name || o.id.slice(0, 10)}</p>
+                      <p className="font-semibold text-gray-900 flex items-center gap-1.5">
+                        {r.number}
+                        {r.source === "booking" && (
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase ${BOOKING_TYPES[r.bookingType ?? "table"]?.chip ?? "bg-gray-100 text-gray-600"}`}>
+                            {BOOKING_TYPES[r.bookingType ?? "table"]?.label ?? r.bookingType}
+                          </span>
+                        )}
+                      </p>
                       <p className="text-xs text-gray-400 flex items-center gap-1">
-                        <Clock size={10} /> {clockTime(o.created_at)} · {sinceLabel(o.created_at)}
+                        <Clock size={10} /> {clockTime(r.createdAt)} · {sinceLabel(r.createdAt)}
                       </p>
                     </td>
                     <td className="px-4 py-3 max-w-[220px]">
-                      <p className="font-medium text-gray-800 truncate">{o.store?.name || "—"}</p>
-                      {o.store?.alias && <p className="text-xs text-gray-400 truncate">{o.store.alias}</p>}
+                      <p className="font-medium text-gray-800 truncate">{r.where}</p>
+                      {r.whereNote && <p className="text-xs text-gray-400 truncate">{r.whereNote}</p>}
                     </td>
-                    <td className="px-4 py-3 max-w-[180px]">
-                      <p className="text-gray-700 truncate">{o.customer?.name || "—"}</p>
-                      {o.customer?.phone && (
+                    <td className="px-4 py-3 max-w-[190px]">
+                      <p className="text-gray-700 truncate">{r.customerName || "—"}</p>
+                      {r.customerPhone && (
                         <a
-                          href={`tel:${o.customer.phone}`}
+                          href={`tel:${r.customerPhone}`}
                           onClick={(e) => e.stopPropagation()}
                           className="text-xs text-gray-400 hover:text-orange-600 flex items-center gap-1"
                         >
-                          <Phone size={10} /> <span dir="ltr">{o.customer.phone}</span>
+                          <Phone size={10} /> <span dir="ltr">{r.customerPhone}</span>
                         </a>
                       )}
+                      {r.account && (
+                        <p className="text-[11px] text-gray-400 truncate">{r.account.email}</p>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{itemCount || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {r.itemCount || "—"}
+                      {r.source === "booking" && r.itemCount > 0 && (
+                        <span className="text-[11px] text-gray-400"> guests</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1 items-start">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${PAYMENT_CHIPS[o.payment_status] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
-                          {o.payment_status || "—"}
+                      {r.source === "takeapp" ? (
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${PAYMENT_CHIPS[r.paymentStatus ?? ""] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
+                            {r.paymentStatus || "—"}
+                          </span>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${FULFILLMENT_CHIPS[r.fulfillmentStatus ?? ""] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
+                            {r.fulfillmentStatus || "—"}
+                          </span>
+                        </div>
+                      ) : r.scheduled ? (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100 whitespace-nowrap">
+                          {r.scheduled}
                         </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${FULFILLMENT_CHIPS[o.fulfillment_status] ?? "bg-gray-50 text-gray-600 border border-gray-200"}`}>
-                          {o.fulfillment_status || "—"}
-                        </span>
-                      </div>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right font-extrabold text-gray-900 whitespace-nowrap">
-                      {money(o.total_amount, o.currency)}
+                      {r.total === null ? <span className="text-gray-300 font-normal">—</span> : money(r.total, r.currency)}
                     </td>
                     <td className="px-4 py-3 text-gray-300">
                       <ChevronDown size={15} className={`transition-transform ${open ? "rotate-180" : ""}`} />
@@ -776,41 +1003,55 @@ export default function LiveOrdersAdmin() {
                       <td colSpan={8} className="px-4 py-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items</p>
-                            <ul className="space-y-1.5">
-                              {items.map((item, i) => (
-                                <li key={i} className="flex items-start justify-between gap-3">
-                                  <span className="min-w-0">
-                                    <span className="font-semibold text-gray-700">{item.quantity}×</span>{" "}
-                                    <span className="text-gray-700">{item.name}</span>
-                                    {(item.options ?? []).length > 0 && (
-                                      <span className="block text-[11px] text-gray-400">
-                                        {(item.options ?? [])
-                                          .map((opt) => [opt.name, opt.value].filter(Boolean).join(": "))
-                                          .filter(Boolean)
-                                          .join(" · ")}
+                            {r.items.length > 0 ? (
+                              <>
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Items</p>
+                                <ul className="space-y-1.5">
+                                  {r.items.map((item, i) => (
+                                    <li key={i} className="flex items-start justify-between gap-3">
+                                      <span className="min-w-0">
+                                        <span className="font-semibold text-gray-700">{item.quantity}×</span>{" "}
+                                        <span className="text-gray-700">{item.name}</span>
+                                        {(item.options ?? []).length > 0 && (
+                                          <span className="block text-[11px] text-gray-400">
+                                            {(item.options ?? [])
+                                              .map((opt) => [opt.name, opt.value].filter(Boolean).join(": "))
+                                              .filter(Boolean)
+                                              .join(" · ")}
+                                          </span>
+                                        )}
                                       </span>
-                                    )}
-                                  </span>
-                                  <span className="text-xs text-gray-500 shrink-0">{money(item.price * item.quantity, o.currency)}</span>
-                                </li>
-                              ))}
-                              {items.length === 0 && <li className="text-xs text-gray-400">No items on this order.</li>}
-                            </ul>
+                                      <span className="text-xs text-gray-500 shrink-0">{money(item.price * item.quantity, r.currency)}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
+                            ) : (
+                              <p className="text-xs text-gray-400">
+                                {r.source === "booking" ? "A booking, not an itemised order." : "No items on this order."}
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-2">
-                            {o.schedule && (
+                            {r.account && (
+                              <p className="text-[12px] text-gray-600">
+                                Account: <span className="font-semibold">{r.account.name || "—"}</span> · {r.account.email}
+                              </p>
+                            )}
+                            {r.scheduled && (
                               <p className="text-[12px] text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
-                                <CalendarClock size={12} className="shrink-0" /> {o.schedule}
+                                <CalendarClock size={12} className="shrink-0" /> {r.scheduled}
                               </p>
                             )}
-                            {o.remark && (
+                            {r.note && (
                               <p className="text-[12px] text-gray-600 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
-                                <StickyNote size={12} className="shrink-0 mt-0.5" /> {o.remark}
+                                <StickyNote size={12} className="shrink-0 mt-0.5" /> {r.note}
                               </p>
                             )}
-                            <p className="text-[11px] text-gray-400">Order reference: {o.id}</p>
+                            <p className="text-[11px] text-gray-400">
+                              {r.source === "booking" ? "Booking" : "take.app order"} reference: {r.id}
+                            </p>
                           </div>
                         </div>
                       </td>

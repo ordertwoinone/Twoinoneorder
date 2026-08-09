@@ -28,17 +28,12 @@ export const ADMIN_AREAS: AdminArea[] = [
   },
   {
     key: "live-orders",
-    label: "Live Orders",
-    hint: "Incoming take.app orders",
-    paths: ["/admin/live-orders"],
-    apiPaths: ["/api/admin/takeapp", "/api/admin/push"],
-  },
-  {
-    key: "bookings",
-    label: "Bookings",
-    hint: "Table, buffet and catering bookings",
-    paths: ["/admin/bookings"],
-    apiPaths: ["/api/admin/bookings"],
+    label: "Orders",
+    hint: "take.app orders and every booking, on one board",
+    /* /admin/bookings is kept as a path so the old link still resolves — it
+       redirects here rather than 404ing for anyone who bookmarked it. */
+    paths: ["/admin/live-orders", "/admin/bookings"],
+    apiPaths: ["/api/admin/takeapp", "/api/admin/push", "/api/admin/bookings"],
   },
   {
     key: "booking-tables",
