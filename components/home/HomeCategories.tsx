@@ -70,18 +70,19 @@ export default async function HomeCategories({ variant = "mobile" }: { variant?:
           <h2 className="text-xl font-extrabold text-gray-900 mb-4">
             <T k="home.categoriesTitle" />
           </h2>
-          {/* Columns are capped at 110px (rather than 1fr) so a short list
-              stays grouped under the heading instead of spreading across the
-              full container width; they shrink below that on narrow screens. */}
+          {/* Equal columns across the whole container, so the row ends where
+              the section does rather than trailing off into empty space. The
+              tile itself is capped, so six categories spread out evenly
+              instead of each growing to a third of the screen. */}
           <div
-            className="grid [grid-template-columns:repeat(var(--cat-cols),minmax(0,110px))] justify-items-center gap-4 sm:gap-5"
+            className="grid [grid-template-columns:repeat(var(--cat-cols),minmax(0,1fr))] justify-items-center gap-4 sm:gap-5"
             style={{ ["--cat-cols" as string]: Math.min(categories.length, 10) }}
           >
             {categories.map((cat, i) => (
               <CategoryTile
                 key={cat.id}
                 cat={toTile(cat)}
-                itemClass="stagger-item flex flex-col items-center gap-2 group w-full tap-shrink"
+                itemClass="stagger-item flex flex-col items-center gap-2 group w-full max-w-[150px] tap-shrink"
                 style={{ animationDelay: `${stagger(i, 40)}ms` }}
               />
             ))}

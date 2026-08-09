@@ -245,7 +245,7 @@ export default async function RestaurantCards() {
         </div>
 
         {/* sm+: an even four-across grid of vertical cards. */}
-        <div className="hidden sm:grid sm:grid-cols-4 sm:gap-3">
+        <div className="hidden sm:grid sm:grid-cols-3 lg:grid-cols-5 sm:gap-3">
           {restaurants.map((r, i) => {
             const badgeLabel = r.badge?.trim();
             // background_image_url is the dedicated slot, but it is optional and
