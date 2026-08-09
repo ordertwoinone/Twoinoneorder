@@ -13,7 +13,38 @@ export const SLOT_STEP_MINUTES = 15;
 export const SLOT_COUNT = 24;
 
 /**
- * Today's slots only.
+ * The moment the branch shuts, as a Date on the day `now` falls in.
+ *
+ * `closes_at` is a display string an admin types — "12:00 AM", "11:30 PM",
+ * "23:00" — so this is deliberately forgiving, and returns null on anything it
+ * cannot read rather than guessing a closing time and hiding real slots.
+ *
+ * A closing hour before 6am belongs to the following morning: a kitchen that
+ * shuts at 12:00 AM is open all of this evening, not none of it.
+ */
+export function parseClosingTime(closesAt: string | null | undefined, now: Date): Date | null {
+  const text = (closesAt ?? "").trim();
+  if (!text) return null;
+
+  const match = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i.exec(text);
+  if (!match) return null;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const meridiem = match[3]?.toLowerCase();
+
+  if (hours > 23 || minutes > 59) return null;
+  if (meridiem === "pm" && hours < 12) hours += 12;
+  if (meridiem === "am" && hours === 12) hours = 0;
+
+  const close = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+  // Closing in the small hours means tomorrow's small hours.
+  if (hours < 6) close.setDate(close.getDate() + 1);
+  return close;
+}
+
+/**
+ * Today's slots only, and never past closing.
  *
  * A branch takes collections while it is open today; offering tomorrow morning
  * from tonight's cart means a ticket nobody is on shift to see. Late enough in
@@ -23,6 +54,7 @@ export const SLOT_COUNT = 24;
 export function pickupSlots(
   leadMinutes: number,
   now: Date = new Date(),
+  closesAt?: string | null,
   count: number = SLOT_COUNT,
   stepMinutes: number = SLOT_STEP_MINUTES,
 ): Date[] {
@@ -32,10 +64,14 @@ export function pickupSlots(
   const first = Math.ceil(earliest / step) * step;
 
   const today = slotDateValue(now);
+  const closing = parseClosingTime(closesAt, now);
+
   const slots: Date[] = [];
   for (let i = 0; i < count; i++) {
     const at = new Date(first + i * step);
     if (slotDateValue(at) !== today) break;
+    // Collecting exactly at closing is fine; a minute later is not.
+    if (closing && at.getTime() > closing.getTime()) break;
     slots.push(at);
   }
   return slots;

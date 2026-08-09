@@ -286,7 +286,7 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
@@ -296,6 +296,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   whatsapp: string;
   restaurantName: string;
   pickupLeadMinutes: number;
+  closesAt: string;
   appliedCoupon: CouponData | null;
   onApplyCoupon: (code: string) => Promise<void>;
   onRemoveCoupon: () => void;
@@ -315,8 +316,8 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   /* Rebuilt each time the form opens: a sheet left sitting for twenty minutes
      would otherwise still offer times that have since passed. */
   const slots = useMemo(
-    () => (askingPickup ? pickupSlots(pickupLeadMinutes) : []),
-    [askingPickup, pickupLeadMinutes],
+    () => (askingPickup ? pickupSlots(pickupLeadMinutes, new Date(), closesAt) : []),
+    [askingPickup, pickupLeadMinutes, closesAt],
   );
 
   /* A number worth messaging back on: seven digits is the shortest a UAE
@@ -1068,6 +1069,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}
           pickupLeadMinutes={hero.pickup_lead_minutes ?? 30}
+          closesAt={hero.closes_at}
           restaurantName={copy(hero.name, hero.name_ar)}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}

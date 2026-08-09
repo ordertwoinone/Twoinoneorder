@@ -107,6 +107,7 @@ function CartModal({
   whatsapp,
   restaurantName,
   pickupLeadMinutes,
+  closesAt,
   appliedCoupon,
   onApplyCoupon,
   onRemoveCoupon,
@@ -124,6 +125,7 @@ function CartModal({
   whatsapp: string;
   restaurantName: string;
   pickupLeadMinutes: number;
+  closesAt: string;
   appliedCoupon: CouponData | null;
   onApplyCoupon: (code: string) => Promise<void>;
   onRemoveCoupon: () => void;
@@ -141,8 +143,8 @@ function CartModal({
   /* Rebuilt each time the form opens: a sheet left sitting for twenty minutes
      would otherwise still offer times that have since passed. */
   const slots = useMemo(
-    () => (askingPickup ? pickupSlots(pickupLeadMinutes) : []),
-    [askingPickup, pickupLeadMinutes],
+    () => (askingPickup ? pickupSlots(pickupLeadMinutes, new Date(), closesAt) : []),
+    [askingPickup, pickupLeadMinutes, closesAt],
   );
 
   /* A number worth messaging back on: seven digits is the shortest a UAE
@@ -539,6 +541,7 @@ export default function MenuContent({
   whatsapp,
   restaurantName,
   pickupLeadMinutes,
+  closesAt,
 }: {
   popular: KalbaPopularItem[];
   categories: KalbaCategory[];
@@ -546,6 +549,8 @@ export default function MenuContent({
   restaurantName: string;
   /** Minutes the kitchen needs; set in admin → University Kalba → Branch Info. */
   pickupLeadMinutes: number;
+  /** When the branch shuts, as typed in Branch Info — no slot goes past it. */
+  closesAt: string;
 }) {
   const searchParams = useSearchParams();
   const { t, tp } = useTranslation();
@@ -970,6 +975,7 @@ export default function MenuContent({
           onClose={() => setCartOpen(false)}
           whatsapp={whatsapp}
           pickupLeadMinutes={pickupLeadMinutes}
+          closesAt={closesAt}
           restaurantName={restaurantName}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}
