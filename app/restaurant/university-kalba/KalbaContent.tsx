@@ -283,13 +283,11 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersChange, onQtyChange, onClose, whatsapp, restaurantName, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
   totalPrice: number;
-  members: number;
-  onMembersChange: (n: number) => void;
   onQtyChange: (id: string, qty: number) => void;
   onClose: () => void;
   whatsapp: string;
@@ -304,7 +302,38 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
 }) {
   const { t, tp } = useTranslation();
   const [couponInput, setCouponInput] = useState("");
+  /* Delivery asks where to before it sends: the kitchen reading the WhatsApp
+     message has no way to chase an address that never arrived. */
+  const [askingAddress, setAskingAddress] = useState(false);
+  const [address, setAddress] = useState("");
+  const [mapPin, setMapPin] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [locationNote, setLocationNote] = useState("");
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
+
+  /* A dropped pin says more than a typed address in an area where streets go
+     unnamed — but it is an extra, never a replacement for the written one. */
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setLocationNote(t("kalba.cart.locationFailed"));
+      return;
+    }
+    setLocating(true);
+    setLocationNote(t("kalba.cart.locating"));
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const { latitude, longitude } = coords;
+        setMapPin(`https://maps.google.com/?q=${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+        setLocationNote(t("kalba.cart.locationAdded"));
+        setLocating(false);
+      },
+      () => {
+        setLocationNote(t("kalba.cart.locationFailed"));
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  }
 
   function buildWaUrl(type: "pickup" | "delivery") {
     const orderLines = inCart
@@ -318,8 +347,12 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
       "",
       orderLines || t("kalba.wa.noItems"),
       "",
-      t("kalba.wa.party", { party: tp("common.members", members) }),
     ];
+    if (type === "delivery" && address.trim()) {
+      lines.push(t("kalba.wa.address", { address: address.trim() }));
+      if (mapPin) lines.push(t("kalba.wa.mapPin", { link: mapPin }));
+      lines.push("");
+    }
     if (appliedCoupon && discountAmount > 0) {
       lines.push(t("kalba.wa.coupon", { code: appliedCoupon.code, amount: discountAmount }));
       lines.push(t("kalba.wa.total", { total: finalPrice }));
@@ -339,15 +372,19 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
   function saveKalbaOrder(type: "pickup" | "delivery") {
     const itemsText = inCart.map((i) => `${i.name} x${cartQty[i.id]}`).join(", ");
     const total = appliedCoupon && discountAmount > 0 ? finalPrice : totalPrice;
+    const where = type === "delivery" && address.trim()
+      ? ` · Deliver to: ${address.trim()}${mapPin ? ` (${mapPin})` : ""}`
+      : "";
     fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "kalba",
         table_section: restaurantName,
-        guests: members,
+        // A food order has no party; the column is not nullable, so it reads 1.
+        guests: 1,
         // Kept in English: this row is read by staff in the admin panel.
-        notes: `${type === "pickup" ? "Pickup" : "Delivery"} order · ${itemsText || "(no items)"} · Total: AED ${total}`,
+        notes: `${type === "pickup" ? "Pickup" : "Delivery"} order · ${itemsText || "(no items)"} · Total: AED ${total}${where}`,
         status: "pending",
       }),
     }).catch(() => {});
@@ -413,31 +450,6 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
           )}
         </div>
 
-        {/* Party size */}
-        <div className="px-5 pb-3 shrink-0">
-          <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-[11px] text-gray-500 leading-none">{t("kalba.cart.partySize")}</p>
-                <p className="text-xs font-bold text-gray-800 mt-0.5">{tp("common.members", members)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onMembersChange(Math.max(1, members - 1))}
-                className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-base font-bold hover:bg-orange-200 transition-colors"
-              >−</button>
-              <span className="text-sm font-extrabold text-gray-900 w-5 text-center">{members}</span>
-              <button
-                onClick={() => onMembersChange(Math.min(20, members + 1))}
-                className="w-7 h-7 rounded-full text-white flex items-center justify-center text-base font-bold hover:opacity-90 transition-opacity"
-                style={{ background: "#ea580c" }}
-              >+</button>
-            </div>
-          </div>
-        </div>
-
         {/* Coupon */}
         <div className="px-5 pb-3 shrink-0">
           {appliedCoupon ? (
@@ -501,28 +513,80 @@ function CartModal({ items, cartQty, totalQty, totalPrice, members, onMembersCha
 
         {/* Footer CTA */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-          <div className="grid grid-cols-2 gap-3">
-            <a
-              href={buildWaUrl("pickup")}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => { saveKalbaOrder("pickup"); onClose(); }}
-              className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl font-extrabold text-sm border-2 hover:bg-orange-50 transition-colors"
-              style={{ borderColor: "#ea580c", color: "#ea580c" }}
-            >
-              {t("kalba.cart.pickup")}
-            </a>
-            <a
-              href={buildWaUrl("delivery")}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => { saveKalbaOrder("delivery"); onClose(); }}
-              className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
-              style={{ background: "#ea580c" }}
-            >
-              {t("kalba.cart.delivery")}
-            </a>
-          </div>
+          {askingAddress ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-extrabold text-gray-900">{t("kalba.cart.deliveryAddress")}</p>
+                <button
+                  onClick={() => setAskingAddress(false)}
+                  className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {t("kalba.cart.changeToPickup")}
+                </button>
+              </div>
+
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={2}
+                autoFocus
+                placeholder={t("kalba.cart.addressPlaceholder")}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+              />
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={useMyLocation}
+                  disabled={locating}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                >
+                  <MapPin size={12} className={mapPin ? "text-green-600" : "text-[#ea580c]"} />
+                  {locating ? t("kalba.cart.locating") : t("kalba.cart.useLocation")}
+                </button>
+                {locationNote && (
+                  <span className={`text-[11px] ${mapPin ? "text-green-600" : "text-gray-400"}`}>{locationNote}</span>
+                )}
+              </div>
+
+              <a
+                href={address.trim() ? buildWaUrl("delivery") : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  if (!address.trim()) { e.preventDefault(); return; }
+                  saveKalbaOrder("delivery");
+                  onClose();
+                }}
+                aria-disabled={!address.trim()}
+                className={`flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md transition-opacity ${
+                  address.trim() ? "hover:opacity-90" : "opacity-50 cursor-not-allowed"
+                }`}
+                style={{ background: "#ea580c" }}
+              >
+                {address.trim() ? t("kalba.cart.sendDelivery") : t("kalba.cart.addressRequired")}
+              </a>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <a
+                href={buildWaUrl("pickup")}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => { saveKalbaOrder("pickup"); onClose(); }}
+                className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl font-extrabold text-sm border-2 hover:bg-orange-50 transition-colors"
+                style={{ borderColor: "#ea580c", color: "#ea580c" }}
+              >
+                {t("kalba.cart.pickup")}
+              </a>
+              <button
+                onClick={() => setAskingAddress(true)}
+                className="flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
+                style={{ background: "#ea580c" }}
+              >
+                {t("kalba.cart.delivery")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -546,7 +610,6 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
   };
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
-  const [members, setMembers] = useState(1);
   const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -854,11 +917,6 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                 })}
               </div>
             )}
-            <a href={hero.maps_url} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-full text-white text-sm font-bold transition hover:opacity-90"
-              style={{ background: "#ea580c" }}>
-              {copy(study.button_text, study.button_text_ar) || t("kalba.study.button")} <ChevronRight size={15} />
-            </a>
           </div>
         </section>
 
@@ -909,8 +967,6 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           cartQty={cartQty}
           totalQty={totalQty}
           totalPrice={totalPrice}
-          members={members}
-          onMembersChange={setMembers}
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}

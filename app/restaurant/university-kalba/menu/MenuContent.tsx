@@ -10,7 +10,7 @@ import {
   ShoppingCart,
   ChevronLeft,
   Search,
-  Users,
+  MapPin,
   GraduationCap,
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
@@ -101,8 +101,6 @@ function CartModal({
   cartQty,
   totalQty,
   totalPrice,
-  members,
-  onMembersChange,
   onQtyChange,
   onClose,
   whatsapp,
@@ -119,8 +117,6 @@ function CartModal({
   cartQty: Record<string, number>;
   totalQty: number;
   totalPrice: number;
-  members: number;
-  onMembersChange: (n: number) => void;
   onQtyChange: (id: string, qty: number) => void;
   onClose: () => void;
   whatsapp: string;
@@ -134,6 +130,33 @@ function CartModal({
   finalPrice: number;
 }) {
   const { t, tp } = useTranslation();
+  /* Same as the branch page's cart: delivery asks where to before it sends. */
+  const [askingAddress, setAskingAddress] = useState(false);
+  const [address, setAddress] = useState("");
+  const [mapPin, setMapPin] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [locationNote, setLocationNote] = useState("");
+
+  function useMyLocation() {
+    if (!navigator.geolocation) {
+      setLocationNote(t("kalba.cart.locationFailed"));
+      return;
+    }
+    setLocating(true);
+    setLocationNote(t("kalba.cart.locating"));
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setMapPin(`https://maps.google.com/?q=${coords.latitude.toFixed(6)},${coords.longitude.toFixed(6)}`);
+        setLocationNote(t("kalba.cart.locationAdded"));
+        setLocating(false);
+      },
+      () => {
+        setLocationNote(t("kalba.cart.locationFailed"));
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  }
   const [couponInput, setCouponInput] = useState("");
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
 
@@ -149,8 +172,12 @@ function CartModal({
       "",
       orderLines || t("kalba.wa.noItems"),
       "",
-      t("kalba.wa.party", { party: tp("common.members", members) }),
     ];
+    if (type === "delivery" && address.trim()) {
+      lines.push(t("kalba.wa.address", { address: address.trim() }));
+      if (mapPin) lines.push(t("kalba.wa.mapPin", { link: mapPin }));
+      lines.push("");
+    }
     if (appliedCoupon && discountAmount > 0) {
       lines.push(t("kalba.wa.coupon", { code: appliedCoupon.code, amount: discountAmount }));
       lines.push(t("kalba.wa.total", { total: finalPrice }));
@@ -259,41 +286,6 @@ function CartModal({
           )}
         </div>
 
-        {/* Party size */}
-        <div className="px-5 pb-3 shrink-0">
-          <div className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-gray-500" />
-              <div>
-                <p className="text-[11px] text-gray-500 leading-none">
-                  {t("kalba.cart.partySize")}
-                </p>
-                <p className="text-xs font-bold text-gray-800 mt-0.5">
-                  {tp("common.members", members)}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onMembersChange(Math.max(1, members - 1))}
-                className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-base font-bold hover:bg-orange-200 transition-colors"
-              >
-                −
-              </button>
-              <span className="text-sm font-extrabold text-gray-900 w-5 text-center">
-                {members}
-              </span>
-              <button
-                onClick={() => onMembersChange(Math.min(20, members + 1))}
-                className="w-7 h-7 rounded-full text-white flex items-center justify-center text-base font-bold hover:opacity-90 transition-opacity"
-                style={{ background: "#ea580c" }}
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Coupon */}
         <div className="px-5 pb-3 shrink-0">
           {appliedCoupon ? (
@@ -374,28 +366,79 @@ function CartModal({
 
         {/* Footer: Pickup + Delivery */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-          <div className="flex gap-3">
-            <a
-              href={buildWaUrl("pickup")}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onClose}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm border-2 transition-colors"
-              style={{ borderColor: "#ea580c", color: "#ea580c" }}
-            >
-              {t("kalba.cart.pickup")}
-            </a>
-            <a
-              href={buildWaUrl("delivery")}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onClose}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
-              style={{ background: "#ea580c" }}
-            >
-              {t("kalba.cart.delivery")}
-            </a>
-          </div>
+          {askingAddress ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-extrabold text-gray-900">{t("kalba.cart.deliveryAddress")}</p>
+                <button
+                  onClick={() => setAskingAddress(false)}
+                  className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {t("kalba.cart.changeToPickup")}
+                </button>
+              </div>
+
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={2}
+                autoFocus
+                placeholder={t("kalba.cart.addressPlaceholder")}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+              />
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={useMyLocation}
+                  disabled={locating}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                >
+                  <MapPin size={12} className={mapPin ? "text-green-600" : "text-[#ea580c]"} />
+                  {locating ? t("kalba.cart.locating") : t("kalba.cart.useLocation")}
+                </button>
+                {locationNote && (
+                  <span className={`text-[11px] ${mapPin ? "text-green-600" : "text-gray-400"}`}>{locationNote}</span>
+                )}
+              </div>
+
+              <a
+                href={address.trim() ? buildWaUrl("delivery") : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  if (!address.trim()) { e.preventDefault(); return; }
+                  onClose();
+                }}
+                aria-disabled={!address.trim()}
+                className={`flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md transition-opacity ${
+                  address.trim() ? "hover:opacity-90" : "opacity-50 cursor-not-allowed"
+                }`}
+                style={{ background: "#ea580c" }}
+              >
+                {address.trim() ? t("kalba.cart.sendDelivery") : t("kalba.cart.addressRequired")}
+              </a>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <a
+                href={buildWaUrl("pickup")}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onClose}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm border-2 transition-colors"
+                style={{ borderColor: "#ea580c", color: "#ea580c" }}
+              >
+                {t("kalba.cart.pickup")}
+              </a>
+              <button
+                onClick={() => setAskingAddress(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
+                style={{ background: "#ea580c" }}
+              >
+                {t("kalba.cart.delivery")}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -418,7 +461,6 @@ export default function MenuContent({
   const pick = useLocalizedField();
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
   const [cartOpen, setCartOpen] = useState(false);
-  const [members, setMembers] = useState(1);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>(
     searchParams.get("category") ?? "all"
@@ -833,8 +875,6 @@ export default function MenuContent({
           cartQty={cartQty}
           totalQty={totalQty}
           totalPrice={totalPrice}
-          members={members}
-          onMembersChange={setMembers}
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
           whatsapp={whatsapp}
