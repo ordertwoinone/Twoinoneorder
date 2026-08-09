@@ -131,6 +131,12 @@ function CartModal({
 }) {
   const { t, tp } = useTranslation();
   /* Same as the branch page's cart: delivery asks where to before it sends. */
+  const [askingPickup, setAskingPickup] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  /* A number worth messaging back on: seven digits is the shortest a UAE
+     number gets once the leading zero or country code is stripped. */
+  const pickupReady = name.trim().length > 0 && phone.replace(/\D/g, "").length >= 7;
   const [askingAddress, setAskingAddress] = useState(false);
   const [address, setAddress] = useState("");
   const [mapPin, setMapPin] = useState("");
@@ -173,6 +179,11 @@ function CartModal({
       orderLines || t("kalba.wa.noItems"),
       "",
     ];
+    if (type === "pickup" && pickupReady) {
+      lines.push(t("kalba.wa.customer", { name: name.trim() }));
+      lines.push(t("kalba.wa.phone", { phone: phone.trim() }));
+      lines.push("");
+    }
     if (type === "delivery" && address.trim()) {
       lines.push(t("kalba.wa.address", { address: address.trim() }));
       if (mapPin) lines.push(t("kalba.wa.mapPin", { link: mapPin }));
@@ -366,7 +377,54 @@ function CartModal({
 
         {/* Footer: Pickup + Delivery */}
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-          {askingAddress ? (
+          {askingPickup ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-extrabold text-gray-900">{t("kalba.cart.pickupDetails")}</p>
+                <button
+                  onClick={() => setAskingPickup(false)}
+                  className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {t("kalba.cart.changeToDelivery")}
+                </button>
+              </div>
+
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+                placeholder={t("kalba.cart.namePlaceholder")}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              <input
+                type="tel"
+                inputMode="tel"
+                dir="ltr"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder={t("kalba.cart.phonePlaceholder")}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+
+              <a
+                href={pickupReady ? buildWaUrl("pickup") : undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  if (!pickupReady) { e.preventDefault(); return; }
+                  onClose();
+                }}
+                aria-disabled={!pickupReady}
+                className={`flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md transition-opacity ${
+                  pickupReady ? "hover:opacity-90" : "opacity-50 cursor-not-allowed"
+                }`}
+                style={{ background: "#ea580c" }}
+              >
+                {pickupReady ? t("kalba.cart.sendPickup") : t("kalba.cart.detailsRequired")}
+              </a>
+            </div>
+          ) : askingAddress ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-extrabold text-gray-900">{t("kalba.cart.deliveryAddress")}</p>
@@ -420,16 +478,13 @@ function CartModal({
             </div>
           ) : (
             <div className="flex gap-3">
-              <a
-                href={buildWaUrl("pickup")}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={onClose}
+              <button
+                onClick={() => setAskingPickup(true)}
                 className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-extrabold text-sm border-2 transition-colors"
                 style={{ borderColor: "#ea580c", color: "#ea580c" }}
               >
                 {t("kalba.cart.pickup")}
-              </a>
+              </button>
               <button
                 onClick={() => setAskingAddress(true)}
                 className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:opacity-90 transition-opacity"
