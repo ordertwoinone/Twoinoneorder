@@ -16,6 +16,7 @@ import {
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { pickupSlots, isNextDay } from "@/lib/pickup-slots";
 import { useLocalizedField } from "@/lib/i18n/localized";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
@@ -105,6 +106,7 @@ function CartModal({
   onClose,
   whatsapp,
   restaurantName,
+  pickupLeadMinutes,
   appliedCoupon,
   onApplyCoupon,
   onRemoveCoupon,
@@ -121,6 +123,7 @@ function CartModal({
   onClose: () => void;
   whatsapp: string;
   restaurantName: string;
+  pickupLeadMinutes: number;
   appliedCoupon: CouponData | null;
   onApplyCoupon: (code: string) => Promise<void>;
   onRemoveCoupon: () => void;
@@ -134,9 +137,22 @@ function CartModal({
   const [askingPickup, setAskingPickup] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [pickupAt, setPickupAt] = useState("");
+  /* Rebuilt each time the form opens: a sheet left sitting for twenty minutes
+     would otherwise still offer times that have since passed. */
+  const slots = useMemo(
+    () => (askingPickup ? pickupSlots(pickupLeadMinutes) : []),
+    [askingPickup, pickupLeadMinutes],
+  );
+  const slotLabel = (at: Date) => {
+    const time = at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return isNextDay(at) ? t("kalba.cart.pickupTomorrow", { time }) : t("kalba.cart.pickupToday", { time });
+  };
+
   /* A number worth messaging back on: seven digits is the shortest a UAE
      number gets once the leading zero or country code is stripped. */
-  const pickupReady = name.trim().length > 0 && phone.replace(/\D/g, "").length >= 7;
+  const pickupReady =
+    name.trim().length > 0 && phone.replace(/\D/g, "").length >= 7 && pickupAt !== "";
   const [askingAddress, setAskingAddress] = useState(false);
   const [address, setAddress] = useState("");
   const [mapPin, setMapPin] = useState("");
@@ -182,6 +198,7 @@ function CartModal({
     if (type === "pickup" && pickupReady) {
       lines.push(t("kalba.wa.customer", { name: name.trim() }));
       lines.push(t("kalba.wa.phone", { phone: phone.trim() }));
+      if (pickupAt) lines.push(t("kalba.wa.pickupAt", { time: slotLabel(new Date(pickupAt)) }));
       lines.push("");
     }
     if (type === "delivery" && address.trim()) {
@@ -407,6 +424,24 @@ function CartModal({
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
 
+              <div>
+                <select
+                  value={pickupAt}
+                  onChange={(e) => setPickupAt(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                >
+                  <option value="">{t("kalba.cart.pickupTime")}</option>
+                  {slots.map((slot) => (
+                    <option key={slot.toISOString()} value={slot.toISOString()}>
+                      {slotLabel(slot)}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  {t("kalba.cart.pickupTimeHint", { minutes: pickupLeadMinutes })}
+                </p>
+              </div>
+
               <a
                 href={pickupReady ? buildWaUrl("pickup") : undefined}
                 target="_blank"
@@ -505,11 +540,14 @@ export default function MenuContent({
   categories,
   whatsapp,
   restaurantName,
+  pickupLeadMinutes,
 }: {
   popular: KalbaPopularItem[];
   categories: KalbaCategory[];
   whatsapp: string;
   restaurantName: string;
+  /** Minutes the kitchen needs; set in admin → University Kalba → Branch Info. */
+  pickupLeadMinutes: number;
 }) {
   const searchParams = useSearchParams();
   const { t, tp } = useTranslation();
@@ -933,6 +971,7 @@ export default function MenuContent({
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
           whatsapp={whatsapp}
+          pickupLeadMinutes={pickupLeadMinutes}
           restaurantName={restaurantName}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}

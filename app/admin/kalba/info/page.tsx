@@ -22,6 +22,7 @@ interface KalbaHero {
   is_open: boolean;
   closes_at: string;
   closes_at_ar: string;
+  pickup_lead_minutes: number;
   student_title: string;
   student_title_ar: string;
   student_subtitle: string;
@@ -48,6 +49,7 @@ const DEFAULTS: KalbaHero = {
   is_open: true,
   closes_at: "12:00 AM",
   closes_at_ar: "",
+  pickup_lead_minutes: 30,
   student_title: "Are you a student?",
   student_title_ar: "",
   student_subtitle: "Unlock exclusive student deals & discounts",
@@ -232,6 +234,27 @@ export default function KalbaInfoAdmin() {
                 placeholder="12:00 AM"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+              Pickup Lead Time (minutes)
+            </label>
+            <input
+              type="number"
+              min={0}
+              max={480}
+              step={5}
+              value={form.pickup_lead_minutes ?? 30}
+              onChange={(e) => handleField("pickup_lead_minutes", parseInt(e.target.value) || 0)}
+              className={inputCls}
+              placeholder="30"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              How long the kitchen needs before an order can be collected. A customer choosing a
+              pickup time is offered nothing sooner than this — set it to 30 and the earliest slot
+              is half an hour from now.
+            </p>
           </div>
         </div>
 

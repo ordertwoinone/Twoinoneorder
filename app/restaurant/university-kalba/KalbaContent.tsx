@@ -26,12 +26,15 @@ import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { pickupSlots, slotDateValue, slotTimeValue, isNextDay } from "@/lib/pickup-slots";
 import { useLocalized, useLocalizedField } from "@/lib/i18n/localized";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface KalbaHero {
   name: string;
+  /** Minutes the kitchen needs before an order can be collected. */
+  pickup_lead_minutes?: number | null;
   name_ar?: string | null;
   location: string;
   location_ar?: string | null;
@@ -283,7 +286,7 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
@@ -292,6 +295,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   onClose: () => void;
   whatsapp: string;
   restaurantName: string;
+  pickupLeadMinutes: number;
   appliedCoupon: CouponData | null;
   onApplyCoupon: (code: string) => Promise<void>;
   onRemoveCoupon: () => void;
@@ -307,9 +311,22 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   const [askingPickup, setAskingPickup] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [pickupAt, setPickupAt] = useState("");
+  /* Rebuilt each time the form opens: a sheet left sitting for twenty minutes
+     would otherwise still offer times that have since passed. */
+  const slots = useMemo(
+    () => (askingPickup ? pickupSlots(pickupLeadMinutes) : []),
+    [askingPickup, pickupLeadMinutes],
+  );
+  const slotLabel = (at: Date) => {
+    const time = at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return isNextDay(at) ? t("kalba.cart.pickupTomorrow", { time }) : t("kalba.cart.pickupToday", { time });
+  };
+
   /* A number worth messaging back on: seven digits is the shortest a UAE
      number gets once the leading zero or country code is stripped. */
-  const pickupReady = name.trim().length > 0 && phone.replace(/\D/g, "").length >= 7;
+  const pickupReady =
+    name.trim().length > 0 && phone.replace(/\D/g, "").length >= 7 && pickupAt !== "";
   const [askingAddress, setAskingAddress] = useState(false);
   const [address, setAddress] = useState("");
   const [mapPin, setMapPin] = useState("");
@@ -357,6 +374,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
     if (type === "pickup" && pickupReady) {
       lines.push(t("kalba.wa.customer", { name: name.trim() }));
       lines.push(t("kalba.wa.phone", { phone: phone.trim() }));
+      if (pickupAt) lines.push(t("kalba.wa.pickupAt", { time: slotLabel(new Date(pickupAt)) }));
       lines.push("");
     }
     if (type === "delivery" && address.trim()) {
@@ -395,6 +413,10 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
         // Blank until now, which left every Kalba order nameless in Bookings.
         guest_name: name.trim(),
         phone: phone.trim(),
+        // Empty until now, which left every Kalba row undated in Bookings.
+        ...(type === "pickup" && pickupAt
+          ? { date: slotDateValue(new Date(pickupAt)), time: slotTimeValue(new Date(pickupAt)) }
+          : {}),
         // A food order has no party; the column is not nullable, so it reads 1.
         guests: 1,
         // Kept in English: this row is read by staff in the admin panel.
@@ -556,6 +578,24 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
                 placeholder={t("kalba.cart.phonePlaceholder")}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
+
+              <div>
+                <select
+                  value={pickupAt}
+                  onChange={(e) => setPickupAt(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+                >
+                  <option value="">{t("kalba.cart.pickupTime")}</option>
+                  {slots.map((slot) => (
+                    <option key={slot.toISOString()} value={slot.toISOString()}>
+                      {slotLabel(slot)}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  {t("kalba.cart.pickupTimeHint", { minutes: pickupLeadMinutes })}
+                </p>
+              </div>
 
               <a
                 href={pickupReady ? buildWaUrl("pickup") : undefined}
@@ -1029,6 +1069,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           onQtyChange={handleQtyChange}
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}
+          pickupLeadMinutes={hero.pickup_lead_minutes ?? 30}
           restaurantName={copy(hero.name, hero.name_ar)}
           appliedCoupon={appliedCoupon}
           onApplyCoupon={handleApplyCoupon}
