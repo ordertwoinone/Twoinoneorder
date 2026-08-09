@@ -104,6 +104,11 @@ function clockTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-AE", { hour: "numeric", minute: "2-digit" });
 }
 
+/** The "updated" stamp carries seconds, so a refresh visibly lands. */
+function stampTime(at: Date) {
+  return at.toLocaleTimeString("en-AE", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+}
+
 function sinceLabel(iso: string) {
   if (!iso) return "";
   const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
@@ -214,6 +219,12 @@ export default function LiveOrdersAdmin() {
   }, [soundOn, chime]);
 
   const load = useCallback(async () => {
+    /* Back to true on every call, not just the first: without this the icon
+       never spins again and a click on Refresh looks like nothing happened.
+       The full-screen "Loading orders…" is guarded on an empty list, so a
+       refresh over existing rows only spins the icon. */
+    setLoading(true);
+
     const params = new URLSearchParams({ limit: "100" });
     if (orderStatus) params.set("order_status", orderStatus);
     if (paymentStatus) params.set("payment_status", paymentStatus);
@@ -420,7 +431,7 @@ export default function LiveOrdersAdmin() {
               {connection === "live" ? "Live" : connection === "connecting" ? "Connecting" : "Reconnecting"}
             </span>
             {shown.length} order{shown.length !== 1 ? "s" : ""}
-            {lastUpdated && <span className="text-gray-400">· updated {clockTime(lastUpdated.toISOString())}</span>}
+            {lastUpdated && <span className="text-gray-400">· updated {stampTime(lastUpdated)}</span>}
             <span className="text-gray-400 hidden sm:inline">· rechecks every {REFRESH_MS / 1000}s</span>
           </p>
         </div>
@@ -451,9 +462,11 @@ export default function LiveOrdersAdmin() {
           </button>
           <button
             onClick={() => load()}
-            className="flex items-center justify-center gap-2 px-4 h-11 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition flex-1 sm:flex-none"
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-4 h-11 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition flex-1 sm:flex-none disabled:opacity-60"
           >
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            {loading ? "Refreshing…" : "Refresh"}
           </button>
         </div>
       </div>
