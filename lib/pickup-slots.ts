@@ -12,6 +12,14 @@ export const SLOT_STEP_MINUTES = 15;
 /** How far ahead the picker lets someone book — six hours at 15-minute steps. */
 export const SLOT_COUNT = 24;
 
+/**
+ * Today's slots only.
+ *
+ * A branch takes collections while it is open today; offering tomorrow morning
+ * from tonight's cart means a ticket nobody is on shift to see. Late enough in
+ * the evening this returns nothing, which the cart says plainly rather than
+ * pretending there is a slot.
+ */
 export function pickupSlots(
   leadMinutes: number,
   now: Date = new Date(),
@@ -22,7 +30,20 @@ export function pickupSlots(
   const earliest = now.getTime() + Math.max(0, leadMinutes) * 60_000;
   // Rounded up to the next step, so slots read as clock times rather than 14:37.
   const first = Math.ceil(earliest / step) * step;
-  return Array.from({ length: count }, (_, i) => new Date(first + i * step));
+
+  const today = slotDateValue(now);
+  const slots: Date[] = [];
+  for (let i = 0; i < count; i++) {
+    const at = new Date(first + i * step);
+    if (slotDateValue(at) !== today) break;
+    slots.push(at);
+  }
+  return slots;
+}
+
+/** "3:15 PM" — the 12-hour clock, whatever the device is set to. */
+export function slotLabel(at: Date): string {
+  return at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
 /** "14:45" — what the bookings row stores, and what admin screens parse. */
@@ -33,9 +54,4 @@ export function slotTimeValue(at: Date): string {
 /** "2026-08-08" in local time; toISOString would shift the date across UTC. */
 export function slotDateValue(at: Date): string {
   return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
-}
-
-/** Whether a slot falls on a later day than now — the picker says so. */
-export function isNextDay(at: Date, now: Date = new Date()): boolean {
-  return slotDateValue(at) !== slotDateValue(now);
 }

@@ -16,7 +16,7 @@ import {
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { pickupSlots, isNextDay } from "@/lib/pickup-slots";
+import { pickupSlots, slotLabel } from "@/lib/pickup-slots";
 import { useLocalizedField } from "@/lib/i18n/localized";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
@@ -144,10 +144,6 @@ function CartModal({
     () => (askingPickup ? pickupSlots(pickupLeadMinutes) : []),
     [askingPickup, pickupLeadMinutes],
   );
-  const slotLabel = (at: Date) => {
-    const time = at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-    return isNextDay(at) ? t("kalba.cart.pickupTomorrow", { time }) : t("kalba.cart.pickupToday", { time });
-  };
 
   /* A number worth messaging back on: seven digits is the shortest a UAE
      number gets once the leading zero or country code is stripped. */
@@ -438,7 +434,9 @@ function CartModal({
                   ))}
                 </select>
                 <p className="text-[11px] text-gray-400 mt-1">
-                  {t("kalba.cart.pickupTimeHint", { minutes: pickupLeadMinutes })}
+                  {slots.length === 0
+                    ? t("kalba.cart.noPickupToday")
+                    : t("kalba.cart.pickupTimeHint", { minutes: pickupLeadMinutes })}
                 </p>
               </div>
 
