@@ -58,15 +58,34 @@ export interface ShipdayCarrier {
   vehicle_description?: string | null;
 }
 
-/** Shipday nests the address block differently per integration, so it is read loosely. */
+/** One end of the journey. `location` is where the coordinates live, not the top level. */
 export interface ShipdayPlace {
+  id?: number | null;
   name?: string | null;
   address?: string | null;
+  formatted_address?: string | null;
   phone?: string | null;
   email?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
+  location?: { lat?: number | null; lng?: number | null } | null;
   [key: string]: unknown;
+}
+
+/**
+ * Set when the delivery was handed to a third-party fleet (DoorDash and the
+ * like) rather than one of the company's own drivers.
+ *
+ * The person actually carrying the order is named here, not in `carrier` — so
+ * a board that reads only `carrier` shows "no driver yet" for the whole of a
+ * third-party delivery.
+ */
+export interface ShipdayThirdParty {
+  orderId?: number | null;
+  thirdPartyName?: string | null;
+  referenceId?: string | null;
+  status?: string | null;
+  thirdPartyFee?: number | null;
+  driverName?: string | null;
+  driverPhone?: string | null;
 }
 
 export interface ShipdayOrder {
@@ -87,7 +106,9 @@ export interface ShipdayOrder {
   podUrls?: string[] | null;
   driving_duration?: number | null;
   driving_distance?: number | null;
-  eta?: string | null;
+  /* Documented as a millisecond timestamp, but the sample payload sends "" for
+     an order that has none — so it arrives as either. */
+  eta?: number | string | null;
   /* Epoch milliseconds, every one of them. */
   placement_time?: number | null;
   expected_pickup_time?: number | null;
@@ -108,7 +129,7 @@ export interface ShipdayWebhookPayload {
   company?: Record<string, unknown> | null;
   delivery_details?: ShipdayPlace | null;
   pickup_details?: ShipdayPlace | null;
-  thirdPartyDeliveryOrder?: Record<string, unknown> | null;
+  thirdPartyDeliveryOrder?: ShipdayThirdParty | null;
 }
 
 /* ── The row it becomes ──────────────────────────────────────────────────── */
@@ -129,6 +150,8 @@ export interface ShipdayDeliveryRow {
   carrier_status: string;
   carrier_plate_number: string;
   carrier_vehicle: string;
+  /** The outside fleet carrying it, when it is not one of our own drivers. */
+  third_party_name: string;
   total_cost: number;
   delivery_fee: number;
   tip: number;
@@ -140,7 +163,7 @@ export interface ShipdayDeliveryRow {
   delivery_note: string;
   driving_distance: number;
   driving_duration: number;
-  eta: string;
+  eta: string | null;
   placement_time: string | null;
   expected_pickup_time: string | null;
   expected_delivery_time: string | null;
@@ -175,11 +198,26 @@ function tipOf(order: ShipdayOrder): number {
   return num(order.predefined_tip) + num(order.cash_tip);
 }
 
+/**
+ * The ETA, which is a millisecond timestamp despite arriving as either type.
+ *
+ * Reading it as a plain string — as the empty one in Shipday's own sample
+ * invites — turns a real ETA into the digits of an epoch, so it is parsed as a
+ * time or dropped. Anything non-numeric is dropped rather than kept as text:
+ * a column of stray strings is worse than an empty one.
+ */
+function etaOf(value: unknown): string | null {
+  if (typeof value === "number") return at(value);
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) return at(Number(value.trim()));
+  return null;
+}
+
 export function toDeliveryRow(payload: ShipdayWebhookPayload): ShipdayDeliveryRow | null {
   const order = payload.order;
   if (!order || (typeof order.id !== "string" && typeof order.id !== "number")) return null;
 
   const carrier = payload.carrier ?? null;
+  const third = payload.thirdPartyDeliveryOrder ?? null;
 
   return {
     id: String(order.id),
@@ -194,12 +232,16 @@ export function toDeliveryRow(payload: ShipdayWebhookPayload): ShipdayDeliveryRo
     event_at: at(payload.timestamp) ?? at(order.placement_time),
 
     carrier_id: typeof carrier?.id === "number" ? carrier.id : null,
-    carrier_name: str(carrier?.name),
-    carrier_phone: str(carrier?.phone),
+    /* A third-party delivery names its rider under thirdPartyDeliveryOrder and
+       leaves `carrier` empty, so the fleet's driver stands in — otherwise the
+       board reads "no driver yet" for a delivery already on its way. */
+    carrier_name: str(carrier?.name) || str(third?.driverName),
+    carrier_phone: str(carrier?.phone) || str(third?.driverPhone),
     carrier_email: str(carrier?.email),
     carrier_status: str(carrier?.status),
     carrier_plate_number: str(carrier?.plate_number),
     carrier_vehicle: str(carrier?.vehicle_description),
+    third_party_name: str(third?.thirdPartyName),
 
     total_cost: num(order.total_cost),
     delivery_fee: num(order.delivery_fee),
@@ -214,7 +256,7 @@ export function toDeliveryRow(payload: ShipdayWebhookPayload): ShipdayDeliveryRo
 
     driving_distance: Math.trunc(num(order.driving_distance)),
     driving_duration: Math.trunc(num(order.driving_duration)),
-    eta: str(order.eta),
+    eta: etaOf(order.eta),
 
     placement_time: at(order.placement_time),
     expected_pickup_time: at(order.expected_pickup_time),

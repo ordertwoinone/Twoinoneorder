@@ -12,9 +12,9 @@ import { statusLook, eventLabel, STATUS_LOOK } from "@/lib/shipday";
 interface Place {
   name?: string | null;
   address?: string | null;
+  formatted_address?: string | null;
   phone?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
+  location?: { lat?: number | null; lng?: number | null } | null;
 }
 
 interface Delivery {
@@ -31,6 +31,7 @@ interface Delivery {
   carrier_status: string;
   carrier_plate_number: string;
   carrier_vehicle: string;
+  third_party_name: string;
   total_cost: number;
   delivery_fee: number;
   tip: number;
@@ -40,7 +41,7 @@ interface Delivery {
   delivery_note: string;
   driving_distance: number;
   driving_duration: number;
-  eta: string;
+  eta: string | null;
   placement_time: string | null;
   expected_delivery_time: string | null;
   assigned_time: string | null;
@@ -101,6 +102,13 @@ function sinceLabel(iso: string | null) {
   const hours = Math.floor(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+/** One end of the journey as a line of text, preferring the tidied address. */
+function placeLabel(place: Place | null | undefined) {
+  if (!place) return "";
+  const address = place.formatted_address || place.address || "";
+  return [place.name, address].filter(Boolean).join(" — ");
 }
 
 /** Shipday sends metres and seconds; neither reads well raw. */
@@ -545,7 +553,9 @@ export default function ShipdayAdmin() {
                   </td>
                   <td className="px-4 py-3 align-top">
                     <p className="text-gray-700">{d.takeapp?.customer || d.delivery_details?.name || "—"}</p>
-                    <p className="text-[11px] text-gray-400 truncate max-w-[220px]">{d.delivery_details?.address || ""}</p>
+                    <p className="text-[11px] text-gray-400 truncate max-w-[220px]">
+                      {d.delivery_details?.formatted_address || d.delivery_details?.address || ""}
+                    </p>
                   </td>
                   <td className="px-4 py-3 align-top w-[130px]"><ProgressRail step={look.step} /></td>
                   <td className="px-4 py-3 align-top">
@@ -641,6 +651,9 @@ function DeliveryDetail({ d }: { d: Delivery }) {
         {d.carrier_name ? (
           <>
             <Field icon={User} label="Name" value={d.carrier_name} />
+            {/* Only set when an outside fleet has it, so its presence is the
+                answer to "why is this driver not one of ours". */}
+            <Field icon={Truck} label="Fleet" value={d.third_party_name} />
             <Field icon={Phone} label="Phone" value={d.carrier_phone} />
             <Field icon={Bike} label="Vehicle" value={[d.carrier_vehicle, d.carrier_plate_number].filter(Boolean).join(" · ")} />
             <Field icon={Wifi} label="Driver status" value={d.carrier_status} />
@@ -663,15 +676,21 @@ function DeliveryDetail({ d }: { d: Delivery }) {
       {/* Route */}
       <div className="space-y-2.5">
         <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Route</p>
-        <Field icon={MapPin} label="Pickup" value={[d.pickup_details?.name, d.pickup_details?.address].filter(Boolean).join(" — ")} />
-        <Field icon={MapPin} label="Drop-off" value={[d.delivery_details?.name, d.delivery_details?.address].filter(Boolean).join(" — ")} />
+        <Field icon={MapPin} label="Pickup" value={placeLabel(d.pickup_details)} />
+        <Field icon={MapPin} label="Drop-off" value={placeLabel(d.delivery_details)} />
         <Field icon={Phone} label="Customer" value={d.takeapp?.phone || d.delivery_details?.phone || ""} />
         <Field
           icon={Navigation}
           label="Distance"
           value={[distanceLabel(d.driving_distance), durationLabel(d.driving_duration)].filter(Boolean).join(" · ")}
         />
-        <Field icon={Clock} label="Expected delivery" value={d.expected_delivery_time ? clockTime(d.expected_delivery_time) : d.eta} />
+        {/* Shipday's own expected time first, its live ETA second — both are
+            timestamps, so neither is shown raw. */}
+        <Field
+          icon={Clock}
+          label="Expected delivery"
+          value={d.expected_delivery_time || d.eta ? clockTime(d.expected_delivery_time ?? d.eta) : ""}
+        />
         <Field icon={StickyNote} label="Delivery note" value={d.delivery_note} />
         <Field
           icon={CreditCard}

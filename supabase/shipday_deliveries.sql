@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS shipday_deliveries (
   carrier_status         text        NOT NULL DEFAULT '',
   carrier_plate_number   text        NOT NULL DEFAULT '',
   carrier_vehicle        text        NOT NULL DEFAULT '',
+  -- Set when an outside fleet is carrying it (DoorDash and the like). Their
+  -- rider's name and phone land in the carrier_ columns above, because that is
+  -- who is holding the order.
+  third_party_name       text        NOT NULL DEFAULT '',
 
   -- Money, as Shipday sends it: a major-unit decimal, not the smallest unit
   -- take.app uses. Kept numeric so it is never rounded through a float.
@@ -54,7 +58,9 @@ CREATE TABLE IF NOT EXISTS shipday_deliveries (
   -- Metres and seconds, as Shipday sends them.
   driving_distance       integer     NOT NULL DEFAULT 0,
   driving_duration       integer     NOT NULL DEFAULT 0,
-  eta                    text        NOT NULL DEFAULT '',
+  -- A time, not a label: Shipday documents `eta` as milliseconds since epoch,
+  -- even though its own sample payload sends "" when there is none.
+  eta                    timestamptz,
 
   -- The delivery's milestones. Each stays null until that step happens, which
   -- is what the timeline on the admin screen reads.
@@ -100,3 +106,25 @@ $$;
 
 -- Realtime sends the whole row on an update only when the table replicates it.
 ALTER TABLE shipday_deliveries REPLICA IDENTITY FULL;
+
+-- ── Bringing an earlier table up to date ─────────────────────────────────────
+-- The whole file is safe to re-run: CREATE TABLE IF NOT EXISTS leaves an
+-- existing table alone, and these two patch it to match the definition above.
+
+ALTER TABLE shipday_deliveries
+  ADD COLUMN IF NOT EXISTS third_party_name text NOT NULL DEFAULT '';
+
+-- `eta` was text in the first version of this file. Nothing is lost by
+-- replacing it: the code that wrote to a text eta stored Shipday's numeric
+-- timestamp as an empty string, so the column never held anything else.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'shipday_deliveries' AND column_name = 'eta' AND data_type = 'text'
+  ) THEN
+    ALTER TABLE shipday_deliveries DROP COLUMN eta;
+    ALTER TABLE shipday_deliveries ADD COLUMN eta timestamptz;
+  END IF;
+END
+$$;
