@@ -75,6 +75,43 @@ The logo comes from **admin → Header** (`header_logo_url`), falling back to
 account page, 404 and install prompt all read from it, so uploading a new logo
 changes every one of them.
 
+## Shipday Delivery
+
+**admin → Shipday Delivery** shows the delivery half of an order: which driver
+has it, where it has got to, and when each step happened. take.app owns the
+order; Shipday owns the delivery.
+
+**How it fills.** Accepting an order sends it to Shipday, Shipday assigns a
+driver, and every step after that is POSTed to `/webhooks/shipday`. Each event
+is upserted into `shipday_deliveries` on the Shipday order id, and the admin
+screen listens to that table over SSE — so a driver assignment appears without
+anyone refreshing. A minute-timer reload sits under the stream as a safety net.
+
+**Setting it up**
+
+1. Run `supabase/shipday_deliveries.sql` in the Supabase SQL editor.
+2. Set `SHIPDAY_WEBHOOK_TOKEN` to the token you want Shipday to send.
+3. In Shipday → Dispatch → Settings → API & Webhooks, point the webhook at
+   `https://<your-domain>/webhooks/shipday` and paste the same token in.
+
+**Notes**
+
+- The token is the *whole* of the webhook's authentication — Shipday sends it in
+  a `token` header and signs nothing — so it is compared in constant time and an
+  unverified body is never parsed. Treat it like a password.
+- Shipday's own event spellings are matched verbatim, typo included:
+  `ORDER_PIKEDUP`, not `ORDER_PICKED_UP`.
+- Deliveries can arrive out of order, so an event older than the one already
+  stored is acknowledged and dropped rather than applied. Without that, a
+  retried `ORDER_ASSIGNED` would walk a finished delivery back to "unassigned".
+- Money arrives as a major-unit decimal (`572.63`), unlike take.app's smallest
+  unit — do not divide it by 100.
+- `SHIPDAY_API_KEY` is optional and feeds only the driver-roster panel. **The key
+  currently in `.env.local` is rejected by `api.shipday.com` with a 403**; a
+  working key is `prefix.secret` shaped (e.g. `BgxsDwd00n.LNNn90QydrjgZ1K9dS13`),
+  and can be copied from Dispatch → Settings → API. Everything else on the
+  screen runs on the webhook alone and works without it.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

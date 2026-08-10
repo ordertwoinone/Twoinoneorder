@@ -36,6 +36,13 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/takeapp", "/api/admin/push", "/api/admin/bookings"],
   },
   {
+    key: "shipday",
+    label: "Shipday Delivery",
+    hint: "Drivers and delivery status for accepted orders",
+    paths: ["/admin/shipday"],
+    apiPaths: ["/api/admin/shipday"],
+  },
+  {
     key: "booking-tables",
     label: "Table Details",
     hint: "The /book-table floor plan",
