@@ -168,6 +168,20 @@ interface Toast {
   total: string;
 }
 
+/**
+ * Names kept out of the restaurant dropdown.
+ *
+ * A row's `where` is a take.app store name for an order but the booking's own
+ * section for a booking, so catering occasions and buffet sittings end up in a
+ * list labelled "All restaurants" beside the actual restaurants. These are the
+ * ones that are not places, hidden by name.
+ *
+ * Hand-maintained, with the cost that implies: a new catering occasion or
+ * buffet sitting will show up in the dropdown until it is added here. Only the
+ * dropdown is affected — bookings under these names stay on the board.
+ */
+const NOT_RESTAURANTS = ["Birthday", "Wedding", "Dinner Buffet", "Lunch Buffet", "Outdoor Terrace"];
+
 const ORDER_STATUSES = ["draft", "pending", "confirmed", "completed", "cancelled"];
 const PAYMENT_STATUSES = ["pending", "paid", "refunded"];
 const FULFILLMENT_STATUSES = ["unfulfilled", "ready", "fulfilled"];
@@ -441,7 +455,9 @@ export default function LiveOrdersAdmin() {
   );
 
   const stores = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.where).filter(Boolean))).sort(),
+    () => Array.from(new Set(rows.map((r) => r.where).filter(Boolean)))
+      .filter((name) => !NOT_RESTAURANTS.includes(name))
+      .sort(),
     [rows],
   );
 
