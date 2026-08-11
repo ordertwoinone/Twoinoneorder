@@ -25,6 +25,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
+import { useStudentCard } from "@/hooks/useStudentCard";
+import { STUDENT_DISCOUNT_PERCENT, studentDiscountAmount } from "@/lib/student-card";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { pickupSlots, slotDateValue, slotTimeValue, slotLabel, type DayHours } from "@/lib/pickup-slots";
 import { useLocalized, useLocalizedField } from "@/lib/i18n/localized";
@@ -288,7 +290,7 @@ function CartRow({ item, qty, onQtyChange }: {
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, finalPrice }: {
+function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, studentDiscount, studentPercent, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   totalQty: number;
@@ -308,6 +310,9 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   couponError: string;
   couponLoading: boolean;
   discountAmount: number;
+  /** Taken off by the shopper's Student Privilege Card; 0 without one. */
+  studentDiscount: number;
+  studentPercent: number;
   finalPrice: number;
 }) {
   const { t, tp } = useTranslation();
@@ -389,10 +394,15 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
     }
     if (appliedCoupon && discountAmount > 0) {
       lines.push(t("kalba.wa.coupon", { code: appliedCoupon.code, amount: discountAmount }));
-      lines.push(t("kalba.wa.total", { total: finalPrice }));
-    } else {
-      lines.push(t("kalba.wa.total", { total: totalPrice }));
     }
+    if (studentDiscount > 0) {
+      lines.push(t("kalba.wa.student", { percent: studentPercent, amount: studentDiscount }));
+    }
+    lines.push(
+      t("kalba.wa.total", {
+        total: discountAmount > 0 || studentDiscount > 0 ? finalPrice : totalPrice,
+      }),
+    );
     lines.push(
       "",
       t("kalba.wa.orderType", {
@@ -405,7 +415,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
   // Save the Kalba order as a booking (labelled "kalba"); links to account if logged in
   function saveKalbaOrder(type: "pickup" | "delivery") {
     const itemsText = inCart.map((i) => `${i.name} x${cartQty[i.id]}`).join(", ");
-    const total = appliedCoupon && discountAmount > 0 ? finalPrice : totalPrice;
+    const total = discountAmount > 0 || studentDiscount > 0 ? finalPrice : totalPrice;
     const where = type === "delivery" && address.trim()
       ? ` · Deliver to: ${address.trim()}${mapPin ? ` (${mapPin})` : ""}`
       : "";
@@ -461,7 +471,7 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
                   <p className="text-sm font-extrabold text-gray-900">{tp("common.items", totalQty)}</p>
                 </div>
                 <div className="text-end">
-                  {discountAmount > 0 ? (
+                  {discountAmount + studentDiscount > 0 ? (
                     <>
                       <p className="text-xs text-gray-400 line-through">{t("common.price", { amount: totalPrice })}</p>
                       <p className="text-lg font-extrabold text-orange-500">{t("common.price", { amount: finalPrice })}</p>
@@ -480,6 +490,14 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
                       : t("kalba.cart.amountOff", { value: appliedCoupon.discount_value })}
                   </span>
                   <span className="text-[11px] text-green-600 font-bold">{t("kalba.cart.discount", { amount: discountAmount })}</span>
+                </div>
+              )}
+              {studentDiscount > 0 && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
+                  <span className="text-[11px] text-green-600 font-semibold">
+                    🎓 {t("kalba.cart.studentDiscount", { percent: studentPercent })}
+                  </span>
+                  <span className="text-[11px] text-green-600 font-bold">{t("kalba.cart.discount", { amount: studentDiscount })}</span>
                 </div>
               )}
             </div>
@@ -719,6 +737,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
   const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const { card: studentCard } = useStudentCard();
 
   // Keep the install prompt from landing on the cart bar.
   useBottomBarSpace();
@@ -777,7 +796,12 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
       ? parseFloat((base * discount_value / 100).toFixed(2))
       : parseFloat(Math.min(discount_value, base).toFixed(2));
   }
-  const finalPrice = parseFloat((totalPrice - discountAmount).toFixed(2));
+  /* The card discounts the whole basket, on top of any coupon: the two are
+     separate promises to the customer, not alternatives. */
+  const studentDiscount = studentDiscountAmount(studentCard, totalPrice);
+  const studentPercent = studentCard?.discount_percent ?? STUDENT_DISCOUNT_PERCENT;
+
+  const finalPrice = Math.max(0, parseFloat((totalPrice - discountAmount - studentDiscount).toFixed(2)));
 
   const handleApplyCoupon = useCallback(async (code: string) => {
     setCouponLoading(true);
@@ -1087,6 +1111,8 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           couponError={couponError}
           couponLoading={couponLoading}
           discountAmount={discountAmount}
+          studentDiscount={studentDiscount}
+          studentPercent={studentPercent}
           finalPrice={finalPrice}
         />
       )}

@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
+import { useStudentCard } from "@/hooks/useStudentCard";
+import { STUDENT_DISCOUNT_PERCENT, studentDiscountAmount } from "@/lib/student-card";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { pickupSlots, slotLabel, type DayHours } from "@/lib/pickup-slots";
 import { useLocalizedField } from "@/lib/i18n/localized";
@@ -116,6 +118,8 @@ function CartModal({
   couponError,
   couponLoading,
   discountAmount,
+  studentDiscount,
+  studentPercent,
   finalPrice,
 }: {
   items: CartItem[];
@@ -137,6 +141,9 @@ function CartModal({
   couponError: string;
   couponLoading: boolean;
   discountAmount: number;
+  /** Taken off by the shopper's Student Privilege Card; 0 without one. */
+  studentDiscount: number;
+  studentPercent: number;
   finalPrice: number;
 }) {
   const { t, tp } = useTranslation();
@@ -214,10 +221,15 @@ function CartModal({
     }
     if (appliedCoupon && discountAmount > 0) {
       lines.push(t("kalba.wa.coupon", { code: appliedCoupon.code, amount: discountAmount }));
-      lines.push(t("kalba.wa.total", { total: finalPrice }));
-    } else {
-      lines.push(t("kalba.wa.total", { total: totalPrice }));
     }
+    if (studentDiscount > 0) {
+      lines.push(t("kalba.wa.student", { percent: studentPercent, amount: studentDiscount }));
+    }
+    lines.push(
+      t("kalba.wa.total", {
+        total: discountAmount > 0 || studentDiscount > 0 ? finalPrice : totalPrice,
+      }),
+    );
     lines.push(
       "",
       t("kalba.wa.orderType", {
@@ -280,7 +292,7 @@ function CartModal({
                   </p>
                 </div>
                 <div className="text-end">
-                  {discountAmount > 0 ? (
+                  {discountAmount + studentDiscount > 0 ? (
                     <>
                       <p className="text-xs text-gray-400 line-through">
                         {t("common.price", { amount: totalPrice })}
@@ -306,6 +318,16 @@ function CartModal({
                   </span>
                   <span className="text-[11px] text-green-600 font-bold">
                     {t("kalba.cart.discount", { amount: discountAmount })}
+                  </span>
+                </div>
+              )}
+              {studentDiscount > 0 && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
+                  <span className="text-[11px] text-green-600 font-semibold">
+                    🎓 {t("kalba.cart.studentDiscount", { percent: studentPercent })}
+                  </span>
+                  <span className="text-[11px] text-green-600 font-bold">
+                    {t("kalba.cart.discount", { amount: studentDiscount })}
                   </span>
                 </div>
               )}
@@ -576,6 +598,7 @@ export default function MenuContent({
   const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const { card: studentCard } = useStudentCard();
 
   // Keep the install prompt from landing on the cart bar.
   useBottomBarSpace();
@@ -617,7 +640,12 @@ export default function MenuContent({
     return Math.min(appliedCoupon.discount_value, base);
   }, [appliedCoupon, cartItems, cartQty]);
 
-  const finalPrice = Math.max(0, totalPrice - discountAmount);
+  /* The card discounts the whole basket, on top of any coupon: the two are
+     separate promises to the customer, not alternatives. */
+  const studentDiscount = studentDiscountAmount(studentCard, totalPrice);
+  const studentPercent = studentCard?.discount_percent ?? STUDENT_DISCOUNT_PERCENT;
+
+  const finalPrice = Math.max(0, totalPrice - discountAmount - studentDiscount);
 
   const handleApplyCoupon = useCallback(
     async (code: string) => {
@@ -1000,6 +1028,8 @@ export default function MenuContent({
           couponError={couponError}
           couponLoading={couponLoading}
           discountAmount={discountAmount}
+          studentDiscount={studentDiscount}
+          studentPercent={studentPercent}
           finalPrice={finalPrice}
         />
       )}

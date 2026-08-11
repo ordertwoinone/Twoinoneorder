@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import {
   Mail, Lock, User as UserIcon, LogOut, Loader2, ShoppingBag,
-  Heart, MapPin, ChevronRight, CheckCircle2,
+  Heart, MapPin, ChevronRight, CheckCircle2, GraduationCap, Gift,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { LOCALE_META } from "@/lib/i18n/config";
+import PrivilegeCard from "@/components/account/PrivilegeCard";
+import { useStudentCard } from "@/hooks/useStudentCard";
 
 function GoogleIcon() {
   return (
@@ -27,6 +29,7 @@ export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { l
   const { t, locale } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
+  const { card, loading: cardLoading, refresh: refreshCard } = useStudentCard();
 
   // form state
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -44,6 +47,8 @@ export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { l
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
+      // Whose card this is changes with the session — ask again.
+      void refreshCard();
     });
     return () => sub.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,44 +121,64 @@ export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { l
 
     return (
       <div className="max-w-xl mx-auto px-4 py-6">
-        {/* Profile card */}
-        <div className="rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
-          <div className="px-6 py-8 flex items-center gap-4" style={{ background: "linear-gradient(120deg,#fff7ed,#ffedd5 55%,#fed7aa)" }}>
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-white shadow-sm flex items-center justify-center shrink-0">
-              {avatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatar} alt={displayName} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-2xl font-extrabold text-orange-500">
-                  {displayName.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-xl font-extrabold text-gray-900 truncate">{displayName}</h1>
-              <p className="text-[13px] text-gray-600 truncate force-ltr">{user.email}</p>
-              {joined && (
-                <p className="text-[11px] text-gray-400 mt-0.5">{t("account.memberSince", { date: joined })}</p>
-              )}
-            </div>
-          </div>
+        {/* A cardholder is greeted by their card; everyone else by their profile. */}
+        {card ? (
+          <>
+            <h1 className="text-2xl font-extrabold text-gray-900">{t("account.welcomeStudent")}</h1>
+            <p className="text-sm text-gray-500 mt-1 mb-5">{t("account.welcomeStudentSub")}</p>
 
-          {/* Account rows */}
-          <div className="bg-white divide-y divide-gray-100">
-            {rows.map(({ icon: Icon, label, sub, href }) => (
-              <a key={label} href={href} className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors">
-                <span className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-                  <Icon size={18} className="text-orange-500" />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900">{label}</p>
-                  <p className="text-[12px] text-gray-400">{sub}</p>
-                </div>
-                <ChevronRight size={16} className="text-gray-300 shrink-0" />
-              </a>
-            ))}
+            <PrivilegeCard card={card} />
+
+            <div className="flex items-start gap-3 bg-orange-50/70 rounded-2xl px-4 py-4 mt-5">
+              <Gift size={22} className="text-orange-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-gray-900">{t("account.valuedTitle")}</p>
+                <p className="text-[13px] text-gray-600 leading-snug mt-0.5">{t("account.valuedSub")}</p>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="rounded-3xl overflow-hidden border border-gray-100 shadow-sm">
+            <div className="px-6 py-8 flex items-center gap-4" style={{ background: "linear-gradient(120deg,#fff7ed,#ffedd5 55%,#fed7aa)" }}>
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-white shadow-sm flex items-center justify-center shrink-0">
+                {avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatar} alt={displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-extrabold text-orange-500">
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-xl font-extrabold text-gray-900 truncate">{displayName}</h1>
+                <p className="text-[13px] text-gray-600 truncate force-ltr">{user.email}</p>
+                {joined && (
+                  <p className="text-[11px] text-gray-400 mt-0.5">{t("account.memberSince", { date: joined })}</p>
+                )}
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* Account rows */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm divide-y divide-gray-100 overflow-hidden mt-5">
+          {rows.map(({ icon: Icon, label, sub, href }) => (
+            <a key={label} href={href} className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors">
+              <span className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+                <Icon size={18} className="text-orange-500" />
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-900">{label}</p>
+                <p className="text-[12px] text-gray-400">{sub}</p>
+              </div>
+              <ChevronRight size={16} className="text-gray-300 shrink-0" />
+            </a>
+          ))}
         </div>
+
+        {/* Not a member yet — the same invitation the sign-in screen makes. */}
+        {!cardLoading && !card && <StudentInvite />}
 
         <button
           onClick={handleLogout}
@@ -269,6 +294,30 @@ export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { l
           {mode === "signin" ? t("common.signUp") : t("common.signIn")}
         </button>
       </p>
+
+      {/* Student card */}
+      <StudentInvite />
     </div>
+  );
+}
+
+/** The way in to the Student Privilege Card, offered wherever there isn't one. */
+function StudentInvite() {
+  const { t } = useTranslation();
+
+  return (
+    <a
+      href="/account/student"
+      className="mt-5 flex items-center gap-4 px-4 py-4 rounded-2xl bg-white border border-gray-100 shadow-sm hover:bg-gray-50 transition-colors"
+    >
+      <span className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
+        <GraduationCap size={20} className="text-orange-500" />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-bold text-gray-900">{t("account.studentTitle")}</span>
+        <span className="block text-[12px] text-gray-400 leading-snug">{t("account.studentSub")}</span>
+      </span>
+      <ChevronRight size={16} className="text-gray-300 shrink-0" />
+    </a>
   );
 }
