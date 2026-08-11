@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   Mail, Lock, User as UserIcon, LogOut, Loader2, ShoppingBag,
   Heart, MapPin, ChevronRight, CheckCircle2, GraduationCap, Gift,
@@ -24,8 +25,15 @@ function GoogleIcon() {
   );
 }
 
+/** A query parameter, read without useSearchParams so the page stays static. */
+function readParam(name: string): string {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get(name) ?? "";
+}
+
 export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { logoUrl?: string }) {
   const supabase = createClient();
+  const router = useRouter();
   const { t, locale } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [checking, setChecking] = useState(true);
@@ -40,15 +48,34 @@ export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { l
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
+  /* Where to go once they are in — set when another screen sent them here to
+     sign in first. Read during render because the auth listener can fire before
+     effects do, and stripped from the address bar below. */
+  const nextPath = useRef(readParam("next"));
+
+  // Anything the confirmation link had to say. Set in an effect so the first
+  // paint still matches what the server rendered.
+  useEffect(() => {
+    if (readParam("confirmed")) setInfo(t("account.emailConfirmed"));
+    else if (readParam("authError")) setError(t("account.linkExpired"));
+    if (window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ?? null);
+      if (data.user && nextPath.current) router.replace(nextPath.current);
       setChecking(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null);
       // Whose card this is changes with the session — ask again.
       void refreshCard();
+      // Signing in was the only thing standing between them and where they were headed.
+      if (session?.user && nextPath.current) router.replace(nextPath.current);
     });
     return () => sub.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps

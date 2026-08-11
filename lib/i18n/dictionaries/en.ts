@@ -346,6 +346,8 @@ const en = {
     valuedTitle: "You're a valued member!",
     valuedSub: "Thank you for being part of the Two in One University Cafe family. 🎉",
     confirmEmail: "Check your inbox to confirm your email, then sign in.",
+    emailConfirmed: "Your email is confirmed. Sign in to continue.",
+    linkExpired: "That link has expired or was already used. Sign in below instead.",
     memberSince: "Member since {date}",
     guest: "Guest",
     rowOrders: "My Orders",
@@ -381,14 +383,11 @@ const en = {
     secureNote:
       "Your information is secure and will only be used to verify your student privilege.",
     continue: "Continue",
-    verifyTitle: "Verify your account",
-    verifySub: "Your card is tied to your account, so it follows you to every device.",
-    signedInAs: "Signed in as {email}",
-    issuingTitle: "Issuing your card",
+    verifyTitle: "Check your details",
+    verifySub: "This is how your card will read. Go back if anything needs changing.",
+    account: "Account",
+    issuingTitle: "Issuing your card…",
     issueCard: "Issue my card",
-    confirmEmailTitle: "Confirm your email",
-    confirmEmailSub:
-      "We sent a link to {email}. Confirm it and sign in — your card is issued the moment you're back.",
     completeTitle: "You're all set!",
     completeSub:
       "Your Student Privilege Card is ready. Just order — the {percent}% comes off for you.",
