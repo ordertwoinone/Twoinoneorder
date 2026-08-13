@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import PageMeta from "@/lib/i18n/PageMeta";
+import { getSiteFlags } from "@/lib/site-flags";
 import StudentCardClient from "./StudentCardClient";
 
 export const metadata: Metadata = {
@@ -11,7 +13,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function StudentCardPage() {
+export default async function StudentCardPage() {
+  /* Switched off in admin → Settings → Features. The invitation is hidden there
+     too, so this only catches a bookmark or a shared link. */
+  const { studentCardEnabled } = await getSiteFlags();
+  if (!studentCardEnabled) redirect("/account");
+
   return (
     <>
       <PageMeta titleKey="studentCard.metaTitle" descriptionKey="studentCard.metaDescription" />

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
+import { getSiteFlags } from "@/lib/site-flags";
 import {
   STUDENT_DISCOUNT_PERCENT,
   generateCardNumber,
@@ -51,6 +52,16 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Sign in to get your card." }, { status: 401 });
+  }
+
+  /* Switched off in admin → Settings → Features. Only issuing stops — GET above
+     still hands back the cards that were already given out. */
+  const { studentCardEnabled } = await getSiteFlags();
+  if (!studentCardEnabled) {
+    return NextResponse.json(
+      { error: "Student card registration is closed at the moment." },
+      { status: 403 },
+    );
   }
 
   const body = await request.json().catch(() => null);

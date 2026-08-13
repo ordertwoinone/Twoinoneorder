@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Save, Globe, Phone, MapPin, Share2, RefreshCw, BarChart3 } from "lucide-react";
+import { Save, Globe, Phone, MapPin, Share2, RefreshCw, BarChart3, Smartphone, ToggleRight } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import BilingualField from "@/components/admin/BilingualField";
 
@@ -30,6 +30,10 @@ interface Settings {
   ga_measurement_id: string;
   gtm_id: string;
   head_scripts: string;
+  /* Added by supabase/splash_and_feature_toggles.sql. */
+  splash_image_url: string;
+  splash_enabled: boolean;
+  student_card_enabled: boolean;
 }
 
 const EMPTY: Omit<Settings, "id"> = {
@@ -39,7 +43,11 @@ const EMPTY: Omit<Settings, "id"> = {
   whatsapp_number: "", address: "", address_ar: "", city: "", city_ar: "",
   country: "UAE", country_ar: "", email: "", phone: "",
   meta_pixel_id: "", ga_measurement_id: "", gtm_id: "", head_scripts: "",
+  splash_image_url: "", splash_enabled: true, student_card_enabled: true,
 };
+
+/** What the splash falls back to with nothing uploaded — mirrors lib/site-flags. */
+const FALLBACK_SPLASH = "/splash/we-bring-it-fast.png";
 
 export default function SettingsAdmin() {
   const [form, setForm] = useState<Omit<Settings, "id"> & { id?: string }>({ ...EMPTY });
@@ -48,17 +56,26 @@ export default function SettingsAdmin() {
   const [saved, setSaved] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [cleared, setCleared] = useState(false);
+  /* The splash and feature switches need columns that a hand-run migration
+     adds. Without them the controls would appear to do nothing, so say so. */
+  const [togglesReady, setTogglesReady] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/settings")
       .then((r) => r.json())
       .then((data) => {
-        setForm(data);
+        setForm({
+          ...data,
+          // Missing columns (migration not run) read as "on", matching the site.
+          splash_enabled: data.splash_enabled !== false,
+          student_card_enabled: data.student_card_enabled !== false,
+        });
+        setTogglesReady("splash_enabled" in data);
         setLoading(false);
       });
   }, []);
 
-  function handleField(key: string, value: string) {
+  function handleField(key: string, value: string | boolean) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -72,10 +89,18 @@ export default function SettingsAdmin() {
 
   async function handleSave() {
     setSaving(true);
+    /* Sending a column the database hasn't got fails the whole save, taking the
+       rest of the settings down with it. Leave the new ones out until then. */
+    const payload = { ...form };
+    if (!togglesReady) {
+      delete (payload as Partial<Settings>).splash_image_url;
+      delete (payload as Partial<Settings>).splash_enabled;
+      delete (payload as Partial<Settings>).student_card_enabled;
+    }
     await fetch("/api/admin/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
     });
     setSaving(false);
     setSaved(true);
@@ -113,6 +138,40 @@ export default function SettingsAdmin() {
       />
     </div>
   );
+
+  const Toggle = ({ label, hint, field }: { label: string; hint: string; field: "splash_enabled" | "student_card_enabled" }) => (
+    <div className="flex items-start justify-between gap-6">
+      <div>
+        <p className="text-xs font-semibold text-gray-700">{label}</p>
+        <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{hint}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={form[field]}
+        aria-label={label}
+        disabled={!togglesReady}
+        onClick={() => handleField(field, !form[field])}
+        className={`relative w-12 h-7 rounded-full shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+          form[field] ? "bg-orange-500" : "bg-gray-300"
+        }`}
+      >
+        <span
+          className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${
+            form[field] ? "left-6" : "left-1"
+          }`}
+        />
+      </button>
+    </div>
+  );
+
+  const MigrationNotice = () =>
+    togglesReady ? null : (
+      <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2">
+        Run <code className="font-mono">supabase/splash_and_feature_toggles.sql</code> in the
+        Supabase SQL editor to switch these on — there is nowhere to save them until then.
+      </p>
+    );
 
   return (
     <div className="p-8 max-w-3xl">
@@ -171,6 +230,68 @@ export default function SettingsAdmin() {
         <ImageUploadField label="Logo" value={form.logo_url} onChange={(v) => handleField("logo_url", v)} folder="brand" />
         <ImageUploadField label="Favicon (.ico or .png)" value={form.favicon_url} onChange={(v) => handleField("favicon_url", v)} folder="brand" />
         <ImageUploadField label="OG Image (social share preview, 1200×630)" value={form.og_image_url} onChange={(v) => handleField("og_image_url", v)} folder="brand" />
+      </Section>
+
+      {/* Splash screen */}
+      <Section icon={Smartphone} title="Splash Screen">
+        <p className="text-xs text-gray-400 -mt-1">
+          The opening screen on phones — shown once per visit while the site loads. Desktop never
+          sees it. A tall image on a plain background works best; leave the picture blank to use the
+          one shipped with the site.
+        </p>
+        <MigrationNotice />
+        <Toggle
+          label="Show the splash screen"
+          hint="Off means the site opens straight onto the homepage."
+          field="splash_enabled"
+        />
+        <ImageUploadField
+          label="Splash Image"
+          value={form.splash_image_url}
+          onChange={(v) => handleField("splash_image_url", v)}
+          folder="brand"
+          hint="1000×1000 px, PNG with a transparent or white background"
+        />
+        {/* What a phone actually shows, at roughly the real proportions. */}
+        <div>
+          <p className="text-xs font-semibold text-gray-700 mb-1.5">Preview</p>
+          <div className="w-[150px] h-[280px] rounded-2xl border border-gray-200 bg-white flex items-center justify-center px-5 overflow-hidden">
+            {form.splash_enabled ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={form.splash_image_url || FALLBACK_SPLASH}
+                alt="Splash preview"
+                className="max-w-full max-h-full object-contain"
+              />
+            ) : (
+              <span className="text-[11px] text-gray-400 text-center">No splash screen</span>
+            )}
+          </div>
+        </div>
+      </Section>
+
+      {/* Feature switches */}
+      <Section icon={ToggleRight} title="Features">
+        <MigrationNotice />
+        <Toggle
+          label="Student Privilege Card"
+          hint="Off hides the “Are you a student?” invitation and closes the registration form. Cards already issued keep working and keep their discount."
+          field="student_card_enabled"
+        />
+        <div className="flex items-start justify-between gap-6 pt-1 border-t border-gray-100">
+          <div className="pt-4">
+            <p className="text-xs font-semibold text-gray-700">Spin &amp; Win offer wheel</p>
+            <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+              Switched on and off from its own screen, along with the prizes.
+            </p>
+          </div>
+          <a
+            href="/admin/spin-wheel"
+            className="mt-4 px-3 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors shrink-0"
+          >
+            Open Spin Wheel
+          </a>
+        </div>
       </Section>
 
       {/* Social */}

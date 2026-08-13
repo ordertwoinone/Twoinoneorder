@@ -3,6 +3,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { getBranding } from "@/lib/branding";
+import { getSiteFlags } from "@/lib/site-flags";
 import PageMeta from "@/lib/i18n/PageMeta";
 import AccountClient from "./AccountClient";
 
@@ -13,14 +14,17 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountPage() {
-  const { logoUrl } = await getBranding();
+  const [{ logoUrl }, { studentCardEnabled }] = await Promise.all([
+    getBranding(),
+    getSiteFlags(),
+  ]);
 
   return (
     <>
       <PageMeta titleKey="account.metaTitle" descriptionKey="account.metaDescription" />
       <Navbar />
       <main className="bg-white min-h-[70vh] pb-20 sm:pb-8">
-        <AccountClient logoUrl={logoUrl} />
+        <AccountClient logoUrl={logoUrl} studentCardEnabled={studentCardEnabled} />
       </main>
       <Footer />
       <BottomNav />

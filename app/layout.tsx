@@ -6,9 +6,10 @@ import { FavoritesProvider } from "@/lib/favorites/FavoritesContext";
 import JsonLd from "@/components/seo/JsonLd";
 import TrackingScripts from "@/components/seo/TrackingScripts";
 import PwaProvider from "@/components/pwa/PwaProvider";
-import LogoLoader from "@/components/ui/LogoLoader";
+import SplashScreen from "@/components/ui/SplashScreen";
 import { SITE_URL, organizationSchema, webSiteSchema } from "@/lib/seo";
 import { FALLBACK_LOGO, FALLBACK_SITE_NAME } from "@/lib/branding";
+import { getSiteFlags } from "@/lib/site-flags";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import LocaleScript from "@/lib/i18n/LocaleScript";
 import { DEFAULT_LOCALE, LOCALE_META, LOCALES } from "@/lib/i18n/config";
@@ -163,7 +164,10 @@ async function getShellSettings() {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { sameAs, tracking, logoUrl, siteName } = await getShellSettings();
+  const [{ sameAs, tracking, logoUrl, siteName }, flags] = await Promise.all([
+    getShellSettings(),
+    getSiteFlags(),
+  ]);
 
   return (
     // lang/dir are the static-English defaults; LocaleScript overwrites both
@@ -171,6 +175,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={LOCALE_META[DEFAULT_LOCALE].htmlLang} dir={LOCALE_META[DEFAULT_LOCALE].dir} className="scroll-smooth">
       <head>
         <LocaleScript />
+        {/* The splash covers the whole screen on first paint, so its artwork is
+            the one image worth fetching ahead of everything else. */}
+        {flags.splashEnabled && (
+          <link rel="preload" as="image" href={flags.splashImageUrl} fetchPriority="high" />
+        )}
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -202,7 +211,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <I18nProvider>
           <FavoritesProvider>{children}</FavoritesProvider>
           <PwaProvider logoUrl={logoUrl} siteName={siteName} />
-          <LogoLoader logoUrl={logoUrl} siteName={siteName} />
+          {flags.splashEnabled && (
+            <SplashScreen imageUrl={flags.splashImageUrl} siteName={siteName} />
+          )}
         </I18nProvider>
       </body>
     </html>

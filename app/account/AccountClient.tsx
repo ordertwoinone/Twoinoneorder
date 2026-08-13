@@ -31,7 +31,14 @@ function readParam(name: string): string {
   return new URLSearchParams(window.location.search).get(name) ?? "";
 }
 
-export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { logoUrl?: string }) {
+export default function AccountClient({
+  logoUrl = "/logos/two-in-one.png",
+  /* admin → Settings → Features. Off hides the way in; issued cards still work. */
+  studentCardEnabled = true,
+}: {
+  logoUrl?: string;
+  studentCardEnabled?: boolean;
+}) {
   const supabase = createClient();
   const router = useRouter();
   const { t, locale } = useTranslation();
@@ -205,7 +212,7 @@ export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { l
         </div>
 
         {/* Not a member yet — the same invitation the sign-in screen makes. */}
-        {!cardLoading && !card && <StudentInvite />}
+        {studentCardEnabled && !cardLoading && !card && <StudentInvite />}
 
         <button
           onClick={handleLogout}
@@ -323,7 +330,7 @@ export default function AccountClient({ logoUrl = "/logos/two-in-one.png" }: { l
       </p>
 
       {/* Student card */}
-      <StudentInvite />
+      {studentCardEnabled && <StudentInvite />}
     </div>
   );
 }
