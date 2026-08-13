@@ -1,7 +1,7 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -30,14 +30,20 @@ function pickIndex(pool: Seg[]): number {
 const available = (s: Seg) =>
   s.is_active && s.weight > 0 && (s.usage_limit === 0 || s.times_won < s.usage_limit);
 
-// Authoritative spin: picks a non-depleted slice, atomically claims the win,
-// and records the entry. The client only animates to the returned winner.
+/**
+ * Authoritative spin: picks a non-depleted slice, atomically claims the win,
+ * and records the entry. The client only animates to the returned winner.
+ *
+ * supabaseAdminLive throughout — a cached read of `is_enabled` would let a
+ * hidden wheel still be spun, and a cached `times_won` would hand out a prize
+ * that has already run out.
+ */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const email = (body.email ?? "").trim().toLowerCase();
   const hasEmail = EMAIL_RE.test(email);
 
-  const { data: settings } = await supabaseAdmin
+  const { data: settings } = await supabaseAdminLive
     .from("spin_wheel_settings")
     .select("is_enabled")
     .single();
@@ -45,9 +51,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Wheel is not active" }, { status: 400 });
   }
 
-  // One prize per email — if they already played, return their existing prize.
+  // One prize per email â€” if they already played, return their existing prize.
   if (hasEmail) {
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await supabaseAdminLive
       .from("spin_wheel_entries")
       .select("prize_label, prize_code, is_winning")
       .eq("email", email)
@@ -62,7 +68,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data: rows } = await supabaseAdmin
+  const { data: rows } = await supabaseAdminLive
     .from("spin_wheel_segments")
     .select("*")
     .order("sort_order", { ascending: true });
@@ -77,7 +83,7 @@ export async function POST(request: Request) {
     // No claim needed for "no win" slices or unlimited prizes.
     if (!candidate.is_winning || candidate.usage_limit === 0) {
       if (candidate.is_winning) {
-        await supabaseAdmin
+        await supabaseAdminLive
           .from("spin_wheel_segments")
           .update({ times_won: candidate.times_won + 1, updated_at: new Date().toISOString() })
           .eq("id", candidate.id);
@@ -87,7 +93,7 @@ export async function POST(request: Request) {
     }
 
     // Limited prize: optimistic compare-and-set on times_won.
-    const { data: claimed } = await supabaseAdmin
+    const { data: claimed } = await supabaseAdminLive
       .from("spin_wheel_segments")
       .update({ times_won: candidate.times_won + 1, updated_at: new Date().toISOString() })
       .eq("id", candidate.id)
@@ -100,9 +106,9 @@ export async function POST(request: Request) {
       break;
     }
 
-    // Lost the race — drop it, refetch its current state, retry if still available.
+    // Lost the race â€” drop it, refetch its current state, retry if still available.
     pool = pool.filter((s) => s.id !== candidate.id);
-    const { data: fresh } = await supabaseAdmin
+    const { data: fresh } = await supabaseAdminLive
       .from("spin_wheel_segments")
       .select("*")
       .eq("id", candidate.id)
@@ -116,7 +122,7 @@ export async function POST(request: Request) {
 
   // Record the entry (email mode only).
   if (hasEmail) {
-    await supabaseAdmin.from("spin_wheel_entries").insert([
+    await supabaseAdminLive.from("spin_wheel_entries").insert([
       {
         email,
         prize_label: winner.label,

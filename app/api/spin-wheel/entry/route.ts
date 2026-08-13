@@ -1,7 +1,7 @@
-export const dynamic = 'force-dynamic';
+﻿export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabaseAdminLive
     .from("spin_wheel_entries")
     .select("email, prize_label, prize_code, is_winning, created_at")
     .eq("email", email)
@@ -34,8 +34,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
-  // One prize per email — don't insert a duplicate.
-  const { data: existing } = await supabaseAdmin
+  // One prize per email â€” don't insert a duplicate.
+  const { data: existing } = await supabaseAdminLive
     .from("spin_wheel_entries")
     .select("id")
     .eq("email", email)
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, duplicate: true });
   }
 
-  const { error } = await supabaseAdmin.from("spin_wheel_entries").insert([
+  const { error } = await supabaseAdminLive.from("spin_wheel_entries").insert([
     {
       email,
       prize_label: (body.prize_label ?? "").toString().slice(0, 120),
