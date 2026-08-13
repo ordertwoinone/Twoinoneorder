@@ -1,7 +1,10 @@
 /* Two In One — service worker
    Conservative, app-shell style caching. Never caches API/admin/auth so
    business logic and data stay live. Bumping CACHE_VERSION invalidates old caches. */
-const CACHE_VERSION = "v3";
+/* v4: the manifest's launch icons changed, and the old one is precached — a
+   version bump is the only thing that gets an installed app to take the new
+   splash artwork instead of the logo it was installed with. */
+const CACHE_VERSION = "v4";
 const STATIC_CACHE = `tio-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `tio-pages-${CACHE_VERSION}`;
 const IMAGE_CACHE = `tio-images-${CACHE_VERSION}`;
@@ -9,8 +12,11 @@ const OFFLINE_URL = "/offline.html";
 
 const PRECACHE = [
   OFFLINE_URL,
+  // Still shipped: push notifications and the install card point at these.
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  // What the launch screen is drawn from.
+  "/icons/launch-512.png",
   "/logos/two-in-one.png",
   "/manifest.webmanifest",
 ];
