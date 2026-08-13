@@ -727,7 +727,6 @@ const en = {
       prompt: "Add extras?",
       chosen: "Extras ({count})",
       plusPrice: "+{amount}",
-      free: "Free",
       plusExtras: "+ AED {amount} extras",
       waLine: "Extras: {extras}",
     },

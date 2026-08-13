@@ -10,12 +10,17 @@ import { groupAddons, type KalbaAddon } from "@/lib/kalba/addons";
  * caught up yet — the add-ons simply start working the moment it is run.
  */
 
-const COLUMNS = "id, item_id, name, name_ar, price, is_active, sort_order";
+/* `*` rather than a column list: image_url was added to the migration after the
+   first copies of it had been run, and PostgREST rejects the whole select when
+   one named column is unknown — which would have emptied every add-on list
+   rather than just leaving out the picture. */
+const COLUMNS = "*";
 
 export interface AddonInput {
   id?: string;
   name: string;
   name_ar?: string;
+  image_url?: string;
   price: number | string;
   sort_order?: number;
 }
@@ -59,6 +64,7 @@ export async function syncItemAddons(itemId: string, addons: AddonInput[]): Prom
       id: addon.id,
       name: (addon.name ?? "").trim(),
       name_ar: (addon.name_ar ?? "").trim(),
+      image_url: (addon.image_url ?? "").trim(),
       price: Number(addon.price) || 0,
       sort_order: addon.sort_order ?? index,
     }))
@@ -86,27 +92,52 @@ export async function syncItemAddons(itemId: string, addons: AddonInput[]): Prom
 
   await Promise.all([
     ...updates.map((row) =>
-      supabaseAdminLive
-        .from("kalba_item_addons")
-        .update({
-          name: row.name,
-          name_ar: row.name_ar,
-          price: row.price,
-          sort_order: row.sort_order,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", row.id as string),
+      tolerate((fields) =>
+        supabaseAdminLive
+          .from("kalba_item_addons")
+          .update({ ...fields, updated_at: new Date().toISOString() })
+          .eq("id", row.id as string),
+      )({
+        name: row.name,
+        name_ar: row.name_ar,
+        image_url: row.image_url,
+        price: row.price,
+        sort_order: row.sort_order,
+      }),
     ),
     inserts.length > 0
-      ? supabaseAdminLive.from("kalba_item_addons").insert(
-          inserts.map((row) => ({
-            item_id: itemId,
-            name: row.name,
-            name_ar: row.name_ar,
-            price: row.price,
-            sort_order: row.sort_order,
-          })),
-        )
+      ? tolerate((fields) =>
+          supabaseAdminLive.from("kalba_item_addons").insert(
+            inserts.map((row) => ({
+              item_id: itemId,
+              name: row.name,
+              name_ar: row.name_ar,
+              price: row.price,
+              sort_order: row.sort_order,
+              ...(("image_url" in fields) ? { image_url: row.image_url } : {}),
+            })),
+          ),
+        )({ image_url: "" })
       : Promise.resolve(),
   ]);
+}
+
+/**
+ * Runs a write, and retries once without `image_url` if the column is unknown.
+ *
+ * That column arrived after the first copies of the migration had been run, so a
+ * database can have the table but not the picture. Dropping the one field beats
+ * losing the whole edit — and it starts saving the moment the file is re-run.
+ */
+function tolerate<T extends Record<string, unknown>>(
+  attempt: (fields: T) => PromiseLike<{ error: { message?: string } | null }>,
+) {
+  return async (fields: T) => {
+    const result = await attempt(fields);
+    if (!result.error?.message || !/image_url/i.test(result.error.message)) return result;
+
+    const rest = { ...fields };
+    delete rest.image_url;
+    return attempt(rest);
+  };
 }

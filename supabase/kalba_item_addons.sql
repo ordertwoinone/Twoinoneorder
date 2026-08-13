@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS kalba_item_addons (
   item_id    uuid          NOT NULL REFERENCES kalba_popular_items (id) ON DELETE CASCADE,
   name       text          NOT NULL DEFAULT '',
   name_ar    text          NOT NULL DEFAULT '',
+  -- Optional. Blank shows the extra as a plain named pill, which is fine.
+  image_url  text          NOT NULL DEFAULT '',
   -- AED. 0 is a real choice — "no sauce" costs nothing but is still an option.
   price      numeric(10,2) NOT NULL DEFAULT 0,
   is_active  boolean       NOT NULL DEFAULT true,
@@ -25,6 +27,11 @@ CREATE TABLE IF NOT EXISTS kalba_item_addons (
 -- Every read is "the add-ons for these items, in order".
 CREATE INDEX IF NOT EXISTS kalba_item_addons_item_idx
   ON kalba_item_addons (item_id, sort_order);
+
+-- For a database that ran an earlier copy of this file, before add-ons could
+-- carry a picture. Harmless on a fresh one.
+ALTER TABLE kalba_item_addons
+  ADD COLUMN IF NOT EXISTS image_url text NOT NULL DEFAULT '';
 
 -- Read server-side via the service role key, which bypasses RLS. Enabling it
 -- with no policies blocks direct access with the public anon key.

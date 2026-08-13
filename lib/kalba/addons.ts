@@ -16,6 +16,8 @@ export interface KalbaAddon {
   item_id: string;
   name: string;
   name_ar?: string | null;
+  /** Optional thumbnail. Blank is normal — most extras read fine as text. */
+  image_url?: string | null;
   /** AED. Comes back from Postgres numeric as a string often enough to matter. */
   price: number | string;
   sort_order?: number;

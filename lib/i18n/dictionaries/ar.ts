@@ -749,7 +749,6 @@ const ar: Dictionary = {
       prompt: "تريد إضافات؟",
       chosen: "الإضافات ({count})",
       plusPrice: "+{amount}",
-      free: "مجانًا",
       plusExtras: "+ {amount} د.إ إضافات",
       waLine: "الإضافات: {extras}",
     },
