@@ -921,12 +921,6 @@ export default function MenuContent({
                         <span className="text-4xl">🍽️</span>
                       </div>
                     )}
-                    <span
-                      className="absolute top-2 start-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white z-10"
-                      style={{ background: "#ea580c" }}
-                    >
-                      {t("common.price", { amount: p.price })}
-                    </span>
                     <FavoriteButton
                       itemKey={`menu:${p.id}`}
                       name={p.name}
@@ -940,6 +934,13 @@ export default function MenuContent({
                     <h3 className="text-gray-900 font-extrabold text-[13px] leading-tight mb-1 min-h-[2.2em]">
                       {pick(p, "name")}
                     </h3>
+                    {/* Two lines at most, so one wordy item cannot stretch the
+                        whole row of cards beside it. */}
+                    {pick(p, "description") && (
+                      <p className="text-[11px] text-gray-500 leading-snug mb-1.5 line-clamp-2">
+                        {pick(p, "description")}
+                      </p>
+                    )}
                     {(p.tags ?? []).length > 0 && (
                       <div className="flex flex-wrap gap-0.5 mb-1.5">
                         {(p.tags ?? []).map((tag) => {
@@ -950,6 +951,11 @@ export default function MenuContent({
                         })}
                       </div>
                     )}
+                    {/* Off the photo and into the card, directly above the
+                        rating and time — it is the number people scan for. */}
+                    <p className="text-sm font-extrabold mb-1" style={{ color: "#ea580c" }}>
+                      {t("common.price", { amount: p.price })}
+                    </p>
                     <div className="flex items-center justify-between text-[10.5px] mb-2">
                       <span className="flex items-center gap-0.5 font-semibold text-gray-700">
                         <Star

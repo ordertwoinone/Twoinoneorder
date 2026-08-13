@@ -91,6 +91,9 @@ export interface KalbaPopularItem {
   id: string;
   name: string;
   name_ar?: string | null;
+  /** A line under the name on the card. Blank for most items. */
+  description?: string | null;
+  description_ar?: string | null;
   price: string;
   rating: string;
   time_text: string;
@@ -1011,10 +1014,6 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw" />
                       )}
-                      <span className="absolute top-2 start-2 text-[10px] font-bold px-2 py-0.5 rounded-md text-white z-10"
-                        style={{ background: "#ea580c" }}>
-                        {t("common.price", { amount: p.price })}
-                      </span>
                       <FavoriteButton
                         itemKey={`menu:${p.id}`}
                         name={p.name}
@@ -1028,6 +1027,13 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                       <h3 className="text-gray-900 font-extrabold text-[12.5px] leading-tight mb-1 min-h-[2em]">
                         {pick(p, "name")}
                       </h3>
+                      {/* Two lines at most — the grid is six cards wide on a
+                          desktop, and a card that grows drags its row with it. */}
+                      {pick(p, "description") && (
+                        <p className="text-[10.5px] text-gray-500 leading-snug mb-1.5 line-clamp-2">
+                          {pick(p, "description")}
+                        </p>
+                      )}
                       {(p.tags ?? []).length > 0 && (
                         <div className="flex flex-wrap gap-0.5 mb-1.5">
                           {(p.tags ?? []).map((t) => {
@@ -1038,6 +1044,11 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           })}
                         </div>
                       )}
+                      {/* Off the photo and into the card, directly above the
+                          rating and time — it is the number people scan for. */}
+                      <p className="text-[13px] font-extrabold mb-1" style={{ color: "#ea580c" }}>
+                        {t("common.price", { amount: p.price })}
+                      </p>
                       <div className="flex items-center justify-between text-[10.5px]">
                         <span className="flex items-center gap-0.5 font-semibold text-gray-700">
                           <Star size={10} className="fill-amber-400 stroke-amber-400" />

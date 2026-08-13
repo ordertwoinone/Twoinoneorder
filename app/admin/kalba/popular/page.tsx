@@ -17,6 +17,8 @@ interface Addon {
   id?: string;
   name: string;
   name_ar: string;
+  /** Optional thumbnail shown beside the extra in the cart. */
+  image_url: string;
   price: number | string;
   sort_order: number;
 }
@@ -25,6 +27,8 @@ interface PopularItem {
   id: string;
   name: string;
   name_ar: string;
+  description: string;
+  description_ar: string;
   price: string;
   rating: string;
   time_text: string;
@@ -49,6 +53,8 @@ const DIETARY_TAGS = [
 const EMPTY: Omit<PopularItem, "id"> = {
   name: "",
   name_ar: "",
+  description: "",
+  description_ar: "",
   price: "",
   rating: "4.5",
   time_text: "15–20 min",
@@ -103,7 +109,10 @@ export default function KalbaPopularAdmin() {
   }
 
   function addAddon() {
-    setAddons((list) => [...list, { name: "", name_ar: "", price: "", sort_order: list.length }]);
+    setAddons((list) => [
+      ...list,
+      { name: "", name_ar: "", image_url: "", price: "", sort_order: list.length },
+    ]);
   }
 
   function updateAddon(index: number, patch: Partial<Addon>) {
@@ -276,6 +285,18 @@ export default function KalbaPopularAdmin() {
                 />
               </div>
 
+              <BilingualField
+                label="Description"
+                hint="(optional — shown on the card)"
+                value={modal.data.description ?? ""}
+                valueAr={modal.data.description_ar ?? ""}
+                onChange={(v) => handleField("description", v)}
+                onChangeAr={(v) => handleField("description_ar", v)}
+                placeholder="Crispy chicken, lettuce and garlic sauce"
+                multiline
+                rows={2}
+              />
+
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Category</label>
                 <select
@@ -370,8 +391,9 @@ export default function KalbaPopularAdmin() {
                 </div>
                 <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
                   Extras offered with this dish. A shopper who adds it to the cart is asked which
-                  ones they want, and each one they tick is added to the price. Leave empty for a
-                  dish with no extras.
+                  ones they want, and each one they tick is added to the price. Leave the price
+                  blank for an extra that costs nothing — a choice like &ldquo;no onions&rdquo;
+                  rather than a paid addition. Leave the whole list empty for a dish with no extras.
                 </p>
 
                 {(modal.data.addons ?? []).length === 0 ? (
@@ -381,32 +403,47 @@ export default function KalbaPopularAdmin() {
                 ) : (
                   <div className="space-y-2">
                     {(modal.data.addons ?? []).map((addon, index) => (
-                      <div key={addon.id ?? `new-${index}`} className="flex items-start gap-2">
+                      <div
+                        key={addon.id ?? `new-${index}`}
+                        className="flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50/60 p-2.5"
+                      >
                         <GripVertical size={14} className="text-gray-300 mt-3 shrink-0" />
-                        <div className="flex-1 min-w-0 grid grid-cols-[1fr_5rem] gap-2">
-                          <input
-                            type="text"
-                            value={addon.name}
-                            onChange={(e) => updateAddon(index, { name: e.target.value })}
-                            placeholder="Extra cheese"
-                            className={inputCls}
-                          />
-                          <input
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            value={addon.price}
-                            onChange={(e) => updateAddon(index, { price: e.target.value })}
-                            placeholder="AED"
-                            className={inputCls}
-                          />
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="grid grid-cols-[1fr_5rem] gap-2">
+                            <input
+                              type="text"
+                              value={addon.name}
+                              onChange={(e) => updateAddon(index, { name: e.target.value })}
+                              placeholder="Extra cheese"
+                              className={inputCls}
+                            />
+                            {/* Blank is a real answer, not a missing one. */}
+                            <input
+                              type="number"
+                              step="0.5"
+                              min="0"
+                              value={addon.price}
+                              onChange={(e) => updateAddon(index, { price: e.target.value })}
+                              placeholder="AED —"
+                              title="Price in AED. Leave blank if this extra is free."
+                              className={inputCls}
+                            />
+                          </div>
                           <input
                             type="text"
                             dir="rtl"
                             value={addon.name_ar ?? ""}
                             onChange={(e) => updateAddon(index, { name_ar: e.target.value })}
                             placeholder="بالعربية (اختياري)"
-                            className={`${inputCls} col-span-2`}
+                            className={inputCls}
+                          />
+                          {/* Optional — an extra with no picture reads fine as text. */}
+                          <ImageUploadField
+                            label="Photo (optional)"
+                            value={addon.image_url ?? ""}
+                            onChange={(url) => updateAddon(index, { image_url: url })}
+                            folder="kalba"
+                            hint="square, 200×200px"
                           />
                         </div>
                         <button
