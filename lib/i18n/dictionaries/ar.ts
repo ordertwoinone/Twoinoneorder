@@ -397,6 +397,13 @@ const ar: Dictionary = {
     formSub: "يرجى تعبئة بياناتك كما تظهر على بطاقة الامتيازات",
     fullName: "الاسم الكامل (كما في البطاقة)",
     fullNamePlaceholder: "أدخل اسمك الكامل",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    passwordPlaceholder: "6 أحرف على الأقل",
+    accountNote:
+      "تُحفظ بطاقتك على هذا البريد الإلكتروني. جديد هنا؟ سننشئ حسابك — لديك حساب بالفعل؟ أدخل كلمة المرور فحسب.",
+    confirmEmail:
+      "تحقّق من بريدك الإلكتروني لتأكيد الحساب ثم عد إلى هنا — بياناتك محفوظة وبطاقتك على بُعد نقرة واحدة.",
     academicYear: "السنة الدراسية",
     academicYearPlaceholder: "اختر السنة الدراسية",
     university: "الجامعة / الكلية",
@@ -436,6 +443,8 @@ const ar: Dictionary = {
     errors: {
       required: "يرجى تعبئة جميع الحقول.",
       failed: "تعذّر إصدار بطاقتك. يرجى المحاولة مرة أخرى.",
+      passwordShort: "يجب ألا تقل كلمة المرور عن 6 أحرف.",
+      accountExists: "هذا البريد الإلكتروني مسجّل بالفعل. أدخل كلمة المرور الخاصة به للمتابعة.",
     },
   },
 
@@ -734,6 +743,15 @@ const ar: Dictionary = {
       seating: "جلسات داخلية",
       groupTables: "طاولات جماعية",
       openLate: "مفتوح حتى وقت متأخر",
+    },
+    addons: {
+      available: "+ إضافات متاحة",
+      prompt: "تريد إضافات؟",
+      chosen: "الإضافات ({count})",
+      plusPrice: "+{amount}",
+      free: "مجانًا",
+      plusExtras: "+ {amount} د.إ إضافات",
+      waLine: "الإضافات: {extras}",
     },
     cart: {
       title: "سلتك",

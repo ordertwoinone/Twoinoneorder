@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ChevronLeft, ChevronDown, User as UserIcon, GraduationCap, Landmark, IdCard,
   CalendarDays, ShieldCheck, ArrowRight, Loader2, Check, PartyPopper,
+  Mail, Lock, CheckCircle2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -19,12 +19,16 @@ import {
 /**
  * Registering a Student Privilege Card.
  *
- * The card is issued to an account, so this screen starts from one: a signed-out
- * visitor is sent to sign in and comes straight back. Registering used to offer
- * to create the account here, which meant a confirmation e-mail in the middle of
- * the form — and a link that a mail scanner could burn, or that opened on a
- * different phone than the one holding the half-filled form. Nothing survived
- * that round trip reliably, so the round trip is gone.
+ * The card is issued to an account, so a signed-out visitor needs one. Bouncing
+ * them to /account to sign in first read as a dead click — the invitation to
+ * register sits on that very screen, so the round trip landed them back where
+ * they started with no explanation. The account is made here instead: e-mail and
+ * password are two more fields on the form.
+ *
+ * If the project requires a confirmed address, sign-up hands back no session and
+ * the card cannot be issued yet. That is the one case that still needs a round
+ * trip, so the filled-in details are parked in localStorage and restored when the
+ * confirmation link brings them back here — the form is not retyped.
  */
 
 interface Details {
@@ -32,22 +36,65 @@ interface Details {
   university: UniversityCode | "";
   academic_year: string;
   date_of_birth: string;
+  email: string;
+  password: string;
 }
 
-const EMPTY: Details = { full_name: "", university: "", academic_year: "", date_of_birth: "" };
+const EMPTY: Details = {
+  full_name: "", university: "", academic_year: "", date_of_birth: "", email: "", password: "",
+};
 
-function isComplete(details: Details): boolean {
-  return (
+/** The draft that survives a confirmation e-mail. Never holds the password. */
+const DRAFT_KEY = "two-in-one:student-card-draft";
+
+function saveDraft(details: Details) {
+  try {
+    const { full_name, university, academic_year, date_of_birth, email } = details;
+    window.localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ full_name, university, academic_year, date_of_birth, email }),
+    );
+  } catch {
+    /* Private mode, or a full quota. The form still works, it just won't survive. */
+  }
+}
+
+function readDraft(): Partial<Details> | null {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Partial<Details>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* Nothing to clean up. */
+  }
+}
+
+/** Enough to send; Supabase is the one that decides if the address is real. */
+function looksLikeEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+/** `needsAccount` is false once they are signed in — no credentials to ask for. */
+function isComplete(details: Details, needsAccount: boolean): boolean {
+  const student =
     details.full_name.trim().length >= 2 &&
     details.university !== "" &&
     details.academic_year !== "" &&
-    details.date_of_birth !== ""
-  );
+    details.date_of_birth !== "";
+
+  if (!needsAccount) return student;
+  return student && looksLikeEmail(details.email) && details.password.length >= 6;
 }
 
 export default function StudentCardClient() {
   const supabase = createClient();
-  const router = useRouter();
   const { t } = useTranslation();
 
   const [user, setUser] = useState<User | null>(null);
@@ -56,29 +103,95 @@ export default function StudentCardClient() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [details, setDetails] = useState<Details>(EMPTY);
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
 
   /* One issue request at a time — a double tap must not mint two numbers. */
   const issuing = useRef(false);
 
   const years = useMemo(() => academicYearOptions(), []);
+  const needsAccount = user === null;
+
+  /**
+   * Puts a session behind the form, making the account if there isn't one.
+   *
+   * "pending" means the address has to be confirmed before there is a session —
+   * the card waits for their return rather than failing.
+   */
+  const ensureSession = useCallback(async (): Promise<"ready" | "pending" | "failed"> => {
+    const email = details.email.trim();
+    const password = details.password;
+
+    // An existing student, signing in from the form.
+    const { data: signedIn, error: signInError } =
+      await supabase.auth.signInWithPassword({ email, password });
+    if (signedIn?.session) {
+      setUser(signedIn.user);
+      return "ready";
+    }
+
+    const { data: signedUp, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: details.full_name.trim() },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/account/student`,
+      },
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      return "failed";
+    }
+
+    /* Supabase will not admit that an address is taken — it answers a sign-up for
+       one with a user carrying no identities. So the account exists and the
+       password above was simply the wrong one; say that, not "check your inbox". */
+    if (signedUp.user && signedUp.user.identities?.length === 0) {
+      setError(signInError?.message ?? t("studentCard.errors.accountExists"));
+      return "failed";
+    }
+
+    // Confirmations off: they are signed in already and the card can be issued.
+    if (signedUp.session) {
+      setUser(signedUp.user);
+      return "ready";
+    }
+
+    saveDraft(details);
+    setInfo(t("studentCard.confirmEmail"));
+    return "pending";
+  }, [details, supabase, t]);
 
   const issueCard = useCallback(async () => {
     if (issuing.current) return;
     issuing.current = true;
     setBusy(true);
     setError("");
+    setInfo("");
     try {
+      if (!user) {
+        const outcome = await ensureSession();
+        // "pending" and "failed" have both already said what happened.
+        if (outcome !== "ready") return;
+      }
+
       const res = await fetch("/api/student-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(details),
+        body: JSON.stringify({
+          full_name: details.full_name,
+          university: details.university,
+          academic_year: details.academic_year,
+          date_of_birth: details.date_of_birth,
+        }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.card) {
         setError(data?.error ?? t("studentCard.errors.failed"));
         return;
       }
+      clearDraft();
       setCard(data.card as StudentCard);
       setStep(3);
     } catch {
@@ -87,35 +200,54 @@ export default function StudentCardClient() {
       issuing.current = false;
       setBusy(false);
     }
-  }, [details, t]);
+  }, [details, ensureSession, t, user]);
 
   useEffect(() => {
     let cancelled = false;
 
-    supabase.auth.getUser().then(async ({ data }) => {
-      const current = data.user ?? null;
-      if (cancelled) return;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const current = data.user ?? null;
+        if (cancelled) return;
+        setUser(current);
 
-      // No account, no card. Sign in first and come straight back here.
-      if (!current) {
-        router.replace("/account?next=/account/student");
-        return;
-      }
-      setUser(current);
+        // Signed out: the form asks for an e-mail and password of its own.
+        if (!current) {
+          const draft = readDraft();
+          if (draft) setDetails((d) => ({ ...d, ...draft, password: "" }));
+          return;
+        }
 
-      const res = await fetch("/api/student-card", { cache: "no-store" });
-      const body = await res.json().catch(() => ({ card: null }));
-      if (cancelled) return;
+        const res = await fetch("/api/student-card", { cache: "no-store" });
+        const body = await res.json().catch(() => ({ card: null }));
+        if (cancelled) return;
 
-      if (body.card) {
-        setCard(body.card as StudentCard);
-        setStep(3);
-      } else {
+        if (body.card) {
+          setCard(body.card as StudentCard);
+          setStep(3);
+          clearDraft();
+          return;
+        }
+
+        /* Back from a confirmation link, most likely. Whatever they typed before
+           the e-mail went out is still here — hand it back rather than ask twice. */
         const meta = current.user_metadata || {};
-        setDetails((d) => ({ ...d, full_name: meta.full_name || meta.name || "" }));
+        const draft = readDraft();
+        setDetails((d) => ({
+          ...d,
+          ...draft,
+          password: "",
+          full_name: draft?.full_name || meta.full_name || meta.name || "",
+          email: current.email ?? "",
+        }));
+      } catch {
+        /* Offline, or the card route fell over. Show the form anyway — issuing
+           it is what reports the real problem, and a dead spinner reports none. */
+      } finally {
+        if (!cancelled) setChecking(false);
       }
-      setChecking(false);
-    });
+    })();
 
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -124,11 +256,16 @@ export default function StudentCardClient() {
   function update(patch: Partial<Details>) {
     setDetails((d) => ({ ...d, ...patch }));
     setError("");
+    setInfo("");
   }
 
   function handleContinue() {
-    if (!isComplete(details)) {
-      setError(t("studentCard.errors.required"));
+    if (!isComplete(details, needsAccount)) {
+      setError(
+        needsAccount && details.password.length > 0 && details.password.length < 6
+          ? t("studentCard.errors.passwordShort")
+          : t("studentCard.errors.required"),
+      );
       return;
     }
     setError("");
@@ -182,6 +319,37 @@ export default function StudentCardClient() {
               />
             </Field>
 
+            {/* The card is issued to an account, so a signed-out student makes
+                one right here. Signed in, there is nothing to ask. */}
+            {needsAccount && (
+              <>
+                <Field icon={Mail} label={t("studentCard.email")} required>
+                  <input
+                    type="email"
+                    value={details.email}
+                    onChange={(e) => update({ email: e.target.value })}
+                    placeholder={t("account.emailPlaceholder")}
+                    autoComplete="email"
+                    dir="ltr"
+                    className="w-full bg-transparent text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                  />
+                </Field>
+
+                <Field icon={Lock} label={t("studentCard.password")} required>
+                  <input
+                    type="password"
+                    value={details.password}
+                    onChange={(e) => update({ password: e.target.value })}
+                    placeholder={t("studentCard.passwordPlaceholder")}
+                    autoComplete="current-password"
+                    minLength={6}
+                    dir="ltr"
+                    className="w-full bg-transparent text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                  />
+                </Field>
+              </>
+            )}
+
             <Field icon={GraduationCap} label={t("studentCard.academicYear")} required select>
               <select
                 value={details.academic_year}
@@ -233,10 +401,12 @@ export default function StudentCardClient() {
 
           <div className="flex items-start gap-3 bg-orange-50/70 rounded-2xl px-4 py-3.5 mt-4">
             <ShieldCheck size={20} className="text-orange-500 shrink-0 mt-0.5" />
-            <p className="text-[13px] text-gray-600 leading-snug">{t("studentCard.secureNote")}</p>
+            <p className="text-[13px] text-gray-600 leading-snug">
+              {needsAccount ? t("studentCard.accountNote") : t("studentCard.secureNote")}
+            </p>
           </div>
 
-          {error && <p className="text-[13px] text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{error}</p>}
+          <Notices error={error} info={info} />
 
           <button
             onClick={handleContinue}
@@ -259,10 +429,10 @@ export default function StudentCardClient() {
             <Row label={t("studentCard.academicYear")} value={details.academic_year} />
             <Row label={t("studentCard.university")} value={universityLabel} />
             <Row label={t("studentCard.dateOfBirth")} value={details.date_of_birth} ltr />
-            <Row label={t("studentCard.account")} value={user?.email ?? ""} ltr />
+            <Row label={t("studentCard.account")} value={user?.email ?? details.email.trim()} ltr />
           </div>
 
-          {error && <p className="text-[13px] text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{error}</p>}
+          <Notices error={error} info={info} />
 
           <button
             onClick={() => void issueCard()}
@@ -375,6 +545,23 @@ function Field({
       </span>
       {select && <ChevronDown size={18} className="text-gray-400 shrink-0" />}
     </label>
+  );
+}
+
+/** Whatever the last attempt had to say: a refusal, or "check your inbox". */
+function Notices({ error, info }: { error: string; info: string }) {
+  if (!error && !info) return null;
+
+  return (
+    <>
+      {error && <p className="text-[13px] text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-3">{error}</p>}
+      {info && (
+        <p className="text-[13px] text-green-700 bg-green-50 px-3 py-2 rounded-lg mt-3 flex items-start gap-2">
+          <CheckCircle2 size={15} className="shrink-0 mt-0.5" />
+          {info}
+        </p>
+      )}
+    </>
   );
 }
 

@@ -373,6 +373,13 @@ const en = {
     formSub: "Please fill in your details as shown on your privilege card",
     fullName: "Full Name (as on card)",
     fullNamePlaceholder: "Enter your full name",
+    email: "Email address",
+    password: "Password",
+    passwordPlaceholder: "At least 6 characters",
+    accountNote:
+      "Your card is saved to this email. New here? We'll create your account — already registered? Just enter your password.",
+    confirmEmail:
+      "Check your inbox to confirm your email, then come back — your details are saved and your card is one tap away.",
     academicYear: "Academic Year",
     academicYearPlaceholder: "Select academic year",
     university: "University / College",
@@ -414,6 +421,8 @@ const en = {
     errors: {
       required: "Please fill in every field.",
       failed: "We couldn't issue your card. Please try again.",
+      passwordShort: "Your password needs at least 6 characters.",
+      accountExists: "That email already has an account. Enter its password to continue.",
     },
   },
 
@@ -712,6 +721,15 @@ const en = {
       seating: "Indoor Seating",
       groupTables: "Group Tables",
       openLate: "Open Late",
+    },
+    addons: {
+      available: "+ Extras available",
+      prompt: "Add extras?",
+      chosen: "Extras ({count})",
+      plusPrice: "+{amount}",
+      free: "Free",
+      plusExtras: "+ AED {amount} extras",
+      waLine: "Extras: {extras}",
     },
     cart: {
       title: "Your Cart",
