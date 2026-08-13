@@ -122,6 +122,13 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/header"],
   },
   {
+    key: "student-card",
+    label: "Student Card",
+    hint: "The wording and colours of the Student Privilege Card",
+    paths: ["/admin/student-card"],
+    apiPaths: ["/api/admin/student-card-design"],
+  },
+  {
     key: "spin-wheel",
     label: "Spin & Win",
     hint: "The prize wheel and its entries",

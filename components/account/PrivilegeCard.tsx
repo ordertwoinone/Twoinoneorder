@@ -8,6 +8,7 @@ import {
   formatValidThru,
   type StudentCard,
 } from "@/lib/student-card";
+import { normalizeCardDesign, type StudentCardDesign } from "@/lib/student-card-design";
 
 /**
  * The Student Privilege Card, drawn rather than photographed.
@@ -22,18 +23,26 @@ import {
  * the same picture at every width. (An earlier version sized the type in `cqw`,
  * which collapses on browsers without container queries — a blank-looking
  * card.)
+ *
+ * Every word and colour comes from admin → Student Card. A blank wording field
+ * means "print what the site ships with", so the dictionary — and its
+ * translations — stay in charge until somebody types over them.
  */
 const W = 640;
 const H = 405;
 
 export default function PrivilegeCard({
   card,
+  design,
   className = "",
 }: {
   card?: StudentCard | null;
+  /** From admin → Student Card. Omitted anywhere the card is purely decorative. */
+  design?: Partial<StudentCardDesign> | null;
   className?: string;
 }) {
   const { t } = useTranslation();
+  const d = normalizeCardDesign(design);
   const frame = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
 
@@ -58,6 +67,14 @@ export default function PrivilegeCard({
   const validThru = card ? formatValidThru(card.valid_thru) : "00/00";
   const percent = card?.discount_percent ?? STUDENT_DISCOUNT_PERCENT;
 
+  /* Admin's wording wins; blank falls through to the dictionary, which is where
+     the translations live. */
+  const academicYear = card
+    ? d.academic_year_label
+      ? d.academic_year_label.replace("{year}", card.academic_year)
+      : t("studentCard.card.academicYear", { year: card.academic_year })
+    : "";
+
   return (
     <div
       ref={frame}
@@ -73,97 +90,110 @@ export default function PrivilegeCard({
         <div
           className="relative w-full h-full overflow-hidden rounded-[22px] border border-gray-100"
           style={{
-            background: "linear-gradient(135deg,#fbfaf9 0%,#f4f1ee 55%,#efeae5 100%)",
+            background: `linear-gradient(135deg,${d.bg_from} 0%,${d.bg_via} 55%,${d.bg_to} 100%)`,
             boxShadow: "0 10px 30px -12px rgba(17,24,39,0.25)",
           }}
         >
           {/* Engraving: the campus building, and the guilloche waves it sits on */}
-          <Building className="absolute text-[#e8521a]" style={{ right: 34, bottom: 26, width: 210, opacity: 0.15 }} />
-          <Waves />
+          {d.show_engraving && (
+            <Building
+              className="absolute"
+              style={{ right: 34, bottom: 26, width: 210, opacity: 0.15, color: d.accent_color }}
+            />
+          )}
+          {d.show_waves && <Waves color={d.accent_color} />}
 
           {/* Issuer tab */}
           <div
-            className="absolute top-0 right-0 flex flex-col items-center justify-center text-center text-white"
-            style={{ width: 128, height: 132, background: "#e8521a", borderBottomLeftRadius: 20, padding: 10 }}
+            className="absolute top-0 right-0 flex flex-col items-center justify-center text-center"
+            style={{
+              width: 128,
+              height: 132,
+              background: d.tab_bg_color,
+              color: d.tab_text_color,
+              borderBottomLeftRadius: 20,
+              padding: 10,
+            }}
           >
-            <Building className="text-white" style={{ width: 54, opacity: 0.95 }} />
+            <Building style={{ width: 54, opacity: 0.95, color: d.tab_text_color }} />
             <span style={{ fontSize: 12, lineHeight: 1.25, fontWeight: 700, marginTop: 6, letterSpacing: "0.02em" }}>
-              {t("studentCard.card.issuer")}
+              {d.issuer || t("studentCard.card.issuer")}
             </span>
           </div>
 
           {/* Brand */}
           <div className="absolute" style={{ left: 34, top: 30, width: 190 }}>
-            <p style={{ fontSize: 46, lineHeight: 0.92, fontWeight: 800, color: "#1a1a1a", letterSpacing: "-0.02em" }}>
-              two
+            <p style={{ fontSize: 46, lineHeight: 0.92, fontWeight: 800, color: d.text_color, letterSpacing: "-0.02em" }}>
+              {d.brand_line1 || "two"}
             </p>
-            <p style={{ fontSize: 46, lineHeight: 0.92, fontWeight: 800, color: "#1a1a1a", letterSpacing: "-0.02em" }}>
-              in <span style={{ color: "#e8521a" }}>one</span>
+            <p style={{ fontSize: 46, lineHeight: 0.92, fontWeight: 800, color: d.text_color, letterSpacing: "-0.02em" }}>
+              {d.brand_line2 || "in"}{" "}
+              <span style={{ color: d.accent_color }}>{d.brand_accent || "one"}</span>
             </p>
             <p
               style={{
                 fontSize: 13,
                 fontWeight: 700,
                 letterSpacing: "0.14em",
-                color: "#1a1a1a",
+                color: d.text_color,
                 marginTop: 6,
                 paddingTop: 5,
-                borderTop: "2px solid #1a1a1a",
+                borderTop: `2px solid ${d.text_color}`,
                 display: "inline-block",
               }}
             >
-              {t("studentCard.card.cafe")}
+              {d.cafe_line || t("studentCard.card.cafe")}
             </p>
-            <p style={{ fontSize: 11, fontWeight: 600, color: "#6b7280", marginTop: 4 }}>
-              {t("studentCard.card.tagline")}
+            <p style={{ fontSize: 11, fontWeight: 600, color: d.tagline_color, marginTop: 4 }}>
+              {d.tagline || t("studentCard.card.tagline")}
             </p>
           </div>
 
           {/* Card name — kept clear of the tab */}
           <div className="absolute" style={{ left: 250, top: 42, width: 250 }}>
-            <p style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 800, color: "#e8521a" }}>
-              {t("studentCard.card.student")}
+            <p style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 800, color: d.accent_color }}>
+              {d.title_line1 || t("studentCard.card.student")}
             </p>
-            <p style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 800, color: "#1a1a1a" }}>
-              {t("studentCard.card.privilege")}
+            <p style={{ fontSize: 30, lineHeight: 1.15, fontWeight: 800, color: d.text_color }}>
+              {d.title_line2 || t("studentCard.card.privilege")}
             </p>
           </div>
 
           {/* Number */}
           <p
             className="absolute tabular-nums"
-            style={{ left: 36, top: 218, fontSize: 38, fontWeight: 500, color: "#1a1a1a", letterSpacing: "0.07em" }}
+            style={{ left: 36, top: 218, fontSize: 38, fontWeight: 500, color: d.number_color, letterSpacing: "0.07em" }}
           >
             {number}
           </p>
 
           {/* Issue details */}
           <div className="absolute" style={{ left: 36, top: 288 }}>
-            <Label>{t("studentCard.card.memberId")}</Label>
-            <Value>{memberId}</Value>
+            <Label color={d.muted_color}>{d.member_id_label || t("studentCard.card.memberId")}</Label>
+            <Value color={d.text_color}>{memberId}</Value>
           </div>
           <div className="absolute" style={{ left: 226, top: 288 }}>
-            <Label>{t("studentCard.card.validThru")}</Label>
-            <Value>{validThru}</Value>
+            <Label color={d.muted_color}>{d.valid_thru_label || t("studentCard.card.validThru")}</Label>
+            <Value color={d.text_color}>{validThru}</Value>
           </div>
 
           <div className="absolute text-right" style={{ right: 34, top: 278, width: 180 }}>
-            <p style={{ fontSize: 44, lineHeight: 1, fontWeight: 800, color: "#e8521a" }}>{percent}%</p>
-            <p style={{ fontSize: 12, lineHeight: 1.3, fontWeight: 700, color: "#4b5563", marginTop: 4 }}>
-              {t("studentCard.card.discountLine1")}
+            <p style={{ fontSize: 44, lineHeight: 1, fontWeight: 800, color: d.accent_color }}>{percent}%</p>
+            <p style={{ fontSize: 12, lineHeight: 1.3, fontWeight: 700, color: d.muted_color, marginTop: 4 }}>
+              {d.discount_line1 || t("studentCard.card.discountLine1")}
               <br />
-              {t("studentCard.card.discountLine2")}
+              {d.discount_line2 || t("studentCard.card.discountLine2")}
             </p>
           </div>
 
           {/* Holder — blank stock carries no name */}
           {card && (
             <div className="absolute" style={{ left: 36, top: 340, width: 400 }}>
-              <p className="truncate" style={{ fontSize: 19, fontWeight: 700, color: "#1a1a1a", letterSpacing: "0.07em" }}>
+              <p className="truncate" style={{ fontSize: 19, fontWeight: 700, color: d.text_color, letterSpacing: "0.07em" }}>
                 {card.full_name.toUpperCase()}
               </p>
-              <p style={{ fontSize: 12, fontWeight: 700, color: "#4b5563", letterSpacing: "0.06em", marginTop: 3 }}>
-                {t("studentCard.card.academicYear", { year: card.academic_year })}
+              <p style={{ fontSize: 12, fontWeight: 700, color: d.muted_color, letterSpacing: "0.06em", marginTop: 3 }}>
+                {academicYear}
               </p>
             </div>
           )}
@@ -173,13 +203,13 @@ export default function PrivilegeCard({
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <p style={{ fontSize: 11, fontWeight: 700, color: "#4b5563", letterSpacing: "0.09em" }}>{children}</p>;
+function Label({ children, color }: { children: React.ReactNode; color: string }) {
+  return <p style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: "0.09em" }}>{children}</p>;
 }
 
-function Value({ children }: { children: React.ReactNode }) {
+function Value({ children, color }: { children: React.ReactNode; color: string }) {
   return (
-    <p className="tabular-nums" style={{ fontSize: 17, fontWeight: 600, color: "#1a1a1a", letterSpacing: "0.04em", marginTop: 2 }}>
+    <p className="tabular-nums" style={{ fontSize: 17, fontWeight: 600, color, letterSpacing: "0.04em", marginTop: 2 }}>
       {children}
     </p>
   );
@@ -198,7 +228,7 @@ function Building({ className = "", style }: { className?: string; style?: React
 }
 
 /** Guilloche waves, the security pattern printed under the number. */
-function Waves() {
+function Waves({ color }: { color: string }) {
   return (
     <svg
       viewBox="0 0 400 120"
@@ -212,7 +242,7 @@ function Waves() {
           key={offset}
           d={`M0 ${40 + offset} C 90 ${offset}, 190 ${80 + offset}, 400 ${20 + offset}`}
           fill="none"
-          stroke="#e8521a"
+          stroke={color}
           strokeWidth="0.8"
         />
       ))}

@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import PrivilegeCard from "@/components/account/PrivilegeCard";
+import type { StudentCardDesign } from "@/lib/student-card-design";
 import {
   UNIVERSITY_CODES, academicYearOptions, type StudentCard, type UniversityCode,
 } from "@/lib/student-card";
@@ -93,7 +94,12 @@ function isComplete(details: Details, needsAccount: boolean): boolean {
   return student && looksLikeEmail(details.email) && details.password.length >= 6;
 }
 
-export default function StudentCardClient() {
+export default function StudentCardClient({
+  /* admin → Student Card. */
+  cardDesign,
+}: {
+  cardDesign?: Partial<StudentCardDesign> | null;
+} = {}) {
   const supabase = createClient();
   const { t } = useTranslation();
 
@@ -301,7 +307,7 @@ export default function StudentCardClient() {
 
       <Stepper step={step} />
 
-      <PrivilegeCard card={card} className="mt-6" />
+      <PrivilegeCard card={card} design={cardDesign} className="mt-6" />
 
       {step === 1 && (
         <>

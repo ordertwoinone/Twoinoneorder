@@ -12,6 +12,7 @@ import type { User } from "@supabase/supabase-js";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { LOCALE_META } from "@/lib/i18n/config";
 import PrivilegeCard from "@/components/account/PrivilegeCard";
+import type { StudentCardDesign } from "@/lib/student-card-design";
 import { useStudentCard } from "@/hooks/useStudentCard";
 
 function GoogleIcon() {
@@ -35,9 +36,12 @@ export default function AccountClient({
   logoUrl = "/logos/two-in-one.png",
   /* admin → Settings → Features. Off hides the way in; issued cards still work. */
   studentCardEnabled = true,
+  /* admin → Student Card. */
+  cardDesign,
 }: {
   logoUrl?: string;
   studentCardEnabled?: boolean;
+  cardDesign?: Partial<StudentCardDesign> | null;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -161,7 +165,7 @@ export default function AccountClient({
             <h1 className="text-2xl font-extrabold text-gray-900">{t("account.welcomeStudent")}</h1>
             <p className="text-sm text-gray-500 mt-1 mb-5">{t("account.welcomeStudentSub")}</p>
 
-            <PrivilegeCard card={card} />
+            <PrivilegeCard card={card} design={cardDesign} />
 
             <div className="flex items-start gap-3 bg-orange-50/70 rounded-2xl px-4 py-4 mt-5">
               <Gift size={22} className="text-orange-500 shrink-0 mt-0.5" />
