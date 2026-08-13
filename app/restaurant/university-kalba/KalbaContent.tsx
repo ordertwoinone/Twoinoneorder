@@ -24,6 +24,11 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
+import AddonPicker from "@/components/kalba/AddonPicker";
+import {
+  addonsTotal, addonSummary, toggleAddon,
+  type AddonSelection, type KalbaAddon,
+} from "@/lib/kalba/addons";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useStudentCard } from "@/hooks/useStudentCard";
 import { STUDENT_DISCOUNT_PERCENT, studentDiscountAmount } from "@/lib/student-card";
@@ -93,6 +98,8 @@ export interface KalbaPopularItem {
   image_url: string;
   category_id?: string | null;
   tags?: string[] | null;
+  /** Extras from admin → Popular Around Campus; empty for most dishes. */
+  addons?: KalbaAddon[] | null;
 }
 
 export interface KalbaStudy {
@@ -201,6 +208,13 @@ interface CartItem {
   image_url: string;
   priceLabel: string;
   numericPrice: number;
+  /** Extras offered with this dish. Empty for everything without them. */
+  addons: KalbaAddon[];
+}
+
+/** What one of this dish costs once the ticked extras are counted. */
+function unitPrice(item: CartItem, selection: AddonSelection): number {
+  return item.numericPrice + addonsTotal(item.addons, selection[item.id]);
 }
 
 interface CouponData {
@@ -257,45 +271,69 @@ function SectionHeader({ title, action, href, internal }: { title: string; actio
   );
 }
 
-function CartRow({ item, qty, onQtyChange }: {
+function CartRow({ item, qty, selectedAddons, onQtyChange, onToggleAddon }: {
   item: CartItem;
   qty: number;
+  selectedAddons: string[];
   onQtyChange: (id: string, qty: number) => void;
+  onToggleAddon: (itemId: string, addonId: string) => void;
 }) {
+  const { t } = useTranslation();
+  const extras = addonsTotal(item.addons, selectedAddons);
+
   return (
-    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
-      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-        {item.image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-        )}
+    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+          {item.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.image_url} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-800 leading-tight truncate">{item.name}</p>
+          <p className="text-[10px] font-bold" style={{ color: "#ea580c" }}>
+            {item.priceLabel}
+            {/* The extras are priced separately so the dish price stays honest. */}
+            {extras > 0 && (
+              <span className="text-gray-500 font-semibold">
+                {" "}{t("kalba.addons.plusExtras", { amount: extras })}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={() => onQtyChange(item.id, Math.max(0, qty - 1))}
+            className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
+          >−</button>
+          <span className="text-sm font-bold text-gray-900 w-5 text-center">{qty}</span>
+          <button
+            onClick={() => onQtyChange(item.id, qty + 1)}
+            className="w-6 h-6 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
+            style={{ background: "#ea580c" }}
+          >+</button>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-gray-800 leading-tight truncate">{item.name}</p>
-        <p className="text-[10px] font-bold" style={{ color: "#ea580c" }}>{item.priceLabel}</p>
-      </div>
-      <div className="flex items-center gap-1.5 shrink-0">
-        <button
-          onClick={() => onQtyChange(item.id, Math.max(0, qty - 1))}
-          className="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
-        >−</button>
-        <span className="text-sm font-bold text-gray-900 w-5 text-center">{qty}</span>
-        <button
-          onClick={() => onQtyChange(item.id, qty + 1)}
-          className="w-6 h-6 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
-          style={{ background: "#ea580c" }}
-        >+</button>
-      </div>
+
+      <AddonPicker
+        addons={item.addons}
+        selected={selectedAddons}
+        onToggle={(addonId) => onToggleAddon(item.id, addonId)}
+      />
     </div>
   );
 }
 
-function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, studentDiscount, studentPercent, finalPrice }: {
+function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChange, onToggleAddon, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, studentDiscount, studentPercent, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
+  /** Which extras are ticked, per item. */
+  cartAddons: AddonSelection;
   totalQty: number;
   totalPrice: number;
   onQtyChange: (id: string, qty: number) => void;
+  onToggleAddon: (itemId: string, addonId: string) => void;
   onClose: () => void;
   whatsapp: string;
   restaurantName: string;
@@ -368,10 +406,16 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
     );
   }
 
+  /* The kitchen reads this, so the extras have to be on the line they belong to
+     rather than summarised at the bottom. */
+  function orderLineFor(item: CartItem): string {
+    const extras = addonSummary(item.addons, cartAddons[item.id], (a) => a.name);
+    const base = `• ${item.name} x${cartQty[item.id]} (${item.priceLabel})`;
+    return extras ? `${base}\n   ↳ ${t("kalba.addons.waLine", { extras })}` : base;
+  }
+
   function buildWaUrl(type: "pickup" | "delivery") {
-    const orderLines = inCart
-      .map((i) => `• ${i.name} x${cartQty[i.id]} (${i.priceLabel})`)
-      .join("\n");
+    const orderLines = inCart.map(orderLineFor).join("\n");
     const lines = [
       t("kalba.wa.order", {
         type: type === "pickup" ? t("kalba.wa.pickupWord") : t("kalba.wa.deliveryWord"),
@@ -414,7 +458,13 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
 
   // Save the Kalba order as a booking (labelled "kalba"); links to account if logged in
   function saveKalbaOrder(type: "pickup" | "delivery") {
-    const itemsText = inCart.map((i) => `${i.name} x${cartQty[i.id]}`).join(", ");
+    const itemsText = inCart
+      .map((i) => {
+        // Kept in English with the rest of this row — staff read it in admin.
+        const extras = addonSummary(i.addons, cartAddons[i.id], (a) => a.name);
+        return `${i.name} x${cartQty[i.id]}${extras ? ` (+ ${extras})` : ""}`;
+      })
+      .join(", ");
     const total = discountAmount > 0 || studentDiscount > 0 ? finalPrice : totalPrice;
     const where = type === "delivery" && address.trim()
       ? ` · Deliver to: ${address.trim()}${mapPin ? ` (${mapPin})` : ""}`
@@ -565,7 +615,14 @@ function CartModal({ items, cartQty, totalQty, totalPrice, onQtyChange, onClose,
             </div>
           ) : (
             inCart.map((item) => (
-              <CartRow key={item.id} item={item} qty={cartQty[item.id] ?? 0} onQtyChange={onQtyChange} />
+              <CartRow
+                key={item.id}
+                item={item}
+                qty={cartQty[item.id] ?? 0}
+                selectedAddons={cartAddons[item.id] ?? []}
+                onQtyChange={onQtyChange}
+                onToggleAddon={onToggleAddon}
+              />
             ))
           )}
         </div>
@@ -733,6 +790,8 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
     return value ? tMaybe(SEEDED_COPY[value] ?? "", value) : value;
   };
   const [cartQty, setCartQty] = useState<Record<string, number>>({});
+  /* Extras are chosen per dish, not per cart line — see lib/kalba/addons. */
+  const [cartAddons, setCartAddons] = useState<AddonSelection>({});
   const [cartOpen, setCartOpen] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<CouponData | null>(null);
   const [couponError, setCouponError] = useState("");
@@ -757,6 +816,13 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
 
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
+    /* Emptying the dish out of the cart forgets its extras too — coming back to
+       a dish still carrying last time's cheese is a charge nobody asked for. */
+    if (qty === 0) setCartAddons((prev) => ({ ...prev, [id]: [] }));
+  }
+
+  function handleToggleAddon(itemId: string, addonId: string) {
+    setCartAddons((prev) => toggleAddon(prev, itemId, addonId));
   }
 
   const allCartItems: CartItem[] = [
@@ -766,6 +832,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
       image_url: p.image_url,
       priceLabel: `AED ${p.price}`,
       numericPrice: parseFloat(p.price) || 0,
+      addons: p.addons ?? [],
     })),
     ...specials.map((s) => ({
       id: s.id,
@@ -773,12 +840,14 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
       image_url: s.image_url,
       priceLabel: pick(s, "price_text") || t("kalba.cart.seePrice"),
       numericPrice: parseNumericPrice(s.price_text),
+      // Specials are managed on their own screen and have no extras.
+      addons: [] as KalbaAddon[],
     })),
   ];
 
   const totalQty = allCartItems.reduce((n, i) => n + (cartQty[i.id] ?? 0), 0);
   const totalPrice = allCartItems.reduce((sum, i) => {
-    return sum + i.numericPrice * (cartQty[i.id] ?? 0);
+    return sum + unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0);
   }, 0);
 
   // Discount calculation
@@ -789,7 +858,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
     if (applicable_item_ids.length > 0) {
       base = allCartItems.reduce((sum, i) => {
         if (!applicable_item_ids.includes(i.id)) return sum;
-        return sum + i.numericPrice * (cartQty[i.id] ?? 0);
+        return sum + unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0);
       }, 0);
     }
     discountAmount = discount_type === "percentage"
@@ -979,6 +1048,13 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           {pick(p, "time_text")}
                         </span>
                       </div>
+                      {/* Says the extras exist without making the choice happen
+                          here — the cart is where it is actually asked. */}
+                      {(p.addons ?? []).length > 0 && (
+                        <p className="text-[9.5px] font-semibold text-orange-500 mt-1">
+                          {t("kalba.addons.available")}
+                        </p>
+                      )}
                       <div className="h-px bg-gray-100 my-1.5" />
                       {qty === 0 ? (
                         <button
@@ -1095,9 +1171,11 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
         <CartModal
           items={allCartItems}
           cartQty={cartQty}
+          cartAddons={cartAddons}
           totalQty={totalQty}
           totalPrice={totalPrice}
           onQtyChange={handleQtyChange}
+          onToggleAddon={handleToggleAddon}
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}
           pickupLeadMinutes={hero.pickup_lead_minutes ?? 30}

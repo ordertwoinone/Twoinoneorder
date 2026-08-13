@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, GripVertical } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import TopPicksField from "@/components/admin/TopPicksField";
 import TopPicksToggle from "@/components/admin/TopPicksToggle";
@@ -10,6 +10,15 @@ interface Category {
   id: string;
   emoji: string;
   label: string;
+}
+
+/** An extra offered with this dish. Blank id = not saved yet. */
+interface Addon {
+  id?: string;
+  name: string;
+  name_ar: string;
+  price: number | string;
+  sort_order: number;
 }
 
 interface PopularItem {
@@ -27,6 +36,7 @@ interface PopularItem {
   tags: string[];
   show_in_top_picks: boolean;
   top_picks_order: number;
+  addons: Addon[];
 }
 
 const DIETARY_TAGS = [
@@ -50,6 +60,7 @@ const EMPTY: Omit<PopularItem, "id"> = {
   tags: [],
   show_in_top_picks: false,
   top_picks_order: 0,
+  addons: [],
 };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -78,11 +89,32 @@ export default function KalbaPopularAdmin() {
 
   useEffect(() => { load(); }, []);
 
-  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY } }); }
-  function openEdit(item: PopularItem) { setModal({ open: true, mode: "edit", data: { ...item } }); }
+  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY, addons: [] } }); }
+  function openEdit(item: PopularItem) {
+    setModal({ open: true, mode: "edit", data: { ...item, addons: [...(item.addons ?? [])] } });
+  }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) {
     setModal((m) => ({ ...m, data: { ...m.data, [key]: value } }));
+  }
+
+  function setAddons(update: (list: Addon[]) => Addon[]) {
+    setModal((m) => ({ ...m, data: { ...m.data, addons: update(m.data.addons ?? []) } }));
+  }
+
+  function addAddon() {
+    setAddons((list) => [...list, { name: "", name_ar: "", price: "", sort_order: list.length }]);
+  }
+
+  function updateAddon(index: number, patch: Partial<Addon>) {
+    setAddons((list) => list.map((a, i) => (i === index ? { ...a, ...patch } : a)));
+  }
+
+  function removeAddon(index: number) {
+    // Renumbered so the order the admin sees is the order the cart shows.
+    setAddons((list) =>
+      list.filter((_, i) => i !== index).map((a, i) => ({ ...a, sort_order: i })),
+    );
   }
 
   function toggleTag(key: string) {
@@ -183,6 +215,11 @@ export default function KalbaPopularAdmin() {
                         ) : null;
                       })}
                     </div>
+                  )}
+                  {(item.addons ?? []).length > 0 && (
+                    <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-medium mt-1">
+                      + {item.addons.length} add-on{item.addons.length !== 1 ? "s" : ""}
+                    </span>
                   )}
                 </td>
                 <td className="px-4 py-3">
@@ -317,6 +354,74 @@ export default function KalbaPopularAdmin() {
                 order={modal.data.top_picks_order ?? 0}
                 onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}
               />
+
+              {/* Add-ons ─────────────────────────────────────────────── */}
+              <div className="border-t border-gray-100 pt-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-gray-700">Add-ons / Extras</label>
+                  <button
+                    type="button"
+                    onClick={addAddon}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors"
+                  >
+                    <Plus size={12} />
+                    Add
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
+                  Extras offered with this dish. A shopper who adds it to the cart is asked which
+                  ones they want, and each one they tick is added to the price. Leave empty for a
+                  dish with no extras.
+                </p>
+
+                {(modal.data.addons ?? []).length === 0 ? (
+                  <p className="text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-3 text-center">
+                    No add-ons — the cart won&apos;t ask for any.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {(modal.data.addons ?? []).map((addon, index) => (
+                      <div key={addon.id ?? `new-${index}`} className="flex items-start gap-2">
+                        <GripVertical size={14} className="text-gray-300 mt-3 shrink-0" />
+                        <div className="flex-1 min-w-0 grid grid-cols-[1fr_5rem] gap-2">
+                          <input
+                            type="text"
+                            value={addon.name}
+                            onChange={(e) => updateAddon(index, { name: e.target.value })}
+                            placeholder="Extra cheese"
+                            className={inputCls}
+                          />
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0"
+                            value={addon.price}
+                            onChange={(e) => updateAddon(index, { price: e.target.value })}
+                            placeholder="AED"
+                            className={inputCls}
+                          />
+                          <input
+                            type="text"
+                            dir="rtl"
+                            value={addon.name_ar ?? ""}
+                            onChange={(e) => updateAddon(index, { name_ar: e.target.value })}
+                            placeholder="بالعربية (اختياري)"
+                            className={`${inputCls} col-span-2`}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeAddon(index)}
+                          aria-label={`Remove ${addon.name || "add-on"}`}
+                          className="w-8 h-8 mt-1 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-2xl">
