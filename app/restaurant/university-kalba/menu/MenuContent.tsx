@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
@@ -14,10 +14,10 @@ import {
   GraduationCap,
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
-import AddonPicker from "@/components/kalba/AddonPicker";
+import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
 import {
-  addonsTotal, addonSummary, toggleAddon,
-  type AddonSelection, type KalbaAddon,
+  addonsTotal, addonSummary, defaultSelection,
+  type AddonSelection, type KalbaAddonGroup,
 } from "@/lib/kalba/addons";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useStudentCard } from "@/hooks/useStudentCard";
@@ -38,16 +38,17 @@ const DIETARY_TAGS: Record<string, TranslationKey> = {
 interface CartItem {
   id: string;
   name: string;
+  description?: string | null;
   image_url: string;
   priceLabel: string;
   numericPrice: number;
-  /** Extras offered with this dish. Empty for everything without them. */
-  addons: KalbaAddon[];
+  /** Questions asked before this dish is ordered. Empty for most of them. */
+  groups: KalbaAddonGroup[];
 }
 
-/** What one of this dish costs once the ticked extras are counted. */
+/** What one of this dish costs once the chosen options are counted. */
 function unitPrice(item: CartItem, selection: AddonSelection): number {
-  return item.numericPrice + addonsTotal(item.addons, selection[item.id]);
+  return item.numericPrice + addonsTotal(item.groups, selection[item.id]);
 }
 
 interface CouponData {
@@ -64,16 +65,18 @@ function CartRow({
   qty,
   selectedAddons,
   onQtyChange,
-  onToggleAddon,
+  onEditOptions,
 }: {
   item: CartItem;
   qty: number;
   selectedAddons: string[];
   onQtyChange: (id: string, qty: number) => void;
-  onToggleAddon: (itemId: string, addonId: string) => void;
+  onEditOptions: (itemId: string) => void;
 }) {
   const { t } = useTranslation();
-  const extras = addonsTotal(item.addons, selectedAddons);
+  const pick = useLocalizedField();
+  const extras = addonsTotal(item.groups, selectedAddons);
+  const chosen = addonSummary(item.groups, selectedAddons, (a) => pick(a, "name"));
 
   return (
     <div className="bg-gray-50 rounded-xl px-3 py-2.5">
@@ -123,11 +126,20 @@ function CartRow({
         </div>
       </div>
 
-      <AddonPicker
-        addons={item.addons}
-        selected={selectedAddons}
-        onToggle={(addonId) => onToggleAddon(item.id, addonId)}
-      />
+      {/* What they chose, and the way back to change it. */}
+      {item.groups.length > 0 && (
+        <div className="flex items-start gap-2 mt-2 pt-2 border-t border-gray-200/70">
+          <p className="flex-1 min-w-0 text-[10.5px] text-gray-500 leading-snug">
+            {chosen || t("kalba.addons.customise")}
+          </p>
+          <button
+            onClick={() => onEditOptions(item.id)}
+            className="shrink-0 text-[10.5px] font-bold text-orange-600 hover:underline"
+          >
+            {t("kalba.addons.edit")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -139,7 +151,7 @@ function CartModal({
   totalQty,
   totalPrice,
   onQtyChange,
-  onToggleAddon,
+  onEditOptions,
   onClose,
   whatsapp,
   restaurantName,
@@ -164,7 +176,7 @@ function CartModal({
   totalQty: number;
   totalPrice: number;
   onQtyChange: (id: string, qty: number) => void;
-  onToggleAddon: (itemId: string, addonId: string) => void;
+  onEditOptions: (itemId: string) => void;
   onClose: () => void;
   whatsapp: string;
   restaurantName: string;
@@ -236,7 +248,7 @@ function CartModal({
   /* The kitchen reads this, so the extras have to be on the line they belong to
      rather than summarised at the bottom. */
   function orderLineFor(item: CartItem): string {
-    const extras = addonSummary(item.addons, cartAddons[item.id], (a) => a.name);
+    const extras = addonSummary(item.groups, cartAddons[item.id], (a) => a.name);
     const base = `• ${item.name} x${cartQty[item.id]} (${item.priceLabel})`;
     return extras ? `${base}\n   ↳ ${t("kalba.addons.waLine", { extras })}` : base;
   }
@@ -460,7 +472,7 @@ function CartModal({
                 qty={cartQty[item.id] ?? 0}
                 selectedAddons={cartAddons[item.id] ?? []}
                 onQtyChange={onQtyChange}
-                onToggleAddon={onToggleAddon}
+                onEditOptions={onEditOptions}
               />
             ))
           )}
@@ -658,18 +670,44 @@ export default function MenuContent({
     if (qty === 0) setCartAddons((prev) => ({ ...prev, [id]: [] }));
   }
 
-  function handleToggleAddon(itemId: string, addonId: string) {
-    setCartAddons((prev) => toggleAddon(prev, itemId, addonId));
-  }
-
   const cartItems: CartItem[] = popular.map((p) => ({
     id: p.id,
     name: pick(p, "name"),
+    description: pick(p, "description"),
     image_url: p.image_url,
     priceLabel: t("common.price", { amount: p.price }),
     numericPrice: parseFloat(p.price) || 0,
-    addons: p.addons ?? [],
+    groups: p.addon_groups ?? [],
   }));
+
+  /* Which dish the options sheet is showing, and whether it was opened to add
+     it or to change an answer already in the cart. */
+  const [sheet, setSheet] = useState<{ id: string; mode: "add" | "edit" } | null>(null);
+  const sheetItem = sheet ? cartItems.find((i) => i.id === sheet.id) ?? null : null;
+
+  /**
+   * Adding a dish. One that asks nothing goes straight in; one that does opens
+   * its sheet, because a required question cannot be answered from a card.
+   */
+  function handleAdd(itemId: string) {
+    const item = cartItems.find((i) => i.id === itemId);
+    if (!item || item.groups.length === 0) {
+      handleQtyChange(itemId, (cartQty[itemId] ?? 0) + 1);
+      return;
+    }
+    setSheet({ id: itemId, mode: "add" });
+  }
+
+  function handleSheetConfirm(selection: string[], qty: number) {
+    if (!sheet) return;
+    setCartAddons((prev) => ({ ...prev, [sheet.id]: selection }));
+    setCartQty((prev) => ({
+      ...prev,
+      // Adding tops up what is already there; editing leaves the count alone.
+      [sheet.id]: sheet.mode === "add" ? (prev[sheet.id] ?? 0) + qty : qty,
+    }));
+    setSheet(null);
+  }
 
   const totalQty = cartItems.reduce((n, i) => n + (cartQty[i.id] ?? 0), 0);
   const totalPrice = cartItems.reduce(
@@ -969,21 +1007,30 @@ export default function MenuContent({
                         {pick(p, "time_text")}
                       </span>
                     </div>
-                    {/* Says the extras exist without making the choice happen
-                        here — the cart is where it is actually asked. */}
-                    {(p.addons ?? []).length > 0 && (
+                    {/* Warns that a tap opens the chooser rather than adding
+                        straight away — the sheet is not a surprise then. */}
+                    {(p.addon_groups ?? []).length > 0 && (
                       <p className="text-[9.5px] font-semibold text-orange-500 mb-1.5 -mt-1">
                         {t("kalba.addons.available")}
                       </p>
                     )}
                     <div className="h-px bg-gray-100 mb-2" />
-                    {qty === 0 ? (
+                    {/* A dish with questions keeps one button, whatever is in
+                        the cart: the stepper would add a second helping with
+                        the first one's answers, silently. */}
+                    {qty === 0 || (p.addon_groups ?? []).length > 0 ? (
                       <button
-                        onClick={() => handleQtyChange(p.id, 1)}
+                        onClick={() => handleAdd(p.id)}
                         className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors tap-shrink"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">{t("common.addToCart")}</span>
+                        <span className="text-xs font-bold">
+                          {qty > 0
+                            ? `${t("common.addToCart")} · ${qty}`
+                            : (p.addon_groups ?? []).length > 0
+                              ? t("kalba.addons.customise")
+                              : t("common.addToCart")}
+                        </span>
                       </button>
                     ) : (
                       <div className="flex items-center justify-between">
@@ -1082,7 +1129,7 @@ export default function MenuContent({
           totalQty={totalQty}
           totalPrice={totalPrice}
           onQtyChange={handleQtyChange}
-          onToggleAddon={handleToggleAddon}
+          onEditOptions={(id) => setSheet({ id, mode: "edit" })}
           onClose={() => setCartOpen(false)}
           whatsapp={whatsapp}
           pickupLeadMinutes={pickupLeadMinutes}
@@ -1102,6 +1149,24 @@ export default function MenuContent({
           studentDiscount={studentDiscount}
           studentPercent={studentPercent}
           finalPrice={finalPrice}
+        />
+      )}
+
+      {/* The dish and its questions */}
+      {sheet && sheetItem && (
+        <ItemOptionsSheet
+          key={sheet.id}
+          item={sheetItem}
+          groups={sheetItem.groups}
+          initialSelection={
+            sheet.mode === "edit"
+              ? (cartAddons[sheet.id] ?? defaultSelection(sheetItem.groups))
+              : undefined
+          }
+          initialQty={sheet.mode === "edit" ? (cartQty[sheet.id] ?? 1) : 1}
+          mode={sheet.mode}
+          onConfirm={handleSheetConfirm}
+          onClose={() => setSheet(null)}
         />
       )}
     </>

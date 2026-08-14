@@ -1,11 +1,11 @@
-import { Suspense } from "react";
+﻿import { Suspense } from "react";
 import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { orderWhatsapp } from "@/lib/whatsapp";
-import { getAddonsByItem } from "@/lib/kalba/addons-server";
+import { getAddonGroupsByItem } from "@/lib/kalba/addons-server";
 import JsonLd from "@/components/seo/JsonLd";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { breadcrumbSchema } from "@/lib/seo";
@@ -20,7 +20,7 @@ const DEFAULT_HERO_PARTIAL = {
 };
 
 async function getMenuData() {
-  const [heroRes, catsRes, popularRes, settingsRes, addonsByItem] = await Promise.all([
+  const [heroRes, catsRes, popularRes, settingsRes, groupsByItem] = await Promise.all([
     supabaseAdmin.from("kalba_hero").select("name, whatsapp, pickup_lead_minutes, closes_at, opening_hours, is_open").limit(1).single(),
     supabaseAdmin
       .from("kalba_categories")
@@ -33,7 +33,7 @@ async function getMenuData() {
       .eq("is_active", true)
       .order("sort_order"),
     supabaseAdmin.from("site_settings").select("whatsapp_number").single(),
-    getAddonsByItem(),
+    getAddonGroupsByItem(),
   ]);
 
   const hero = (heroRes.data ?? DEFAULT_HERO_PARTIAL) as Pick<KalbaHero, "name" | "whatsapp" | "pickup_lead_minutes" | "closes_at" | "opening_hours" | "is_open">;
@@ -45,7 +45,7 @@ async function getMenuData() {
     // Each dish carries its own extras, so the cart never has to go looking.
     popular: ((popularRes.data ?? []) as KalbaPopularItem[]).map((item) => ({
       ...item,
-      addons: addonsByItem[item.id] ?? [],
+      addon_groups: groupsByItem[item.id] ?? [],
     })),
   };
 }

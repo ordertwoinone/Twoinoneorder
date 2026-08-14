@@ -24,10 +24,10 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
-import AddonPicker from "@/components/kalba/AddonPicker";
+import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
 import {
-  addonsTotal, addonSummary, toggleAddon,
-  type AddonSelection, type KalbaAddon,
+  addonsTotal, addonSummary, defaultSelection,
+  type AddonSelection, type KalbaAddonGroup,
 } from "@/lib/kalba/addons";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useStudentCard } from "@/hooks/useStudentCard";
@@ -101,8 +101,8 @@ export interface KalbaPopularItem {
   image_url: string;
   category_id?: string | null;
   tags?: string[] | null;
-  /** Extras from admin → Popular Around Campus; empty for most dishes. */
-  addons?: KalbaAddon[] | null;
+  /** Choice groups from admin → Popular Around Campus; empty for most dishes. */
+  addon_groups?: KalbaAddonGroup[] | null;
 }
 
 export interface KalbaStudy {
@@ -208,16 +208,17 @@ function parseNumericPrice(text: string): number {
 interface CartItem {
   id: string;
   name: string;
+  description?: string | null;
   image_url: string;
   priceLabel: string;
   numericPrice: number;
-  /** Extras offered with this dish. Empty for everything without them. */
-  addons: KalbaAddon[];
+  /** Questions asked before this dish is ordered. Empty for most of them. */
+  groups: KalbaAddonGroup[];
 }
 
-/** What one of this dish costs once the ticked extras are counted. */
+/** What one of this dish costs once the chosen options are counted. */
 function unitPrice(item: CartItem, selection: AddonSelection): number {
-  return item.numericPrice + addonsTotal(item.addons, selection[item.id]);
+  return item.numericPrice + addonsTotal(item.groups, selection[item.id]);
 }
 
 interface CouponData {
@@ -274,15 +275,17 @@ function SectionHeader({ title, action, href, internal }: { title: string; actio
   );
 }
 
-function CartRow({ item, qty, selectedAddons, onQtyChange, onToggleAddon }: {
+function CartRow({ item, qty, selectedAddons, onQtyChange, onEditOptions }: {
   item: CartItem;
   qty: number;
   selectedAddons: string[];
   onQtyChange: (id: string, qty: number) => void;
-  onToggleAddon: (itemId: string, addonId: string) => void;
+  onEditOptions: (itemId: string) => void;
 }) {
   const { t } = useTranslation();
-  const extras = addonsTotal(item.addons, selectedAddons);
+  const pick = useLocalizedField();
+  const extras = addonsTotal(item.groups, selectedAddons);
+  const chosen = addonSummary(item.groups, selectedAddons, (a) => pick(a, "name"));
 
   return (
     <div className="bg-gray-50 rounded-xl px-3 py-2.5">
@@ -319,16 +322,25 @@ function CartRow({ item, qty, selectedAddons, onQtyChange, onToggleAddon }: {
         </div>
       </div>
 
-      <AddonPicker
-        addons={item.addons}
-        selected={selectedAddons}
-        onToggle={(addonId) => onToggleAddon(item.id, addonId)}
-      />
+      {/* What they chose, and the way back to change it. */}
+      {item.groups.length > 0 && (
+        <div className="flex items-start gap-2 mt-2 pt-2 border-t border-gray-200/70">
+          <p className="flex-1 min-w-0 text-[10.5px] text-gray-500 leading-snug">
+            {chosen || t("kalba.addons.customise")}
+          </p>
+          <button
+            onClick={() => onEditOptions(item.id)}
+            className="shrink-0 text-[10.5px] font-bold text-orange-600 hover:underline"
+          >
+            {t("kalba.addons.edit")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChange, onToggleAddon, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, studentDiscount, studentPercent, finalPrice }: {
+function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChange, onEditOptions, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, studentDiscount, studentPercent, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   /** Which extras are ticked, per item. */
@@ -336,7 +348,7 @@ function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChan
   totalQty: number;
   totalPrice: number;
   onQtyChange: (id: string, qty: number) => void;
-  onToggleAddon: (itemId: string, addonId: string) => void;
+  onEditOptions: (itemId: string) => void;
   onClose: () => void;
   whatsapp: string;
   restaurantName: string;
@@ -412,7 +424,7 @@ function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChan
   /* The kitchen reads this, so the extras have to be on the line they belong to
      rather than summarised at the bottom. */
   function orderLineFor(item: CartItem): string {
-    const extras = addonSummary(item.addons, cartAddons[item.id], (a) => a.name);
+    const extras = addonSummary(item.groups, cartAddons[item.id], (a) => a.name);
     const base = `• ${item.name} x${cartQty[item.id]} (${item.priceLabel})`;
     return extras ? `${base}\n   ↳ ${t("kalba.addons.waLine", { extras })}` : base;
   }
@@ -464,7 +476,7 @@ function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChan
     const itemsText = inCart
       .map((i) => {
         // Kept in English with the rest of this row — staff read it in admin.
-        const extras = addonSummary(i.addons, cartAddons[i.id], (a) => a.name);
+        const extras = addonSummary(i.groups, cartAddons[i.id], (a) => a.name);
         return `${i.name} x${cartQty[i.id]}${extras ? ` (+ ${extras})` : ""}`;
       })
       .join(", ");
@@ -624,7 +636,7 @@ function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChan
                 qty={cartQty[item.id] ?? 0}
                 selectedAddons={cartAddons[item.id] ?? []}
                 onQtyChange={onQtyChange}
-                onToggleAddon={onToggleAddon}
+                onEditOptions={onEditOptions}
               />
             ))
           )}
@@ -819,34 +831,61 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
 
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
-    /* Emptying the dish out of the cart forgets its extras too — coming back to
+    /* Emptying the dish out of the cart forgets its answers too — coming back to
        a dish still carrying last time's cheese is a charge nobody asked for. */
     if (qty === 0) setCartAddons((prev) => ({ ...prev, [id]: [] }));
-  }
-
-  function handleToggleAddon(itemId: string, addonId: string) {
-    setCartAddons((prev) => toggleAddon(prev, itemId, addonId));
   }
 
   const allCartItems: CartItem[] = [
     ...popular.map((p) => ({
       id: p.id,
       name: pick(p, "name"),
+      description: pick(p, "description"),
       image_url: p.image_url,
       priceLabel: `AED ${p.price}`,
       numericPrice: parseFloat(p.price) || 0,
-      addons: p.addons ?? [],
+      groups: p.addon_groups ?? [],
     })),
     ...specials.map((s) => ({
       id: s.id,
       name: pick(s, "name"),
+      description: pick(s, "description"),
       image_url: s.image_url,
       priceLabel: pick(s, "price_text") || t("kalba.cart.seePrice"),
       numericPrice: parseNumericPrice(s.price_text),
-      // Specials are managed on their own screen and have no extras.
-      addons: [] as KalbaAddon[],
+      // Specials are managed on their own screen and ask nothing.
+      groups: [] as KalbaAddonGroup[],
     })),
   ];
+
+  /* Which dish the options sheet is showing, and whether it was opened to add
+     it or to change an answer already in the cart. */
+  const [sheet, setSheet] = useState<{ id: string; mode: "add" | "edit" } | null>(null);
+  const sheetItem = sheet ? allCartItems.find((i) => i.id === sheet.id) ?? null : null;
+
+  /**
+   * Adding a dish. One that asks nothing goes straight in; one that does opens
+   * its sheet, because a required question cannot be answered from a card.
+   */
+  function handleAdd(itemId: string) {
+    const item = allCartItems.find((i) => i.id === itemId);
+    if (!item || item.groups.length === 0) {
+      handleQtyChange(itemId, (cartQty[itemId] ?? 0) + 1);
+      return;
+    }
+    setSheet({ id: itemId, mode: "add" });
+  }
+
+  function handleSheetConfirm(selection: string[], qty: number) {
+    if (!sheet) return;
+    setCartAddons((prev) => ({ ...prev, [sheet.id]: selection }));
+    setCartQty((prev) => ({
+      ...prev,
+      // Adding tops up what is already there; editing leaves the count alone.
+      [sheet.id]: sheet.mode === "add" ? (prev[sheet.id] ?? 0) + qty : qty,
+    }));
+    setSheet(null);
+  }
 
   const totalQty = allCartItems.reduce((n, i) => n + (cartQty[i.id] ?? 0), 0);
   const totalPrice = allCartItems.reduce((sum, i) => {
@@ -1059,21 +1098,30 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           {pick(p, "time_text")}
                         </span>
                       </div>
-                      {/* Says the extras exist without making the choice happen
-                          here — the cart is where it is actually asked. */}
-                      {(p.addons ?? []).length > 0 && (
+                      {/* Warns that a tap opens the chooser rather than adding
+                          straight away — the sheet is not a surprise then. */}
+                      {(p.addon_groups ?? []).length > 0 && (
                         <p className="text-[9.5px] font-semibold text-orange-500 mt-1">
                           {t("kalba.addons.available")}
                         </p>
                       )}
                       <div className="h-px bg-gray-100 my-1.5" />
-                      {qty === 0 ? (
+                      {/* A dish with questions keeps one button, whatever is in
+                          the cart: the stepper would add a second helping with
+                          the first one's answers, silently. */}
+                      {qty === 0 || (p.addon_groups ?? []).length > 0 ? (
                         <button
-                          onClick={() => handleQtyChange(p.id, 1)}
+                          onClick={() => handleAdd(p.id)}
                           className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
                         >
                           <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          <span className="text-[10px] sm:text-xs font-semibold">{t("common.add")}</span>
+                          <span className="text-[10px] sm:text-xs font-semibold">
+                            {qty > 0
+                              ? `${t("common.add")} · ${qty}`
+                              : (p.addon_groups ?? []).length > 0
+                                ? t("kalba.addons.customise")
+                                : t("common.add")}
+                          </span>
                         </button>
                       ) : (
                         <div className="flex items-center justify-between">
@@ -1186,7 +1234,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           totalQty={totalQty}
           totalPrice={totalPrice}
           onQtyChange={handleQtyChange}
-          onToggleAddon={handleToggleAddon}
+          onEditOptions={(id) => setSheet({ id, mode: "edit" })}
           onClose={() => setCartOpen(false)}
           whatsapp={hero.whatsapp}
           pickupLeadMinutes={hero.pickup_lead_minutes ?? 30}
@@ -1203,6 +1251,24 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           studentDiscount={studentDiscount}
           studentPercent={studentPercent}
           finalPrice={finalPrice}
+        />
+      )}
+
+      {/* The dish and its questions */}
+      {sheet && sheetItem && (
+        <ItemOptionsSheet
+          key={sheet.id}
+          item={sheetItem}
+          groups={sheetItem.groups}
+          initialSelection={
+            sheet.mode === "edit"
+              ? (cartAddons[sheet.id] ?? defaultSelection(sheetItem.groups))
+              : undefined
+          }
+          initialQty={sheet.mode === "edit" ? (cartQty[sheet.id] ?? 1) : 1}
+          mode={sheet.mode}
+          onConfirm={handleSheetConfirm}
+          onClose={() => setSheet(null)}
         />
       )}
     </>

@@ -4,7 +4,11 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { insertRow } from "@/lib/admin-write";
-import { getAllAddonsByItem, syncItemAddons, type AddonInput } from "@/lib/kalba/addons-server";
+import {
+  getAllAddonGroupsByItem,
+  syncItemAddonGroups,
+  type GroupInput,
+} from "@/lib/kalba/addons-server";
 
 export async function GET() {
   const { data, error } = await supabaseAdminLive
@@ -14,12 +18,12 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  /* The editor edits an item and its extras as one thing, so they arrive as one
-     thing. Empty for every item until the migration has been run. */
-  const byItem = await getAllAddonsByItem();
+  /* The editor edits an item and its questions as one thing, so they arrive as
+     one thing. Empty for every item until the migrations have been run. */
+  const byItem = await getAllAddonGroupsByItem();
   const rows = (data ?? []).map((item) => {
     const { id } = item as { id: string };
-    return { ...item, addons: byItem[id] ?? [] };
+    return { ...item, addon_groups: byItem[id] ?? [] };
   });
 
   return NextResponse.json(rows);
@@ -27,16 +31,18 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  // Add-ons live in their own table — they are not a column on the item.
-  const { addons, ...fields } = body as { addons?: AddonInput[] } & Record<string, unknown>;
+  // Choice groups live in their own tables — not columns on the item.
+  const { addon_groups, ...fields } = body as {
+    addon_groups?: GroupInput[];
+  } & Record<string, unknown>;
 
   const { data, error } = await insertRow("kalba_popular_items", fields);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const created = data as { id: string } | null;
-  if (created?.id && Array.isArray(addons)) {
-    await syncItemAddons(created.id, addons);
+  if (created?.id && Array.isArray(addon_groups)) {
+    await syncItemAddonGroups(created.id, addon_groups);
   }
 
   revalidatePath("/restaurant/university-kalba");

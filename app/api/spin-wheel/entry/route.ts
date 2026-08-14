@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
 
-  // One prize per email â€” don't insert a duplicate.
+  // One prize per email — don't insert a duplicate.
   const { data: existing } = await supabaseAdminLive
     .from("spin_wheel_entries")
     .select("id")

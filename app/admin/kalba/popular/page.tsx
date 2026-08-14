@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, X, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import TopPicksField from "@/components/admin/TopPicksField";
 import TopPicksToggle from "@/components/admin/TopPicksToggle";
@@ -12,15 +12,42 @@ interface Category {
   label: string;
 }
 
-/** An extra offered with this dish. Blank id = not saved yet. */
+/** One answer to a choice group. Blank id = not saved yet. */
 interface Addon {
   id?: string;
   name: string;
   name_ar: string;
-  /** Optional thumbnail shown beside the extra in the cart. */
+  /** Optional thumbnail shown beside the option. */
   image_url: string;
   price: number | string;
   sort_order: number;
+}
+
+/** A question the shopper is asked — "Choice of Side item" — and its answers. */
+interface AddonGroup {
+  id?: string;
+  name: string;
+  name_ar: string;
+  /** 0 = skippable. 1+ = must be answered. */
+  min_select: number;
+  /** 0 = no ceiling. 1 = a single choice. */
+  max_select: number;
+  sort_order: number;
+  options: Addon[];
+}
+
+/** The shapes a group can take, in the words an admin would use. */
+const GROUP_RULES = [
+  { key: "one-required", label: "Required · choose 1", min: 1, max: 1 },
+  { key: "one-optional", label: "Optional · choose up to 1", min: 0, max: 1 },
+  { key: "many-required", label: "Required · choose several", min: 1, max: 0 },
+  { key: "many-optional", label: "Optional · any number", min: 0, max: 0 },
+] as const;
+
+function ruleKeyFor(group: AddonGroup): string {
+  const found = GROUP_RULES.find((r) => r.min === group.min_select && r.max === group.max_select);
+  // A hand-tuned ceiling ("choose up to 3") is none of the four presets.
+  return found ? found.key : "custom";
 }
 
 interface PopularItem {
@@ -40,7 +67,7 @@ interface PopularItem {
   tags: string[];
   show_in_top_picks: boolean;
   top_picks_order: number;
-  addons: Addon[];
+  addon_groups: AddonGroup[];
 }
 
 const DIETARY_TAGS = [
@@ -66,7 +93,7 @@ const EMPTY: Omit<PopularItem, "id"> = {
   tags: [],
   show_in_top_picks: false,
   top_picks_order: 0,
-  addons: [],
+  addon_groups: [],
 };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -95,34 +122,107 @@ export default function KalbaPopularAdmin() {
 
   useEffect(() => { load(); }, []);
 
-  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY, addons: [] } }); }
+  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY, addon_groups: [] } }); }
   function openEdit(item: PopularItem) {
-    setModal({ open: true, mode: "edit", data: { ...item, addons: [...(item.addons ?? [])] } });
+    setModal({
+      open: true,
+      mode: "edit",
+      data: {
+        ...item,
+        // Deep enough that editing a draft cannot mutate the loaded list.
+        addon_groups: (item.addon_groups ?? []).map((g) => ({
+          ...g,
+          options: [...(g.options ?? [])],
+        })),
+      },
+    });
   }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField(key: string, value: unknown) {
     setModal((m) => ({ ...m, data: { ...m.data, [key]: value } }));
   }
 
-  function setAddons(update: (list: Addon[]) => Addon[]) {
-    setModal((m) => ({ ...m, data: { ...m.data, addons: update(m.data.addons ?? []) } }));
+  function setGroups(update: (list: AddonGroup[]) => AddonGroup[]) {
+    setModal((m) => ({
+      ...m,
+      data: { ...m.data, addon_groups: update(m.data.addon_groups ?? []) },
+    }));
   }
 
-  function addAddon() {
-    setAddons((list) => [
+  function addGroup() {
+    setGroups((list) => [
       ...list,
-      { name: "", name_ar: "", image_url: "", price: "", sort_order: list.length },
+      {
+        name: "",
+        name_ar: "",
+        // The commonest question by far: pick exactly one.
+        min_select: 1,
+        max_select: 1,
+        sort_order: list.length,
+        options: [{ name: "", name_ar: "", image_url: "", price: "", sort_order: 0 }],
+      },
     ]);
   }
 
-  function updateAddon(index: number, patch: Partial<Addon>) {
-    setAddons((list) => list.map((a, i) => (i === index ? { ...a, ...patch } : a)));
+  function updateGroup(gi: number, patch: Partial<AddonGroup>) {
+    setGroups((list) => list.map((g, i) => (i === gi ? { ...g, ...patch } : g)));
   }
 
-  function removeAddon(index: number) {
-    // Renumbered so the order the admin sees is the order the cart shows.
-    setAddons((list) =>
-      list.filter((_, i) => i !== index).map((a, i) => ({ ...a, sort_order: i })),
+  function removeGroup(gi: number) {
+    // Renumbered so the order the admin sees is the order the shopper sees.
+    setGroups((list) =>
+      list.filter((_, i) => i !== gi).map((g, i) => ({ ...g, sort_order: i })),
+    );
+  }
+
+  function moveGroup(gi: number, by: -1 | 1) {
+    setGroups((list) => {
+      const to = gi + by;
+      if (to < 0 || to >= list.length) return list;
+      const next = [...list];
+      [next[gi], next[to]] = [next[to], next[gi]];
+      return next.map((g, i) => ({ ...g, sort_order: i }));
+    });
+  }
+
+  function addOption(gi: number) {
+    setGroups((list) =>
+      list.map((g, i) =>
+        i === gi
+          ? {
+              ...g,
+              options: [
+                ...g.options,
+                { name: "", name_ar: "", image_url: "", price: "", sort_order: g.options.length },
+              ],
+            }
+          : g,
+      ),
+    );
+  }
+
+  function updateOption(gi: number, oi: number, patch: Partial<Addon>) {
+    setGroups((list) =>
+      list.map((g, i) =>
+        i === gi
+          ? { ...g, options: g.options.map((o, j) => (j === oi ? { ...o, ...patch } : o)) }
+          : g,
+      ),
+    );
+  }
+
+  function removeOption(gi: number, oi: number) {
+    setGroups((list) =>
+      list.map((g, i) =>
+        i === gi
+          ? {
+              ...g,
+              options: g.options
+                .filter((_, j) => j !== oi)
+                .map((o, j) => ({ ...o, sort_order: j })),
+            }
+          : g,
+      ),
     );
   }
 
@@ -225,9 +325,10 @@ export default function KalbaPopularAdmin() {
                       })}
                     </div>
                   )}
-                  {(item.addons ?? []).length > 0 && (
+                  {(item.addon_groups ?? []).length > 0 && (
                     <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 font-medium mt-1">
-                      + {item.addons.length} add-on{item.addons.length !== 1 ? "s" : ""}
+                      {item.addon_groups.length} choice
+                      {item.addon_groups.length !== 1 ? "s" : ""}
                     </span>
                   )}
                 </td>
@@ -376,84 +477,185 @@ export default function KalbaPopularAdmin() {
                 onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}
               />
 
-              {/* Add-ons ─────────────────────────────────────────────── */}
+              {/* Choice groups ──────────────────────────────────────── */}
               <div className="border-t border-gray-100 pt-4">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-gray-700">Add-ons / Extras</label>
+                  <label className="text-xs font-semibold text-gray-700">Choices &amp; Add-ons</label>
                   <button
                     type="button"
-                    onClick={addAddon}
+                    onClick={addGroup}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors"
                   >
                     <Plus size={12} />
-                    Add
+                    Add choice group
                   </button>
                 </div>
                 <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
-                  Extras offered with this dish. A shopper who adds it to the cart is asked which
-                  ones they want, and each one they tick is added to the price. Leave the price
-                  blank for an extra that costs nothing — a choice like &ldquo;no onions&rdquo;
-                  rather than a paid addition. Leave the whole list empty for a dish with no extras.
+                  Each group is one question the shopper is asked before this dish goes in the
+                  cart — &ldquo;Choice of Side item&rdquo;, &ldquo;Choice of Beverages&rdquo; — and
+                  its options are the answers. Leave an option&apos;s price blank when it costs
+                  nothing. A dish with no groups is added in a single tap, as before.
                 </p>
 
-                {(modal.data.addons ?? []).length === 0 ? (
+                {(modal.data.addon_groups ?? []).length === 0 ? (
                   <p className="text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-3 text-center">
-                    No add-ons — the cart won&apos;t ask for any.
+                    No choices — this dish is added straight to the cart.
                   </p>
                 ) : (
-                  <div className="space-y-2">
-                    {(modal.data.addons ?? []).map((addon, index) => (
+                  <div className="space-y-3">
+                    {(modal.data.addon_groups ?? []).map((group, gi) => (
                       <div
-                        key={addon.id ?? `new-${index}`}
-                        className="flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50/60 p-2.5"
+                        key={group.id ?? `new-group-${gi}`}
+                        className="rounded-xl border border-gray-200 bg-gray-50/60 p-3"
                       >
-                        <GripVertical size={14} className="text-gray-300 mt-3 shrink-0" />
-                        <div className="flex-1 min-w-0 space-y-2">
-                          <div className="grid grid-cols-[1fr_5rem] gap-2">
+                        {/* Group heading and its rule */}
+                        <div className="flex items-start gap-2 mb-2.5">
+                          <div className="flex flex-col gap-0.5 mt-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => moveGroup(gi, -1)}
+                              disabled={gi === 0}
+                              aria-label="Move group up"
+                              className="w-5 h-4 flex items-center justify-center rounded text-gray-400 hover:text-orange-600 disabled:opacity-25"
+                            >
+                              <ChevronUp size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveGroup(gi, 1)}
+                              disabled={gi === (modal.data.addon_groups ?? []).length - 1}
+                              aria-label="Move group down"
+                              className="w-5 h-4 flex items-center justify-center rounded text-gray-400 hover:text-orange-600 disabled:opacity-25"
+                            >
+                              <ChevronDown size={13} />
+                            </button>
+                          </div>
+
+                          <div className="flex-1 min-w-0 space-y-2">
                             <input
                               type="text"
-                              value={addon.name}
-                              onChange={(e) => updateAddon(index, { name: e.target.value })}
-                              placeholder="Extra cheese"
-                              className={inputCls}
+                              value={group.name}
+                              onChange={(e) => updateGroup(gi, { name: e.target.value })}
+                              placeholder="Choice of Side item"
+                              className={`${inputCls} font-semibold`}
                             />
-                            {/* Blank is a real answer, not a missing one. */}
                             <input
-                              type="number"
-                              step="0.5"
-                              min="0"
-                              value={addon.price}
-                              onChange={(e) => updateAddon(index, { price: e.target.value })}
-                              placeholder="AED —"
-                              title="Price in AED. Leave blank if this extra is free."
+                              type="text"
+                              dir="rtl"
+                              value={group.name_ar ?? ""}
+                              onChange={(e) => updateGroup(gi, { name_ar: e.target.value })}
+                              placeholder="بالعربية (اختياري)"
                               className={inputCls}
                             />
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={ruleKeyFor(group)}
+                                onChange={(e) => {
+                                  const rule = GROUP_RULES.find((r) => r.key === e.target.value);
+                                  if (rule) updateGroup(gi, { min_select: rule.min, max_select: rule.max });
+                                }}
+                                className={`${inputCls} bg-white flex-1`}
+                              >
+                                {GROUP_RULES.map((r) => (
+                                  <option key={r.key} value={r.key}>{r.label}</option>
+                                ))}
+                                {ruleKeyFor(group) === "custom" && (
+                                  <option value="custom">
+                                    Custom · {group.min_select}–{group.max_select || "any"}
+                                  </option>
+                                )}
+                              </select>
+                              {/* A ceiling only means anything above one pick. */}
+                              {group.max_select !== 1 && (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={group.max_select}
+                                  onChange={(e) =>
+                                    updateGroup(gi, { max_select: parseInt(e.target.value) || 0 })
+                                  }
+                                  title="Most that may be picked. 0 = no limit."
+                                  className={`${inputCls} w-20`}
+                                />
+                              )}
+                            </div>
                           </div>
-                          <input
-                            type="text"
-                            dir="rtl"
-                            value={addon.name_ar ?? ""}
-                            onChange={(e) => updateAddon(index, { name_ar: e.target.value })}
-                            placeholder="بالعربية (اختياري)"
-                            className={inputCls}
-                          />
-                          {/* Optional — an extra with no picture reads fine as text. */}
-                          <ImageUploadField
-                            label="Photo (optional)"
-                            value={addon.image_url ?? ""}
-                            onChange={(url) => updateAddon(index, { image_url: url })}
-                            folder="kalba"
-                            hint="square, 200×200px"
-                          />
+
+                          <button
+                            type="button"
+                            onClick={() => removeGroup(gi)}
+                            aria-label={`Remove ${group.name || "group"}`}
+                            className="w-8 h-8 mt-1 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => removeAddon(index)}
-                          aria-label={`Remove ${addon.name || "add-on"}`}
-                          className="w-8 h-8 mt-1 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+
+                        {/* Its options */}
+                        <div className="space-y-2 ps-2 border-s-2 border-orange-100">
+                          {group.options.map((option, oi) => (
+                            <div
+                              key={option.id ?? `new-option-${oi}`}
+                              className="flex items-start gap-2 rounded-lg border border-gray-100 bg-white p-2.5"
+                            >
+                              <GripVertical size={13} className="text-gray-300 mt-3 shrink-0" />
+                              <div className="flex-1 min-w-0 space-y-2">
+                                <div className="grid grid-cols-[1fr_5rem] gap-2">
+                                  <input
+                                    type="text"
+                                    value={option.name}
+                                    onChange={(e) => updateOption(gi, oi, { name: e.target.value })}
+                                    placeholder="Regular Fries"
+                                    className={inputCls}
+                                  />
+                                  {/* Blank is a real answer, not a missing one. */}
+                                  <input
+                                    type="number"
+                                    step="0.5"
+                                    min="0"
+                                    value={option.price}
+                                    onChange={(e) => updateOption(gi, oi, { price: e.target.value })}
+                                    placeholder="AED —"
+                                    title="Extra charge in AED. Leave blank if this option is included."
+                                    className={inputCls}
+                                  />
+                                </div>
+                                <input
+                                  type="text"
+                                  dir="rtl"
+                                  value={option.name_ar ?? ""}
+                                  onChange={(e) => updateOption(gi, oi, { name_ar: e.target.value })}
+                                  placeholder="بالعربية (اختياري)"
+                                  className={inputCls}
+                                />
+                                <ImageUploadField
+                                  label="Photo (optional)"
+                                  value={option.image_url ?? ""}
+                                  onChange={(url) => updateOption(gi, oi, { image_url: url })}
+                                  folder="kalba"
+                                  hint="square, 200×200px"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeOption(gi, oi)}
+                                aria-label={`Remove ${option.name || "option"}`}
+                                className="w-8 h-8 mt-1 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          ))}
+
+                          <button
+                            type="button"
+                            onClick={() => addOption(gi)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-gray-300 text-[11px] font-semibold text-gray-500 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors w-full justify-center"
+                          >
+                            <Plus size={12} />
+                            Add option
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>

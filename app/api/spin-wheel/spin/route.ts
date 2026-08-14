@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Wheel is not active" }, { status: 400 });
   }
 
-  // One prize per email â€” if they already played, return their existing prize.
+  // One prize per email — if they already played, return their existing prize.
   if (hasEmail) {
     const { data: existing } = await supabaseAdminLive
       .from("spin_wheel_entries")
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
       break;
     }
 
-    // Lost the race â€” drop it, refetch its current state, retry if still available.
+    // Lost the race — drop it, refetch its current state, retry if still available.
     pool = pool.filter((s) => s.id !== candidate.id);
     const { data: fresh } = await supabaseAdminLive
       .from("spin_wheel_segments")

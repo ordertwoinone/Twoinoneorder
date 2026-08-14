@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { orderWhatsapp } from "@/lib/whatsapp";
-import { getAddonsByItem } from "@/lib/kalba/addons-server";
+import { getAddonGroupsByItem } from "@/lib/kalba/addons-server";
 import JsonLd from "@/components/seo/JsonLd";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { SITE_URL, restaurantSchema, breadcrumbSchema } from "@/lib/seo";
@@ -68,7 +68,7 @@ const DEFAULT_STUDY: KalbaStudy = {
 };
 
 async function getKalbaData() {
-  const [heroRes, bannerRes, catsRes, popularRes, studyRes, dealsRes, specialsRes, settingsRes, addonsByItem] =
+  const [heroRes, bannerRes, catsRes, popularRes, studyRes, dealsRes, specialsRes, settingsRes, groupsByItem] =
     await Promise.all([
       supabaseAdmin.from("kalba_hero").select("*").limit(1).single(),
       supabaseAdmin.from("kalba_banner").select("*").limit(1).single(),
@@ -78,7 +78,7 @@ async function getKalbaData() {
       supabaseAdmin.from("kalba_daily_deals").select("*").eq("is_active", true).order("sort_order"),
       supabaseAdmin.from("kalba_specials").select("*").eq("is_active", true).order("sort_order"),
       supabaseAdmin.from("site_settings").select("whatsapp_number").single(),
-      getAddonsByItem(),
+      getAddonGroupsByItem(),
     ]);
 
   const banner = bannerRes.data ?? DEFAULT_BANNER;
@@ -94,7 +94,7 @@ async function getKalbaData() {
     // Each dish carries its own extras, so the cart never has to go looking.
     popular: ((popularRes.data ?? []) as KalbaPopularItem[]).map((item) => ({
       ...item,
-      addons: addonsByItem[item.id] ?? [],
+      addon_groups: groupsByItem[item.id] ?? [],
     })),
     study: { ...study, features: Array.isArray(study.features) ? study.features : [] } as KalbaStudy,
     deals: (dealsRes.data ?? []) as KalbaDailyDeal[],

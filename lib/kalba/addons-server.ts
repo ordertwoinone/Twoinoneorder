@@ -1,20 +1,23 @@
 import { supabaseAdmin, supabaseAdminLive } from "@/lib/supabase-admin";
-import { groupAddons, type KalbaAddon } from "@/lib/kalba/addons";
+import { buildGroups, type KalbaAddon, type KalbaAddonGroup } from "@/lib/kalba/addons";
 
 /**
- * Reading and writing the add-ons table from the server.
+ * Reading and writing choice groups from the server.
  *
- * supabase/kalba_item_addons.sql is run by hand, so every function here treats a
- * missing table as "no item has add-ons" rather than an error. That keeps the
- * branch page rendering and the admin panel saving on a database that has not
- * caught up yet — the add-ons simply start working the moment it is run.
+ * The SQL in supabase/ is run by hand, so every function here treats a missing
+ * table as "this item asks nothing" rather than an error. That keeps the branch
+ * page rendering and the admin panel saving on a database that has not caught
+ * up — the questions simply start working the moment the migrations are run.
  */
 
-/* `*` rather than a column list: image_url was added to the migration after the
-   first copies of it had been run, and PostgREST rejects the whole select when
-   one named column is unknown — which would have emptied every add-on list
-   rather than just leaving out the picture. */
+/* `*` rather than a column list: these tables have gained columns between
+   copies of the migration, and PostgREST rejects the whole select when one
+   named column is unknown — which would empty every list rather than leave out
+   the one field. */
 const COLUMNS = "*";
+
+/** What the loose pre-groups add-ons are gathered under. */
+const LOOSE_LABEL = "Extras";
 
 export interface AddonInput {
   id?: string;
@@ -25,60 +28,142 @@ export interface AddonInput {
   sort_order?: number;
 }
 
-/** Active add-ons for every item, keyed by item id. Never throws. */
-export async function getAddonsByItem(): Promise<Record<string, KalbaAddon[]>> {
-  const { data, error } = await supabaseAdmin
-    .from("kalba_item_addons")
-    .select(COLUMNS)
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
-
-  if (error || !data) return {};
-  return groupAddons(data as unknown as KalbaAddon[]);
+export interface GroupInput {
+  id?: string;
+  name: string;
+  name_ar?: string;
+  min_select?: number;
+  max_select?: number;
+  sort_order?: number;
+  options: AddonInput[];
 }
 
-/** Every add-on including the switched-off ones — the admin panel edits these. */
-export async function getAllAddonsByItem(): Promise<Record<string, KalbaAddon[]>> {
-  const { data, error } = await supabaseAdminLive
-    .from("kalba_item_addons")
-    .select(COLUMNS)
-    .order("sort_order", { ascending: true });
+type GroupRow = Omit<KalbaAddonGroup, "options">;
 
-  if (error || !data) return {};
-  return groupAddons(data as unknown as KalbaAddon[]);
+async function read(live: boolean) {
+  const client = live ? supabaseAdminLive : supabaseAdmin;
+
+  const [groupsRes, addonsRes] = await Promise.all([
+    client.from("kalba_addon_groups").select(COLUMNS).order("sort_order", { ascending: true }),
+    live
+      ? client.from("kalba_item_addons").select(COLUMNS).order("sort_order", { ascending: true })
+      : client
+          .from("kalba_item_addons")
+          .select(COLUMNS)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+  ]);
+
+  return {
+    groups: (groupsRes.error ? [] : (groupsRes.data ?? [])) as unknown as GroupRow[],
+    addons: (addonsRes.error ? [] : (addonsRes.data ?? [])) as unknown as KalbaAddon[],
+  };
+}
+
+/** Every item's questions, keyed by item id. For the public pages. */
+export async function getAddonGroupsByItem(): Promise<Record<string, KalbaAddonGroup[]>> {
+  const { groups, addons } = await read(false);
+  return buildGroups(groups, addons, LOOSE_LABEL);
+}
+
+/** The same, read live and including switched-off options — for the admin panel. */
+export async function getAllAddonGroupsByItem(): Promise<Record<string, KalbaAddonGroup[]>> {
+  const { groups, addons } = await read(true);
+  return buildGroups(groups, addons, LOOSE_LABEL);
 }
 
 /**
- * Makes the stored add-ons match what the admin panel just sent.
+ * Makes an item's stored questions match what the admin panel just sent.
  *
- * Rows the form dropped are deleted, the rest are inserted or updated in place —
- * updating rather than replacing wholesale so an add-on keeps its id, and a cart
- * open in another tab does not lose the extra it had ticked.
- *
- * Returns quietly on a missing table: the item itself has already saved, and
- * failing loudly here would make a working edit look broken.
+ * Groups and options the form dropped are deleted; the rest are updated in place
+ * so an option keeps its id, and a cart open in another tab does not lose the
+ * answer it had ticked. Returns quietly if the tables are not there: the item
+ * itself has already saved, and failing loudly would make a working edit look
+ * broken.
  */
-export async function syncItemAddons(itemId: string, addons: AddonInput[]): Promise<void> {
-  const rows = addons
-    .map((addon, index) => ({
-      id: addon.id,
-      name: (addon.name ?? "").trim(),
-      name_ar: (addon.name_ar ?? "").trim(),
-      image_url: (addon.image_url ?? "").trim(),
-      price: Number(addon.price) || 0,
-      sort_order: addon.sort_order ?? index,
+export async function syncItemAddonGroups(itemId: string, groups: GroupInput[]): Promise<void> {
+  const clean = groups
+    .map((group, index) => ({
+      id: group.id,
+      name: (group.name ?? "").trim(),
+      name_ar: (group.name_ar ?? "").trim(),
+      min_select: Math.max(0, Number(group.min_select) || 0),
+      max_select: Math.max(0, Number(group.max_select) || 0),
+      sort_order: group.sort_order ?? index,
+      options: (group.options ?? [])
+        .map((option, i) => ({
+          id: option.id,
+          name: (option.name ?? "").trim(),
+          name_ar: (option.name_ar ?? "").trim(),
+          image_url: (option.image_url ?? "").trim(),
+          price: Number(option.price) || 0,
+          sort_order: option.sort_order ?? i,
+        }))
+        // A blank name is a row the admin started and abandoned, not an option.
+        .filter((option) => option.name !== ""),
     }))
-    // A blank name is a row the admin started and abandoned, not an add-on.
-    .filter((row) => row.name !== "");
+    .filter((group) => group.name !== "" && group.options.length > 0);
 
-  const { data: existing, error: readError } = await supabaseAdminLive
-    .from("kalba_item_addons")
+  const { data: existingGroups, error: groupsError } = await supabaseAdminLive
+    .from("kalba_addon_groups")
     .select("id")
     .eq("item_id", itemId);
 
-  if (readError) return;
+  if (groupsError) return;
 
-  const keptIds = new Set(rows.map((r) => r.id).filter(Boolean) as string[]);
+  const keptGroupIds = new Set(clean.map((g) => g.id).filter(Boolean) as string[]);
+  const goneGroupIds = (existingGroups ?? [])
+    .map((row) => (row as { id: string }).id)
+    .filter((id) => !keptGroupIds.has(id));
+
+  // The options cascade with their group.
+  if (goneGroupIds.length > 0) {
+    await supabaseAdminLive.from("kalba_addon_groups").delete().in("id", goneGroupIds);
+  }
+
+  for (const group of clean) {
+    const fields = {
+      name: group.name,
+      name_ar: group.name_ar,
+      min_select: group.min_select,
+      max_select: group.max_select,
+      sort_order: group.sort_order,
+    };
+
+    let groupId = group.id;
+
+    if (groupId) {
+      await supabaseAdminLive
+        .from("kalba_addon_groups")
+        .update({ ...fields, updated_at: new Date().toISOString() })
+        .eq("id", groupId);
+    } else {
+      const { data, error } = await supabaseAdminLive
+        .from("kalba_addon_groups")
+        .insert([{ ...fields, item_id: itemId }])
+        .select("id")
+        .single();
+      if (error || !data) continue;
+      groupId = (data as { id: string }).id;
+    }
+
+    await syncGroupOptions(itemId, groupId, group.options);
+  }
+}
+
+async function syncGroupOptions(
+  itemId: string,
+  groupId: string,
+  options: Required<AddonInput>[] | { id?: string; name: string; name_ar: string; image_url: string; price: number; sort_order: number }[],
+): Promise<void> {
+  const { data: existing, error } = await supabaseAdminLive
+    .from("kalba_item_addons")
+    .select("id")
+    .eq("group_id", groupId);
+
+  if (error) return;
+
+  const keptIds = new Set(options.map((o) => o.id).filter(Boolean) as string[]);
   const goneIds = (existing ?? [])
     .map((row) => (row as { id: string }).id)
     .filter((id) => !keptIds.has(id));
@@ -87,57 +172,52 @@ export async function syncItemAddons(itemId: string, addons: AddonInput[]): Prom
     await supabaseAdminLive.from("kalba_item_addons").delete().in("id", goneIds);
   }
 
-  const updates = rows.filter((row) => row.id);
-  const inserts = rows.filter((row) => !row.id);
+  await Promise.all(
+    options.map((option) => {
+      const fields = {
+        item_id: itemId,
+        group_id: groupId,
+        name: option.name,
+        name_ar: option.name_ar,
+        image_url: option.image_url,
+        price: option.price,
+        sort_order: option.sort_order,
+      };
 
-  await Promise.all([
-    ...updates.map((row) =>
-      tolerate((fields) =>
-        supabaseAdminLive
-          .from("kalba_item_addons")
-          .update({ ...fields, updated_at: new Date().toISOString() })
-          .eq("id", row.id as string),
-      )({
-        name: row.name,
-        name_ar: row.name_ar,
-        image_url: row.image_url,
-        price: row.price,
-        sort_order: row.sort_order,
-      }),
-    ),
-    inserts.length > 0
-      ? tolerate((fields) =>
-          supabaseAdminLive.from("kalba_item_addons").insert(
-            inserts.map((row) => ({
-              item_id: itemId,
-              name: row.name,
-              name_ar: row.name_ar,
-              price: row.price,
-              sort_order: row.sort_order,
-              ...(("image_url" in fields) ? { image_url: row.image_url } : {}),
-            })),
-          ),
-        )({ image_url: "" })
-      : Promise.resolve(),
-  ]);
+      return option.id
+        ? tolerate((f) =>
+            supabaseAdminLive
+              .from("kalba_item_addons")
+              .update({ ...f, updated_at: new Date().toISOString() })
+              .eq("id", option.id as string),
+          )(fields)
+        : tolerate((f) => supabaseAdminLive.from("kalba_item_addons").insert([f]))(fields);
+    }),
+  );
 }
 
 /**
- * Runs a write, and retries once without `image_url` if the column is unknown.
+ * Runs a write, retrying once without a column the database has not got.
  *
- * That column arrived after the first copies of the migration had been run, so a
- * database can have the table but not the picture. Dropping the one field beats
- * losing the whole edit — and it starts saving the moment the file is re-run.
+ * image_url and group_id both arrived after earlier copies of the migrations had
+ * been run. Dropping the one field beats losing the edit, and it starts saving
+ * the moment the newer file is run.
  */
 function tolerate<T extends Record<string, unknown>>(
   attempt: (fields: T) => PromiseLike<{ error: { message?: string } | null }>,
 ) {
   return async (fields: T) => {
     const result = await attempt(fields);
-    if (!result.error?.message || !/image_url/i.test(result.error.message)) return result;
+    const message = result.error?.message;
+    if (!message) return result;
 
-    const rest = { ...fields };
-    delete rest.image_url;
-    return attempt(rest);
+    for (const column of ["image_url", "group_id"]) {
+      if (message.includes(column) && column in fields) {
+        const rest = { ...fields };
+        delete rest[column];
+        return attempt(rest);
+      }
+    }
+    return result;
   };
 }

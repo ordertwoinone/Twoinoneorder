@@ -4,20 +4,22 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { updateRow } from "@/lib/admin-write";
-import { syncItemAddons, type AddonInput } from "@/lib/kalba/addons-server";
+import { syncItemAddonGroups, type GroupInput } from "@/lib/kalba/addons-server";
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const body = await request.json();
-  // Add-ons live in their own table — they are not a column on the item.
-  const { addons, ...fields } = body as { addons?: AddonInput[] } & Record<string, unknown>;
+  // Choice groups live in their own tables — not columns on the item.
+  const { addon_groups, ...fields } = body as {
+    addon_groups?: GroupInput[];
+  } & Record<string, unknown>;
 
   const { data, error } = await updateRow("kalba_popular_items", params.id, fields);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   /* Only when the caller sent them: the Top Picks toggle PUTs a single field,
-     and must not read as "this item now has no extras". */
-  if (Array.isArray(addons)) await syncItemAddons(params.id, addons);
+     and must not read as "this item now asks nothing". */
+  if (Array.isArray(addon_groups)) await syncItemAddonGroups(params.id, addon_groups);
 
   revalidatePath("/restaurant/university-kalba");
   revalidatePath("/restaurant/university-kalba/menu");
