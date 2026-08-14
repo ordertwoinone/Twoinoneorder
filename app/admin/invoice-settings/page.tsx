@@ -33,6 +33,7 @@ const SAMPLE: InvoiceOrder = {
   guests: 2,
   notes: "",
   status: "completed",
+  payment_method: "card",
   created_at: new Date().toISOString(),
   items: [
     { name: "Turkish Breakfast 2 Portion", qty: 1, unit_price: 84, line_total: 84 },
@@ -188,18 +189,19 @@ export default function InvoiceSettingsAdmin() {
               <Field label="Tax" value={form.tax_label} onChange={(v) => set("tax_label", v)} />
               <Field label="Surcharges" value={form.surcharge_label} onChange={(v) => set("surcharge_label", v)} />
               <Field label="Total" value={form.total_label} onChange={(v) => set("total_label", v)} />
-              <Field label="Payment method" value={form.payment_label} onChange={(v) => set("payment_label", v)} />
               <Field label="Total paid" value={form.paid_label} onChange={(v) => set("paid_label", v)} />
+              <Field label="Cash payment reads" value={form.cash_label} onChange={(v) => set("cash_label", v)} />
+              <Field label="Card payment reads" value={form.card_label} onChange={(v) => set("card_label", v)} />
               <Field label="Currency before amounts" value={form.currency_symbol} onChange={(v) => set("currency_symbol", v)} placeholder="blank, or AED" />
               <Field label="Tips" value={form.tips_label} onChange={(v) => set("tips_label", v)} />
-              <Field label="Change" value={form.change_label} onChange={(v) => set("change_label", v)} />
+              <Field label="Pickup / delivery line" value={form.fulfilment_label} onChange={(v) => set("fulfilment_label", v)} />
             </div>
 
             <div className="space-y-3 pt-1">
               <Toggle label="Show surcharges row" hint="" checked={form.show_surcharge} onChange={(v) => set("show_surcharge", v)} />
-              <Toggle label="Show payment and total paid" hint="" checked={form.show_paid} onChange={(v) => set("show_paid", v)} />
+              <Toggle label="Show payment and total paid" hint="Which method it reads is set per order in Order History." checked={form.show_paid} onChange={(v) => set("show_paid", v)} />
               <Toggle label="Show tips row" hint="" checked={form.show_tips} onChange={(v) => set("show_tips", v)} />
-              <Toggle label="Show change row" hint="" checked={form.show_change} onChange={(v) => set("show_change", v)} />
+              <Toggle label="Show pickup / delivery row" hint="" checked={form.show_fulfilment} onChange={(v) => set("show_fulfilment", v)} />
             </div>
           </Section>
 

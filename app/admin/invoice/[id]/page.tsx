@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { getBranding } from "@/lib/branding";
 import { getInvoiceSettings } from "@/lib/invoice-settings-server";
-import { toInvoiceOrder } from "@/lib/invoice";
+import { isReconstructed, toInvoiceOrder } from "@/lib/invoice";
 import InvoiceSheet from "@/components/admin/InvoiceSheet";
 import PrintButton from "./PrintButton";
 
@@ -46,7 +46,31 @@ export default async function InvoicePage({
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
+      {/* Zero page margins are what suppress the browser's own header and
+          footer — the site title, the date and the URL it prints at the edges.
+          The sheet supplies its own padding so nothing sits on the crease. */}
+      <style>{`
+        @media print {
+          @page { size: auto; margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+        }
+      `}</style>
+
       <PrintButton autoPrint={searchParams.print === "1"} />
+
+      {/* Screen only. An operator has to know the figures were recovered from a
+          note before they hand the paper to a customer. */}
+      {isReconstructed(row) && (
+        <div className="mx-auto mt-4 w-[min(100%,760px)] rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-amber-800 print:hidden">
+          <p className="font-semibold">This order was not stored itemised.</p>
+          <p className="mt-1">
+            It was placed before{" "}
+            <code className="font-mono">supabase/order_invoices.sql</code> was run, so there are no
+            line items and the total below was read out of the order note. Run that file in the
+            Supabase SQL editor and every order taken afterwards will print in full.
+          </p>
+        </div>
+      )}
 
       <div className="mx-auto my-6 w-[min(100%,760px)] shadow-sm print:my-0 print:w-full print:shadow-none">
         <InvoiceSheet

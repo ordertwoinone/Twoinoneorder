@@ -44,7 +44,7 @@ export default function InvoiceSheet({
     : "";
 
   return (
-    <div className="bg-white px-10 py-8 text-black print:px-0 print:py-0">
+    <div className="bg-white px-10 py-8 text-black print:px-8 print:py-8">
       {/* Head */}
       <header className="text-center">
         {s.show_logo && logo && (
@@ -134,8 +134,10 @@ export default function InvoiceSheet({
         {s.discount_label && order.discount_total > 0 && (
           <Fact label={s.discount_label} value={`−${money(order.discount_total)}`} />
         )}
+        {/* The rate belongs inside the label's punctuation — "Tax (5%):", not
+            "Tax: (5%)" — so it reads as one heading however admin words it. */}
         {s.tax_label && (
-          <Fact label={`${s.tax_label} (${VAT_PERCENT}%)`} value={money(order.tax_amount)} />
+          <Fact label={withRate(s.tax_label, VAT_PERCENT)} value={money(order.tax_amount)} />
         )}
         {s.show_surcharge && s.surcharge_label && (
           <Fact label={s.surcharge_label} value={money(0)} />
@@ -150,8 +152,9 @@ export default function InvoiceSheet({
 
       {s.show_paid && (
         <>
+          {/* How it was settled, in the words admin chose. */}
           <div className="mt-2 flex items-center justify-between text-[13px]">
-            <span>{s.payment_label}</span>
+            <span>{order.payment_method === "card" ? s.card_label : s.cash_label}</span>
             <span>{money(order.total_amount)}</span>
           </div>
           <hr className="my-3 border-gray-300" />
@@ -162,12 +165,16 @@ export default function InvoiceSheet({
         </>
       )}
 
-      {(s.show_tips || s.show_change) && (
+      {(s.show_tips || s.show_fulfilment) && (
         <>
           <hr className="my-3 border-gray-300" />
           <dl className="space-y-1 text-[13px]">
             {s.show_tips && s.tips_label && <Fact label={s.tips_label} value={money(0)} />}
-            {s.show_change && s.change_label && <Fact label={s.change_label} value={money(0)} />}
+            {/* Pickup or delivery — the thing staff actually need off the
+                bottom of a bill, where the change line used to be. */}
+            {s.show_fulfilment && s.fulfilment_label && (
+              <Fact label={s.fulfilment_label} value={orderTypeLabel(order)} bold />
+            )}
           </dl>
         </>
       )}
@@ -181,6 +188,14 @@ export default function InvoiceSheet({
       )}
     </div>
   );
+}
+
+/** "Tax:" + 5 → "Tax (5%):". A label with no colon just gains the rate. */
+function withRate(label: string, percent: number): string {
+  const trimmed = label.trim();
+  return trimmed.endsWith(":")
+    ? `${trimmed.slice(0, -1).trim()} (${percent}%):`
+    : `${trimmed} (${percent}%)`;
 }
 
 function Fact({ label, value, bold }: { label: string; value: string; bold?: boolean }) {

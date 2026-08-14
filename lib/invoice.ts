@@ -34,6 +34,8 @@ export interface InvoiceOrder {
   guests: number;
   notes: string;
   status: string;
+  /** 'cash' | 'card', set by staff in admin → Order History. */
+  payment_method: string;
   created_at: string;
   items: InvoiceLine[];
   subtotal: number;
@@ -53,6 +55,21 @@ export interface InvoiceBranding {
 
 function num(value: unknown): number {
   const n = typeof value === "number" ? value : parseFloat(String(value ?? ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * The total out of a legacy note, e.g. "… · Total: AED 24.70 · Deliver to: …".
+ *
+ * Reconstructing money from prose is exactly what the stored columns exist to
+ * avoid, and this is not used when they are there. But an order taken before
+ * they existed still has to print something truthful, and a zero on a tax
+ * invoice is a worse lie than a figure recovered from the note beside it.
+ */
+function totalFromNotes(notes: string): number {
+  const match = /total:\s*(?:aed\s*)?([\d.,]+)/i.exec(notes);
+  if (!match) return 0;
+  const n = parseFloat(match[1].replace(/,/g, ""));
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -76,13 +93,17 @@ export function toInvoiceOrder(row: Record<string, unknown>): InvoiceOrder {
     };
   });
 
-  const total = num(row.total_amount);
+  const notes = String(row.notes ?? "");
+  /* An order placed before the invoice columns existed has no stored money at
+     all, only the note the cart wrote for staff. Recover the total from that
+     rather than printing zeros. */
+  const total = num(row.total_amount) || totalFromNotes(notes);
   const storedTax = num(row.tax_amount);
   const storedSubtotal = num(row.subtotal);
 
-  /* An order placed before the invoice columns existed has a total but no
-     split. Deriving it is right either way — the tax is a fixed proportion of
-     a VAT-inclusive total, so it cannot disagree with what was charged. */
+  /* The tax split is derived when it was not stored. Safe either way: it is a
+     fixed proportion of a VAT-inclusive total, so it cannot disagree with what
+     was actually charged. */
   const tax = storedTax || vatIncludedIn(total);
   const subtotal = storedSubtotal || roundMoney(total - tax);
 
@@ -90,14 +111,17 @@ export function toInvoiceOrder(row: Record<string, unknown>): InvoiceOrder {
     id: String(row.id ?? ""),
     order_number: row.order_number == null ? null : Math.round(num(row.order_number)),
     type: String(row.type ?? ""),
-    order_type: String(row.order_type ?? ""),
+    /* A legacy note opens with "Pickup order …" / "Delivery order …", which is
+       better than falling back to the generic label for its booking type. */
+    order_type: String(row.order_type ?? "") || legacyOrderType(notes),
     guest_name: String(row.guest_name ?? ""),
     phone: String(row.phone ?? ""),
     table_id: String(row.table_id ?? ""),
     table_section: String(row.table_section ?? ""),
     guests: Math.round(num(row.guests)),
-    notes: String(row.notes ?? ""),
+    notes,
     status: String(row.status ?? ""),
+    payment_method: String(row.payment_method ?? "cash").toLowerCase() === "card" ? "card" : "cash",
     created_at: String(row.created_at ?? ""),
     items,
     subtotal,
@@ -105,6 +129,23 @@ export function toInvoiceOrder(row: Record<string, unknown>): InvoiceOrder {
     tax_amount: tax,
     total_amount: total,
   };
+}
+
+/** "Pickup" / "Delivery" off the front of a legacy note. */
+function legacyOrderType(notes: string): string {
+  const match = /^(pickup|delivery)\s+order/i.exec(notes.trim());
+  return match ? match[1] : "";
+}
+
+/**
+ * Whether this order's figures were recovered rather than recorded.
+ *
+ * The invoice still prints, but the screen says so — an operator needs to know
+ * the tax split is derived from a total scraped out of a note before they hand
+ * the paper to a customer.
+ */
+export function isReconstructed(row: Record<string, unknown>): boolean {
+  return !Array.isArray(row.items) || row.items.length === 0;
 }
 
 /** "INV # 33861", or the row's own id when the migration has not run. */

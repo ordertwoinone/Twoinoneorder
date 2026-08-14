@@ -9,7 +9,7 @@ import {
   BookOpen, List, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
   Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound, Truck,
-  CreditCard, Sparkles, Receipt,
+  CreditCard, Sparkles, Receipt, History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -31,6 +31,7 @@ interface Access {
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Orders", href: "/admin/live-orders", icon: Radio },
+  { label: "Order History", href: "/admin/order-history", icon: History },
   { label: "Invoice", href: "/admin/invoice-settings", icon: Receipt },
   { label: "Shipday Delivery", href: "/admin/shipday", icon: Truck },
   { label: "Restaurant Menus", href: "/admin/restaurant-menu", icon: BookOpen },

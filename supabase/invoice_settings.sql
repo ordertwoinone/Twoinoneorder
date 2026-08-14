@@ -44,13 +44,16 @@ CREATE TABLE IF NOT EXISTS invoice_settings (
   surcharge_label  text        NOT NULL DEFAULT 'Surcharges Tax:',
   show_surcharge   boolean     NOT NULL DEFAULT true,
   total_label      text        NOT NULL DEFAULT 'Total:',
-  payment_label    text        NOT NULL DEFAULT 'Visa',
   paid_label       text        NOT NULL DEFAULT 'Total Paid:',
   show_paid        boolean     NOT NULL DEFAULT true,
+  -- How each payment method is worded on the bill.
+  cash_label       text        NOT NULL DEFAULT 'Cash',
+  card_label       text        NOT NULL DEFAULT 'Card',
   tips_label       text        NOT NULL DEFAULT 'Tips:',
   show_tips        boolean     NOT NULL DEFAULT true,
-  change_label     text        NOT NULL DEFAULT 'Change:',
-  show_change      boolean     NOT NULL DEFAULT true,
+  -- Printed against the order's Pickup / Delivery.
+  fulfilment_label text        NOT NULL DEFAULT 'Fulfilment:',
+  show_fulfilment  boolean     NOT NULL DEFAULT true,
   currency_symbol  text        NOT NULL DEFAULT '',
 
   -- Foot

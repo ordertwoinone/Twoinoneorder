@@ -34,7 +34,13 @@ export const ADMIN_AREAS: AdminArea[] = [
        redirects here rather than 404ing for anyone who bookmarked it. */
     /* The invoice screens belong to whoever handles orders: printing a receipt
        and changing an order's status are the same job. */
-    paths: ["/admin/live-orders", "/admin/bookings", "/admin/invoice", "/admin/invoice-settings"],
+    paths: [
+      "/admin/live-orders",
+      "/admin/bookings",
+      "/admin/order-history",
+      "/admin/invoice",
+      "/admin/invoice-settings",
+    ],
     apiPaths: [
       "/api/admin/takeapp",
       "/api/admin/push",

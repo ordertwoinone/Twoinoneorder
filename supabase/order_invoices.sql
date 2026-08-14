@@ -44,7 +44,10 @@ ALTER TABLE bookings
   ADD COLUMN IF NOT EXISTS tax_amount     numeric(10,2) NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS total_amount   numeric(10,2) NOT NULL DEFAULT 0,
   -- "Pickup", "Delivery", "Dine-in" — printed at the head of the invoice.
-  ADD COLUMN IF NOT EXISTS order_type     text          NOT NULL DEFAULT '';
+  ADD COLUMN IF NOT EXISTS order_type     text          NOT NULL DEFAULT '',
+  -- 'cash' | 'card'. Set by staff in admin → Order History once they know how
+  -- it was actually settled; the website cannot know at the time of ordering.
+  ADD COLUMN IF NOT EXISTS payment_method text          NOT NULL DEFAULT 'cash';
 
 -- What the invoice is headed with, and every word printed on it, lives in
 -- supabase/invoice_settings.sql — run that one too.

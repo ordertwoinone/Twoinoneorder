@@ -46,13 +46,16 @@ export interface InvoiceSettings {
   surcharge_label: string;
   show_surcharge: boolean;
   total_label: string;
-  payment_label: string;
   paid_label: string;
   show_paid: boolean;
+  /** How each payment method is worded on the bill. */
+  cash_label: string;
+  card_label: string;
   tips_label: string;
   show_tips: boolean;
-  change_label: string;
-  show_change: boolean;
+  /** Printed against the order's Pickup / Delivery. */
+  fulfilment_label: string;
+  show_fulfilment: boolean;
   /** Printed before every amount. Blank for none. */
   currency_symbol: string;
 
@@ -90,13 +93,14 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   surcharge_label: "Surcharges Tax:",
   show_surcharge: true,
   total_label: "Total:",
-  payment_label: "Visa",
   paid_label: "Total Paid:",
   show_paid: true,
+  cash_label: "Cash",
+  card_label: "Card",
   tips_label: "Tips:",
   show_tips: true,
-  change_label: "Change:",
-  show_change: true,
+  fulfilment_label: "Fulfilment:",
+  show_fulfilment: true,
   currency_symbol: "",
 
   footer_text: "",
