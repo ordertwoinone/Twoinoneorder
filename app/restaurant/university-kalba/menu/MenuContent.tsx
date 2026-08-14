@@ -25,7 +25,9 @@ import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useStudentCard } from "@/hooks/useStudentCard";
 import { STUDENT_DISCOUNT_PERCENT, studentDiscountAmount } from "@/lib/student-card";
 import { useTranslation } from "@/lib/i18n/useTranslation";
-import { pickupSlots, slotLabel, type DayHours } from "@/lib/pickup-slots";
+import {
+  pickupSlots, slotLabel, slotDateValue, slotTimeValue, type DayHours,
+} from "@/lib/pickup-slots";
 import { useLocalizedField } from "@/lib/i18n/localized";
 import type { TranslationKey } from "@/lib/i18n/types";
 import type { KalbaPopularItem, KalbaCategory } from "../KalbaContent";
@@ -282,6 +284,57 @@ function CartModal({
     }
     rows.push(t("kalba.wa.lineTotal", { amount: roundMoney(unit * qty) }));
     return rows.join("\n");
+  }
+
+  /**
+   * Records the order the same way the branch page does.
+   *
+   * The menu page only ever opened WhatsApp, so an order placed from here never
+   * reached admin → Orders and could never be invoiced. Same shape as the
+   * branch cart, so one board and one invoice template cover both.
+   */
+  function saveKalbaOrder(type: "pickup" | "delivery") {
+    const itemsText = inCart
+      .map((i) => {
+        const extras = addonSummary(i.groups, cartAddons[i.id], (a) => a.name);
+        return `${i.name} x${cartQty[i.id]}${extras ? ` (+ ${extras})` : ""}`;
+      })
+      .join(", ");
+    const where =
+      type === "delivery" && address.trim()
+        ? ` · Deliver to: ${address.trim()}${mapPin ? ` (${mapPin})` : ""}`
+        : "";
+
+    fetch("/api/bookings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "kalba",
+        table_section: restaurantName,
+        guest_name: name.trim(),
+        phone: phone.trim(),
+        ...(type === "pickup" && pickupAt
+          ? { date: slotDateValue(new Date(pickupAt)), time: slotTimeValue(new Date(pickupAt)) }
+          : {}),
+        guests: 1,
+        // Kept in English: this row is read by staff in the admin panel.
+        notes: `${type === "pickup" ? "Pickup" : "Delivery"} order · ${itemsText || "(no items)"} · Total: AED ${payable}${where}`,
+        status: "pending",
+        order_type: type === "pickup" ? "Pickup" : "Delivery",
+        items: inCart.map((i) => ({
+          name: i.name,
+          qty: cartQty[i.id] ?? 0,
+          unit_price: i.numericPrice,
+          extras: addonSummary(i.groups, cartAddons[i.id], (a) => a.name),
+          extras_price: addonsTotal(i.groups, cartAddons[i.id]),
+          line_total: roundMoney(unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0)),
+        })),
+        subtotal: roundMoney(payable - vatIncludedIn(payable)),
+        discount_total: roundMoney(itemOffers + discountAmount + studentDiscount),
+        tax_amount: vatIncludedIn(payable),
+        total_amount: payable,
+      }),
+    }).catch(() => {});
   }
 
   function buildWaUrl(type: "pickup" | "delivery") {
@@ -590,6 +643,7 @@ function CartModal({
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   if (!pickupReady) { e.preventDefault(); return; }
+                  saveKalbaOrder("pickup");
                   onClose();
                 }}
                 aria-disabled={!pickupReady}
@@ -655,6 +709,7 @@ function CartModal({
                 rel="noopener noreferrer"
                 onClick={(e) => {
                   if (!address.trim()) { e.preventDefault(); return; }
+                  saveKalbaOrder("delivery");
                   onClose();
                 }}
                 aria-disabled={!address.trim()}

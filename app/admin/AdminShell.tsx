@@ -9,7 +9,7 @@ import {
   BookOpen, List, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
   Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound, Truck,
-  CreditCard, Sparkles,
+  CreditCard, Sparkles, Receipt,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -31,6 +31,7 @@ interface Access {
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { label: "Orders", href: "/admin/live-orders", icon: Radio },
+  { label: "Invoice", href: "/admin/invoice-settings", icon: Receipt },
   { label: "Shipday Delivery", href: "/admin/shipday", icon: Truck },
   { label: "Restaurant Menus", href: "/admin/restaurant-menu", icon: BookOpen },
   {
@@ -183,7 +184,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Mobile top bar. `pt-safe` matters once this is an installed app: the
           viewport is set to cover the whole screen, so without it the bar draws
           underneath the clock and the menu button cannot be tapped. */}
-      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 pt-safe">
+      {/* Chrome, not content: an invoice printed from here must come out as
+          the invoice alone. */}
+      <div className="lg:hidden sticky top-0 z-30 bg-white border-b border-gray-200 pt-safe print:hidden">
         <div className="flex items-center gap-2 px-2 h-14">
         <button
           onClick={() => setSidebarOpen(true)}
@@ -206,7 +209,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* Sidebar — slide-in drawer on mobile, static on desktop */}
       <aside
-        className={`w-[260px] lg:w-[240px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen fixed lg:sticky top-0 z-50 transition-transform duration-300 ${
+        className={`w-[260px] lg:w-[240px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen fixed lg:sticky top-0 z-50 transition-transform duration-300 print:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
@@ -304,7 +307,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0">{children}</main>
+      <main className="flex-1 min-w-0 print:m-0 print:p-0">{children}</main>
     </div>
   );
 }

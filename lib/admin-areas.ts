@@ -32,8 +32,15 @@ export const ADMIN_AREAS: AdminArea[] = [
     hint: "take.app orders and every booking, on one board",
     /* /admin/bookings is kept as a path so the old link still resolves — it
        redirects here rather than 404ing for anyone who bookmarked it. */
-    paths: ["/admin/live-orders", "/admin/bookings"],
-    apiPaths: ["/api/admin/takeapp", "/api/admin/push", "/api/admin/bookings"],
+    /* The invoice screens belong to whoever handles orders: printing a receipt
+       and changing an order's status are the same job. */
+    paths: ["/admin/live-orders", "/admin/bookings", "/admin/invoice", "/admin/invoice-settings"],
+    apiPaths: [
+      "/api/admin/takeapp",
+      "/api/admin/push",
+      "/api/admin/bookings",
+      "/api/admin/invoice-settings",
+    ],
   },
   {
     key: "shipday",

@@ -541,6 +541,22 @@ function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, itemOffer
         // Kept in English: this row is read by staff in the admin panel.
         notes: `${type === "pickup" ? "Pickup" : "Delivery"} order · ${itemsText || "(no items)"} · Total: AED ${total}${where}`,
         status: "pending",
+        /* Structured alongside the note, so the tax invoice prints from figures
+           rather than parsing an English sentence back apart. Shed harmlessly
+           by the writer on a database that has not run order_invoices.sql. */
+        order_type: type === "pickup" ? "Pickup" : "Delivery",
+        items: inCart.map((i) => ({
+          name: i.name,
+          qty: cartQty[i.id] ?? 0,
+          unit_price: i.numericPrice,
+          extras: addonSummary(i.groups, cartAddons[i.id], (a) => a.name),
+          extras_price: addonsTotal(i.groups, cartAddons[i.id]),
+          line_total: roundMoney(unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0)),
+        })),
+        subtotal: roundMoney(total - vatIncludedIn(total)),
+        discount_total: roundMoney(itemOffers + discountAmount + studentDiscount),
+        tax_amount: vatIncludedIn(total),
+        total_amount: total,
       }),
     }).catch(() => {});
   }

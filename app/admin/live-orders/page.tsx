@@ -3,7 +3,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import {
   RefreshCw, Volume2, VolumeX, AlertTriangle, Store, Phone, Clock,
   CalendarClock, StickyNote, BellRing, X, Wifi, WifiOff,
-  Search, SlidersHorizontal, Download, ChevronDown,
+  Search, SlidersHorizontal, Download, ChevronDown, Printer,
 } from "lucide-react";
 import NotificationButton from "./NotificationButton";
 
@@ -36,6 +36,8 @@ interface Order {
 /** A booking as /api/admin/bookings returns it — the other half of the board. */
 interface Booking {
   id: string;
+  /** From supabase/order_invoices.sql; absent until that has been run. */
+  order_number?: number | null;
   type: string;
   table_id: string;
   table_section: string;
@@ -82,6 +84,8 @@ interface Row {
   /** Booking rows carry the account that placed them, and an editable status. */
   bookingType?: string;
   account?: Booking["account"];
+  /** Ours to invoice. take.app issues its own, from its own numbering. */
+  invoiceable?: boolean;
 }
 
 const BOOKING_TYPES: Record<string, { label: string; chip: string }> = {
@@ -123,7 +127,10 @@ function bookingRow(b: Booking): Row {
     key: `booking:${b.id}`,
     source: "booking",
     id: b.id,
-    number: b.table_id || b.id.slice(0, 8),
+    /* The order number if it has one — that is what a customer quotes and what
+       the invoice prints. The table code is a fallback for rows taken before
+       supabase/order_invoices.sql was run. */
+    number: b.order_number != null ? `#${b.order_number}` : b.table_id || b.id.slice(0, 8),
     createdAt: b.created_at,
     where: b.table_section || BOOKING_TYPES[b.type]?.label || "—",
     whereNote: b.seats ? `${b.seats} seats` : "",
@@ -139,6 +146,7 @@ function bookingRow(b: Booking): Row {
     scheduled: when || null,
     bookingType: b.type || "table",
     account: b.account ?? null,
+    invoiceable: true,
   };
 }
 
@@ -830,6 +838,21 @@ export default function LiveOrdersAdmin() {
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {/* take.app issues its own invoices off its own numbering, so
+                      only our own orders get one from here. */}
+                  {r.invoiceable && (
+                    <a
+                      href={`/admin/invoice/${r.id}?print=1`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      title="Print invoice"
+                      aria-label="Print invoice"
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:text-orange-600 hover:border-orange-300 active:bg-gray-100"
+                    >
+                      <Printer size={15} />
+                    </a>
+                  )}
                   {r.customerPhone && (
                     <a
                       href={`tel:${r.customerPhone}`}
@@ -1009,8 +1032,25 @@ export default function LiveOrdersAdmin() {
                     <td className="px-4 py-3 text-right font-extrabold text-gray-900 whitespace-nowrap">
                       {r.total === null ? <span className="text-gray-300 font-normal">—</span> : money(r.total, r.currency)}
                     </td>
-                    <td className="px-4 py-3 text-gray-300">
-                      <ChevronDown size={15} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1.5 text-gray-300">
+                        {/* take.app issues its own invoices off its own
+                            numbering, so only our own orders get one here. */}
+                        {r.invoiceable && (
+                          <a
+                            href={`/admin/invoice/${r.id}?print=1`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Print invoice"
+                            aria-label="Print invoice"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+                          >
+                            <Printer size={14} />
+                          </a>
+                        )}
+                        <ChevronDown size={15} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+                      </div>
                     </td>
                   </tr>
 
