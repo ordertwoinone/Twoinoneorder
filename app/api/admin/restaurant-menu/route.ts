@@ -20,7 +20,13 @@ export async function GET(request: Request) {
   if (restaurantId) {
     const { data, error } = await supabaseAdminLive
       .from("restaurant_menu_items")
-      .select("id, external_id, name, price, currency, image_url, category, product_url, is_available, show_in_top_picks, top_picks_order, last_synced_at")
+      /* `*` rather than a column list. Naming them meant the Deals columns were
+         simply left out when they were added: the switch read back undefined
+         and drew itself off while the home page was already showing the item.
+         PostgREST also rejects the whole select if one named column is unknown,
+         so a list would take the screen down on a database that has not run the
+         migration yet — `*` survives both. */
+      .select("*")
       .eq("restaurant_id", restaurantId)
       .order("category", { ascending: true })
       .order("name", { ascending: true })
