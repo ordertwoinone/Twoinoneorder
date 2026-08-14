@@ -1,5 +1,10 @@
 import { supabaseAdmin, supabaseAdminLive } from "@/lib/supabase-admin";
-import { buildGroups, type KalbaAddon, type KalbaAddonGroup } from "@/lib/kalba/addons";
+import {
+  buildGroups,
+  LOOSE_GROUP_ID,
+  type KalbaAddon,
+  type KalbaAddonGroup,
+} from "@/lib/kalba/addons";
 
 /**
  * Reading and writing choice groups from the server.
@@ -91,7 +96,11 @@ export async function syncItemAddonGroups(
   const dropped = new Set<string>();
   const clean = groups
     .map((group, index) => ({
-      id: group.id,
+      /* "__loose__" is the synthetic heading the options that predate groups
+         are shown under. It is not a row, so saving must create a real group
+         and adopt them into it — treating it as an id makes every query
+         against it fail, and the whole sync quietly does nothing. */
+      id: group.id === LOOSE_GROUP_ID ? undefined : group.id,
       name: (group.name ?? "").trim(),
       name_ar: (group.name_ar ?? "").trim(),
       min_select: Math.max(0, Number(group.min_select) || 0),
@@ -161,6 +170,30 @@ export async function syncItemAddonGroups(
     await syncGroupOptions(itemId, groupId, group.options, dropped);
   }
 
+  /**
+   * Then remove whatever the form dropped.
+   *
+   * Scoped to the item, not the group: an option can be deleted, or moved
+   * between groups, or be one of the loose ones being adopted — a per-group
+   * sweep misses all three, which is how a deleted option kept coming back.
+   */
+  const keptOptionIds = new Set(
+    clean.flatMap((g) => g.options.map((o) => o.id).filter(Boolean) as string[]),
+  );
+
+  const { data: allOptions } = await supabaseAdminLive
+    .from("kalba_item_addons")
+    .select("id")
+    .eq("item_id", itemId);
+
+  const goneOptionIds = (allOptions ?? [])
+    .map((row) => (row as { id: string }).id)
+    .filter((id) => !keptOptionIds.has(id));
+
+  if (goneOptionIds.length > 0) {
+    await supabaseAdminLive.from("kalba_item_addons").delete().in("id", goneOptionIds);
+  }
+
   return { droppedColumns: Array.from(dropped) };
 }
 
@@ -170,22 +203,8 @@ async function syncGroupOptions(
   options: { id?: string; name: string; name_ar: string; image_url: string; price: number; sort_order: number }[],
   dropped: Set<string>,
 ): Promise<void> {
-  const { data: existing, error } = await supabaseAdminLive
-    .from("kalba_item_addons")
-    .select("id")
-    .eq("group_id", groupId);
-
-  if (error) return;
-
-  const keptIds = new Set(options.map((o) => o.id).filter(Boolean) as string[]);
-  const goneIds = (existing ?? [])
-    .map((row) => (row as { id: string }).id)
-    .filter((id) => !keptIds.has(id));
-
-  if (goneIds.length > 0) {
-    await supabaseAdminLive.from("kalba_item_addons").delete().in("id", goneIds);
-  }
-
+  /* Writes only — removals are swept up once, per item, by the caller. Doing
+     it here per group could not see an option that had moved out of one. */
   await Promise.all(
     options.map((option) => {
       const fields = {

@@ -180,7 +180,9 @@ export default function KalbaPopularAdmin() {
         min_select: 1,
         max_select: 1,
         sort_order: list.length,
-        options: (preset?.options ?? [""]).map((name, i) => ({
+        /* No blank row for a plain group: seeding one made the first "Add
+           option" look like it had added two. A preset brings its own. */
+        options: (preset?.options ?? []).map((name, i) => ({
           name,
           name_ar: "",
           image_url: "",
@@ -734,6 +736,11 @@ export default function KalbaPopularAdmin() {
 
                         {/* Its options */}
                         <div className="space-y-2 ps-2 border-s-2 border-orange-100">
+                          {group.options.length === 0 && (
+                            <p className="text-[11px] text-gray-400 py-1">
+                              No options yet — add the answers to this question below.
+                            </p>
+                          )}
                           {group.options.map((option, oi) => (
                             <div
                               key={option.id ?? `new-option-${oi}`}
