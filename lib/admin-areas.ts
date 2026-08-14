@@ -75,6 +75,7 @@ export const ADMIN_AREAS: AdminArea[] = [
       "/admin/trust-badges",
       "/admin/campus-promo",
       "/admin/homepage-cards",
+      "/admin/home-sections",
     ],
     apiPaths: [
       "/api/admin/restaurants",

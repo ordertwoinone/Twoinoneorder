@@ -5,7 +5,52 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { stagger } from "@/lib/stagger";
 import { T } from "@/lib/i18n/T";
 import { L } from "@/lib/i18n/localized";
+import type { TranslationKey } from "@/lib/i18n/types";
 import TopPickSubtitle from "./TopPickSubtitle";
+
+/**
+ * A home-page strip of items pulled from every area of the admin panel.
+ *
+ * Two of these run: "Top Picks For You" and "Deals You'll Love". They are the
+ * same machinery pointed at a different pair of columns, because the only thing
+ * that differs is which flag publishes an item and in what order — duplicating
+ * the component would mean fixing every future bug twice.
+ *
+ * Items live in their own per-area tables rather than being copied into a
+ * strip table, so an item is published by switching a flag on where it already
+ * lives, and can appear in both strips at once.
+ */
+
+export type StripVariant = "top-picks" | "deals";
+
+interface VariantConfig {
+  flagColumn: string;
+  orderColumn: string;
+  titleKey: TranslationKey;
+  subtitleKey: TranslationKey;
+  /** admin → Homepage → Home Sections, when it has been filled in. */
+  titleField: string;
+  subtitleField: string;
+}
+
+const VARIANTS: Record<StripVariant, VariantConfig> = {
+  "top-picks": {
+    flagColumn: "show_in_top_picks",
+    orderColumn: "top_picks_order",
+    titleKey: "home.topPicksTitle",
+    subtitleKey: "home.topPicksSubtitle",
+    titleField: "top_picks_title",
+    subtitleField: "top_picks_subtitle",
+  },
+  deals: {
+    flagColumn: "show_in_deals",
+    orderColumn: "deals_order",
+    titleKey: "home.dealsTitle",
+    subtitleKey: "home.dealsSubtitle",
+    titleField: "deals_title",
+    subtitleField: "deals_subtitle",
+  },
+};
 
 /** Normalised shape every source table is mapped into. */
 interface Pick {
@@ -48,45 +93,38 @@ function restaurantName(relation: unknown, field: "name" | "name_ar" = "name"): 
   return typeof name === "string" && name ? name : null;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Row = Record<string, any>;
+
 /**
- * Items are spread across the per-area admin tables plus the menus imported
- * from the restaurants' storefronts; each one carries a show_in_top_picks
- * flag. Pull the flagged rows from every source and merge them into a single
- * strip ordered by top_picks_order.
+ * Pulls the flagged rows from every source and merges them into one strip.
+ *
+ * A source whose read fails is skipped rather than taking the strip down with
+ * it: the deals columns arrive with a hand-run migration, and a table that has
+ * not had it yet simply contributes nothing.
  */
-async function getPicks(): Promise<Pick[]> {
+async function getPicks(config: VariantConfig): Promise<Pick[]> {
+  const { flagColumn, orderColumn } = config;
+
   const [menuItems, buffetDishes, kalbaPopular, kalbaSpecials, imported] = await Promise.all([
-    supabaseAdmin
-      .from("buffet_menu_items")
-      .select("*")
-      .eq("is_active", true)
-      .eq("show_in_top_picks", true),
-    supabaseAdmin
-      .from("buffet_popular_dishes")
-      .select("*")
-      .eq("is_active", true)
-      .eq("show_in_top_picks", true),
-    supabaseAdmin
-      .from("kalba_popular_items")
-      .select("*")
-      .eq("is_active", true)
-      .eq("show_in_top_picks", true),
-    supabaseAdmin
-      .from("kalba_specials")
-      .select("*")
-      .eq("is_active", true)
-      .eq("show_in_top_picks", true),
+    supabaseAdmin.from("buffet_menu_items").select("*").eq("is_active", true).eq(flagColumn, true),
+    supabaseAdmin.from("buffet_popular_dishes").select("*").eq("is_active", true).eq(flagColumn, true),
+    supabaseAdmin.from("kalba_popular_items").select("*").eq("is_active", true).eq(flagColumn, true),
+    supabaseAdmin.from("kalba_specials").select("*").eq("is_active", true).eq(flagColumn, true),
     // Items imported from the restaurants' ordering storefronts. These are the
     // only source with a real per-item order link.
     supabaseAdmin
       .from("restaurant_menu_items")
       .select("*, restaurants(name, name_ar)")
       .eq("is_available", true)
-      .eq("show_in_top_picks", true),
+      .eq(flagColumn, true),
   ]);
 
+  const rows = (res: { data: unknown; error: unknown }): Row[] =>
+    res.error ? [] : ((res.data ?? []) as Row[]);
+
   const picks: Pick[] = [
-    ...(menuItems.data ?? []).map((r) => ({
+    ...rows(menuItems).map((r) => ({
       key: `buffetmenu:${r.id}`,
       name: r.name,
       nameAr: r.name_ar ?? null,
@@ -96,10 +134,10 @@ async function getPicks(): Promise<Pick[]> {
       subtitleKey: "home.subtitles.buffetMenu",
       subtitle: "Buffet menu",
       subtitleAr: null,
-      order: r.top_picks_order ?? 0,
+      order: r[orderColumn] ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
-    ...(buffetDishes.data ?? []).map((r) => ({
+    ...rows(buffetDishes).map((r) => ({
       key: `buffetdish:${r.id}`,
       name: r.name,
       nameAr: r.name_ar ?? null,
@@ -109,10 +147,10 @@ async function getPicks(): Promise<Pick[]> {
       subtitleKey: r.tag ? null : "home.subtitles.buffetDish",
       subtitle: r.tag || "Buffet dish",
       subtitleAr: r.tag_ar ?? null,
-      order: r.top_picks_order ?? 0,
+      order: r[orderColumn] ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
-    ...(kalbaPopular.data ?? []).map((r) => ({
+    ...rows(kalbaPopular).map((r) => ({
       key: `kalbapopular:${r.id}`,
       name: r.name,
       nameAr: r.name_ar ?? null,
@@ -122,10 +160,10 @@ async function getPicks(): Promise<Pick[]> {
       subtitleKey: "home.subtitles.universityKalba",
       subtitle: "University Kalba",
       subtitleAr: null,
-      order: r.top_picks_order ?? 0,
+      order: r[orderColumn] ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
-    ...(kalbaSpecials.data ?? []).map((r) => ({
+    ...rows(kalbaSpecials).map((r) => ({
       key: `kalbaspecial:${r.id}`,
       name: r.name,
       nameAr: r.name_ar ?? null,
@@ -135,10 +173,10 @@ async function getPicks(): Promise<Pick[]> {
       subtitleKey: "home.subtitles.universityKalba",
       subtitle: "University Kalba",
       subtitleAr: null,
-      order: r.top_picks_order ?? 0,
+      order: r[orderColumn] ?? 0,
       sortOrder: r.sort_order ?? 0,
     })),
-    ...(imported.data ?? []).map((r) => ({
+    ...rows(imported).map((r) => ({
       key: `menuitem:${r.id}`,
       name: r.name,
       nameAr: r.name_ar ?? null,
@@ -149,7 +187,7 @@ async function getPicks(): Promise<Pick[]> {
       subtitleKey: restaurantName(r.restaurants) ? null : "home.subtitles.orderNow",
       subtitle: restaurantName(r.restaurants) ?? "Order now",
       subtitleAr: restaurantName(r.restaurants, "name_ar"),
-      order: r.top_picks_order ?? 0,
+      order: r[orderColumn] ?? 0,
       sortOrder: 0,
     })),
   ];
@@ -159,8 +197,30 @@ async function getPicks(): Promise<Pick[]> {
     .sort((a, b) => a.order - b.order || a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 }
 
-export default async function TopPicks() {
-  const picks = await getPicks();
+/** The admin-written heading, or null to fall back to the dictionary. */
+async function getHeading(config: VariantConfig) {
+  const { data, error } = await supabaseAdmin
+    .from("site_settings")
+    .select(
+      `${config.titleField}, ${config.titleField}_ar, ${config.subtitleField}, ${config.subtitleField}_ar`,
+    )
+    .single();
+
+  if (error || !data) return null;
+  const row = data as unknown as Record<string, string | null>;
+  const text = (key: string) => (typeof row[key] === "string" ? row[key]!.trim() : "");
+
+  return {
+    title: text(config.titleField),
+    titleAr: text(`${config.titleField}_ar`),
+    subtitle: text(config.subtitleField),
+    subtitleAr: text(`${config.subtitleField}_ar`),
+  };
+}
+
+export default async function PicksStrip({ variant }: { variant: StripVariant }) {
+  const config = VARIANTS[variant];
+  const [picks, heading] = await Promise.all([getPicks(config), getHeading(config)]);
 
   // Nothing flagged in the admin panel yet — render nothing rather than an
   // empty heading.
@@ -171,20 +231,26 @@ export default async function TopPicks() {
       <div className="max-w-7xl mx-auto">
         <div className="px-4 mb-3">
           <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">
-            <T k="home.topPicksTitle" />
+            {heading?.title ? (
+              <L en={heading.title} ar={heading.titleAr || null} />
+            ) : (
+              <T k={config.titleKey} />
+            )}
           </h2>
           <p className="text-[11px] text-gray-400 mt-0.5">
-            <T k="home.topPicksSubtitle" />
+            {heading?.subtitle ? (
+              <L en={heading.subtitle} ar={heading.subtitleAr || null} />
+            ) : (
+              <T k={config.subtitleKey} />
+            )}
           </p>
         </div>
 
-        {/* Mobile: horizontal swipe strip. Desktop: even grid. */}
-        {/* Mobile: two rows that scroll sideways — grid-flow-col fills top to
-            bottom, then moves to the next column, with each column sized so
-            three sit in view. scroll-ps-4 matches the px-4 inset (see
-            HomeCategories: snapping otherwise pulls the first card flush to the
-            screen edge). sm+: a plain single-row grid. */}
-        <div className="grid grid-flow-col grid-rows-2 auto-cols-[calc((100vw-3.5rem)/3)] gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-ps-4 sm:grid-flow-row sm:grid-rows-none sm:auto-cols-auto sm:grid-cols-4 lg:grid-cols-5 sm:gap-4 sm:overflow-visible">
+        {/* Mobile: one row that scrolls sideways, sized so three sit in view.
+            scroll-ps-4 matches the px-4 inset (see HomeCategories: snapping
+            otherwise pulls the first card flush to the screen edge).
+            sm+: a plain grid. */}
+        <div className="grid grid-flow-col grid-rows-1 auto-cols-[calc((100vw-3.5rem)/3)] gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-ps-4 sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-4 lg:grid-cols-5 sm:gap-4 sm:overflow-visible">
           {picks.map((p, i) => (
             <div
               key={p.key}

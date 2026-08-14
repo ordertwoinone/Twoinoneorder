@@ -112,6 +112,8 @@ const en = {
     categoriesTitle: "What are you craving?",
     restaurantsTitle: "Our Restaurants",
     restaurantsSubtitle: "Tap to order · Fast delivery across UAE",
+    dealsTitle: "Deals You'll Love",
+    dealsSubtitle: "Hand-picked offers worth ordering today",
     topPicksTitle: "Top Picks For You",
     topPicksSubtitle: "Handpicked favourites from our kitchens",
     moreWaysTitle: "More Ways to Enjoy",

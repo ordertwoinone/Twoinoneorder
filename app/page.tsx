@@ -6,7 +6,7 @@ import SearchBar from "@/components/home/SearchBar";
 import HeroBannerMobile from "@/components/home/HeroBannerMobile";
 import HeroBannerWeb from "@/components/home/HeroBannerWeb";
 import RestaurantCards from "@/components/home/RestaurantCards";
-import TopPicks from "@/components/home/TopPicks";
+import PicksStrip from "@/components/home/PicksStrip";
 import HomepageCards from "@/components/home/HomepageCards";
 import HomeCategories from "@/components/home/HomeCategories";
 import TrustBadges from "@/components/home/TrustBadges";
@@ -77,7 +77,8 @@ export default async function HomePage() {
         {/* `trigger` on the sections whose cards stagger in themselves — the
             wrapper only reports when they've been scrolled to. */}
         <FadeInSection trigger><RestaurantCards /></FadeInSection>
-        <FadeInSection trigger><TopPicks /></FadeInSection>
+        <FadeInSection trigger><PicksStrip variant="top-picks" /></FadeInSection>
+        <FadeInSection trigger><PicksStrip variant="deals" /></FadeInSection>
         <FadeInSection trigger><HomepageCards /></FadeInSection>
         <FadeInSection trigger><TrustBadges /></FadeInSection>
         <Footer />

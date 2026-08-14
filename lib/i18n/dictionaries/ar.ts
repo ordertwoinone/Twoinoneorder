@@ -136,6 +136,8 @@ const ar: Dictionary = {
     categoriesTitle: "ماذا تشتهي اليوم؟",
     restaurantsTitle: "مطاعمنا",
     restaurantsSubtitle: "اضغط للطلب · توصيل سريع في جميع أنحاء الإمارات",
+    dealsTitle: "عروض ستحبها",
+    dealsSubtitle: "عروض مختارة تستحق الطلب اليوم",
     topPicksTitle: "اختياراتنا لك",
     topPicksSubtitle: "أشهى الأطباق المختارة من مطابخنا",
     moreWaysTitle: "المزيد من الخيارات",

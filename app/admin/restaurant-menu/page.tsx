@@ -1,7 +1,7 @@
 "use client";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, Search, ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
-import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import PicksToggle from "@/components/admin/PicksToggle";
 
 interface RestaurantSummary {
   id: string;
@@ -26,6 +26,7 @@ interface MenuItem {
   product_url: string | null;
   is_available: boolean;
   show_in_top_picks: boolean;
+  show_in_deals: boolean;
   last_synced_at: string;
 }
 
@@ -266,24 +267,25 @@ export default function RestaurantMenuAdmin() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Price</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Top Picks</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Deals</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {itemsLoading ? (
-                  <tr><td colSpan={6} className="text-center py-16 text-gray-400 text-sm">Loading items…</td></tr>
+                  <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading items…</td></tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-16 text-gray-400 text-sm">
+                    <td colSpan={7} className="text-center py-16 text-gray-400 text-sm">
                       Nothing imported yet — hit &ldquo;Sync this menu&rdquo; to pull the items in.
                     </td>
                   </tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-16 text-gray-400 text-sm">No items match that search.</td></tr>
+                  <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No items match that search.</td></tr>
                 ) : grouped.map(([categoryName, rows]) => (
                   <Fragment key={categoryName}>
                     <tr className="bg-gray-50/70 border-b border-gray-100">
-                      <td colSpan={6} className="px-4 py-2">
+                      <td colSpan={7} className="px-4 py-2">
                         <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wide">{categoryName}</span>
                         <span className="text-[11px] text-gray-400 ml-2">{rows.length} item{rows.length !== 1 ? "s" : ""}</span>
                       </td>
@@ -318,10 +320,18 @@ export default function RestaurantMenuAdmin() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <TopPicksToggle
+                          <PicksToggle
                             endpoint={`/api/admin/restaurant-menu/${item.id}`}
                             enabled={item.show_in_top_picks}
                             onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_top_picks: v } : x)))}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <PicksToggle
+                      variant="deals"
+                            endpoint={`/api/admin/restaurant-menu/${item.id}`}
+                            enabled={item.show_in_deals}
+                            onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_deals: v } : x)))}
                           />
                         </td>
                         <td className="px-4 py-3">

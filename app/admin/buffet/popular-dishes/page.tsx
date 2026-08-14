@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
-import TopPicksField from "@/components/admin/TopPicksField";
-import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import PicksField from "@/components/admin/PicksField";
+import PicksToggle from "@/components/admin/PicksToggle";
 import BilingualField from "@/components/admin/BilingualField";
 
 interface PopularDish {
@@ -18,6 +18,8 @@ interface PopularDish {
   is_active: boolean;
   show_in_top_picks: boolean;
   top_picks_order: number;
+  show_in_deals: boolean;
+  deals_order: number;
 }
 
 const EMPTY: Omit<PopularDish, "id"> = {
@@ -31,6 +33,8 @@ const EMPTY: Omit<PopularDish, "id"> = {
   is_active: true,
   show_in_top_picks: false,
   top_picks_order: 0,
+  show_in_deals: false,
+  deals_order: 0,
 };
 
 const TAG_SUGGESTIONS = ["Chef's Special", "Bestseller", "Healthy Pick", "Sweet Treat", "New", "Popular", "Must Try"];
@@ -117,14 +121,15 @@ export default function PopularDishesAdmin() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Top Picks</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Deals</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">No dishes yet.</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">No dishes yet.</td></tr>
             ) : items.map((item) => (
               <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
@@ -151,10 +156,18 @@ export default function PopularDishesAdmin() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <TopPicksToggle
+                  <PicksToggle
                     endpoint={`/api/admin/buffet/popular-dishes/${item.id}`}
                     enabled={!!item.show_in_top_picks}
                     onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_top_picks: v } : x)))}
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <PicksToggle
+                      variant="deals"
+                    endpoint={`/api/admin/buffet/popular-dishes/${item.id}`}
+                    enabled={!!item.show_in_deals}
+                    onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_deals: v } : x)))}
                   />
                 </td>
                 <td className="px-4 py-3">
@@ -253,7 +266,7 @@ export default function PopularDishesAdmin() {
                 </div>
               </div>
 
-              <TopPicksField
+              <PicksField
                 enabled={!!modal.data.show_in_top_picks}
                 order={modal.data.top_picks_order ?? 0}
                 onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}

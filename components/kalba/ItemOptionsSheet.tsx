@@ -35,7 +35,6 @@ export interface SheetItem {
   id: string;
   name: string;
   description?: string | null;
-  image_url: string;
   /** The dish on its own, before any answers. */
   numericPrice: number;
 }
@@ -130,37 +129,26 @@ export default function ItemOptionsSheet({
         role="dialog"
         aria-label={item.name}
       >
-        {/* Photo and name. Contained, not cropped: this is the one place the
-            dish is looked at properly, and a landscape photo cut to a strip
-            loses exactly the part that sells it. */}
-        <div className="relative shrink-0">
-          {item.image_url && (
-            <div className="w-full rounded-t-3xl overflow-hidden bg-gray-50 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.image_url}
-                alt={item.name}
-                className="w-full max-h-56 sm:max-h-64 object-contain"
-              />
-            </div>
-          )}
+        {/* No photo of the dish: they have just tapped its card, so they know
+            what it looks like. The sheet is for the choices, and the options'
+            own pictures are the ones worth the room. */}
+        <div className="flex items-start gap-3 px-5 pt-5 pb-2 shrink-0">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-extrabold text-gray-900 leading-tight">{item.name}</h2>
+            {item.description && (
+              <p className="text-[13px] text-gray-500 leading-snug mt-1">{item.description}</p>
+            )}
+            <p className="text-[15px] font-extrabold mt-1.5" style={{ color: "#ea580c" }}>
+              {t("common.price", { amount: item.numericPrice })}
+            </p>
+          </div>
           <button
             onClick={onClose}
             aria-label={t("common.close")}
-            className="absolute top-3 end-3 w-9 h-9 rounded-full bg-white/95 shadow flex items-center justify-center text-gray-600 hover:bg-white transition-colors"
+            className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-colors"
           >
             <X size={17} />
           </button>
-        </div>
-
-        <div className="px-5 pt-4 pb-2 shrink-0">
-          <h2 className="text-lg font-extrabold text-gray-900 leading-tight">{item.name}</h2>
-          {item.description && (
-            <p className="text-[13px] text-gray-500 leading-snug mt-1">{item.description}</p>
-          )}
-          <p className="text-[15px] font-extrabold mt-1.5" style={{ color: "#ea580c" }}>
-            {t("common.price", { amount: item.numericPrice })}
-          </p>
         </div>
 
         {/* The questions */}

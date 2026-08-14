@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, GripVertical, ChevronUp, ChevronDown, Ruler } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
-import TopPicksField from "@/components/admin/TopPicksField";
-import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import PicksField from "@/components/admin/PicksField";
+import PicksToggle from "@/components/admin/PicksToggle";
 import BilingualField from "@/components/admin/BilingualField";
 
 interface Category {
@@ -69,6 +69,8 @@ interface PopularItem {
   tags: string[];
   show_in_top_picks: boolean;
   top_picks_order: number;
+  show_in_deals: boolean;
+  deals_order: number;
   addon_groups: AddonGroup[];
 }
 
@@ -96,6 +98,8 @@ const EMPTY: Omit<PopularItem, "id"> = {
   tags: [],
   show_in_top_picks: false,
   top_picks_order: 0,
+  show_in_deals: false,
+  deals_order: 0,
   addon_groups: [],
 };
 
@@ -113,16 +117,27 @@ export default function KalbaPopularAdmin() {
   /* Columns the last save could not write, because the migration adding them
      has not been run. Shown rather than swallowed. */
   const [saveWarning, setSaveWarning] = useState<string[]>([]);
+  /* Migrations this database has not had run. Checked on load, because a photo
+     that will not stick is a mystery until somebody says why. */
+  const [missingMigrations, setMissingMigrations] = useState<
+    { migration: string; needed: string }[]
+  >([]);
 
   async function load() {
     setLoading(true);
-    const [itemsRes, catsRes] = await Promise.all([
+    const [itemsRes, catsRes, schemaRes] = await Promise.all([
       fetch("/api/admin/kalba/popular"),
       fetch("/api/admin/kalba/categories"),
+      fetch("/api/admin/kalba/schema-check"),
     ]);
-    const [itemsData, catsData] = await Promise.all([itemsRes.json(), catsRes.json()]);
+    const [itemsData, catsData, schemaData] = await Promise.all([
+      itemsRes.json(),
+      catsRes.json(),
+      schemaRes.json().catch(() => ({ missing: [] })),
+    ]);
     setItems(Array.isArray(itemsData) ? itemsData : []);
     setCategories(Array.isArray(catsData) ? catsData : []);
+    setMissingMigrations(schemaData?.missing ?? []);
     setLoading(false);
   }
 
@@ -326,6 +341,26 @@ export default function KalbaPopularAdmin() {
         </button>
       </div>
 
+      {missingMigrations.length > 0 && (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
+          <p className="text-sm font-semibold text-amber-900">
+            Your database is behind — some settings on this screen cannot be saved yet.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {missingMigrations.map(({ migration, needed }) => (
+              <li key={migration} className="text-[12px] text-amber-800">
+                <code className="font-mono bg-amber-100 px-1.5 py-0.5 rounded">{migration}</code>
+                <span className="text-amber-700"> — needed for {needed}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-amber-700 mt-2">
+            Run each one in the Supabase SQL editor. They are safe to run more than once. Until
+            then those fields save nowhere, which is why an uploaded photo does not stick.
+          </p>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -338,14 +373,15 @@ export default function KalbaPopularAdmin() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Order</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Top Picks</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Deals</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={10} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">No items yet.</td></tr>
+              <tr><td colSpan={10} className="text-center py-16 text-gray-400 text-sm">No items yet.</td></tr>
             ) : items.map((item) => (
               <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3">
@@ -395,10 +431,18 @@ export default function KalbaPopularAdmin() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <TopPicksToggle
+                  <PicksToggle
                     endpoint={`/api/admin/kalba/popular/${item.id}`}
                     enabled={!!item.show_in_top_picks}
                     onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_top_picks: v } : x)))}
+                  />
+                </td>
+                <td className="px-4 py-3">
+                  <PicksToggle
+                      variant="deals"
+                    endpoint={`/api/admin/kalba/popular/${item.id}`}
+                    enabled={!!item.show_in_deals}
+                    onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_deals: v } : x)))}
                   />
                 </td>
                 <td className="px-4 py-3">
@@ -551,9 +595,16 @@ export default function KalbaPopularAdmin() {
                 </div>
               </div>
 
-              <TopPicksField
+              <PicksField
                 enabled={!!modal.data.show_in_top_picks}
                 order={modal.data.top_picks_order ?? 0}
+                onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}
+              />
+
+              <PicksField
+                variant="deals"
+                enabled={!!modal.data.show_in_deals}
+                order={modal.data.deals_order ?? 0}
                 onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}
               />
 

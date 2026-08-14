@@ -1,8 +1,8 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Star, Clock } from "lucide-react";
-import TopPicksField from "@/components/admin/TopPicksField";
-import TopPicksToggle from "@/components/admin/TopPicksToggle";
+import PicksField from "@/components/admin/PicksField";
+import PicksToggle from "@/components/admin/PicksToggle";
 import BilingualField from "@/components/admin/BilingualField";
 
 interface MenuSection {
@@ -33,6 +33,8 @@ interface MenuItem {
   is_active: boolean;
   show_in_top_picks: boolean;
   top_picks_order: number;
+  show_in_deals: boolean;
+  deals_order: number;
   buffet_menu_sections?: { title: string; category_id: string };
 }
 
@@ -51,6 +53,8 @@ const EMPTY: Omit<MenuItem, "id" | "buffet_menu_sections"> = {
   is_active: true,
   show_in_top_picks: false,
   top_picks_order: 0,
+  show_in_deals: false,
+  deals_order: 0,
 };
 
 const DIETARY_TAGS = [
@@ -211,14 +215,15 @@ export default function MenuItemsAdmin() {
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Timings</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Top Picks</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Deals</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="text-center py-16 text-gray-400 text-sm">No items yet.</td></tr>
+              <tr><td colSpan={9} className="text-center py-16 text-gray-400 text-sm">No items yet.</td></tr>
             ) : filtered.map((item) => {
               const tl = timingLabel(item);
               return (
@@ -257,10 +262,18 @@ export default function MenuItemsAdmin() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <TopPicksToggle
+                    <PicksToggle
                       endpoint={`/api/admin/buffet-menu/items/${item.id}`}
                       enabled={!!item.show_in_top_picks}
                       onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_top_picks: v } : x)))}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <PicksToggle
+                      variant="deals"
+                      endpoint={`/api/admin/buffet-menu/items/${item.id}`}
+                      enabled={!!item.show_in_deals}
+                      onChange={(v) => setItems((list) => list.map((x) => (x.id === item.id ? { ...x, show_in_deals: v } : x)))}
                     />
                   </td>
                   <td className="px-4 py-3">
@@ -390,7 +403,7 @@ export default function MenuItemsAdmin() {
                 </div>
               </div>
 
-              <TopPicksField
+              <PicksField
                 enabled={!!modal.data.show_in_top_picks}
                 order={modal.data.top_picks_order ?? 0}
                 onChange={(patch) => setModal((m) => ({ ...m, data: { ...m.data, ...patch } }))}

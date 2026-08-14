@@ -9,7 +9,7 @@ import {
   BookOpen, List, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
   Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound, Truck,
-  CreditCard,
+  CreditCard, Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -45,6 +45,7 @@ const NAV: NavItem[] = [
       { label: "Trust Badges",     href: "/admin/trust-badges",     icon: ShieldCheck },
       { label: "Campus Promo",     href: "/admin/campus-promo",     icon: MapPin      },
       { label: "Quick Link Cards", href: "/admin/homepage-cards",   icon: LayoutGrid  },
+      { label: "Home Sections",    href: "/admin/home-sections",    icon: Sparkles    },
     ],
   },
   {
