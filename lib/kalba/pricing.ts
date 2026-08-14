@@ -7,6 +7,17 @@
  * stack in the shopper's favour rather than competing.
  */
 
+/**
+ * To the fil, killing the binary-float residue.
+ *
+ * 24 − 19.44 is 4.559999999999999 in IEEE 754, and a cart happily printed that.
+ * Every figure the shopper reads goes through here, so a total, a saving and a
+ * line price can never disagree in the fifteenth decimal place.
+ */
+export function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 /** Postgres numeric comes back as a string often enough to matter. */
 export function toPercent(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : parseFloat(String(value ?? ""));
@@ -19,10 +30,10 @@ export function toPercent(value: number | string | null | undefined): number {
 export function discountedPrice(base: number, percent: number | string | null): number {
   const pct = toPercent(percent);
   if (pct <= 0) return base;
-  return Math.round(base * (100 - pct)) / 100;
+  return roundMoney((base * (100 - pct)) / 100);
 }
 
 /** What the offer takes off one of this dish. */
 export function itemSaving(base: number, percent: number | string | null): number {
-  return Math.round((base - discountedPrice(base, percent)) * 100) / 100;
+  return roundMoney(base - discountedPrice(base, percent));
 }

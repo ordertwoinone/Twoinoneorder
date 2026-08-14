@@ -12,10 +12,11 @@ import {
   Search,
   MapPin,
   GraduationCap,
+  Check,
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
-import { discountedPrice, toPercent } from "@/lib/kalba/pricing";
+import { discountedPrice, roundMoney, toPercent } from "@/lib/kalba/pricing";
 import {
   addonsTotal, addonSummary, defaultSelection,
   type AddonSelection, type KalbaAddonGroup,
@@ -52,7 +53,7 @@ interface CartItem {
 
 /** What one of this dish costs once the chosen options are counted. */
 function unitPrice(item: CartItem, selection: AddonSelection): number {
-  return item.numericPrice + addonsTotal(item.groups, selection[item.id]);
+  return roundMoney(item.numericPrice + addonsTotal(item.groups, selection[item.id]));
 }
 
 interface CouponData {
@@ -585,17 +586,30 @@ function CartModal({
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
               />
 
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* The quickest way to a deliverable address in an area where
+                  streets go unnamed, so it is the loudest thing here after the
+                  box itself — and turns green once a pin is actually held. */}
+              <div>
                 <button
                   onClick={useMyLocation}
                   disabled={locating}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 text-[13px] font-bold transition-colors disabled:opacity-70 ${
+                    mapPin
+                      ? "border-green-500 bg-green-50 text-green-700"
+                      : "border-orange-400 bg-orange-50 text-orange-600 hover:bg-orange-100"
+                  }`}
                 >
-                  <MapPin size={12} className={mapPin ? "text-green-600" : "text-[#ea580c]"} />
+                  {mapPin ? (
+                    <Check size={16} strokeWidth={3} />
+                  ) : (
+                    <MapPin size={16} className={locating ? "animate-pulse" : ""} />
+                  )}
                   {locating ? t("kalba.cart.locating") : t("kalba.cart.useLocation")}
                 </button>
                 {locationNote && (
-                  <span className={`text-[11px] ${mapPin ? "text-green-600" : "text-gray-400"}`}>{locationNote}</span>
+                  <p className={`text-[11px] mt-1.5 text-center ${mapPin ? "text-green-600" : "text-gray-400"}`}>
+                    {locationNote}
+                  </p>
                 )}
               </div>
 
@@ -732,17 +746,15 @@ export default function MenuContent({
   }
 
   const totalQty = cartItems.reduce((n, i) => n + (cartQty[i.id] ?? 0), 0);
-  const totalPrice = cartItems.reduce(
-    (sum, i) => sum + unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0),
-    0
+  const totalPrice = roundMoney(
+    cartItems.reduce((sum, i) => sum + unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0), 0),
   );
 
   /* What the dishes' own offers have already taken off. Not subtracted again —
      totalPrice is charged at the discounted price — but worth showing, because
      a saving nobody is told about is a saving that does not land. */
-  const itemOffers = cartItems.reduce(
-    (sum, i) => sum + (i.listPrice - i.numericPrice) * (cartQty[i.id] ?? 0),
-    0,
+  const itemOffers = roundMoney(
+    cartItems.reduce((sum, i) => sum + (i.listPrice - i.numericPrice) * (cartQty[i.id] ?? 0), 0),
   );
 
   const discountAmount = useMemo(() => {
@@ -761,7 +773,7 @@ export default function MenuContent({
     if (appliedCoupon.discount_type === "percentage") {
       return Math.round((base * appliedCoupon.discount_value) / 100 * 100) / 100;
     }
-    return Math.min(appliedCoupon.discount_value, base);
+    return roundMoney(Math.min(appliedCoupon.discount_value, base));
   }, [appliedCoupon, cartItems, cartQty, cartAddons]);
 
   /* The card discounts the whole basket, on top of any coupon: the two are
@@ -769,7 +781,7 @@ export default function MenuContent({
   const studentDiscount = studentDiscountAmount(studentCard, totalPrice);
   const studentPercent = studentCard?.discount_percent ?? STUDENT_DISCOUNT_PERCENT;
 
-  const finalPrice = Math.max(0, totalPrice - discountAmount - studentDiscount);
+  const finalPrice = Math.max(0, roundMoney(totalPrice - discountAmount - studentDiscount));
 
   const handleApplyCoupon = useCallback(
     async (code: string) => {

@@ -14,6 +14,8 @@
  * of answers. The cart is a short list of dishes, not a spreadsheet.
  */
 
+import { roundMoney } from "@/lib/kalba/pricing";
+
 export interface KalbaAddon {
   id: string;
   item_id: string;
@@ -129,12 +131,14 @@ export function chosenAddons(
   return allOptions(groups).filter((a) => wanted.has(a.id));
 }
 
-/** What the ticked options add to one unit of the dish. */
+/** What the ticked options add to one unit of the dish, to the fil. */
 export function addonsTotal(
   groups: KalbaAddonGroup[],
   selectedIds: string[] | undefined,
 ): number {
-  return chosenAddons(groups, selectedIds).reduce((sum, a) => sum + addonPrice(a), 0);
+  return roundMoney(
+    chosenAddons(groups, selectedIds).reduce((sum, a) => sum + addonPrice(a), 0),
+  );
 }
 
 /** How many of a group's options are ticked. */
