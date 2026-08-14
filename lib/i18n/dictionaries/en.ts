@@ -755,6 +755,7 @@ const en = {
       amountOff: "AED {value} off",
       discount: "−AED {amount}",
       itemOffers: "Item offers",
+      vatIncluded: "Includes VAT ({percent}%)",
       studentDiscount: "Student Privilege Card — {percent}% off",
       pickup: "🏃 Pickup",
       delivery: "🛵 Delivery",
@@ -790,7 +791,15 @@ const en = {
       party: "Party Size: {party}",
       coupon: "Coupon: {code} (−AED {amount})",
       student: "🎓 Student Privilege Card {percent}%: (−AED {amount})",
+      /* One dish, broken out — the kitchen packs from the extras line and the
+         counter checks the money against the line total. */
+      lineItem: "   Item: AED {amount} × {qty} = AED {total}",
+      lineExtras: "   Extras: {extras} (+AED {amount} each)",
+      lineTotal: "   Line total: AED {amount}",
+      subtotal: "Subtotal: AED {amount}",
+      itemOffers: "Item offers: (−AED {amount})",
       total: "Total: AED {total}",
+      vat: "Includes VAT {percent}%: AED {amount}",
       orderType: "Order Type: {type}",
       pickupLabel: "Pickup 🏃",
       deliveryLabel: "Delivery 🛵",

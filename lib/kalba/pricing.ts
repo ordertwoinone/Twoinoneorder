@@ -18,6 +18,22 @@ export function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/** UAE value-added tax. */
+export const VAT_PERCENT = 5;
+
+/**
+ * The VAT already inside a price, not an extra charge on top of it.
+ *
+ * Consumer prices in the UAE are quoted inclusive of VAT, so the menu price is
+ * what the customer pays and this only names the portion of it that is tax:
+ * total × 5/105, never total × 5%. Adding it on top would quietly raise every
+ * price on the site by 5%.
+ */
+export function vatIncludedIn(total: number): number {
+  if (total <= 0) return 0;
+  return roundMoney((total * VAT_PERCENT) / (100 + VAT_PERCENT));
+}
+
 /** Postgres numeric comes back as a string often enough to matter. */
 export function toPercent(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : parseFloat(String(value ?? ""));

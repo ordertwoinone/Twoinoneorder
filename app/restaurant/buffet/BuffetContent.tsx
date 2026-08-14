@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
+import { vatIncludedIn, VAT_PERCENT } from "@/lib/kalba/pricing";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useLocalized, useLocalizedField, useLocalizedList } from "@/lib/i18n/localized";
 import type { TranslationKey } from "@/lib/i18n/types";
@@ -846,11 +847,14 @@ function CartModal({
         : "",
       t("buffet.wa.party", { party: tp("common.people", members) }),
       total !== null && pricing
-        ? t("buffet.wa.total", {
+        ? `${t("buffet.wa.total", {
             currency: pricing.currency,
             total: total.toLocaleString(),
             rate: Math.round(pricing.perPerson),
-          })
+          })}\n${t("kalba.wa.vat", {
+            percent: VAT_PERCENT,
+            amount: vatIncludedIn(total).toFixed(2),
+          })}`
         : "",
       included ? `\n${t("buffet.wa.included")}\n${included}` : "",
       extras ? `\n${t("buffet.wa.extras")}\n${extras}` : "",
@@ -1056,9 +1060,16 @@ function CartModal({
                 </p>
                 <p className="text-[11px] text-gray-500 font-semibold">{t("buffet.cart.estimatedTotal")}</p>
               </div>
-              <p className="text-xl font-extrabold text-orange-500 leading-none">
-                {pricing.currency} {total.toLocaleString()}
-              </p>
+              <div className="text-end">
+                <p className="text-xl font-extrabold text-orange-500 leading-none">
+                  {pricing.currency} {total.toLocaleString()}
+                </p>
+                {/* Named, not added: the package rate already contains it. */}
+                <p className="text-[10.5px] text-gray-400 mt-1">
+                  {t("kalba.cart.vatIncluded", { percent: VAT_PERCENT })}{" "}
+                  {pricing.currency} {vatIncludedIn(total).toFixed(2)}
+                </p>
+              </div>
             </div>
           )}
 

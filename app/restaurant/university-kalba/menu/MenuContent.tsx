@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
-import { discountedPrice, roundMoney, toPercent } from "@/lib/kalba/pricing";
+import { discountedPrice, roundMoney, toPercent, vatIncludedIn, VAT_PERCENT } from "@/lib/kalba/pricing";
 import {
   addonsTotal, addonSummary, defaultSelection,
   type AddonSelection, type KalbaAddonGroup,
@@ -252,17 +252,40 @@ function CartModal({
   }
   const [couponInput, setCouponInput] = useState("");
   const inCart = items.filter((i) => (cartQty[i.id] ?? 0) > 0);
+  /* What is actually charged once every discount is off — the figure the VAT
+     line has to be a portion of. */
+  const payable = discountAmount > 0 || studentDiscount > 0 ? finalPrice : totalPrice;
 
-  /* The kitchen reads this, so the extras have to be on the line they belong to
-     rather than summarised at the bottom. */
+  /**
+   * One dish, itemised.
+   *
+   * The kitchen packs from the extras line and the counter checks the money
+   * against the line total, so both have to be there — a single figure per
+   * dish leaves them adding it up by hand and disagreeing with the app.
+   */
   function orderLineFor(item: CartItem): string {
+    const qty = cartQty[item.id] ?? 0;
     const extras = addonSummary(item.groups, cartAddons[item.id], (a) => a.name);
-    const base = `• ${item.name} x${cartQty[item.id]} (${item.priceLabel})`;
-    return extras ? `${base}\n   ↳ ${t("kalba.addons.waLine", { extras })}` : base;
+    const extrasEach = addonsTotal(item.groups, cartAddons[item.id]);
+    const unit = unitPrice(item, cartAddons);
+
+    const rows = [
+      `• ${item.name} ×${qty}`,
+      t("kalba.wa.lineItem", {
+        amount: item.numericPrice,
+        qty,
+        total: roundMoney(item.numericPrice * qty),
+      }),
+    ];
+    if (extras) {
+      rows.push(t("kalba.wa.lineExtras", { extras, amount: extrasEach }));
+    }
+    rows.push(t("kalba.wa.lineTotal", { amount: roundMoney(unit * qty) }));
+    return rows.join("\n");
   }
 
   function buildWaUrl(type: "pickup" | "delivery") {
-    const orderLines = inCart.map(orderLineFor).join("\n");
+    const orderLines = inCart.map(orderLineFor).join("\n\n");
     const lines = [
       t("kalba.wa.order", {
         type: type === "pickup" ? t("kalba.wa.pickupWord") : t("kalba.wa.deliveryWord"),
@@ -283,17 +306,21 @@ function CartModal({
       if (mapPin) lines.push(t("kalba.wa.mapPin", { link: mapPin }));
       lines.push("");
     }
+    /* The money, in the order it is arrived at. The subtotal is taken before
+       the per-dish offers, because totalPrice is already net of them. */
+    lines.push(t("kalba.wa.subtotal", { amount: roundMoney(totalPrice + itemOffers) }));
+    if (itemOffers > 0) {
+      lines.push(t("kalba.wa.itemOffers", { amount: itemOffers }));
+    }
     if (appliedCoupon && discountAmount > 0) {
       lines.push(t("kalba.wa.coupon", { code: appliedCoupon.code, amount: discountAmount }));
     }
     if (studentDiscount > 0) {
       lines.push(t("kalba.wa.student", { percent: studentPercent, amount: studentDiscount }));
     }
-    lines.push(
-      t("kalba.wa.total", {
-        total: discountAmount > 0 || studentDiscount > 0 ? finalPrice : totalPrice,
-      }),
-    );
+    lines.push(t("kalba.wa.total", { total: payable }));
+    // The kitchen's copy says what the tax portion was, same as the screen.
+    lines.push(t("kalba.wa.vat", { percent: VAT_PERCENT, amount: vatIncludedIn(payable) }));
     lines.push(
       "",
       t("kalba.wa.orderType", {
@@ -405,6 +432,15 @@ function CartModal({
                   </span>
                 </div>
               )}
+              {/* Named, not added: the price above already contains it. */}
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
+                <span className="text-[11px] text-gray-500">
+                  {t("kalba.cart.vatIncluded", { percent: VAT_PERCENT })}
+                </span>
+                <span className="text-[11px] text-gray-500 font-semibold">
+                  {t("common.price", { amount: vatIncludedIn(payable) })}
+                </span>
+              </div>
             </div>
           ) : (
             <div className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-center">
