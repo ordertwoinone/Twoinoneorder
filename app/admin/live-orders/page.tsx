@@ -51,6 +51,9 @@ interface Booking {
   notes: string;
   status: string;
   created_at: string;
+  /** From supabase/order_invoices.sql; absent until that has been run. */
+  total_amount?: number | string | null;
+  payment_method?: string | null;
   account?: { name: string; email: string; avatarUrl: string } | null;
 }
 
@@ -75,6 +78,8 @@ interface Row {
   /** Filled for take.app orders only. */
   paymentStatus?: string;
   fulfillmentStatus?: string;
+  /** Cash or card, ours to record. Filled for bookings only. */
+  paymentMethod?: string;
   items: LineItem[];
   itemCount: number;
   total: number | null;
@@ -121,6 +126,14 @@ function orderRow(o: Order): Row {
   };
 }
 
+/** The order's own total in cents, else its minimum spend, else nothing. */
+function bookingTotal(b: Booking): number | null {
+  const charged =
+    typeof b.total_amount === "number" ? b.total_amount : parseFloat(String(b.total_amount ?? ""));
+  if (Number.isFinite(charged) && charged > 0) return Math.round(charged * 100);
+  return b.min_spend > 0 ? b.min_spend * 100 : null;
+}
+
 function bookingRow(b: Booking): Row {
   const when = [b.date, b.time].filter(Boolean).join(" ");
   return {
@@ -139,14 +152,18 @@ function bookingRow(b: Booking): Row {
     status: b.status || "pending",
     items: [],
     itemCount: b.guests ?? 0,
-    // A booking's minimum spend is a floor, not a bill — shown only when set.
-    total: b.min_spend > 0 ? b.min_spend * 100 : null,
+    /* What was actually charged, when the order carries it. A booking's minimum
+       spend is a floor rather than a bill, so it is only the fallback — and a
+       food order has one of those but no minimum, which is why every Kalba row
+       used to show no total at all. Cents, to match take.app's convention. */
+    total: bookingTotal(b),
     currency: "AED",
     note: b.notes,
     scheduled: when || null,
     bookingType: b.type || "table",
     account: b.account ?? null,
     invoiceable: true,
+    paymentMethod: b.payment_method ?? undefined,
   };
 }
 
@@ -469,14 +486,22 @@ export default function LiveOrdersAdmin() {
     [rows],
   );
 
-  /* Filters the API cannot apply — the store, the upper date bound and the
-     search — are applied here, over what is already in state. */
+  /* Filters the API cannot apply — the store, the search and both date bounds
+     — are applied here, over what is already in state.
+
+     Both bounds, not just the upper one: `created_after` reaches take.app only,
+     and bookings come from our own table unfiltered. Leaving the lower bound to
+     the API meant every booking ignored the From date, which on a board that is
+     now mostly bookings looked like the filter doing nothing at all. */
   const shown = useMemo(() => {
-    const cutoff = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
+    const floor = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
+    const cutoff = toDate ? new Date(`${toDate}T23:59:59.999`).getTime() : null;
     const needle = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (store && r.where !== store) return false;
-      if (cutoff && new Date(r.createdAt).getTime() > cutoff) return false;
+      const placed = new Date(r.createdAt).getTime();
+      if (floor && (!Number.isFinite(placed) || placed < floor)) return false;
+      if (cutoff && placed > cutoff) return false;
       /* The API-side status filters only reach take.app; applying them here as
          well is what keeps a filtered board consistent across both sources. */
       if (orderStatus && r.status !== orderStatus) return false;
@@ -488,7 +513,7 @@ export default function LiveOrdersAdmin() {
       }
       return true;
     });
-  }, [rows, store, toDate, search, orderStatus, paymentStatus, fulfillmentStatus]);
+  }, [rows, store, fromDate, toDate, search, orderStatus, paymentStatus, fulfillmentStatus]);
 
   const counts = useMemo(() => {
     const tally: Record<string, number> = {};
@@ -531,16 +556,19 @@ export default function LiveOrdersAdmin() {
      other than what you are looking at would be a surprise. */
   function downloadReport() {
     const header = [
-      "Reference", "Placed", "Where", "Status", "Payment", "Fulfilment",
+      "Reference", "Placed", "Source", "Where", "Status", "Payment", "Fulfilment",
       "Customer", "Phone", "Items", "Total", "Currency", "Note",
     ];
     const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const lines = shown.map((r) => [
       r.number,
       r.createdAt,
+      r.source === "booking" ? BOOKING_TYPES[r.bookingType ?? "table"]?.label ?? "Booking" : "take.app",
       r.where,
       r.status,
-      r.paymentStatus ?? "",
+      /* take.app tracks whether it is paid; our own orders track how — the
+         column carries whichever the row actually knows. */
+      r.paymentStatus ?? r.paymentMethod ?? "",
       r.fulfillmentStatus ?? "",
       r.customerName,
       r.customerPhone,
@@ -556,7 +584,10 @@ export default function LiveOrdersAdmin() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    /* Named for the range it covers, not the day it was downloaded — three
+       reports pulled in one afternoon must not all be called the same thing. */
+    const span = fromDate || toDate ? `${fromDate || "start"}_to_${toDate || "today"}` : "all";
+    link.download = `orders-${span}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -599,7 +630,9 @@ export default function LiveOrdersAdmin() {
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
           <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">take.app</p>
-          <h1 className="text-2xl font-semibold text-gray-900">Order History</h1>
+          {/* "Orders", matching its own place in the sidebar. Order History is
+              a different screen, and two headings with one name is a maze. */}
+          <h1 className="text-2xl font-semibold text-gray-900">Orders</h1>
           <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-2 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full ${
               connection === "live"

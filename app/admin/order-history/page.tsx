@@ -1,6 +1,9 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search, Printer, Banknote, CreditCard } from "lucide-react";
+import { RefreshCw, Search, Printer, Banknote, CreditCard, Download } from "lucide-react";
+
+const filterCls =
+  "px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 /**
  * admin → Order History.
@@ -49,6 +52,9 @@ const STATUS_CHIPS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-600",
 };
 
+/** The same four the live board offers, so one order reads alike on both. */
+const STATUSES = ["pending", "confirmed", "completed", "cancelled"] as const;
+
 function money(value: unknown): string {
   const n = typeof value === "number" ? value : parseFloat(String(value ?? ""));
   return Number.isFinite(n) && n > 0 ? `AED ${n.toFixed(2)}` : "—";
@@ -65,6 +71,10 @@ export default function OrderHistoryAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState("");
+  const [payment, setPayment] = useState("");
   /* payment_method arrives with a hand-run migration. Without it the dropdown
      would appear to work and save nowhere, so say so instead. */
   const [ready, setReady] = useState(true);
@@ -81,22 +91,37 @@ export default function OrderHistoryAdmin() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function setPayment(id: string, method: string) {
+  /**
+   * Saves one field of one order, optimistically.
+   *
+   * The row moves first so the dropdown feels immediate, and moves back if the
+   * write is refused — a control that stays where it was put while the database
+   * disagrees is the worst of both.
+   */
+  async function patchOrder(id: string, patch: Partial<Booking>) {
     setSaving(id);
     const previous = rows;
-    setRows((list) => list.map((r) => (r.id === id ? { ...r, payment_method: method } : r)));
+    setRows((list) => list.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
+    const [field, expected] = Object.entries(patch)[0] ?? [];
 
     try {
       const res = await fetch(`/api/admin/bookings/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payment_method: method }),
+        body: JSON.stringify(patch),
       });
       const saved = await res.json().catch(() => null);
-      // A row that comes back without the field means the column is not there.
-      if (!res.ok || (saved && saved.payment_method !== method)) {
+
+      if (!res.ok) {
         setRows(previous);
-        setReady(false);
+        return;
+      }
+      /* A row that comes back without the field means the column is not there
+         and the write shed it — the migration has not been run. */
+      if (saved && field && saved[field] !== expected) {
+        setRows(previous);
+        if (field === "payment_method") setReady(false);
       }
     } catch {
       setRows(previous);
@@ -107,13 +132,72 @@ export default function OrderHistoryAdmin() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) =>
-      [r.order_number, r.guest_name, r.phone, r.table_id, r.notes, r.type]
+    /* Whole days, in the operator's own timezone: someone asking for the 14th
+       means every order that day, not from midnight UTC. */
+    const floor = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
+    const cutoff = toDate ? new Date(`${toDate}T23:59:59.999`).getTime() : null;
+
+    return rows.filter((r) => {
+      const placed = new Date(r.created_at).getTime();
+      if (floor && (!Number.isFinite(placed) || placed < floor)) return false;
+      if (cutoff && placed > cutoff) return false;
+      if (status && (r.status || "pending") !== status) return false;
+      if (payment && (r.payment_method ?? "cash").toLowerCase() !== payment) return false;
+      if (!q) return true;
+      return [r.order_number, r.guest_name, r.phone, r.table_id, r.notes, r.type]
         .map((v) => String(v ?? "").toLowerCase())
-        .some((v) => v.includes(q)),
+        .some((v) => v.includes(q));
+    });
+  }, [rows, query, fromDate, toDate, status, payment]);
+
+  /** The takings for what is on screen — the reason to filter by date at all. */
+  const takings = useMemo(
+    () =>
+      filtered.reduce((sum, r) => {
+        const n = typeof r.total_amount === "number" ? r.total_amount : parseFloat(String(r.total_amount ?? ""));
+        return sum + (Number.isFinite(n) ? n : 0);
+      }, 0),
+    [filtered],
+  );
+
+  /* The report is what is on screen, filters and all — downloading something
+     other than what you are looking at would be a surprise. */
+  function downloadReport() {
+    const header = [
+      "Order", "Placed", "Type", "Fulfilment", "Customer", "Phone",
+      "Total", "Payment", "Status", "Note",
+    ];
+    const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = filtered.map((r) =>
+      [
+        r.order_number ?? r.id.slice(0, 8),
+        r.created_at,
+        r.type,
+        r.order_type ?? "",
+        r.guest_name,
+        r.phone,
+        (() => {
+          const n = typeof r.total_amount === "number" ? r.total_amount : parseFloat(String(r.total_amount ?? ""));
+          return Number.isFinite(n) && n > 0 ? n.toFixed(2) : "";
+        })(),
+        (r.payment_method ?? "cash").toLowerCase(),
+        r.status || "pending",
+        r.notes,
+      ].map(escape).join(","),
     );
-  }, [rows, query]);
+
+    const blob = new Blob([[header.map(escape).join(","), ...lines].join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    // Named for the range it covers, not the day it was downloaded.
+    const span = fromDate || toDate ? `${fromDate || "start"}_to_${toDate || "today"}` : "all";
+    link.download = `order-history-${span}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="p-4 sm:p-8">
@@ -142,7 +226,54 @@ export default function OrderHistoryAdmin() {
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             Refresh
           </button>
+          <button
+            onClick={downloadReport}
+            disabled={filtered.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+            style={{ background: "#ea580c" }}
+          >
+            <Download size={14} />
+            Download report
+          </button>
         </div>
+      </div>
+
+      {/* Filters. Dates are whole days in the operator's own timezone. */}
+      <div className="bg-white rounded-xl border border-gray-200 px-4 py-3.5 mb-5 flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-700">From</span>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className={filterCls} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-700">To</span>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className={filterCls} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-700">Status</span>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={filterCls}>
+            <option value="">Any</option>
+            {STATUSES.map((v) => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-gray-700">Payment</span>
+          <select value={payment} onChange={(e) => setPayment(e.target.value)} className={filterCls}>
+            <option value="">Any</option>
+            {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </label>
+        <button
+          onClick={() => { setFromDate(""); setToDate(""); setStatus(""); setPayment(""); setQuery(""); }}
+          className="px-4 py-2.5 rounded-lg bg-gray-100 text-sm font-semibold text-gray-600 hover:bg-gray-200"
+        >
+          Clear
+        </button>
+        {takings > 0 && (
+          <p className="ms-auto text-sm text-gray-500">
+            Takings shown:{" "}
+            <span className="font-extrabold text-gray-900">AED {takings.toFixed(2)}</span>
+          </p>
+        )}
       </div>
 
       {!ready && (
@@ -195,7 +326,7 @@ export default function OrderHistoryAdmin() {
                     <select
                       value={(r.payment_method ?? "cash").toLowerCase()}
                       disabled={saving === r.id}
-                      onChange={(e) => setPayment(r.id, e.target.value)}
+                      onChange={(e) => patchOrder(r.id, { payment_method: e.target.value })}
                       className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60"
                     >
                       {PAYMENT_METHODS.map((m) => (
@@ -204,9 +335,20 @@ export default function OrderHistoryAdmin() {
                     </select>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${STATUS_CHIPS[r.status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {r.status || "pending"}
-                    </span>
+                    {/* Keeps the chip's colour so the board still scans at a
+                        glance, and changes it in place. */}
+                    <select
+                      value={r.status || "pending"}
+                      disabled={saving === r.id}
+                      onChange={(e) => patchOrder(r.id, { status: e.target.value })}
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wide border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60 ${STATUS_CHIPS[r.status] ?? "bg-gray-100 text-gray-600"}`}
+                    >
+                      {STATUSES.map((v) => (
+                        <option key={v} value={v} className="bg-white text-gray-800 font-normal text-sm normal-case">
+                          {v}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <a
@@ -228,8 +370,9 @@ export default function OrderHistoryAdmin() {
       </div>
 
       <p className="text-[11px] text-gray-400 mt-3">
-        Payment method is set here, not at checkout — the money changes hands after the order is
-        placed, so only staff know how it was settled. It prints on the invoice.
+        Status and payment method save as soon as you change them. Payment is set here rather than
+        at checkout — the money changes hands after the order is placed, so only staff know how it
+        was settled. It prints on the invoice.
       </p>
     </div>
   );
