@@ -752,6 +752,7 @@ const en = {
       percentOff: "{value}% off",
       amountOff: "AED {value} off",
       discount: "−AED {amount}",
+      itemOffers: "Item offers",
       studentDiscount: "Student Privilege Card — {percent}% off",
       pickup: "🏃 Pickup",
       delivery: "🛵 Delivery",

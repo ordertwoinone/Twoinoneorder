@@ -40,6 +40,19 @@ export interface SheetItem {
   numericPrice: number;
 }
 
+/** The chosen/not-chosen dot, shared by both ways of drawing an option. */
+function Tick({ on, className = "" }: { on: boolean; className?: string }) {
+  return (
+    <span
+      className={`w-4 h-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+        on ? "bg-orange-500 border-orange-500" : "bg-white border-gray-300"
+      } ${className}`}
+    >
+      {on && <Check size={10} strokeWidth={4} className="text-white" />}
+    </span>
+  );
+}
+
 export default function ItemOptionsSheet({
   item,
   groups,
@@ -117,15 +130,19 @@ export default function ItemOptionsSheet({
         role="dialog"
         aria-label={item.name}
       >
-        {/* Photo and name */}
+        {/* Photo and name. Contained, not cropped: this is the one place the
+            dish is looked at properly, and a landscape photo cut to a strip
+            loses exactly the part that sells it. */}
         <div className="relative shrink-0">
           {item.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={item.image_url}
-              alt={item.name}
-              className="w-full h-40 sm:h-44 object-cover rounded-t-3xl"
-            />
+            <div className="w-full rounded-t-3xl overflow-hidden bg-gray-50 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={item.image_url}
+                alt={item.name}
+                className="w-full max-h-56 sm:max-h-64 object-contain"
+              />
+            </div>
           )}
           <button
             onClick={onClose}
@@ -192,53 +209,79 @@ export default function ItemOptionsSheet({
                   </span>
                 </header>
 
-                <div className="flex gap-2.5 overflow-x-auto px-3.5 py-3">
-                  {group.options.map((option) => {
-                    const on = draft.includes(option.id);
-                    const price = addonPrice(option);
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => toggle(group, option.id)}
-                        className={`relative shrink-0 w-[104px] rounded-xl border-2 bg-white p-2 text-start transition-colors ${
-                          on ? "border-orange-500" : "border-gray-200 hover:border-orange-300"
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-1.5 end-1.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                            on ? "bg-orange-500 border-orange-500" : "bg-white border-gray-300"
+                {/* Tiles when there are photos to show, rows when there are
+                    not — a grid of empty grey squares is worse than a list. */}
+                {group.options.some((o) => o.image_url?.trim()) ? (
+                  <div className="flex gap-2.5 overflow-x-auto px-3.5 py-3">
+                    {group.options.map((option) => {
+                      const on = draft.includes(option.id);
+                      const price = addonPrice(option);
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => toggle(group, option.id)}
+                          className={`relative shrink-0 w-[104px] rounded-xl border-2 bg-white p-2 text-start transition-colors ${
+                            on ? "border-orange-500" : "border-gray-200 hover:border-orange-300"
                           }`}
                         >
-                          {on && <Check size={10} strokeWidth={4} className="text-white" />}
-                        </span>
+                          <Tick on={on} className="absolute top-1.5 end-1.5" />
 
-                        {option.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={option.image_url}
-                            alt=""
-                            loading="lazy"
-                            className="w-full h-16 object-contain mb-1.5"
-                          />
-                        ) : (
-                          <span className="block w-full h-16 rounded-lg bg-gray-50 mb-1.5" />
-                        )}
+                          {option.image_url?.trim() ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={option.image_url}
+                              alt=""
+                              loading="lazy"
+                              className="w-full h-16 object-contain mb-1.5"
+                            />
+                          ) : (
+                            <span className="block w-full h-16 mb-1.5" />
+                          )}
 
-                        <span className="block text-[11px] font-bold text-gray-800 leading-tight">
-                          {pick(option, "name")}
-                        </span>
-                        {/* An option included in the price says nothing at all. */}
-                        {price > 0 && (
-                          <span className="block text-[10.5px] font-semibold text-orange-600 mt-0.5">
-                            {t("kalba.addons.plusPrice", { amount: price })}
+                          <span className="block text-[11px] font-bold text-gray-800 leading-tight">
+                            {pick(option, "name")}
                           </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                          {/* An option included in the price says nothing. */}
+                          {price > 0 && (
+                            <span className="block text-[10.5px] font-semibold text-orange-600 mt-0.5">
+                              {t("kalba.addons.plusPrice", { amount: price })}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-3.5 py-3 space-y-1.5">
+                    {group.options.map((option) => {
+                      const on = draft.includes(option.id);
+                      const price = addonPrice(option);
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => toggle(group, option.id)}
+                          className={`w-full flex items-center gap-2.5 rounded-xl border-2 bg-white px-3 py-2.5 text-start transition-colors ${
+                            on ? "border-orange-500" : "border-gray-200 hover:border-orange-300"
+                          }`}
+                        >
+                          <Tick on={on} />
+                          <span className="flex-1 min-w-0 text-[13px] font-bold text-gray-800">
+                            {pick(option, "name")}
+                          </span>
+                          {price > 0 && (
+                            <span className="shrink-0 text-[12px] font-semibold text-orange-600">
+                              {t("kalba.addons.plusPrice", { amount: price })}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             );
           })}

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
+import { discountedPrice, toPercent } from "@/lib/kalba/pricing";
 import {
   addonsTotal, addonSummary, defaultSelection,
   type AddonSelection, type KalbaAddonGroup,
@@ -41,7 +42,10 @@ interface CartItem {
   description?: string | null;
   image_url: string;
   priceLabel: string;
+  /** The dish's price after its own offer — what is actually charged. */
   numericPrice: number;
+  /** Before the offer. Equal to numericPrice when there isn't one. */
+  listPrice: number;
   /** Questions asked before this dish is ordered. Empty for most of them. */
   groups: KalbaAddonGroup[];
 }
@@ -150,6 +154,7 @@ function CartModal({
   cartAddons,
   totalQty,
   totalPrice,
+  itemOffers,
   onQtyChange,
   onEditOptions,
   onClose,
@@ -175,6 +180,8 @@ function CartModal({
   cartAddons: AddonSelection;
   totalQty: number;
   totalPrice: number;
+  /** Already off the total; shown so the shopper knows they saved it. */
+  itemOffers: number;
   onQtyChange: (id: string, qty: number) => void;
   onEditOptions: (itemId: string) => void;
   onClose: () => void;
@@ -384,6 +391,16 @@ function CartModal({
                   </span>
                   <span className="text-[11px] text-green-600 font-bold">
                     {t("kalba.cart.discount", { amount: studentDiscount })}
+                  </span>
+                </div>
+              )}
+              {itemOffers > 0 && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
+                  <span className="text-[11px] text-green-600 font-semibold">
+                    🏷️ {t("kalba.cart.itemOffers")}
+                  </span>
+                  <span className="text-[11px] text-green-600 font-bold">
+                    {t("kalba.cart.discount", { amount: itemOffers })}
                   </span>
                 </div>
               )}
@@ -670,15 +687,20 @@ export default function MenuContent({
     if (qty === 0) setCartAddons((prev) => ({ ...prev, [id]: [] }));
   }
 
-  const cartItems: CartItem[] = popular.map((p) => ({
-    id: p.id,
-    name: pick(p, "name"),
-    description: pick(p, "description"),
-    image_url: p.image_url,
-    priceLabel: t("common.price", { amount: p.price }),
-    numericPrice: parseFloat(p.price) || 0,
-    groups: p.addon_groups ?? [],
-  }));
+  const cartItems: CartItem[] = popular.map((p) => {
+    const list = parseFloat(p.price) || 0;
+    const net = discountedPrice(list, p.discount_percent ?? 0);
+    return {
+      id: p.id,
+      name: pick(p, "name"),
+      description: pick(p, "description"),
+      image_url: p.image_url,
+      priceLabel: t("common.price", { amount: net }),
+      numericPrice: net,
+      listPrice: list,
+      groups: p.addon_groups ?? [],
+    };
+  });
 
   /* Which dish the options sheet is showing, and whether it was opened to add
      it or to change an answer already in the cart. */
@@ -713,6 +735,14 @@ export default function MenuContent({
   const totalPrice = cartItems.reduce(
     (sum, i) => sum + unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0),
     0
+  );
+
+  /* What the dishes' own offers have already taken off. Not subtracted again —
+     totalPrice is charged at the discounted price — but worth showing, because
+     a saving nobody is told about is a saving that does not land. */
+  const itemOffers = cartItems.reduce(
+    (sum, i) => sum + (i.listPrice - i.numericPrice) * (cartQty[i.id] ?? 0),
+    0,
   );
 
   const discountAmount = useMemo(() => {
@@ -939,6 +969,9 @@ export default function MenuContent({
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {filtered.map((p) => {
               const qty = cartQty[p.id] ?? 0;
+              const listPrice = parseFloat(p.price) || 0;
+              const offer = toPercent(p.discount_percent);
+              const netPrice = discountedPrice(listPrice, offer);
               return (
                 <div
                   key={p.id}
@@ -959,12 +992,32 @@ export default function MenuContent({
                         <span className="text-4xl">🍽️</span>
                       </div>
                     )}
+                    {/* Back on the photo, where it has always been. With an
+                        offer the old price rides alongside, struck. */}
+                    <span className="absolute top-2 start-2 z-10 flex items-center gap-1">
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-md text-white"
+                        style={{ background: "#ea580c" }}
+                      >
+                        {t("common.price", { amount: netPrice })}
+                      </span>
+                      {offer > 0 && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-white/95 text-gray-400 line-through">
+                          {listPrice}
+                        </span>
+                      )}
+                    </span>
+                    {offer > 0 && (
+                      <span className="absolute bottom-2 start-2 z-10 text-[10px] font-extrabold px-2 py-0.5 rounded-md text-white bg-green-600">
+                        {t("kalba.cart.percentOff", { value: offer })}
+                      </span>
+                    )}
                     <FavoriteButton
                       itemKey={`menu:${p.id}`}
                       name={p.name}
                       imageUrl={p.image_url}
                       href="/restaurant/university-kalba/menu"
-                      subtitle={`AED ${p.price}`}
+                      subtitle={`AED ${netPrice}`}
                       className="absolute top-2 end-2 w-7 h-7 z-10"
                     />
                   </div>
@@ -989,11 +1042,6 @@ export default function MenuContent({
                         })}
                       </div>
                     )}
-                    {/* Off the photo and into the card, directly above the
-                        rating and time — it is the number people scan for. */}
-                    <p className="text-sm font-extrabold mb-1" style={{ color: "#ea580c" }}>
-                      {t("common.price", { amount: p.price })}
-                    </p>
                     <div className="flex items-center justify-between text-[10.5px] mb-2">
                       <span className="flex items-center gap-0.5 font-semibold text-gray-700">
                         <Star
@@ -1007,13 +1055,6 @@ export default function MenuContent({
                         {pick(p, "time_text")}
                       </span>
                     </div>
-                    {/* Warns that a tap opens the chooser rather than adding
-                        straight away — the sheet is not a surprise then. */}
-                    {(p.addon_groups ?? []).length > 0 && (
-                      <p className="text-[9.5px] font-semibold text-orange-500 mb-1.5 -mt-1">
-                        {t("kalba.addons.available")}
-                      </p>
-                    )}
                     <div className="h-px bg-gray-100 mb-2" />
                     {/* A dish with questions keeps one button, whatever is in
                         the cart: the stepper would add a second helping with
@@ -1128,6 +1169,7 @@ export default function MenuContent({
           cartAddons={cartAddons}
           totalQty={totalQty}
           totalPrice={totalPrice}
+          itemOffers={itemOffers}
           onQtyChange={handleQtyChange}
           onEditOptions={(id) => setSheet({ id, mode: "edit" })}
           onClose={() => setCartOpen(false)}

@@ -1,6 +1,6 @@
 ﻿"use client";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, X, GripVertical, ChevronUp, ChevronDown, Ruler } from "lucide-react";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import TopPicksField from "@/components/admin/TopPicksField";
 import TopPicksToggle from "@/components/admin/TopPicksToggle";
@@ -57,6 +57,8 @@ interface PopularItem {
   description: string;
   description_ar: string;
   price: string;
+  /** A straight percentage off this dish. 0 = no offer. */
+  discount_percent: number | string;
   rating: string;
   time_text: string;
   time_text_ar: string;
@@ -83,6 +85,7 @@ const EMPTY: Omit<PopularItem, "id"> = {
   description: "",
   description_ar: "",
   price: "",
+  discount_percent: "",
   rating: "4.5",
   time_text: "15–20 min",
   time_text_ar: "",
@@ -107,6 +110,9 @@ export default function KalbaPopularAdmin() {
   });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  /* Columns the last save could not write, because the migration adding them
+     has not been run. Shown rather than swallowed. */
+  const [saveWarning, setSaveWarning] = useState<string[]>([]);
 
   async function load() {
     setLoading(true);
@@ -149,19 +155,31 @@ export default function KalbaPopularAdmin() {
     }));
   }
 
-  function addGroup() {
+  function addGroup(preset?: { name: string; options: string[] }) {
     setGroups((list) => [
       ...list,
       {
-        name: "",
+        name: preset?.name ?? "",
         name_ar: "",
         // The commonest question by far: pick exactly one.
         min_select: 1,
         max_select: 1,
         sort_order: list.length,
-        options: [{ name: "", name_ar: "", image_url: "", price: "", sort_order: 0 }],
+        options: (preset?.options ?? [""]).map((name, i) => ({
+          name,
+          name_ar: "",
+          image_url: "",
+          price: "",
+          sort_order: i,
+        })),
       },
     ]);
+  }
+
+  /* Size is a choice group like any other — this only saves typing the three
+     commonest options, and their prices are still the admin's to set. */
+  function addSizeGroup() {
+    addGroup({ name: "Choice of Size", options: ["Small", "Medium", "Large"] });
   }
 
   function updateGroup(gi: number, patch: Partial<AddonGroup>) {
@@ -235,23 +253,42 @@ export default function KalbaPopularAdmin() {
 
   async function handleSave() {
     setSaving(true);
-    if (modal.mode === "add") {
-      await fetch("/api/admin/kalba/popular", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(modal.data),
-      });
-    } else {
-      await fetch(`/api/admin/kalba/popular/${modal.data.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(modal.data),
-      });
-    }
+    const res =
+      modal.mode === "add"
+        ? await fetch("/api/admin/kalba/popular", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(modal.data),
+          })
+        : await fetch(`/api/admin/kalba/popular/${modal.data.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(modal.data),
+          });
+
+    const saved = await res.json().catch(() => null);
     setSaving(false);
+
+    /* Something was saved, but not all of it — a photo or a whole group had
+       nowhere to go. Keep the form open and say which migration is missing,
+       rather than closing on what looks like a clean save. */
+    const missing: string[] = saved?.droppedColumns ?? [];
+    if (missing.length > 0) {
+      setSaveWarning(missing);
+      return;
+    }
+
+    setSaveWarning([]);
     closeModal();
     load();
   }
+
+  /** What the last save could not store, if anything. */
+  const MIGRATION_FOR: Record<string, string> = {
+    image_url: "supabase/kalba_item_addons.sql",
+    group_id: "supabase/kalba_addon_groups.sql",
+    kalba_addon_groups: "supabase/kalba_addon_groups.sql",
+  };
 
   async function handleDelete() {
     if (!deleteId) return;
@@ -259,6 +296,15 @@ export default function KalbaPopularAdmin() {
     setDeleteId(null);
     load();
   }
+
+  /** "AED 22 → AED 19.80", or nothing when there is no offer to preview. */
+  const offerPreview = (() => {
+    const pct = Math.min(100, Math.max(0, Number(modal.data.discount_percent) || 0));
+    const base = parseFloat(String(modal.data.price));
+    if (pct <= 0 || !Number.isFinite(base) || base <= 0) return "";
+    const net = Math.round(base * (100 - pct)) / 100;
+    return `AED ${base} → AED ${net}`;
+  })();
 
   function categoryLabel(item: PopularItem) {
     if (!item.category_id) return null;
@@ -334,6 +380,11 @@ export default function KalbaPopularAdmin() {
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-[11px] font-bold px-2 py-0.5 rounded-md text-white" style={{ background: "#ea580c" }}>AED {item.price}</span>
+                  {Number(item.discount_percent) > 0 && (
+                    <span className="block text-[10px] font-bold text-green-600 mt-1">
+                      −{Number(item.discount_percent)}% offer
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">★ {item.rating}</td>
                 <td className="px-4 py-3 text-xs text-gray-500">{item.time_text}</td>
@@ -427,6 +478,35 @@ export default function KalbaPopularAdmin() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Offer <span className="font-normal text-gray-400">(% off this dish)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={modal.data.discount_percent ?? ""}
+                    onChange={(e) => handleField("discount_percent", e.target.value)}
+                    placeholder="0"
+                    className={`${inputCls} w-24`}
+                  />
+                  <span className="text-sm text-gray-400">%</span>
+                  {/* Shows the arithmetic rather than making them do it. */}
+                  {offerPreview && (
+                    <span className="text-[11px] text-green-700 bg-green-50 border border-green-200 rounded-md px-2 py-1">
+                      {offerPreview}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1.5">
+                  Comes off the dish price only, before any options are added. Leave blank or 0 for
+                  no offer.
+                </p>
+              </div>
+
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Price (AED)</label>
@@ -481,14 +561,24 @@ export default function KalbaPopularAdmin() {
               <div className="border-t border-gray-100 pt-4">
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-semibold text-gray-700">Choices &amp; Add-ons</label>
-                  <button
-                    type="button"
-                    onClick={addGroup}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors"
-                  >
-                    <Plus size={12} />
-                    Add choice group
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={addSizeGroup}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors"
+                    >
+                      <Ruler size={12} />
+                      Sizes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addGroup()}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] font-semibold text-gray-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-600 transition-colors"
+                    >
+                      <Plus size={12} />
+                      Add choice group
+                    </button>
+                  </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">
                   Each group is one question the shopper is asked before this dish goes in the
@@ -663,11 +753,29 @@ export default function KalbaPopularAdmin() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-2xl">
+            <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-2xl">
+              {saveWarning.length > 0 && (
+                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mb-3 leading-relaxed">
+                  <p className="font-semibold mb-1">Saved, but not everything.</p>
+                  <p>
+                    Your database is missing{" "}
+                    {saveWarning.map((c) => <code key={c} className="font-mono">{c}</code>)
+                      .reduce<React.ReactNode[]>((acc, node, i) => (i === 0 ? [node] : [...acc, ", ", node]), [])}
+                    . Run{" "}
+                    {Array.from(new Set(saveWarning.map((c) => MIGRATION_FOR[c] ?? c))).map((file) => (
+                      <code key={file} className="font-mono">{file}</code>
+                    ))}{" "}
+                    in the Supabase SQL editor, then save again — photos and choice groups have
+                    nowhere to be stored until you do.
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-3">
               <button onClick={closeModal} className="px-4 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>
                 {saving ? "Saving..." : modal.mode === "add" ? "Add item" : "Save changes"}
               </button>
+              </div>
             </div>
           </div>
         </div>

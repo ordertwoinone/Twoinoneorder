@@ -81,7 +81,14 @@ export async function getAllAddonGroupsByItem(): Promise<Record<string, KalbaAdd
  * itself has already saved, and failing loudly would make a working edit look
  * broken.
  */
-export async function syncItemAddonGroups(itemId: string, groups: GroupInput[]): Promise<void> {
+export async function syncItemAddonGroups(
+  itemId: string,
+  groups: GroupInput[],
+): Promise<{ droppedColumns: string[] }> {
+  /* Columns the database turned out not to have. Dropping one beats losing the
+     whole edit, but doing it silently is how an admin ends up uploading the
+     same photo five times — so it is reported back and shown. */
+  const dropped = new Set<string>();
   const clean = groups
     .map((group, index) => ({
       id: group.id,
@@ -109,7 +116,7 @@ export async function syncItemAddonGroups(itemId: string, groups: GroupInput[]):
     .select("id")
     .eq("item_id", itemId);
 
-  if (groupsError) return;
+  if (groupsError) return { droppedColumns: [] };
 
   const keptGroupIds = new Set(clean.map((g) => g.id).filter(Boolean) as string[]);
   const goneGroupIds = (existingGroups ?? [])
@@ -143,18 +150,25 @@ export async function syncItemAddonGroups(itemId: string, groups: GroupInput[]):
         .insert([{ ...fields, item_id: itemId }])
         .select("id")
         .single();
-      if (error || !data) continue;
+      if (error || !data) {
+        // No table for the groups: the questions cannot be stored at all.
+        dropped.add("kalba_addon_groups");
+        continue;
+      }
       groupId = (data as { id: string }).id;
     }
 
-    await syncGroupOptions(itemId, groupId, group.options);
+    await syncGroupOptions(itemId, groupId, group.options, dropped);
   }
+
+  return { droppedColumns: Array.from(dropped) };
 }
 
 async function syncGroupOptions(
   itemId: string,
   groupId: string,
-  options: Required<AddonInput>[] | { id?: string; name: string; name_ar: string; image_url: string; price: number; sort_order: number }[],
+  options: { id?: string; name: string; name_ar: string; image_url: string; price: number; sort_order: number }[],
+  dropped: Set<string>,
 ): Promise<void> {
   const { data: existing, error } = await supabaseAdminLive
     .from("kalba_item_addons")
@@ -185,13 +199,18 @@ async function syncGroupOptions(
       };
 
       return option.id
-        ? tolerate((f) =>
-            supabaseAdminLive
-              .from("kalba_item_addons")
-              .update({ ...f, updated_at: new Date().toISOString() })
-              .eq("id", option.id as string),
+        ? tolerate(
+            (f) =>
+              supabaseAdminLive
+                .from("kalba_item_addons")
+                .update({ ...f, updated_at: new Date().toISOString() })
+                .eq("id", option.id as string),
+            dropped,
           )(fields)
-        : tolerate((f) => supabaseAdminLive.from("kalba_item_addons").insert([f]))(fields);
+        : tolerate(
+            (f) => supabaseAdminLive.from("kalba_item_addons").insert([f]),
+            dropped,
+          )(fields);
     }),
   );
 }
@@ -205,6 +224,7 @@ async function syncGroupOptions(
  */
 function tolerate<T extends Record<string, unknown>>(
   attempt: (fields: T) => PromiseLike<{ error: { message?: string } | null }>,
+  dropped: Set<string>,
 ) {
   return async (fields: T) => {
     const result = await attempt(fields);
@@ -215,6 +235,7 @@ function tolerate<T extends Record<string, unknown>>(
       if (message.includes(column) && column in fields) {
         const rest = { ...fields };
         delete rest[column];
+        dropped.add(column);
         return attempt(rest);
       }
     }

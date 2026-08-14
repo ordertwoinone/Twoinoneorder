@@ -41,12 +41,14 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const created = data as { id: string } | null;
+  let droppedColumns: string[] = [];
   if (created?.id && Array.isArray(addon_groups)) {
-    await syncItemAddonGroups(created.id, addon_groups);
+    ({ droppedColumns } = await syncItemAddonGroups(created.id, addon_groups));
   }
 
   revalidatePath("/restaurant/university-kalba");
   revalidatePath("/restaurant/university-kalba/menu");
   revalidatePath("/"); // Top Picks strip on the home page
-  return NextResponse.json(data, { status: 201 });
+  // The editor tells the admin which migration is missing rather than swallowing it.
+  return NextResponse.json({ ...(data as object), droppedColumns }, { status: 201 });
 }

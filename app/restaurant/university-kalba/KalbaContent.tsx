@@ -25,6 +25,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import FavoriteButton from "@/components/ui/FavoriteButton";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
+import { discountedPrice, toPercent } from "@/lib/kalba/pricing";
 import {
   addonsTotal, addonSummary, defaultSelection,
   type AddonSelection, type KalbaAddonGroup,
@@ -103,6 +104,8 @@ export interface KalbaPopularItem {
   tags?: string[] | null;
   /** Choice groups from admin → Popular Around Campus; empty for most dishes. */
   addon_groups?: KalbaAddonGroup[] | null;
+  /** This dish's own offer, as a percentage. 0 or absent means none. */
+  discount_percent?: number | string | null;
 }
 
 export interface KalbaStudy {
@@ -211,7 +214,10 @@ interface CartItem {
   description?: string | null;
   image_url: string;
   priceLabel: string;
+  /** The dish's price after its own offer — what is actually charged. */
   numericPrice: number;
+  /** Before the offer. Equal to numericPrice when there isn't one. */
+  listPrice: number;
   /** Questions asked before this dish is ordered. Empty for most of them. */
   groups: KalbaAddonGroup[];
 }
@@ -340,13 +346,15 @@ function CartRow({ item, qty, selectedAddons, onQtyChange, onEditOptions }: {
   );
 }
 
-function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChange, onEditOptions, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, studentDiscount, studentPercent, finalPrice }: {
+function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, itemOffers, onQtyChange, onEditOptions, onClose, whatsapp, restaurantName, pickupLeadMinutes, closesAt, openingHours, isOpen, appliedCoupon, onApplyCoupon, onRemoveCoupon, couponError, couponLoading, discountAmount, studentDiscount, studentPercent, finalPrice }: {
   items: CartItem[];
   cartQty: Record<string, number>;
   /** Which extras are ticked, per item. */
   cartAddons: AddonSelection;
   totalQty: number;
   totalPrice: number;
+  /** Already off the total; shown so the shopper knows they saved it. */
+  itemOffers: number;
   onQtyChange: (id: string, qty: number) => void;
   onEditOptions: (itemId: string) => void;
   onClose: () => void;
@@ -563,6 +571,16 @@ function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, onQtyChan
                     🎓 {t("kalba.cart.studentDiscount", { percent: studentPercent })}
                   </span>
                   <span className="text-[11px] text-green-600 font-bold">{t("kalba.cart.discount", { amount: studentDiscount })}</span>
+                </div>
+              )}
+              {itemOffers > 0 && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-orange-100">
+                  <span className="text-[11px] text-green-600 font-semibold">
+                    🏷️ {t("kalba.cart.itemOffers")}
+                  </span>
+                  <span className="text-[11px] text-green-600 font-bold">
+                    {t("kalba.cart.discount", { amount: itemOffers })}
+                  </span>
                 </div>
               )}
             </div>
@@ -837,15 +855,20 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
   }
 
   const allCartItems: CartItem[] = [
-    ...popular.map((p) => ({
-      id: p.id,
-      name: pick(p, "name"),
-      description: pick(p, "description"),
-      image_url: p.image_url,
-      priceLabel: `AED ${p.price}`,
-      numericPrice: parseFloat(p.price) || 0,
-      groups: p.addon_groups ?? [],
-    })),
+    ...popular.map((p) => {
+      const list = parseFloat(p.price) || 0;
+      const net = discountedPrice(list, p.discount_percent ?? 0);
+      return {
+        id: p.id,
+        name: pick(p, "name"),
+        description: pick(p, "description"),
+        image_url: p.image_url,
+        priceLabel: `AED ${net}`,
+        numericPrice: net,
+        listPrice: list,
+        groups: p.addon_groups ?? [],
+      };
+    }),
     ...specials.map((s) => ({
       id: s.id,
       name: pick(s, "name"),
@@ -853,6 +876,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
       image_url: s.image_url,
       priceLabel: pick(s, "price_text") || t("kalba.cart.seePrice"),
       numericPrice: parseNumericPrice(s.price_text),
+      listPrice: parseNumericPrice(s.price_text),
       // Specials are managed on their own screen and ask nothing.
       groups: [] as KalbaAddonGroup[],
     })),
@@ -891,6 +915,14 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
   const totalPrice = allCartItems.reduce((sum, i) => {
     return sum + unitPrice(i, cartAddons) * (cartQty[i.id] ?? 0);
   }, 0);
+
+  /* What the dishes' own offers have already taken off. Not subtracted again —
+     totalPrice is charged at the discounted price — but worth showing, because
+     a saving nobody is told about is a saving that does not land. */
+  const itemOffers = allCartItems.reduce(
+    (sum, i) => sum + (i.listPrice - i.numericPrice) * (cartQty[i.id] ?? 0),
+    0,
+  );
 
   // Discount calculation
   let discountAmount = 0;
@@ -1043,6 +1075,9 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {popular.map((p) => {
                 const qty = cartQty[p.id] ?? 0;
+                const listPrice = parseFloat(p.price) || 0;
+                const offer = toPercent(p.discount_percent);
+                const netPrice = discountedPrice(listPrice, offer);
                 return (
                   <div key={p.id}
                     className="bg-white rounded-2xl overflow-hidden border border-gray-100 block group transition-shadow hover:shadow-md"
@@ -1053,12 +1088,32 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw" />
                       )}
+                      {/* Back on the photo, where it has always been. With an
+                          offer the old price rides alongside, struck. */}
+                      <span className="absolute top-2 start-2 z-10 flex items-center gap-1">
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-md text-white"
+                          style={{ background: "#ea580c" }}
+                        >
+                          {t("common.price", { amount: netPrice })}
+                        </span>
+                        {offer > 0 && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-white/95 text-gray-400 line-through">
+                            {listPrice}
+                          </span>
+                        )}
+                      </span>
+                      {offer > 0 && (
+                        <span className="absolute bottom-2 start-2 z-10 text-[10px] font-extrabold px-2 py-0.5 rounded-md text-white bg-green-600">
+                          {t("kalba.cart.percentOff", { value: offer })}
+                        </span>
+                      )}
                       <FavoriteButton
                         itemKey={`menu:${p.id}`}
                         name={p.name}
                         imageUrl={p.image_url}
                         href="/restaurant/university-kalba/menu"
-                        subtitle={`AED ${p.price}`}
+                        subtitle={`AED ${netPrice}`}
                         className="absolute top-2 end-2 w-7 h-7 z-10"
                       />
                     </div>
@@ -1083,11 +1138,6 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           })}
                         </div>
                       )}
-                      {/* Off the photo and into the card, directly above the
-                          rating and time — it is the number people scan for. */}
-                      <p className="text-[13px] font-extrabold mb-1" style={{ color: "#ea580c" }}>
-                        {t("common.price", { amount: p.price })}
-                      </p>
                       <div className="flex items-center justify-between text-[10.5px]">
                         <span className="flex items-center gap-0.5 font-semibold text-gray-700">
                           <Star size={10} className="fill-amber-400 stroke-amber-400" />
@@ -1098,13 +1148,6 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           {pick(p, "time_text")}
                         </span>
                       </div>
-                      {/* Warns that a tap opens the chooser rather than adding
-                          straight away — the sheet is not a surprise then. */}
-                      {(p.addon_groups ?? []).length > 0 && (
-                        <p className="text-[9.5px] font-semibold text-orange-500 mt-1">
-                          {t("kalba.addons.available")}
-                        </p>
-                      )}
                       <div className="h-px bg-gray-100 my-1.5" />
                       {/* A dish with questions keeps one button, whatever is in
                           the cart: the stepper would add a second helping with
@@ -1233,6 +1276,7 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           cartAddons={cartAddons}
           totalQty={totalQty}
           totalPrice={totalPrice}
+          itemOffers={itemOffers}
           onQtyChange={handleQtyChange}
           onEditOptions={(id) => setSheet({ id, mode: "edit" })}
           onClose={() => setCartOpen(false)}

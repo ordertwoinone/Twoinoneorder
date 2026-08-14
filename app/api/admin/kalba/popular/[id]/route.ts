@@ -19,12 +19,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
   /* Only when the caller sent them: the Top Picks toggle PUTs a single field,
      and must not read as "this item now asks nothing". */
-  if (Array.isArray(addon_groups)) await syncItemAddonGroups(params.id, addon_groups);
+  let droppedColumns: string[] = [];
+  if (Array.isArray(addon_groups)) {
+    ({ droppedColumns } = await syncItemAddonGroups(params.id, addon_groups));
+  }
 
   revalidatePath("/restaurant/university-kalba");
   revalidatePath("/restaurant/university-kalba/menu");
   revalidatePath("/"); // Top Picks strip on the home page
-  return NextResponse.json(data);
+  // The editor tells the admin which migration is missing rather than swallowing it.
+  return NextResponse.json({ ...(data as object), droppedColumns });
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {

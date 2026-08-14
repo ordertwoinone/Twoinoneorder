@@ -774,6 +774,7 @@ const ar: Dictionary = {
       percentOff: "خصم {value}%",
       amountOff: "خصم {value} د.إ",
       discount: "−{amount} د.إ",
+      itemOffers: "عروض الأصناف",
       studentDiscount: "بطاقة امتيازات الطالب — خصم {percent}%",
       pickup: "🏃 استلام",
       delivery: "🛵 توصيل",
