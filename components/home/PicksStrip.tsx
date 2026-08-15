@@ -246,11 +246,17 @@ export default async function PicksStrip({ variant }: { variant: StripVariant })
           </p>
         </div>
 
-        {/* Mobile: one row that scrolls sideways, sized so three sit in view.
+        {/* One row that scrolls sideways at every width. It used to become a
+            wrapping grid on desktop, which turned a strip of twenty picks into
+            four rows of wall. Column width is sized so roughly three, four or
+            five sit in view and the next one peeks, which is what says "this
+            scrolls" once the scrollbar is hidden. The lg width is measured off
+            the container rather than the viewport, so the cards stop growing
+            when the page stops growing.
+
             scroll-ps-4 matches the px-4 inset (see HomeCategories: snapping
-            otherwise pulls the first card flush to the screen edge).
-            sm+: a plain grid. */}
-        <div className="grid grid-flow-col grid-rows-1 auto-cols-[calc((100vw-3.5rem)/3)] gap-3 overflow-x-auto scrollbar-none momentum-x px-4 scroll-ps-4 sm:grid-flow-row sm:auto-cols-auto sm:grid-cols-4 lg:grid-cols-5 sm:gap-4 sm:overflow-visible">
+            otherwise pulls the first card flush to the screen edge). */}
+        <div className="grid grid-flow-col grid-rows-1 auto-cols-[calc((100vw-3.5rem)/3)] sm:auto-cols-[calc((100vw-5rem)/4)] lg:auto-cols-[calc((min(100vw,80rem)-6rem)/5)] gap-3 sm:gap-4 overflow-x-auto scrollbar-none momentum-x px-4 scroll-ps-4">
           {picks.map((p, i) => (
             <div
               key={p.key}
