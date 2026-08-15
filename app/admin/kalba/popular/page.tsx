@@ -117,6 +117,8 @@ export default function KalbaPopularAdmin() {
   /* Columns the last save could not write, because the migration adding them
      has not been run. Shown rather than swallowed. */
   const [saveWarning, setSaveWarning] = useState<string[]>([]);
+  /** Why the last save was refused, if it was. */
+  const [saveError, setSaveError] = useState("");
   /* Migrations this database has not had run. Checked on load, because a photo
      that will not stick is a mystery until somebody says why. */
   const [missingMigrations, setMissingMigrations] = useState<
@@ -143,8 +145,18 @@ export default function KalbaPopularAdmin() {
 
   useEffect(() => { load(); }, []);
 
-  function openAdd() { setModal({ open: true, mode: "add", data: { ...EMPTY, addon_groups: [] } }); }
+  /** Both entry points start clean — last time's complaint is not this one's. */
+  function resetSaveState() {
+    setSaveError("");
+    setSaveWarning([]);
+  }
+
+  function openAdd() {
+    resetSaveState();
+    setModal({ open: true, mode: "add", data: { ...EMPTY, addon_groups: [] } });
+  }
   function openEdit(item: PopularItem) {
+    resetSaveState();
     setModal({
       open: true,
       mode: "edit",
@@ -270,21 +282,47 @@ export default function KalbaPopularAdmin() {
 
   async function handleSave() {
     setSaving(true);
+    setSaveError("");
+
+    /* The number boxes hold strings, and an untouched one holds "". Postgres
+       rejects "" for a numeric column outright — not as an unknown column, so
+       the writer cannot shed it — which failed the whole insert. Coerced here,
+       where it is obvious what each field is meant to be. */
+    const payload = {
+      ...modal.data,
+      discount_percent: Number(modal.data.discount_percent) || 0,
+      sort_order: Number(modal.data.sort_order) || 0,
+      addon_groups: (modal.data.addon_groups ?? []).map((g) => ({
+        ...g,
+        min_select: Number(g.min_select) || 0,
+        max_select: Number(g.max_select) || 0,
+        options: g.options.map((o) => ({ ...o, price: Number(o.price) || 0 })),
+      })),
+    };
+
     const res =
       modal.mode === "add"
         ? await fetch("/api/admin/kalba/popular", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(modal.data),
+            body: JSON.stringify(payload),
           })
         : await fetch(`/api/admin/kalba/popular/${modal.data.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(modal.data),
+            body: JSON.stringify(payload),
           });
 
     const saved = await res.json().catch(() => null);
     setSaving(false);
+
+    /* A refused save used to close the form as though it had worked, so an
+       item that never reached the database looked saved until the list
+       reloaded without it. Say what went wrong and stay open. */
+    if (!res.ok) {
+      setSaveError(saved?.error || `Could not save (${res.status}).`);
+      return;
+    }
 
     /* Something was saved, but not all of it — a photo or a whole group had
        nowhere to go. Keep the form open and say which migration is missing,
@@ -585,7 +623,9 @@ export default function KalbaPopularAdmin() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Sort Order</label>
-                  <input type="number" value={modal.data.sort_order} onChange={(e) => handleField("sort_order", parseInt(e.target.value))} className={inputCls} />
+                  {/* `|| 0`, because clearing the box gives NaN, and NaN goes
+                      out as null against a NOT NULL column. */}
+                  <input type="number" value={modal.data.sort_order} onChange={(e) => handleField("sort_order", parseInt(e.target.value) || 0)} className={inputCls} />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">Status</label>
@@ -812,6 +852,11 @@ export default function KalbaPopularAdmin() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-2xl">
+              {saveError && (
+                <p className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5 mb-3">
+                  {saveError}
+                </p>
+              )}
               {saveWarning.length > 0 && (
                 <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mb-3 leading-relaxed">
                   <p className="font-semibold mb-1">Saved, but not everything.</p>
