@@ -1168,12 +1168,11 @@ export default function MenuContent({
                         className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors tap-shrink"
                       >
                         <ShoppingCart className="w-3.5 h-3.5" />
+                        {/* Always "Add to cart". A dish with choices opens its
+                            sheet instead of dropping straight in, but the button
+                            is still the one thing they came to press. */}
                         <span className="text-xs font-bold">
-                          {qty > 0
-                            ? `${t("common.addToCart")} · ${qty}`
-                            : (p.addon_groups ?? []).length > 0
-                              ? t("kalba.addons.customise")
-                              : t("common.addToCart")}
+                          {qty > 0 ? `${t("common.addToCart")} · ${qty}` : t("common.addToCart")}
                         </span>
                       </button>
                     ) : (

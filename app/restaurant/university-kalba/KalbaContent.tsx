@@ -1230,12 +1230,13 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
                           className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
                         >
                           <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                          {/* Always "Add". A dish with choices opens its sheet
+                              instead of dropping straight in the cart, but the
+                              button is still the one thing they came to press —
+                              labelling it differently made the grid read as two
+                              kinds of product. */}
                           <span className="text-[10px] sm:text-xs font-semibold">
-                            {qty > 0
-                              ? `${t("common.add")} · ${qty}`
-                              : (p.addon_groups ?? []).length > 0
-                                ? t("kalba.addons.customise")
-                                : t("common.add")}
+                            {qty > 0 ? `${t("common.add")} · ${qty}` : t("common.add")}
                           </span>
                         </button>
                       ) : (
