@@ -24,7 +24,8 @@ export const ADMIN_AREAS: AdminArea[] = [
     label: "Dashboard",
     hint: "The overview screen",
     paths: ["/admin/dashboard"],
-    apiPaths: ["/api/admin/dashboard"],
+    // The business report is the dashboard; whoever may open one may read both.
+    apiPaths: ["/api/admin/dashboard", "/api/admin/report"],
   },
   {
     key: "live-orders",
