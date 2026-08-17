@@ -1095,23 +1095,25 @@ export default function MenuContent({
                         <span className="text-4xl">🍽️</span>
                       </div>
                     )}
-                    {/* Back on the photo, where it has always been. With an
-                        offer the old price rides alongside, struck. */}
-                    <span className="absolute top-2 start-2 z-10 flex items-center gap-1">
+                    {/* One joined chip so the two prices read as a pair
+                        rather than two unrelated badges: what it costs now,
+                        then what it cost, struck through in red. The shadow
+                        is what keeps both legible over a busy photo. */}
+                    <span className="absolute top-2 start-2 z-10 flex items-stretch rounded-lg overflow-hidden shadow-md">
                       <span
-                        className="text-[10px] font-bold px-2 py-0.5 rounded-md text-white"
+                        className="flex items-center text-[11px] sm:text-xs font-extrabold px-2 py-1 text-white"
                         style={{ background: "#ea580c" }}
                       >
                         {t("common.price", { amount: netPrice })}
                       </span>
                       {offer > 0 && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-white/95 text-gray-400 line-through">
+                        <span className="flex items-center text-[10px] sm:text-[11px] font-bold px-1.5 py-1 bg-white text-gray-500 line-through decoration-red-500 decoration-[1.5px]">
                           {listPrice}
                         </span>
                       )}
                     </span>
                     {offer > 0 && (
-                      <span className="absolute bottom-2 start-2 z-10 text-[10px] font-extrabold px-2 py-0.5 rounded-md text-white bg-green-600">
+                      <span className="absolute bottom-2 start-2 z-10 text-[10px] sm:text-[11px] font-extrabold px-2 py-1 rounded-lg text-white bg-green-600 shadow-md">
                         {t("kalba.cart.percentOff", { value: offer })}
                       </span>
                     )}

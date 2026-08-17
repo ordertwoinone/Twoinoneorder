@@ -35,8 +35,10 @@ export interface SheetItem {
   id: string;
   name: string;
   description?: string | null;
-  /** The dish on its own, before any answers. */
+  /** The dish on its own, before any answers — after its offer. */
   numericPrice: number;
+  /** Before the offer. Equal to numericPrice when there isn't one. */
+  listPrice?: number;
 }
 
 /** The chosen/not-chosen dot, shared by both ways of drawing an option. */
@@ -138,8 +140,17 @@ export default function ItemOptionsSheet({
             {item.description && (
               <p className="text-[13px] text-gray-500 leading-snug mt-1">{item.description}</p>
             )}
-            <p className="text-[15px] font-extrabold mt-1.5" style={{ color: "#ea580c" }}>
-              {t("common.price", { amount: item.numericPrice })}
+            {/* The offer follows them in from the card, so the saving is still
+                on screen while they are choosing what to add to it. */}
+            <p className="mt-1.5 flex items-baseline gap-2">
+              <span className="text-[15px] font-extrabold" style={{ color: "#ea580c" }}>
+                {t("common.price", { amount: item.numericPrice })}
+              </span>
+              {item.listPrice != null && item.listPrice > item.numericPrice && (
+                <span className="text-[13px] font-semibold text-gray-400 line-through decoration-red-500 decoration-[1.5px]">
+                  {t("common.price", { amount: item.listPrice })}
+                </span>
+              )}
             </p>
           </div>
           <button
