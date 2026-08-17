@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
-import { areaForPath, isOwnerOnlyPath } from "@/lib/admin-areas";
+import { canAccess } from "@/lib/admin-areas";
 
 type NavChild = { label: string; href: string; icon: LucideIcon };
 type NavItem =
@@ -129,12 +129,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     return () => { cancelled = true; };
   }, []);
 
+  /* The same function middleware enforces with, so a link can never be shown
+     for a screen the server would refuse — or hidden for one it would allow. */
   const allowed = (href: string) => {
     if (!access) return true;            // until it loads, do not flash an empty rail
-    if (access.isOwner) return true;
-    if (isOwnerOnlyPath(href)) return false;
-    const area = areaForPath(href);
-    return area ? access.areas.includes(area.key) : false;
+    return canAccess(href, access);
   };
 
   const nav: NavItem[] = NAV

@@ -33,21 +33,25 @@ export const ADMIN_AREAS: AdminArea[] = [
     hint: "take.app orders and every booking, on one board",
     /* /admin/bookings is kept as a path so the old link still resolves — it
        redirects here rather than 404ing for anyone who bookmarked it. */
-    /* The invoice screens belong to whoever handles orders: printing a receipt
-       and changing an order's status are the same job. */
-    paths: [
-      "/admin/live-orders",
-      "/admin/bookings",
-      "/admin/order-history",
-      "/admin/invoice",
-      "/admin/invoice-settings",
-    ],
-    apiPaths: [
-      "/api/admin/takeapp",
-      "/api/admin/push",
-      "/api/admin/bookings",
-      "/api/admin/invoice-settings",
-    ],
+    paths: ["/admin/live-orders", "/admin/bookings"],
+    apiPaths: ["/api/admin/takeapp", "/api/admin/push", "/api/admin/bookings"],
+  },
+  {
+    key: "order-history",
+    label: "Order History",
+    hint: "Past orders, payment method, and printing an invoice",
+    /* Its own area rather than part of Orders. Someone who reconciles takings
+       at the end of a shift has no business on the live board, and the person
+       working the live board does not need the ledger. */
+    paths: ["/admin/order-history", "/admin/invoice/"],
+    apiPaths: ["/api/admin/bookings"],
+  },
+  {
+    key: "invoice-settings",
+    label: "Invoice Design",
+    hint: "The wording and layout printed on a tax invoice",
+    paths: ["/admin/invoice-settings"],
+    apiPaths: ["/api/admin/invoice-settings"],
   },
   {
     key: "shipday",
@@ -99,6 +103,8 @@ export const ADMIN_AREAS: AdminArea[] = [
       "/api/admin/trust-badges",
       "/api/admin/campus-promo",
       "/api/admin/homepage-cards",
+      // Home Sections stores its two headings on the site_settings row.
+      "/api/admin/settings",
     ],
   },
   {
@@ -134,7 +140,9 @@ export const ADMIN_AREAS: AdminArea[] = [
     label: "Header",
     hint: "Site wordmark, tagline and logo",
     paths: ["/admin/header"],
-    apiPaths: ["/api/admin/header"],
+    // The header's fields live on the site_settings row, so it reads and
+    // writes the settings endpoint — there is no /api/admin/header.
+    apiPaths: ["/api/admin/header", "/api/admin/settings"],
   },
   {
     key: "student-card",
@@ -173,6 +181,11 @@ export const OWNER_ONLY_PATHS = ["/admin/team", "/api/admin/team"];
  * Open to every member whatever their areas: the login screen, the no-access
  * notice, and the housekeeping routes any screen may call — reading your own
  * access, signing out, and flushing the public cache after an edit.
+ *
+ * Uploading is here for the same reason. Nearly every content screen has an
+ * image field, so filing it under Media alone meant a member who could edit
+ * the Kalba menu could not put a photo on a dish. Browsing and deleting the
+ * library stays behind the Media area; putting a file in does not.
  */
 export const MEMBER_PATHS = [
   "/admin",
@@ -180,17 +193,30 @@ export const MEMBER_PATHS = [
   "/api/admin/me",
   "/api/admin/auth/logout",
   "/api/admin/revalidate",
+  "/api/admin/upload",
 ];
 
 function matches(pathname: string, prefixes: string[]): boolean {
   return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`) || pathname.startsWith(prefix));
 }
 
-/** The area a request belongs to, or null when no area claims it. */
-export function areaForPath(pathname: string): AdminArea | null {
-  return (
-    ADMIN_AREAS.find((area) => matches(pathname, area.paths) || matches(pathname, area.apiPaths)) ?? null
+/**
+ * Every area that claims a path, not just the first.
+ *
+ * Some endpoints genuinely belong to more than one screen — admin → Header and
+ * admin → Home Sections both write site_settings, and half the panel uploads
+ * images. Answering with only the first match meant whoever held the *other*
+ * area was refused their own screen's save.
+ */
+export function areasForPath(pathname: string): AdminArea[] {
+  return ADMIN_AREAS.filter(
+    (area) => matches(pathname, area.paths) || matches(pathname, area.apiPaths),
   );
+}
+
+/** The area a path is filed under, for labelling and for the sidebar. */
+export function areaForPath(pathname: string): AdminArea | null {
+  return areasForPath(pathname)[0] ?? null;
 }
 
 export function isOwnerOnlyPath(pathname: string): boolean {
@@ -210,11 +236,12 @@ export function canAccess(
   if (isMemberPath(pathname)) return true;
   if (isOwnerOnlyPath(pathname)) return false;
 
-  const area = areaForPath(pathname);
+  const claiming = areasForPath(pathname);
   // An unclaimed path is owner-only: a screen added without being listed here
   // stays shut rather than open to everyone.
-  if (!area) return false;
-  return member.areas.includes(area.key);
+  if (claiming.length === 0) return false;
+  // Any one of them is enough — a shared endpoint is shared.
+  return claiming.some((area) => member.areas.includes(area.key));
 }
 
 /** Where to send a member who landed somewhere they may not open. */
