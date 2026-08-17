@@ -22,6 +22,8 @@ interface BuffetHero {
   closes_at_ar: string;
   cover_image_url: string;
   logo_url: string;
+  /** Where buffet reservations are sent. Blank falls back to Settings. */
+  whatsapp: string;
 }
 
 const DEFAULTS: BuffetHero = {
@@ -41,6 +43,7 @@ const DEFAULTS: BuffetHero = {
   closes_at_ar: "",
   cover_image_url: "",
   logo_url: "",
+  whatsapp: "",
 };
 
 export default function BuffetHeroAdmin() {
@@ -178,6 +181,25 @@ export default function BuffetHeroAdmin() {
                 placeholder="KD 0.600 delivery"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+              Orders WhatsApp number
+            </label>
+            <input
+              type="text"
+              dir="ltr"
+              value={form.whatsapp ?? ""}
+              onChange={(e) => handleField("whatsapp", e.target.value)}
+              placeholder="971522305216"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              Where buffet reservations are sent. Leave blank to use the one number in admin →
+              Settings. University Kalba keeps its own under University Kalba → Branch Info, so the
+              two can go to different phones.
+            </p>
           </div>
         </div>
 

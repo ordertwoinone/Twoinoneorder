@@ -7,6 +7,7 @@ import JsonLd from "@/components/seo/JsonLd";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { SITE_URL, restaurantSchema, breadcrumbSchema } from "@/lib/seo";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { orderWhatsapp } from "@/lib/whatsapp";
 
 export const revalidate = 60;
 
@@ -80,7 +81,9 @@ async function getBuffetData() {
     photos:        photosRes.data ?? [],
     reviewSummary: reviewSummaryRes.data ?? null,
     reviews:       reviewsRes.data ?? [],
-    whatsapp:      (settingsRes.data?.whatsapp_number || "971522305216").replace(/\D/g, ""),
+    /* The buffet's own number wins; blank falls back to admin → Settings, the
+       same way the Kalba branch works. Without this both landed on one phone. */
+    whatsapp: orderWhatsapp(heroRes.data?.whatsapp, settingsRes.data?.whatsapp_number),
   };
 }
 
