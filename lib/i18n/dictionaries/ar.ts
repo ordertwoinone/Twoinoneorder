@@ -758,7 +758,7 @@ const ar: Dictionary = {
       missing: "يرجى الإجابة على «{group}» أولًا.",
       saveChoices: "حفظ الاختيارات",
       edit: "تغيير",
-      plusPrice: "+{amount}",
+      plusPrice: "+{amount} د.إ",
       plusExtras: "+ {amount} د.إ إضافات",
       waLine: "مع: {extras}",
     },

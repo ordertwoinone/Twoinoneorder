@@ -21,11 +21,44 @@ export interface TakeAppLineItem {
   options?: { name?: string; value?: string }[] | null;
 }
 
+/**
+ * Where an order is going, as take.app reports it.
+ *
+ * Confirmed against the live v2 API: every order carries `service.location`
+ * with a street line and a real latitude/longitude, plus the distance from the
+ * store. There is no tracking or courier id anywhere in the payload — that is
+ * Shipday's job here, not take.app's.
+ */
+export interface TakeAppLocation {
+  address1?: string | null;
+  address2?: string | null;
+  district?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  country?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export interface TakeAppService {
+  title?: string | null;
+  /** "Delivery" or "Pick up". */
+  name?: string | null;
+  price?: number | null;
+  distance?: number | null;
+  /** "KM" in practice. */
+  distance_unit?: string | null;
+  location?: TakeAppLocation | null;
+}
+
 export interface TakeAppOrder {
   id: string;
   number: string;
   name: string;
   store: { name: string; alias: string } | null;
+  /** How and where it is being fulfilled. Absent on older stored rows. */
+  service?: TakeAppService | null;
   order_status: OrderStatus | string;
   payment_status: PaymentStatus | string;
   fulfillment_status: FulfillmentStatus | string;

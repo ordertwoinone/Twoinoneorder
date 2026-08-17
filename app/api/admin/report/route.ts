@@ -87,6 +87,23 @@ export async function GET(request: Request) {
   const byDay = new Map<string, { orders: number; revenue: number }>();
   const byPayment = new Map<string, { orders: number; revenue: number }>();
 
+  /* What actually sold, by dish. Keyed on the name as it was ordered, because
+     that is the only thing the two sources agree on — a take.app line item and
+     one of ours share no id. */
+  const byItem = new Map<string, { name: string; where: string; qty: number; revenue: number }>();
+
+  function countItem(name: string, where: string, qty: number, revenue: number) {
+    const clean = name.trim();
+    if (!clean || qty <= 0) return;
+    const key = clean.toLowerCase();
+    const row = byItem.get(key) ?? { name: clean, where, qty: 0, revenue: 0 };
+    row.qty += qty;
+    row.revenue = round(row.revenue + revenue);
+    // A dish sold at two places is named for the first one seen; the count is
+    // what matters here, and the breakdown by restaurant answers the rest.
+    byItem.set(key, row);
+  }
+
   let orders = 0;
   let revenue = 0;
   let cancelled = 0;
@@ -141,14 +158,29 @@ export async function GET(request: Request) {
     const name = String(row.table_section ?? "").trim() || OWN_LABELS[type] || type;
     const amount = money(row.total_amount) || money(row.min_spend);
 
+    const isCancelled = String(row.status ?? "") === "cancelled";
+
     count(
       when,
       name,
       "own",
       amount,
-      String(row.status ?? "") === "cancelled",
+      isCancelled,
       String(row.payment_method ?? "cash").toLowerCase() === "card" ? "card" : "cash",
     );
+
+    /* Itemised orders only — a table booking has no dishes, and a Kalba order
+       placed before order_invoices.sql was run has them only as prose. */
+    if (!isCancelled && Array.isArray(row.items)) {
+      for (const entry of row.items as Record<string, unknown>[]) {
+        countItem(
+          String(entry?.name ?? ""),
+          name,
+          Math.round(money(entry?.qty)) || 1,
+          money(entry?.line_total),
+        );
+      }
+    }
   }
 
   // ── take.app storefronts ──────────────────────────────────────────────────
@@ -168,15 +200,25 @@ export async function GET(request: Request) {
     const when = order.created_at ?? "";
     if (!inRange(when)) continue;
 
+    const where = order.store?.name || "take.app";
+    const isCancelled = String(order.order_status ?? "") === "cancelled";
+
     count(
       when,
-      order.store?.name || "take.app",
+      where,
       "takeapp",
       // take.app counts in the smallest currency unit.
       round(money(order.total_amount) / 100),
-      String(order.order_status ?? "") === "cancelled",
+      isCancelled,
       order.payment_status === "paid" ? "paid online" : "unpaid",
     );
+
+    if (!isCancelled) {
+      for (const line of order.line_items ?? []) {
+        const qty = Math.round(money(line?.quantity)) || 1;
+        countItem(String(line?.name ?? ""), where, qty, round((money(line?.price) / 100) * qty));
+      }
+    }
   }
 
   const days = Array.from(byDay.entries())
@@ -194,6 +236,12 @@ export async function GET(request: Request) {
     },
     byDay: days,
     byRestaurant: Array.from(buckets.values()).sort((a, b) => b.revenue - a.revenue),
+    /* Busiest first — the question is "what are people buying", so quantity
+       leads and revenue is the tie-break. Capped, because a year of orders is
+       a long tail nobody reads and the CSV carries the rest. */
+    byItem: Array.from(byItem.values())
+      .sort((a, b) => b.qty - a.qty || b.revenue - a.revenue)
+      .slice(0, 100),
     byPayment: Array.from(byPayment.entries())
       .map(([method, v]) => ({ method, ...v }))
       .sort((a, b) => b.revenue - a.revenue),

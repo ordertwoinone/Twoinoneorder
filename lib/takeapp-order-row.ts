@@ -1,4 +1,4 @@
-import type { TakeAppOrder } from "@/lib/takeapp-orders";
+import type { TakeAppOrder, TakeAppService } from "@/lib/takeapp-orders";
 
 /**
  * The two sources of orders — the merchant API and the webhook — send the same
@@ -71,5 +71,9 @@ export function fromOrderRow(row: TakeAppOrderRow): TakeAppOrder {
     created_at: row.order_created_at ?? "",
     remark: row.remark,
     schedule: row.schedule,
+    /* The delivery address and its pin were never given columns of their own,
+       but the whole payload is kept in `raw` — so they are recovered from
+       there rather than needing a migration and a backfill. */
+    service: (row.raw as { service?: TakeAppService } | null)?.service ?? null,
   };
 }

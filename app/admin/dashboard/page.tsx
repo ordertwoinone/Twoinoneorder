@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Store, TrendingUp, ShoppingBag, Receipt, XCircle, Download, RefreshCw,
+  Store, TrendingUp, ShoppingBag, Receipt, XCircle, Download, RefreshCw, Flame,
 } from "lucide-react";
 
 /**
@@ -22,10 +22,18 @@ interface Bucket {
   cancelled: number;
 }
 
+interface ItemRow {
+  name: string;
+  where: string;
+  qty: number;
+  revenue: number;
+}
+
 interface Report {
   totals: { orders: number; cancelled: number; revenue: number; average: number };
   byDay: { date: string; orders: number; revenue: number }[];
   byRestaurant: Bucket[];
+  byItem: ItemRow[];
   byPayment: { method: string; orders: number; revenue: number }[];
   warning: string | null;
 }
@@ -115,6 +123,7 @@ export default function AdminDashboard() {
     return {
       ...report,
       byRestaurant: rows,
+      byItem: report.byItem.filter((i) => i.where === restaurant),
       totals: {
         orders,
         cancelled,
@@ -126,6 +135,12 @@ export default function AdminDashboard() {
 
   const peak = useMemo(
     () => Math.max(1, ...(shown?.byDay ?? []).map((d) => d.revenue)),
+    [shown],
+  );
+
+  /** The best seller, which every other bar is drawn against. */
+  const topQty = useMemo(
+    () => Math.max(1, ...(shown?.byItem ?? []).map((i) => i.qty)),
     [shown],
   );
 
@@ -147,6 +162,9 @@ export default function AdminDashboard() {
       "",
       '"Date","Orders","Revenue (AED)"',
       ...shown.byDay.map((d) => [d.date, d.orders, d.revenue].map(escape).join(",")),
+      "",
+      '"Item","Where","Quantity sold","Revenue (AED)"',
+      ...shown.byItem.map((i) => [i.name, i.where, i.qty, i.revenue].map(escape).join(",")),
     ];
 
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -337,6 +355,62 @@ export default function AdminDashboard() {
               ))}
             </div>
           )}
+        </Panel>
+      </div>
+
+      {/* What sold */}
+      <div className="mt-5">
+        <Panel icon={Flame} title="Best sellers">
+          {(shown?.byItem.length ?? 0) === 0 ? (
+            <Empty loading={loading} />
+          ) : (
+            <div className="max-h-[420px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-white">
+                  <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
+                    <th className="pb-2 w-8">#</th>
+                    <th className="pb-2">Item</th>
+                    <th className="pb-2 text-right">Sold</th>
+                    <th className="pb-2 text-right">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown!.byItem.map((item, i) => (
+                    <tr key={`${item.where}:${item.name}`} className="border-b border-gray-50 last:border-0">
+                      <td className="py-2.5 text-gray-400 tabular-nums">{i + 1}</td>
+                      <td className="py-2.5">
+                        <p className="font-medium text-gray-800">{item.name}</p>
+                        <p className="text-[11px] text-gray-400">{item.where}</p>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <span className="inline-flex items-center gap-2">
+                          {/* Against the best seller, so the gap between first
+                              and fifth is visible rather than arithmetic. */}
+                          <span className="hidden sm:block w-20 h-1.5 rounded bg-gray-100 overflow-hidden">
+                            <span
+                              className="block h-full rounded bg-orange-400"
+                              style={{ width: `${Math.max(4, (item.qty / topQty) * 100)}%` }}
+                            />
+                          </span>
+                          <span className="font-bold text-gray-900 tabular-nums w-8 text-right">
+                            {item.qty}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="py-2.5 text-right text-gray-600 whitespace-nowrap">
+                        AED {item.revenue.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-[11px] text-gray-400 mt-3">
+            Counted from itemised orders. A table booking has no dishes, and a Kalba order placed
+            before the invoice migration ran recorded its items as text — neither can be counted
+            here. The top hundred are shown; the CSV carries every one.
+          </p>
         </Panel>
       </div>
 

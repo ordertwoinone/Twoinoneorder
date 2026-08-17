@@ -736,7 +736,9 @@ const en = {
       missing: "Please answer “{group}” first.",
       saveChoices: "Save choices",
       edit: "Change",
-      plusPrice: "+{amount}",
+      /* Carries the currency: "+8" beside a dish priced "AED 19.44" reads as a
+         quantity or a percentage before it reads as money. */
+      plusPrice: "+AED {amount}",
       plusExtras: "+ AED {amount} extras",
       waLine: "With: {extras}",
     },

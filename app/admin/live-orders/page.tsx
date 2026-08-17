@@ -3,7 +3,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import {
   RefreshCw, Volume2, VolumeX, AlertTriangle, Store, Phone, Clock,
   CalendarClock, StickyNote, BellRing, X, Wifi, WifiOff,
-  Search, SlidersHorizontal, Download, ChevronDown, Printer,
+  Search, SlidersHorizontal, Download, ChevronDown, Printer, MapPin,
 } from "lucide-react";
 import NotificationButton from "./NotificationButton";
 
@@ -31,6 +31,22 @@ interface Order {
   created_at: string;
   remark?: string | null;
   schedule?: string | null;
+  /* Where it is going. take.app sends a street line and a real pin on every
+     order; it sends no tracking id at all, which is Shipday's job here. */
+  service?: {
+    name?: string | null;
+    distance?: number | null;
+    distance_unit?: string | null;
+    location?: {
+      address1?: string | null;
+      address2?: string | null;
+      district?: string | null;
+      city?: string | null;
+      state?: string | null;
+      latitude?: number | null;
+      longitude?: number | null;
+    } | null;
+  } | null;
 }
 
 /** A booking as /api/admin/bookings returns it — the other half of the board. */
@@ -80,6 +96,11 @@ interface Row {
   fulfillmentStatus?: string;
   /** Cash or card, ours to record. Filled for bookings only. */
   paymentMethod?: string;
+  /** "Delivery" / "Pick up", the address, and a pin to open in Maps. */
+  serviceName?: string;
+  distanceLabel?: string;
+  address?: string;
+  mapUrl?: string;
   items: LineItem[];
   itemCount: number;
   total: number | null;
@@ -102,8 +123,27 @@ const BOOKING_TYPES: Record<string, { label: string; chip: string }> = {
 
 const BOOKING_STATUSES = ["pending", "confirmed", "cancelled", "completed"];
 
+/** The address as one line, skipping the parts take.app leaves empty. */
+function addressLine(o: Order): string {
+  const l = o.service?.location;
+  if (!l) return "";
+  return [l.address1, l.address2, l.district, l.city, l.state]
+    .map((part) => (part ?? "").trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+/** A pin worth opening — only when take.app actually sent coordinates. */
+function mapLink(o: Order): string {
+  const { latitude: lat, longitude: lng } = o.service?.location ?? {};
+  if (typeof lat !== "number" || typeof lng !== "number") return "";
+  if (lat === 0 && lng === 0) return "";
+  return `https://maps.google.com/?q=${lat},${lng}`;
+}
+
 function orderRow(o: Order): Row {
   const items = o.line_items ?? [];
+  const distance = o.service?.distance;
   return {
     key: `takeapp:${o.id}`,
     source: "takeapp",
@@ -123,6 +163,14 @@ function orderRow(o: Order): Row {
     currency: o.currency || "AED",
     note: o.remark,
     scheduled: o.schedule,
+    serviceName: o.service?.name ?? undefined,
+    // 0 km is what take.app sends when it has not measured, not a real distance.
+    distanceLabel:
+      typeof distance === "number" && distance > 0
+        ? `${distance.toFixed(1)} ${(o.service?.distance_unit ?? "km").toLowerCase()}`
+        : undefined,
+    address: addressLine(o) || undefined,
+    mapUrl: mapLink(o) || undefined,
   };
 }
 
@@ -132,6 +180,38 @@ function bookingTotal(b: Booking): number | null {
     typeof b.total_amount === "number" ? b.total_amount : parseFloat(String(b.total_amount ?? ""));
   if (Number.isFinite(charged) && charged > 0) return Math.round(charged * 100);
   return b.min_spend > 0 ? b.min_spend * 100 : null;
+}
+
+/**
+ * Where the order is going, when take.app told us.
+ *
+ * The pin is the useful half: an address typed into a storefront is often
+ * approximate, and a driver would rather have the coordinates. take.app sends
+ * no tracking id of any kind, so there is nothing to show for one.
+ */
+function DeliveryTo({ row }: { row: Row }) {
+  if (!row.address && !row.mapUrl) return null;
+
+  return (
+    <div className="text-[12px] text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
+      <MapPin size={12} className="shrink-0 mt-0.5 text-orange-500" />
+      <span className="flex-1 min-w-0">
+        {row.address || "Location pin only"}
+        {row.distanceLabel && <span className="text-gray-400"> · {row.distanceLabel}</span>}
+        {row.mapUrl && (
+          <a
+            href={row.mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="ms-2 font-semibold text-orange-600 hover:underline whitespace-nowrap"
+          >
+            Open map
+          </a>
+        )}
+      </span>
+    </div>
+  );
 }
 
 function bookingRow(b: Booking): Row {
@@ -869,6 +949,14 @@ export default function LiveOrdersAdmin() {
                       {r.scheduled}
                     </span>
                   ) : null}
+                  {/* How far it has to travel, which is the thing a kitchen
+                      wants off a delivery order at a glance. */}
+                  {r.serviceName && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 border border-gray-200">
+                      {r.serviceName}
+                      {r.distanceLabel && ` · ${r.distanceLabel}`}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {/* take.app issues its own invoices off its own numbering, so
@@ -939,6 +1027,7 @@ export default function LiveOrdersAdmin() {
                       <StickyNote size={12} className="shrink-0 mt-0.5" /> {r.note}
                     </p>
                   )}
+                  <DeliveryTo row={r} />
                 </div>
               )}
             </div>
@@ -1138,6 +1227,7 @@ export default function LiveOrdersAdmin() {
                                 <StickyNote size={12} className="shrink-0 mt-0.5" /> {r.note}
                               </p>
                             )}
+                            <DeliveryTo row={r} />
                             <p className="text-[11px] text-gray-400">
                               {r.source === "booking" ? "Booking" : "take.app order"} reference: {r.id}
                             </p>
