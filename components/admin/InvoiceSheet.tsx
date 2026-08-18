@@ -150,9 +150,18 @@ export default function InvoiceSheet({
         <span>{money(order.total_amount)}</span>
       </div>
 
-      {s.show_paid && (
+      {/* How it was settled, in the words admin chose. An order nobody has
+          marked yet is named as unpaid and gets no "Total Paid" line — a
+          receipt claiming money was taken is the one error nobody can spot. */}
+      {s.show_paid && order.payment_method === "pending" && s.pending_label && (
+        <div className="mt-2 flex items-center justify-between text-[13px]">
+          <span>{s.pending_label}</span>
+          <span>{money(order.total_amount)}</span>
+        </div>
+      )}
+
+      {s.show_paid && order.payment_method !== "pending" && (
         <>
-          {/* How it was settled, in the words admin chose. */}
           <div className="mt-2 flex items-center justify-between text-[13px]">
             <span>{order.payment_method === "card" ? s.card_label : s.cash_label}</span>
             <span>{money(order.total_amount)}</span>

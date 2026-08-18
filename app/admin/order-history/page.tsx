@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search, Printer, Banknote, CreditCard, Download } from "lucide-react";
+import { RefreshCw, Search, Printer, Banknote, CreditCard, Download, Clock } from "lucide-react";
 
 const filterCls =
   "px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -33,10 +33,19 @@ interface Booking {
   payment_method?: string | null;
 }
 
+/* Pending first, because it is where every order starts: the money changes
+   hands after the order is placed, so the website cannot know. */
 const PAYMENT_METHODS = [
+  { value: "pending", label: "Pending", icon: Clock },
   { value: "cash", label: "Cash", icon: Banknote },
   { value: "card", label: "Card", icon: CreditCard },
 ] as const;
+
+/** Anything unrecognised is pending — never a claim that money was taken. */
+function paymentOf(row: { payment_method?: string | null }): string {
+  const v = (row.payment_method ?? "").trim().toLowerCase();
+  return v === "cash" || v === "card" ? v : "pending";
+}
 
 const TYPE_CHIPS: Record<string, string> = {
   table: "bg-orange-100 text-orange-700",
@@ -142,7 +151,7 @@ export default function OrderHistoryAdmin() {
       if (floor && (!Number.isFinite(placed) || placed < floor)) return false;
       if (cutoff && placed > cutoff) return false;
       if (status && (r.status || "pending") !== status) return false;
-      if (payment && (r.payment_method ?? "cash").toLowerCase() !== payment) return false;
+      if (payment && paymentOf(r) !== payment) return false;
       if (!q) return true;
       return [r.order_number, r.guest_name, r.phone, r.table_id, r.notes, r.type]
         .map((v) => String(v ?? "").toLowerCase())
@@ -180,7 +189,7 @@ export default function OrderHistoryAdmin() {
           const n = typeof r.total_amount === "number" ? r.total_amount : parseFloat(String(r.total_amount ?? ""));
           return Number.isFinite(n) && n > 0 ? n.toFixed(2) : "";
         })(),
-        (r.payment_method ?? "cash").toLowerCase(),
+        paymentOf(r),
         r.status || "pending",
         r.notes,
       ].map(escape).join(","),
@@ -324,10 +333,14 @@ export default function OrderHistoryAdmin() {
                   </td>
                   <td className="px-4 py-3">
                     <select
-                      value={(r.payment_method ?? "cash").toLowerCase()}
+                      value={paymentOf(r)}
                       disabled={saving === r.id}
                       onChange={(e) => patchOrder(r.id, { payment_method: e.target.value })}
-                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60"
+                      className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-60 ${
+                        paymentOf(r) === "pending"
+                          ? "border-amber-300 bg-amber-50 text-amber-700"
+                          : "border-gray-200 bg-white text-gray-700"
+                      }`}
                     >
                       {PAYMENT_METHODS.map((m) => (
                         <option key={m.value} value={m.value}>{m.label}</option>

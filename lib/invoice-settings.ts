@@ -51,6 +51,8 @@ export interface InvoiceSettings {
   /** How each payment method is worded on the bill. */
   cash_label: string;
   card_label: string;
+  /** Printed when nobody has marked how the order was settled yet. */
+  pending_label: string;
   tips_label: string;
   show_tips: boolean;
   /** Printed against the order's Pickup / Delivery. */
@@ -97,6 +99,7 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   show_paid: true,
   cash_label: "Cash",
   card_label: "Card",
+  pending_label: "Unpaid",
   tips_label: "Tips:",
   show_tips: true,
   fulfilment_label: "Fulfilment:",

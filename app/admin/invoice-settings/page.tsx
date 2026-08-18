@@ -192,6 +192,7 @@ export default function InvoiceSettingsAdmin() {
               <Field label="Total paid" value={form.paid_label} onChange={(v) => set("paid_label", v)} />
               <Field label="Cash payment reads" value={form.cash_label} onChange={(v) => set("cash_label", v)} />
               <Field label="Card payment reads" value={form.card_label} onChange={(v) => set("card_label", v)} />
+              <Field label="Unmarked payment reads" value={form.pending_label} onChange={(v) => set("pending_label", v)} />
               <Field label="Currency before amounts" value={form.currency_symbol} onChange={(v) => set("currency_symbol", v)} placeholder="blank, or AED" />
               <Field label="Tips" value={form.tips_label} onChange={(v) => set("tips_label", v)} />
               <Field label="Pickup / delivery line" value={form.fulfilment_label} onChange={(v) => set("fulfilment_label", v)} />

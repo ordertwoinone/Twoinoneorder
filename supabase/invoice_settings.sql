@@ -49,6 +49,8 @@ CREATE TABLE IF NOT EXISTS invoice_settings (
   -- How each payment method is worded on the bill.
   cash_label       text        NOT NULL DEFAULT 'Cash',
   card_label       text        NOT NULL DEFAULT 'Card',
+  -- Printed when nobody has marked how the order was settled yet.
+  pending_label    text        NOT NULL DEFAULT 'Unpaid',
   tips_label       text        NOT NULL DEFAULT 'Tips:',
   show_tips        boolean     NOT NULL DEFAULT true,
   -- Printed against the order's Pickup / Delivery.
@@ -62,6 +64,10 @@ CREATE TABLE IF NOT EXISTS invoice_settings (
   created_at       timestamptz DEFAULT now(),
   updated_at       timestamptz DEFAULT now()
 );
+
+-- For a database that ran an earlier copy of this file.
+ALTER TABLE invoice_settings
+  ADD COLUMN IF NOT EXISTS pending_label text NOT NULL DEFAULT 'Unpaid';
 
 -- Read server-side via the service role key, which bypasses RLS.
 ALTER TABLE invoice_settings ENABLE ROW LEVEL SECURITY;

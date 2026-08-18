@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { fetchAllStoreOrders, type TakeAppOrder } from "@/lib/takeapp-orders";
 import { fromOrderRow, type TakeAppOrderRow } from "@/lib/takeapp-order-row";
+import { paymentMethod } from "@/lib/invoice";
 
 /**
  * The business report behind admin → Dashboard.
@@ -166,7 +167,9 @@ export async function GET(request: Request) {
       "own",
       amount,
       isCancelled,
-      String(row.payment_method ?? "cash").toLowerCase() === "card" ? "card" : "cash",
+      /* Unmarked stays its own bucket. Folding it into cash would report money
+         as counted that nobody has said was taken. */
+      paymentMethod(row.payment_method),
     );
 
     /* Itemised orders only — a table booking has no dishes, and a Kalba order

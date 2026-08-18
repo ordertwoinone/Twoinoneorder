@@ -34,7 +34,7 @@ export interface InvoiceOrder {
   guests: number;
   notes: string;
   status: string;
-  /** 'cash' | 'card', set by staff in admin → Order History. */
+  /** 'pending' until staff mark it cash or card in admin → Order History. */
   payment_method: string;
   created_at: string;
   items: InvoiceLine[];
@@ -121,7 +121,7 @@ export function toInvoiceOrder(row: Record<string, unknown>): InvoiceOrder {
     guests: Math.round(num(row.guests)),
     notes,
     status: String(row.status ?? ""),
-    payment_method: String(row.payment_method ?? "cash").toLowerCase() === "card" ? "card" : "cash",
+    payment_method: paymentMethod(row.payment_method),
     created_at: String(row.created_at ?? ""),
     items,
     subtotal,
@@ -129,6 +129,17 @@ export function toInvoiceOrder(row: Record<string, unknown>): InvoiceOrder {
     tax_amount: tax,
     total_amount: total,
   };
+}
+
+/**
+ * How the order was settled, or that nobody has said yet.
+ *
+ * Anything unrecognised reads as pending rather than as cash: claiming money
+ * was taken is the one wrong answer that cannot be spotted from the invoice.
+ */
+export function paymentMethod(value: unknown): "pending" | "cash" | "card" {
+  const v = String(value ?? "").trim().toLowerCase();
+  return v === "card" ? "card" : v === "cash" ? "cash" : "pending";
 }
 
 /** "Pickup" / "Delivery" off the front of a legacy note. */
