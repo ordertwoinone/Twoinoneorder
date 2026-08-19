@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import NotificationButton from "./NotificationButton";
-import { trackingUrl } from "@/lib/order-tracking";
+import { hostForAlias, trackingUrlFor } from "@/lib/order-tracking";
 
 /* ── Shapes as take.app returns them ─────────────────────────────────────── */
 
@@ -104,8 +104,10 @@ interface Row {
   distanceLabel?: string;
   address?: string;
   mapUrl?: string;
-  /** take.app's own live tracking page for this order. */
+  /** The storefront's own live tracking page for this order. */
   trackUrl?: string;
+  /** Which storefront that is, so the tracking screen opens on the right one. */
+  trackHost?: string;
   items: LineItem[];
   itemCount: number;
   total: number | null;
@@ -176,7 +178,10 @@ function orderRow(o: Order): Row {
         : undefined,
     address: addressLine(o) || undefined,
     mapUrl: mapLink(o) || undefined,
-    trackUrl: trackingUrl(o.id) || undefined,
+    /* Each restaurant tracks on its own storefront; the same id on another
+       is a 404, so the store's alias decides the host. */
+    trackUrl: trackingUrlFor(o.id, o.store?.alias) || undefined,
+    trackHost: hostForAlias(o.store?.alias) || undefined,
   };
 }
 
@@ -1173,9 +1178,9 @@ export default function LiveOrdersAdmin() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5 text-gray-300">
-                        {r.source === "takeapp" && (
+                        {r.trackHost && (
                           <Link
-                            href={`/admin/delivery-tracking?id=${encodeURIComponent(r.id)}`}
+                            href={`/admin/delivery-tracking?id=${encodeURIComponent(r.id)}&store=${encodeURIComponent(r.trackHost)}`}
                             onClick={(e) => e.stopPropagation()}
                             title="Track delivery"
                             aria-label="Track delivery"

@@ -2,49 +2,65 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, ExternalLink, RefreshCw, Truck, X } from "lucide-react";
-import { TRACKING_BASE_URL, trackingIdFrom, trackingUrl } from "@/lib/order-tracking";
+import {
+  TRACKING_STORES,
+  buildTrackingUrl,
+  parseTracking,
+  storeForHost,
+} from "@/lib/order-tracking";
 
 /**
  * admin → Delivery Tracking.
  *
- * Shipday already publishes a live tracking page per delivery — driver, ETA,
- * the route on a map — so this frames that rather than rebuilding it against
- * an API that would drift out of step with it. What it adds is the way in: a
- * box to paste an id into, and a link a colleague can be sent.
+ * Each restaurant publishes its own live tracking page — driver, ETA, the route
+ * on a map — so this frames whichever one the order belongs to rather than
+ * rebuilding it. What it adds is the way in.
  *
- * The id lives in the query string so a tracked delivery can be bookmarked,
- * reopened, or linked to from the Shipday board.
+ * The restaurant has to be part of that: an order id only resolves on the
+ * storefront it was placed at, and the same id on another is a 404. Pasting a
+ * whole link fills both in, because the link names the store in its host.
  */
 
-const RECENT_KEY = "tio-recent-tracking-ids";
+const RECENT_KEY = "tio-recent-tracking";
 const RECENT_LIMIT = 6;
+
+interface Recent {
+  id: string;
+  host: string;
+}
 
 function DeliveryTracking() {
   const router = useRouter();
   const params = useSearchParams();
-  const tracked = trackingIdFrom(params.get("id") ?? "");
 
-  const [input, setInput] = useState(tracked);
-  const [recent, setRecent] = useState<string[]>([]);
+  const trackedId = (params.get("id") ?? "").trim();
+  const trackedHost = (params.get("store") ?? "").trim().toLowerCase();
+
+  const [input, setInput] = useState(trackedId);
+  const [host, setHost] = useState(trackedHost || TRACKING_STORES[0].host);
+  const [recent, setRecent] = useState<Recent[]>([]);
   /* Bumped to force the frame to reload on Refresh. Changing the key remounts
      the iframe, which is the only way to reload a cross-origin document. */
   const [reloads, setReloads] = useState(0);
 
-  // Keep the box in step when the query string changes underneath it.
-  useEffect(() => { setInput(tracked); }, [tracked]);
+  // Keep the controls in step when the query string changes underneath them.
+  useEffect(() => { setInput(trackedId); }, [trackedId]);
+  useEffect(() => { if (trackedHost) setHost(trackedHost); }, [trackedHost]);
 
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
-      if (Array.isArray(saved)) setRecent(saved.filter((v) => typeof v === "string"));
+      if (Array.isArray(saved)) {
+        setRecent(saved.filter((r) => r && typeof r.id === "string" && typeof r.host === "string"));
+      }
     } catch {
       /* A corrupted list is not worth a broken screen. */
     }
   }, []);
 
-  const remember = useCallback((id: string) => {
+  const remember = useCallback((entry: Recent) => {
     setRecent((list) => {
-      const next = [id, ...list.filter((v) => v !== id)].slice(0, RECENT_LIMIT);
+      const next = [entry, ...list.filter((r) => r.id !== entry.id)].slice(0, RECENT_LIMIT);
       try {
         localStorage.setItem(RECENT_KEY, JSON.stringify(next));
       } catch {
@@ -54,11 +70,19 @@ function DeliveryTracking() {
     });
   }, []);
 
-  function track(raw: string) {
-    const id = trackingIdFrom(raw);
-    if (!id) return;
-    remember(id);
-    router.replace(`/admin/delivery-tracking?id=${encodeURIComponent(id)}`);
+  function track(raw: string, preferredHost?: string) {
+    const parsed = parseTracking(raw);
+    if (!parsed.id) return;
+
+    /* A pasted link names its own store, and that beats the dropdown — it is
+       the more specific answer, and correcting the picker afterwards would be
+       one more thing to remember. */
+    const store = parsed.host || preferredHost || host;
+    setHost(store);
+    remember({ id: parsed.id, host: store });
+    router.replace(
+      `/admin/delivery-tracking?id=${encodeURIComponent(parsed.id)}&store=${encodeURIComponent(store)}`,
+    );
   }
 
   function clearRecent() {
@@ -70,18 +94,21 @@ function DeliveryTracking() {
     }
   }
 
-  const url = tracked ? trackingUrl(tracked) : "";
+  const url = buildTrackingUrl(trackedId, trackedHost || host);
+  const trackedStore = storeForHost(trackedHost);
 
   return (
     <div className="p-4 sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">
-            Shipday
+            Deliveries
           </p>
           <h1 className="text-2xl font-semibold text-gray-900">Delivery Tracking</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Follow a delivery on Shipday&apos;s live tracking page
+            {trackedStore
+              ? `Following an order at ${trackedStore.label}`
+              : "Follow a delivery on the restaurant's live tracking page"}
           </p>
         </div>
         {url && (
@@ -112,28 +139,41 @@ function DeliveryTracking() {
       {/* The way in */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
         <label htmlFor="tracking-id" className="block text-sm font-semibold text-gray-900">
-          Tracking ID
+          Order tracking
         </label>
         <p className="text-[13px] text-gray-500 mt-0.5 mb-3">
-          Paste the tracking ID, or the whole tracking link — either works.
+          Paste the tracking link and the restaurant is read from it. Paste a bare order ID and
+          pick the restaurant it was placed at — the same ID does not resolve on another.
         </p>
 
         <div className="flex flex-wrap gap-2">
-          <div className="relative flex-1 min-w-[240px]">
+          <select
+            value={host}
+            onChange={(e) => setHost(e.target.value)}
+            aria-label="Restaurant"
+            className="px-3 py-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            {TRACKING_STORES.map((s) => (
+              <option key={s.host} value={s.host}>{s.label}</option>
+            ))}
+          </select>
+
+          <div className="relative flex-1 min-w-[220px]">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               id="tracking-id"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && track(input)}
-              placeholder="Paste tracking ID here"
+              placeholder="Paste tracking link or order ID"
               dir="ltr"
               className="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
+
           <button
             onClick={() => track(input)}
-            disabled={!trackingIdFrom(input)}
+            disabled={!parseTracking(input).id}
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
             style={{ background: "#ea580c" }}
           >
@@ -147,22 +187,26 @@ function DeliveryTracking() {
             <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
               Recent
             </span>
-            {recent.map((id) => (
+            {recent.map((r) => (
               <button
-                key={id}
-                onClick={() => track(id)}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold font-mono transition-colors ${
-                  id === tracked
+                key={`${r.host}:${r.id}`}
+                onClick={() => track(r.id, r.host)}
+                title={storeForHost(r.host)?.label ?? r.host}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${
+                  r.id === trackedId
                     ? "bg-orange-100 text-orange-700"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {id}
+                <span className="font-normal opacity-70">
+                  {storeForHost(r.host)?.label ?? r.host} ·{" "}
+                </span>
+                <span className="font-mono">{r.id.slice(-8)}</span>
               </button>
             ))}
             <button
               onClick={clearRecent}
-              aria-label="Clear recent tracking IDs"
+              aria-label="Clear recent deliveries"
               className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
             >
               <X size={13} />
@@ -175,9 +219,9 @@ function DeliveryTracking() {
       {url ? (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <iframe
-            key={`${tracked}:${reloads}`}
+            key={`${trackedHost}:${trackedId}:${reloads}`}
             src={url}
-            title={`Delivery ${tracked}`}
+            title={`Delivery ${trackedId}`}
             className="w-full h-[78vh] min-h-[560px] border-0"
             /* Its own origin, and it needs scripts to draw the driver moving.
                Nothing in the sandbox may reach back into the panel. */
@@ -186,7 +230,7 @@ function DeliveryTracking() {
             allow="geolocation"
           />
           <p className="px-5 py-3 text-[11px] text-gray-400 border-t border-gray-100">
-            Live from Shipday. If the frame stays blank, use{" "}
+            Live from {trackedStore?.label ?? "the storefront"}. If the frame stays blank, use{" "}
             <a
               href={url}
               target="_blank"
@@ -202,13 +246,17 @@ function DeliveryTracking() {
         <div className="bg-white rounded-xl border border-gray-200 px-6 py-16 text-center">
           <Truck size={30} className="mx-auto text-gray-300" />
           <p className="text-sm font-semibold text-gray-700 mt-3">No delivery being tracked</p>
-          <p className="text-[13px] text-gray-500 mt-1 max-w-md mx-auto">
-            Paste a tracking ID above. Shipday shows the driver, the route and the ETA on its own
-            live page, and this frames it so you never leave the panel.
+          <p className="text-[13px] text-gray-500 mt-1 max-w-lg mx-auto">
+            Every take.app order on the Orders board has a Track button that opens straight here,
+            already pointed at the right restaurant. Or paste a link above.
           </p>
-          <p className="text-[11px] text-gray-400 mt-4 font-mono break-all">
-            {TRACKING_BASE_URL}/&lt;tracking-id&gt;
-          </p>
+          <div className="mt-5 inline-flex flex-col gap-1 text-[11px] text-gray-400 font-mono">
+            {TRACKING_STORES.map((s) => (
+              <span key={s.host}>
+                {s.label}: {s.host}.twoinoneorder.com
+              </span>
+            ))}
+          </div>
         </div>
       )}
     </div>
