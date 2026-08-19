@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  Store, TrendingUp, ShoppingBag, Receipt, XCircle, Download, RefreshCw, Flame,
+  Store, TrendingUp, ShoppingBag, Receipt, XCircle, Download, RefreshCw, Flame, Percent,
 } from "lucide-react";
 
 /**
@@ -19,6 +19,7 @@ interface Bucket {
   source: "own" | "takeapp";
   orders: number;
   revenue: number;
+  discount: number;
   cancelled: number;
 }
 
@@ -30,7 +31,7 @@ interface ItemRow {
 }
 
 interface Report {
-  totals: { orders: number; cancelled: number; revenue: number; average: number };
+  totals: { orders: number; cancelled: number; revenue: number; discount: number; average: number };
   byDay: { date: string; orders: number; revenue: number }[];
   byRestaurant: Bucket[];
   byItem: ItemRow[];
@@ -120,6 +121,7 @@ export default function AdminDashboard() {
     const revenue = rows.reduce((s, r) => s + r.revenue, 0);
     const orders = rows.reduce((s, r) => s + r.orders, 0);
     const cancelled = rows.reduce((s, r) => s + r.cancelled, 0);
+    const discount = rows.reduce((s, r) => s + r.discount, 0);
     return {
       ...report,
       byRestaurant: rows,
@@ -128,6 +130,7 @@ export default function AdminDashboard() {
         orders,
         cancelled,
         revenue: Math.round(revenue * 100) / 100,
+        discount: Math.round(discount * 100) / 100,
         average: orders - cancelled > 0 ? Math.round((revenue / (orders - cancelled)) * 100) / 100 : 0,
       },
     };
@@ -150,13 +153,13 @@ export default function AdminDashboard() {
     const lines: string[] = [
       `"Business report",${escape(`${range.from} to ${range.to}`)}`,
       "",
-      '"Orders","Cancelled","Revenue (AED)","Average order (AED)"',
-      [shown.totals.orders, shown.totals.cancelled, shown.totals.revenue, shown.totals.average]
+      '"Orders","Cancelled","Revenue (AED)","Discounts (AED)","Average order (AED)"',
+      [shown.totals.orders, shown.totals.cancelled, shown.totals.revenue, shown.totals.discount, shown.totals.average]
         .map(escape).join(","),
       "",
-      '"Where","Source","Orders","Cancelled","Revenue (AED)"',
+      '"Where","Source","Orders","Cancelled","Discounts (AED)","Revenue (AED)"',
       ...shown.byRestaurant.map((r) =>
-        [r.name, r.source === "own" ? "Own" : "take.app", r.orders, r.cancelled, r.revenue]
+        [r.name, r.source === "own" ? "Own" : "take.app", r.orders, r.cancelled, r.discount, r.revenue]
           .map(escape).join(","),
       ),
       "",
@@ -180,6 +183,7 @@ export default function AdminDashboard() {
     { label: "Revenue", value: `AED ${(shown?.totals.revenue ?? 0).toFixed(2)}`, icon: TrendingUp, color: "text-green-600", bg: "bg-green-50" },
     { label: "Orders", value: String(shown?.totals.orders ?? 0), icon: ShoppingBag, color: "text-orange-600", bg: "bg-orange-50" },
     { label: "Average order", value: `AED ${(shown?.totals.average ?? 0).toFixed(2)}`, icon: Receipt, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Discounts given", value: `AED ${(shown?.totals.discount ?? 0).toFixed(2)}`, icon: Percent, color: "text-purple-600", bg: "bg-purple-50" },
     { label: "Cancelled", value: String(shown?.totals.cancelled ?? 0), icon: XCircle, color: "text-gray-500", bg: "bg-gray-100" },
   ];
 
@@ -281,7 +285,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Totals */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         {cards.map(({ label, value, icon: Icon, color, bg }) => (
           <div key={label} className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-3">
@@ -306,6 +310,7 @@ export default function AdminDashboard() {
                 <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
                   <th className="pb-2">Where</th>
                   <th className="pb-2 text-right">Orders</th>
+                  <th className="pb-2 text-right">Discounts</th>
                   <th className="pb-2 text-right">Revenue</th>
                 </tr>
               </thead>
@@ -320,6 +325,9 @@ export default function AdminDashboard() {
                       </p>
                     </td>
                     <td className="py-2.5 text-right text-gray-600">{r.orders}</td>
+                    <td className="py-2.5 text-right whitespace-nowrap text-purple-700">
+                      {r.discount > 0 ? `−AED ${r.discount.toFixed(2)}` : "—"}
+                    </td>
                     <td className="py-2.5 text-right font-semibold text-gray-900 whitespace-nowrap">
                       AED {r.revenue.toFixed(2)}
                     </td>

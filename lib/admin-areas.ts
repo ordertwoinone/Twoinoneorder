@@ -56,8 +56,9 @@ export const ADMIN_AREAS: AdminArea[] = [
   {
     key: "shipday",
     label: "Shipday Delivery",
-    hint: "Drivers and delivery status for accepted orders",
-    paths: ["/admin/shipday"],
+    hint: "Drivers, delivery status, and live tracking",
+    // Tracking a delivery is the same job as dispatching one.
+    paths: ["/admin/shipday", "/admin/delivery-tracking"],
     apiPaths: ["/api/admin/shipday"],
   },
   {

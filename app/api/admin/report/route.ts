@@ -23,6 +23,8 @@ interface Bucket {
   source: "own" | "takeapp";
   orders: number;
   revenue: number;
+  /** What was given away to earn that revenue. */
+  discount: number;
   cancelled: number;
 }
 
@@ -107,6 +109,7 @@ export async function GET(request: Request) {
 
   let orders = 0;
   let revenue = 0;
+  let discount = 0;
   let cancelled = 0;
 
   function count(
@@ -116,19 +119,24 @@ export async function GET(request: Request) {
     amount: number,
     isCancelled: boolean,
     payment: string,
+    given = 0,
   ) {
     orders += 1;
     if (isCancelled) {
       cancelled += 1;
     } else {
       revenue = round(revenue + amount);
+      discount = round(discount + given);
     }
 
     const key = `${source}:${name}`;
-    const bucket = buckets.get(key) ?? { name, source, orders: 0, revenue: 0, cancelled: 0 };
+    const bucket = buckets.get(key) ?? { name, source, orders: 0, revenue: 0, discount: 0, cancelled: 0 };
     bucket.orders += 1;
     if (isCancelled) bucket.cancelled += 1;
-    else bucket.revenue = round(bucket.revenue + amount);
+    else {
+      bucket.revenue = round(bucket.revenue + amount);
+      bucket.discount = round(bucket.discount + given);
+    }
     buckets.set(key, bucket);
 
     const day = dayKey(when, offset);
@@ -170,6 +178,10 @@ export async function GET(request: Request) {
       /* Unmarked stays its own bucket. Folding it into cash would report money
          as counted that nobody has said was taken. */
       paymentMethod(row.payment_method),
+      /* Coupons, the student card and per-dish offers, as the cart worked them
+         out at checkout. Recomputing today would price an old order at today's
+         menu. */
+      money(row.discount_total),
     );
 
     /* Itemised orders only — a table booking has no dishes, and a Kalba order
@@ -214,6 +226,7 @@ export async function GET(request: Request) {
       round(money(order.total_amount) / 100),
       isCancelled,
       order.payment_status === "paid" ? "paid online" : "unpaid",
+      round(money((order as unknown as { discounts_amount?: number }).discounts_amount) / 100),
     );
 
     if (!isCancelled) {
@@ -234,6 +247,7 @@ export async function GET(request: Request) {
       orders,
       cancelled,
       revenue: round(revenue),
+      discount: round(discount),
       // Over the orders that actually earned, not the cancelled ones.
       average: orders - cancelled > 0 ? round(revenue / (orders - cancelled)) : 0,
     },
