@@ -8,7 +8,7 @@ import {
   Images, Home, ChevronDown, Clock, Utensils, Star, UtensilsCrossed,
   BookOpen, List, GraduationCap, Info, Grid3x3,
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
-  Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound, Truck,
+  Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound,
   CreditCard, Sparkles, Receipt, History, MapPinned,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -33,7 +33,6 @@ const NAV: NavItem[] = [
   { label: "Orders", href: "/admin/live-orders", icon: Radio },
   { label: "Order History", href: "/admin/order-history", icon: History },
   { label: "Invoice", href: "/admin/invoice-settings", icon: Receipt },
-  { label: "Shipday Delivery", href: "/admin/shipday", icon: Truck },
   { label: "Delivery Tracking", href: "/admin/delivery-tracking", icon: MapPinned },
   { label: "Restaurant Menus", href: "/admin/restaurant-menu", icon: BookOpen },
   {

@@ -5,7 +5,9 @@ import {
   CalendarClock, StickyNote, BellRing, X, Wifi, WifiOff,
   Search, SlidersHorizontal, Download, ChevronDown, Printer, MapPin,
 } from "lucide-react";
+import Link from "next/link";
 import NotificationButton from "./NotificationButton";
+import { trackingUrl } from "@/lib/order-tracking";
 
 /* ── Shapes as take.app returns them ─────────────────────────────────────── */
 
@@ -32,7 +34,8 @@ interface Order {
   remark?: string | null;
   schedule?: string | null;
   /* Where it is going. take.app sends a street line and a real pin on every
-     order; it sends no tracking id at all, which is Shipday's job here. */
+     order. It sends no separate tracking id because it does not need one — the
+     order's own id is what its tracking page is keyed on. */
   service?: {
     name?: string | null;
     distance?: number | null;
@@ -101,6 +104,8 @@ interface Row {
   distanceLabel?: string;
   address?: string;
   mapUrl?: string;
+  /** take.app's own live tracking page for this order. */
+  trackUrl?: string;
   items: LineItem[];
   itemCount: number;
   total: number | null;
@@ -171,6 +176,7 @@ function orderRow(o: Order): Row {
         : undefined,
     address: addressLine(o) || undefined,
     mapUrl: mapLink(o) || undefined,
+    trackUrl: trackingUrl(o.id) || undefined,
   };
 }
 
@@ -186,11 +192,11 @@ function bookingTotal(b: Booking): number | null {
  * Where the order is going, when take.app told us.
  *
  * The pin is the useful half: an address typed into a storefront is often
- * approximate, and a driver would rather have the coordinates. take.app sends
- * no tracking id of any kind, so there is nothing to show for one.
+ * approximate, and a driver would rather have the coordinates. The tracking
+ * link sits beside it, keyed on the order's own id.
  */
 function DeliveryTo({ row }: { row: Row }) {
-  if (!row.address && !row.mapUrl) return null;
+  if (!row.address && !row.mapUrl && !row.trackUrl) return null;
 
   return (
     <div className="text-[12px] text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2.5 py-1.5 flex items-start gap-1.5">
@@ -198,6 +204,17 @@ function DeliveryTo({ row }: { row: Row }) {
       <span className="flex-1 min-w-0">
         {row.address || "Location pin only"}
         {row.distanceLabel && <span className="text-gray-400"> · {row.distanceLabel}</span>}
+        {row.trackUrl && (
+          <a
+            href={row.trackUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="ms-2 font-semibold text-orange-600 hover:underline whitespace-nowrap"
+          >
+            Track delivery
+          </a>
+        )}
         {row.mapUrl && (
           <a
             href={row.mapUrl}
@@ -1156,6 +1173,17 @@ export default function LiveOrdersAdmin() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5 text-gray-300">
+                        {r.source === "takeapp" && (
+                          <Link
+                            href={`/admin/delivery-tracking?id=${encodeURIComponent(r.id)}`}
+                            onClick={(e) => e.stopPropagation()}
+                            title="Track delivery"
+                            aria-label="Track delivery"
+                            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50"
+                          >
+                            <MapPin size={14} />
+                          </Link>
+                        )}
                         {/* take.app issues its own invoices off its own
                             numbering, so only our own orders get one here. */}
                         {r.invoiceable && (

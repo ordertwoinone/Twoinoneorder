@@ -55,9 +55,10 @@ export const ADMIN_AREAS: AdminArea[] = [
   },
   {
     key: "shipday",
-    label: "Shipday Delivery",
-    hint: "Drivers, delivery status, and live tracking",
-    // Tracking a delivery is the same job as dispatching one.
+    label: "Delivery Tracking",
+    hint: "Following a delivery, and the Shipday dispatch board behind it",
+    /* /admin/shipday is off the sidebar but still reachable by URL, so it stays
+       claimed here — an unclaimed path would silently become owner-only. */
     paths: ["/admin/shipday", "/admin/delivery-tracking"],
     apiPaths: ["/api/admin/shipday"],
   },
