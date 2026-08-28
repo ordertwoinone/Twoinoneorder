@@ -879,7 +879,7 @@ function CartModal({ items, cartQty, cartAddons, totalQty, totalPrice, itemOffer
 
 // ─── Main export ────────────────────────────────────────────────────────────
 
-export default function KalbaContent({ hero, banner, popular, study, deals, specials }: Props) {
+export default function KalbaContent({ hero, banner, categories, popular, study, deals, specials }: Props) {
   const { t, tp, tMaybe } = useTranslation();
   const localized = useLocalized();
   const pick = useLocalizedField();
@@ -916,6 +916,37 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
     const run = Array.from({ length: passes }, () => deals).flat();
     return [[...run, ...run], run.length * 2.6] as const;
   }, [deals]);
+
+  /**
+   * Dishes read as a menu when each arrives under its own heading rather than
+   * in one long grid. Categories keep the order the admin gave them, the ones
+   * nothing is filed under drop out, and dishes with no category yet land in a
+   * final block — a new item is never invisible while it waits to be filed.
+   */
+  const popularGroups = (() => {
+    const buckets = new Map(categories.map((c) => [c.id, [] as KalbaPopularItem[]]));
+    const unfiled: KalbaPopularItem[] = [];
+    for (const item of popular) {
+      const bucket = item.category_id ? buckets.get(item.category_id) : undefined;
+      (bucket ?? unfiled).push(item);
+    }
+    const filed = categories
+      .map((c) => ({
+        key: c.id,
+        emoji: c.emoji,
+        label: pick(c, "label"),
+        href: `/restaurant/university-kalba/menu?category=${c.id}`,
+        items: buckets.get(c.id) ?? [],
+      }))
+      .filter((g) => g.items.length > 0);
+    return unfiled.length > 0
+      ? [...filed, { key: "unfiled", emoji: "🍽️", label: t("kalba.moreTitle"), href: "/restaurant/university-kalba/menu", items: unfiled }]
+      : filed;
+  })();
+
+  /* A lone block of dishes nobody has categorised needs no heading — the
+     section title above it already says what they are. */
+  const showGroupHeadings = popularGroups.length > 1 || popularGroups[0]?.key !== "unfiled";
 
   function handleQtyChange(id: string, qty: number) {
     setCartQty((prev) => ({ ...prev, [id]: qty }));
@@ -1139,127 +1170,143 @@ export default function KalbaContent({ hero, banner, popular, study, deals, spec
           </div>
         )}
 
-        {/* Popular Around Campus */}
-        {popular.length > 0 && (
+        {/* Popular Around Campus, one block per category */}
+        {popularGroups.length > 0 && (
           <section className="mt-7">
             <SectionHeader title={t("kalba.popularTitle")} action={t("common.viewAll")}
               href="/restaurant/university-kalba/menu" internal />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-              {popular.map((p) => {
-                const qty = cartQty[p.id] ?? 0;
-                const listPrice = parseFloat(p.price) || 0;
-                const offer = toPercent(p.discount_percent);
-                const netPrice = discountedPrice(listPrice, offer);
-                return (
-                  <div key={p.id}
-                    className="bg-white rounded-2xl overflow-hidden border border-gray-100 block group transition-shadow hover:shadow-md"
-                    style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-                    <div className="relative h-32 sm:h-36">
-                      {p.image_url && (
-                        <Image src={p.image_url} alt={p.name} fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw" />
-                      )}
-                      {/* One joined chip so the two prices read as a pair
-                          rather than two unrelated badges: what it costs now,
-                          then what it cost, struck through in red. The shadow
-                          is what keeps both legible over a busy photo. */}
-                      <span className="absolute top-2 start-2 z-10 flex items-stretch rounded-lg overflow-hidden shadow-md">
-                        <span
-                          className="flex items-center text-[11px] sm:text-xs font-extrabold px-2 py-1 text-white"
-                          style={{ background: "#ea580c" }}
-                        >
-                          {t("common.price", { amount: netPrice })}
+            {popularGroups.map((group) => (
+              <div key={group.key} className="mt-5 first:mt-0">
+                {showGroupHeadings && (
+                  <div className="flex items-center justify-between mb-2.5">
+                    <h3 className="flex items-center gap-1.5 text-[15px] sm:text-base font-extrabold text-gray-900">
+                      <span className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center text-sm leading-none">{group.emoji}</span>
+                      {group.label}
+                    </h3>
+                    <Link href={group.href}
+                      className="flex items-center gap-0.5 text-[11px] font-bold" style={{ color: "#ea580c" }}>
+                      {t("common.viewAll")} <ChevronRight size={13} />
+                    </Link>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                  {group.items.map((p) => {
+                  const qty = cartQty[p.id] ?? 0;
+                  const listPrice = parseFloat(p.price) || 0;
+                  const offer = toPercent(p.discount_percent);
+                  const netPrice = discountedPrice(listPrice, offer);
+                  return (
+                    <div key={p.id}
+                      className="bg-white rounded-2xl overflow-hidden border border-gray-100 block group transition-shadow hover:shadow-md"
+                      style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+                      <div className="relative h-32 sm:h-36">
+                        {p.image_url && (
+                          <Image src={p.image_url} alt={p.name} fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 17vw" />
+                        )}
+                        {/* One joined chip so the two prices read as a pair
+                            rather than two unrelated badges: what it costs now,
+                            then what it cost, struck through in red. The shadow
+                            is what keeps both legible over a busy photo. */}
+                        <span className="absolute top-2 start-2 z-10 flex items-stretch rounded-lg overflow-hidden shadow-md">
+                          <span
+                            className="flex items-center text-[11px] sm:text-xs font-extrabold px-2 py-1 text-white"
+                            style={{ background: "#ea580c" }}
+                          >
+                            {t("common.price", { amount: netPrice })}
+                          </span>
+                          {offer > 0 && (
+                            <span className="flex items-center text-[10px] sm:text-[11px] font-bold px-1.5 py-1 bg-white text-gray-500 line-through decoration-red-500 decoration-[1.5px]">
+                              {listPrice}
+                            </span>
+                          )}
                         </span>
                         {offer > 0 && (
-                          <span className="flex items-center text-[10px] sm:text-[11px] font-bold px-1.5 py-1 bg-white text-gray-500 line-through decoration-red-500 decoration-[1.5px]">
-                            {listPrice}
+                          <span className="absolute bottom-2 start-2 z-10 text-[10px] sm:text-[11px] font-extrabold px-2 py-1 rounded-lg text-white bg-green-600 shadow-md">
+                            {t("kalba.cart.percentOff", { value: offer })}
                           </span>
                         )}
-                      </span>
-                      {offer > 0 && (
-                        <span className="absolute bottom-2 start-2 z-10 text-[10px] sm:text-[11px] font-extrabold px-2 py-1 rounded-lg text-white bg-green-600 shadow-md">
-                          {t("kalba.cart.percentOff", { value: offer })}
-                        </span>
-                      )}
-                      <FavoriteButton
-                        itemKey={`menu:${p.id}`}
-                        name={p.name}
-                        imageUrl={p.image_url}
-                        href="/restaurant/university-kalba/menu"
-                        subtitle={`AED ${netPrice}`}
-                        className="absolute top-2 end-2 w-7 h-7 z-10"
-                      />
-                    </div>
-                    <div className="px-3 pt-2.5 pb-3">
-                      <h3 className="text-gray-900 font-extrabold text-[12.5px] leading-tight mb-1 min-h-[2em]">
-                        {pick(p, "name")}
-                      </h3>
-                      {/* Two lines at most — the grid is six cards wide on a
-                          desktop, and a card that grows drags its row with it. */}
-                      {pick(p, "description") && (
-                        <p className="text-[10.5px] text-gray-500 leading-snug mb-1.5 line-clamp-2">
-                          {pick(p, "description")}
-                        </p>
-                      )}
-                      {(p.tags ?? []).length > 0 && (
-                        <div className="flex flex-wrap gap-0.5 mb-1.5">
-                          {(p.tags ?? []).map((t) => {
-                            const dt = DIETARY_TAGS[t];
-                            return dt ? (
-                              <span key={t} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
-                            ) : null;
-                          })}
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between text-[10.5px]">
-                        <span className="flex items-center gap-0.5 font-semibold text-gray-700">
-                          <Star size={10} className="fill-amber-400 stroke-amber-400" />
-                          {p.rating}
-                        </span>
-                        <span className="flex items-center gap-0.5 text-gray-400">
-                          <Clock size={9} />
-                          {pick(p, "time_text")}
-                        </span>
+                        <FavoriteButton
+                          itemKey={`menu:${p.id}`}
+                          name={p.name}
+                          imageUrl={p.image_url}
+                          href="/restaurant/university-kalba/menu"
+                          subtitle={`AED ${netPrice}`}
+                          className="absolute top-2 end-2 w-7 h-7 z-10"
+                        />
                       </div>
-                      <div className="h-px bg-gray-100 my-1.5" />
-                      {/* A dish with questions keeps one button, whatever is in
-                          the cart: the stepper would add a second helping with
-                          the first one's answers, silently. */}
-                      {qty === 0 || (p.addon_groups ?? []).length > 0 ? (
-                        <button
-                          onClick={() => handleAdd(p.id)}
-                          className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
-                        >
-                          <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                          {/* Always "Add". A dish with choices opens its sheet
-                              instead of dropping straight in the cart, but the
-                              button is still the one thing they came to press —
-                              labelling it differently made the grid read as two
-                              kinds of product. */}
-                          <span className="text-[10px] sm:text-xs font-semibold">
-                            {qty > 0 ? `${t("common.add")} · ${qty}` : t("common.add")}
+                      <div className="px-3 pt-2.5 pb-3">
+                        <h3 className="text-gray-900 font-extrabold text-[12.5px] leading-tight mb-1 min-h-[2em]">
+                          {pick(p, "name")}
+                        </h3>
+                        {/* Two lines at most — the grid is six cards wide on a
+                            desktop, and a card that grows drags its row with it. */}
+                        {pick(p, "description") && (
+                          <p className="text-[10.5px] text-gray-500 leading-snug mb-1.5 line-clamp-2">
+                            {pick(p, "description")}
+                          </p>
+                        )}
+                        {(p.tags ?? []).length > 0 && (
+                          <div className="flex flex-wrap gap-0.5 mb-1.5">
+                            {(p.tags ?? []).map((t) => {
+                              const dt = DIETARY_TAGS[t];
+                              return dt ? (
+                                <span key={t} className="text-[9px] px-1 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100 font-semibold leading-none">{dt}</span>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-[10.5px]">
+                          <span className="flex items-center gap-0.5 font-semibold text-gray-700">
+                            <Star size={10} className="fill-amber-400 stroke-amber-400" />
+                            {p.rating}
                           </span>
-                        </button>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <button
-                            onClick={() => handleQtyChange(p.id, Math.max(0, qty - 1))}
-                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
-                          >−</button>
-                          <span className="text-xs sm:text-sm font-bold text-gray-900">{qty}</span>
-                          <button
-                            onClick={() => handleQtyChange(p.id, qty + 1)}
-                            className="w-6 h-6 sm:w-7 sm:h-7 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
-                            style={{ background: "#ea580c" }}
-                          >+</button>
+                          <span className="flex items-center gap-0.5 text-gray-400">
+                            <Clock size={9} />
+                            {pick(p, "time_text")}
+                          </span>
                         </div>
-                      )}
+                        <div className="h-px bg-gray-100 my-1.5" />
+                        {/* A dish with questions keeps one button, whatever is in
+                            the cart: the stepper would add a second helping with
+                            the first one's answers, silently. */}
+                        {qty === 0 || (p.addon_groups ?? []).length > 0 ? (
+                          <button
+                            onClick={() => handleAdd(p.id)}
+                            className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"
+                          >
+                            <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            {/* Always "Add". A dish with choices opens its sheet
+                                instead of dropping straight in the cart, but the
+                                button is still the one thing they came to press —
+                                labelling it differently made the grid read as two
+                                kinds of product. */}
+                            <span className="text-[10px] sm:text-xs font-semibold">
+                              {qty > 0 ? `${t("common.add")} · ${qty}` : t("common.add")}
+                            </span>
+                          </button>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <button
+                              onClick={() => handleQtyChange(p.id, Math.max(0, qty - 1))}
+                              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-sm font-bold hover:bg-orange-200 transition-colors"
+                            >−</button>
+                            <span className="text-xs sm:text-sm font-bold text-gray-900">{qty}</span>
+                            <button
+                              onClick={() => handleQtyChange(p.id, qty + 1)}
+                              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full text-white flex items-center justify-center text-sm font-bold hover:opacity-90 transition-opacity"
+                              style={{ background: "#ea580c" }}
+                            >+</button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                  })}
+                </div>
+              </div>
+            ))}
           </section>
         )}
 

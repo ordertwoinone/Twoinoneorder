@@ -725,6 +725,7 @@ const ar: Dictionary = {
       wifiLine2: "مجاني",
     },
     popularTitle: "الأكثر طلبًا في الحرم الجامعي",
+    moreTitle: "المزيد في الحرم الجامعي",
     dealsTitle: "عروض يومية",
     days: {
       Monday: "الإثنين",

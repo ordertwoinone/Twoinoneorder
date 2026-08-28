@@ -72,7 +72,10 @@ async function getKalbaData() {
     await Promise.all([
       supabaseAdmin.from("kalba_hero").select("*").limit(1).single(),
       supabaseAdmin.from("kalba_banner").select("*").limit(1).single(),
-      supabaseAdmin.from("kalba_categories").select("*").eq("is_active", true).order("sort_order"),
+      // Ties on sort_order fall back to when the category was made, so the
+      // headings do not shuffle between renders while orders are unset.
+      supabaseAdmin.from("kalba_categories").select("*").eq("is_active", true)
+        .order("sort_order").order("created_at"),
       supabaseAdmin.from("kalba_popular_items").select("*").eq("is_active", true).order("sort_order"),
       supabaseAdmin.from("kalba_study").select("*").limit(1).single(),
       supabaseAdmin.from("kalba_daily_deals").select("*").eq("is_active", true).order("sort_order"),

@@ -703,6 +703,7 @@ const en = {
       wifiLine2: "WiFi",
     },
     popularTitle: "Popular Around Campus",
+    moreTitle: "More Around Campus",
     dealsTitle: "Daily Deals",
     days: {
       Monday: "Monday",

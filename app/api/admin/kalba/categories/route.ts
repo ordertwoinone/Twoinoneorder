@@ -9,7 +9,9 @@ export async function GET() {
   const { data, error } = await supabaseAdminLive
     .from("kalba_categories")
     .select("*")
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    // Same tie-break as the storefront, so this list reads in page order.
+    .order("created_at", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
