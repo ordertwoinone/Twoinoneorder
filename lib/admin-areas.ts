@@ -131,6 +131,21 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/kalba"],
   },
   {
+    key: "kiosk",
+    label: "Kiosk",
+    hint: "The self-order screen, its ads, and the orders it takes",
+    /* The kiosk screen itself is public — it stands in the room and nobody
+       signs in to it. What is claimed here is the admin side of it. */
+    paths: ["/admin/kiosk"],
+    apiPaths: [
+      "/api/admin/kiosk",
+      /* The orders board sets a status through the shared bookings endpoint,
+         which Orders and Order History also claim — areasForPath returns all
+         three, and holding any one of them is enough. */
+      "/api/admin/bookings",
+    ],
+  },
+  {
     key: "contact",
     label: "Contact Page",
     hint: "Contact details and map locations",

@@ -10,6 +10,7 @@ import {
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
   Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound,
   CreditCard, Sparkles, Receipt, History, MapPinned,
+  MonitorSmartphone, Film,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -87,6 +88,16 @@ const NAV: NavItem[] = [
       { label: "Daily Deals",     href: "/admin/kalba/deals",      icon: CalendarDays },
       { label: "Specials",        href: "/admin/kalba/specials",   icon: Gift         },
       { label: "Coupons",         href: "/admin/kalba/coupons",    icon: Percent      },
+    ],
+  },
+  {
+    label: "Kiosk",
+    icon: MonitorSmartphone,
+    basePath: "/admin/kiosk",
+    children: [
+      { label: "Screen", href: "/admin/kiosk/screen", icon: MonitorSmartphone },
+      { label: "Ads",    href: "/admin/kiosk/ads",    icon: Film              },
+      { label: "Orders", href: "/admin/kiosk/orders", icon: Radio             },
     ],
   },
   {
