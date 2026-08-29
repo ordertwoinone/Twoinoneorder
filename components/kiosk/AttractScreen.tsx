@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronRight, CreditCard, Volume2, VolumeX } from "lucide-react";
+import { ChevronRight, CreditCard } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { AD_FALLBACK_SECONDS, type KioskAd, type KioskSettings } from "@/lib/kiosk/types";
 import { KioskWordmark } from "./Chrome";
@@ -14,8 +14,9 @@ import { KioskWordmark } from "./Chrome";
  * not a target. The gold button is there to say what pressing it does, not
  * because it is the only thing that works.
  *
- * Sound starts off. Autoplay is refused outright by every browser otherwise,
- * and a screen shouting across a café at 8am is worse than a silent one.
+ * The loops carry no audio track at all, so there is no sound control: a
+ * button that cannot do anything is worse on a public screen than no button.
+ * Muted is also the only state any browser will autoplay from.
  */
 export default function AttractScreen({
   settings,
@@ -27,7 +28,6 @@ export default function AttractScreen({
   onStart: () => void;
 }) {
   const [index, setIndex] = useState(0);
-  const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const slides = ads.length > 0 ? ads : [];
@@ -48,13 +48,13 @@ export default function AttractScreen({
     return () => clearTimeout(timer);
   }, [ad, next, slides.length]);
 
-  // Re-applied on every slide: a fresh <video> element starts muted again.
+  /* Kicked on every slide: a fresh <video> element does not always autoplay on
+     its own once the page has been up for hours. */
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    el.muted = muted;
     el.play().catch(() => { /* a panel that refuses autoplay still shows the poster */ });
-  }, [muted, index]);
+  }, [index]);
 
   const headline = ad?.headline || "";
   const subline = ad?.subline || "";
@@ -74,7 +74,7 @@ export default function AttractScreen({
             src={ad.media_url}
             poster={ad.poster_url || undefined}
             autoPlay
-            muted={muted}
+            muted
             playsInline
             loop={slides.length < 2}
             onEnded={slides.length > 1 ? next : undefined}
@@ -102,21 +102,13 @@ export default function AttractScreen({
 
       {/* ─── Foreground ─── */}
       <div className="absolute inset-0 flex flex-col text-white p-[3vh]">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start">
           <KioskWordmark
             name={settings.brand_name}
             subtitle={settings.brand_subtitle}
             logoUrl={settings.logo_url || undefined}
             size="lg"
           />
-          <button
-            onClick={(e) => { e.stopPropagation(); setMuted((m) => !m); }}
-            aria-label={muted ? "Turn sound on" : "Turn sound off"}
-            className="flex items-center justify-center rounded-full w-[5.2vh] h-[5.2vh] active:scale-90 transition-transform"
-            style={{ border: "0.18vh solid rgba(255,255,255,0.5)", background: "rgba(0,0,0,0.28)" }}
-          >
-            {muted ? <VolumeX className="w-[2.4vh] h-[2.4vh]" /> : <Volume2 className="w-[2.4vh] h-[2.4vh]" />}
-          </button>
         </div>
 
         {headline && (

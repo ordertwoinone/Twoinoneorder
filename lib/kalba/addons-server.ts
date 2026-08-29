@@ -45,18 +45,20 @@ export interface GroupInput {
 
 type GroupRow = Omit<KalbaAddonGroup, "options">;
 
-async function read(live: boolean) {
+/**
+ * `live` picks the client, `activeOnly` picks the rows — two separate questions
+ * that used to be one flag. The kiosk needs both at once: it must never read
+ * through Next's data cache, and it must never offer an option that has been
+ * switched off.
+ */
+async function read(live: boolean, activeOnly: boolean) {
   const client = live ? supabaseAdminLive : supabaseAdmin;
+
+  const addons = client.from("kalba_item_addons").select(COLUMNS);
 
   const [groupsRes, addonsRes] = await Promise.all([
     client.from("kalba_addon_groups").select(COLUMNS).order("sort_order", { ascending: true }),
-    live
-      ? client.from("kalba_item_addons").select(COLUMNS).order("sort_order", { ascending: true })
-      : client
-          .from("kalba_item_addons")
-          .select(COLUMNS)
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
+    (activeOnly ? addons.eq("is_active", true) : addons).order("sort_order", { ascending: true }),
   ]);
 
   return {
@@ -67,13 +69,24 @@ async function read(live: boolean) {
 
 /** Every item's questions, keyed by item id. For the public pages. */
 export async function getAddonGroupsByItem(): Promise<Record<string, KalbaAddonGroup[]>> {
-  const { groups, addons } = await read(false);
+  const { groups, addons } = await read(false, true);
+  return buildGroups(groups, addons, LOOSE_LABEL);
+}
+
+/**
+ * The same list a shopper sees, read past Next's data cache.
+ *
+ * For the kiosk: it re-reads the menu on its own schedule precisely so a change
+ * made in admin reaches the screen, and a cached answer defeats the whole point.
+ */
+export async function getLiveAddonGroupsByItem(): Promise<Record<string, KalbaAddonGroup[]>> {
+  const { groups, addons } = await read(true, true);
   return buildGroups(groups, addons, LOOSE_LABEL);
 }
 
 /** The same, read live and including switched-off options — for the admin panel. */
 export async function getAllAddonGroupsByItem(): Promise<Record<string, KalbaAddonGroup[]>> {
-  const { groups, addons } = await read(true);
+  const { groups, addons } = await read(true, false);
   return buildGroups(groups, addons, LOOSE_LABEL);
 }
 

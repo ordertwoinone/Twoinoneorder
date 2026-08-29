@@ -34,3 +34,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Source video for the kiosk loops. Hundreds of megabytes of camera-original
+# footage that GitHub would refuse anyway — the transcoded, web-sized versions
+# live in Supabase storage and are pointed at from admin → Kiosk → Ads.
+/public/video/
