@@ -95,7 +95,8 @@ const NAV: NavItem[] = [
     icon: MonitorSmartphone,
     basePath: "/admin/kiosk",
     children: [
-      { label: "Screen", href: "/admin/kiosk/screen", icon: MonitorSmartphone },
+      { label: "Screen",  href: "/admin/kiosk/screen",  icon: MonitorSmartphone },
+      { label: "Screens", href: "/admin/kiosk/devices", icon: LayoutGrid          },
       { label: "Ads",    href: "/admin/kiosk/ads",    icon: Film              },
       { label: "Orders", href: "/admin/kiosk/orders", icon: Radio             },
     ],

@@ -23,6 +23,22 @@ export type KioskItem = KalbaPopularItem & {
   created_at?: string | null;
 };
 
+/**
+ * One physical panel.
+ *
+ * A branch runs several, and the order has to say which one took it. The screen
+ * knows which it is from the URL its browser is pinned to — /kiosk/counter-1 —
+ * rather than from anything it has to sign in to and could be signed out of.
+ */
+export interface KioskDevice {
+  id: string;
+  slug: string;
+  label: string;
+  label_ar?: string | null;
+  location: string;
+  is_active: boolean;
+}
+
 export interface KioskAd {
   id: string;
   media_type: "video" | "image";
@@ -73,12 +89,42 @@ export interface KioskSettings {
   closed_message_ar?: string | null;
 }
 
-/** Everything one screen needs, in the one payload /api/kiosk/menu answers. */
+/**
+ * Everything one screen needs, in the one payload /api/kiosk/menu answers.
+ *
+ * The device is deliberately not in here. This payload is re-read every time
+ * the screen falls back to idle, and which panel it is does not change between
+ * customers — it comes from the address, once, and is held separately.
+ */
 export interface KioskData {
   settings: KioskSettings;
   ads: KioskAd[];
   categories: KioskCategory[];
   items: KioskItem[];
+}
+
+/** What a panel calls itself when nothing has been registered for it. */
+export const UNNAMED_DEVICE_LABEL = "Kiosk";
+
+/** The label to print on an order, for a device that may not be registered. */
+export function deviceLabel(device: KioskDevice | null | undefined): string {
+  return device?.label?.trim() || device?.slug?.trim() || UNNAMED_DEVICE_LABEL;
+}
+
+/**
+ * "Counter 1" → "counter-1". What goes in a panel's URL.
+ *
+ * Derived rather than taken as typed: the slug is the address a screen is
+ * pinned to for good, and a stray space or capital in it is a panel whose URL
+ * nobody can retype correctly when the browser has to be set up again.
+ */
+export function toDeviceSlug(input: unknown): string {
+  return String(input ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
 }
 
 /** An image slide, or a video whose length we were not told, holds this long. */

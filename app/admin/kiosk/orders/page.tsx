@@ -17,8 +17,16 @@ import { kioskOrderCode } from "@/lib/kiosk/types";
  * not been started, what is on, what is ready to hand over.
  */
 
+interface KioskDeviceRow {
+  id: string;
+  slug: string;
+  label: string;
+}
+
 interface KioskOrder {
   id: string;
+  kiosk_device_id?: string | null;
+  table_section?: string | null;
   order_number: number | null;
   status: string;
   phone: string;
@@ -58,16 +66,20 @@ function when(iso: string): string {
 
 export default function KioskOrdersAdmin() {
   const [orders, setOrders] = useState<KioskOrder[]>([]);
+  const [devices, setDevices] = useState<KioskDeviceRow[]>([]);
   const [prefix, setPrefix] = useState("TIO");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>("");
+  /* "" = every screen, "none" = the unnamed /kiosk, otherwise a device id. */
+  const [screen, setScreen] = useState<string>("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/kiosk/orders", { cache: "no-store" });
     const body = await res.json().catch(() => null);
     if (body && Array.isArray(body.orders)) {
       setOrders(body.orders as KioskOrder[]);
+      setDevices(Array.isArray(body.devices) ? (body.devices as KioskDeviceRow[]) : []);
       setPrefix(body.orderPrefix || "TIO");
     }
     setLoading(false);
@@ -106,7 +118,15 @@ export default function KioskOrdersAdmin() {
     return map;
   }, [orders]);
 
-  const shown = filter ? orders.filter((o) => o.status === filter) : orders;
+  /* Both filters are applied here rather than re-fetched. The whole list is
+     already in hand, and a board that blanks for a moment every time someone
+     picks a screen reads as broken on a busy shift. */
+  const shown = orders.filter(
+    (o) =>
+      (!filter || o.status === filter) &&
+      (!screen ||
+        (screen === "none" ? !o.kiosk_device_id : o.kiosk_device_id === screen)),
+  );
 
   const takings = useMemo(
     () =>
@@ -135,6 +155,36 @@ export default function KioskOrdersAdmin() {
           Refresh
         </button>
       </div>
+
+      {/* ─── Which screen ─── */}
+      {devices.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <span className="text-xs font-semibold text-gray-500 me-1">Screen</span>
+          <button
+            onClick={() => setScreen("")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${screen === "" ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+          >
+            All
+          </button>
+          {devices.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setScreen(d.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${screen === d.id ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+            >
+              {d.label || d.slug} ({orders.filter((o) => o.kiosk_device_id === d.id).length})
+            </button>
+          ))}
+          {orders.some((o) => !o.kiosk_device_id) && (
+            <button
+              onClick={() => setScreen("none")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${screen === "none" ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+            >
+              Unnamed ({orders.filter((o) => !o.kiosk_device_id).length})
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ─── Filter ─── */}
       <div className="flex flex-wrap gap-2 mb-5">
@@ -186,6 +236,14 @@ export default function KioskOrdersAdmin() {
                       {when(order.created_at)}
                       {order.phone ? ` · ${order.phone}` : " · no phone"}
                     </p>
+                    {/* Read off the order, not joined from the device row: a
+                        retired panel must still name itself on what it took. */}
+                    {order.table_section && (
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+                        <MonitorSmartphone size={11} />
+                        {order.table_section}
+                      </p>
+                    )}
                   </div>
                   <span
                     className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${chip?.chip ?? "bg-gray-100 text-gray-600"}`}

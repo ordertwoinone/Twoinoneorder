@@ -138,6 +138,7 @@ export function KioskHeader({
   brandName,
   brandSubtitle,
   logoUrl,
+  deviceName,
   step,
   skip,
   language,
@@ -147,6 +148,8 @@ export function KioskHeader({
   brandName: string;
   brandSubtitle: string;
   logoUrl?: string;
+  /** Which panel this is. Shown small — it is for staff, not for customers. */
+  deviceName?: string;
   step: KioskStepKey;
   skip?: KioskStepKey[];
   language: string;
@@ -161,7 +164,17 @@ export function KioskHeader({
       style={{ color: KIOSK.ink, borderBottom: `0.13vh solid ${KIOSK.line}` }}
     >
       <div className="flex items-center justify-between gap-[1.5vh]">
-        <KioskWordmark name={brandName} subtitle={brandSubtitle} logoUrl={logoUrl} />
+        <div className="flex items-center gap-[1.2vh] min-w-0">
+          <KioskWordmark name={brandName} subtitle={brandSubtitle} logoUrl={logoUrl} />
+          {deviceName && (
+            <span
+              className="shrink-0 rounded-full px-[0.9vh] py-[0.3vh] text-[1vh] font-bold"
+              style={{ background: "#F4F4F4", color: "#9CA3AF" }}
+            >
+              {deviceName}
+            </span>
+          )}
+        </div>
         {!stacked && <KioskStepper current={step} skip={skip} />}
         <KioskCornerControls language={language} onLanguage={onLanguage} />
       </div>

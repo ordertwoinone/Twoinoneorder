@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { defaultSelection, type AddonSelection } from "@/lib/kalba/addons";
 import { kioskTotals, type KioskQty } from "@/lib/kiosk/cart";
-import type { KioskData, KioskItem } from "@/lib/kiosk/types";
+import { deviceLabel, type KioskData, type KioskDevice, type KioskItem } from "@/lib/kiosk/types";
 import { KioskHeader, type KioskStepKey } from "@/components/kiosk/Chrome";
 import AttractScreen from "@/components/kiosk/AttractScreen";
 import MenuScreen from "@/components/kiosk/MenuScreen";
@@ -46,7 +46,14 @@ function without<T>(record: Record<string, T>, key: string): Record<string, T> {
  */
 const DONE_BACKSTOP_SECONDS = 15;
 
-export default function KioskApp({ initial }: { initial: KioskData }) {
+export default function KioskApp({
+  initial,
+  device,
+}: {
+  initial: KioskData;
+  /** Which panel this is, or null for the unnamed /kiosk. */
+  device: KioskDevice | null;
+}) {
   const [data, setData] = useState(initial);
   const [screen, setScreen] = useState<Screen>("attract");
 
@@ -187,7 +194,14 @@ export default function KioskApp({ initial }: { initial: KioskData }) {
       const res = await fetch("/api/kiosk/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qty, addons, phone, privilegeCode, receiptChannels: channels }),
+        body: JSON.stringify({
+          qty,
+          addons,
+          phone,
+          privilegeCode,
+          receiptChannels: channels,
+          deviceSlug: device?.slug ?? "",
+        }),
       });
       const body = await res.json();
 
@@ -235,15 +249,18 @@ export default function KioskApp({ initial }: { initial: KioskData }) {
 
   /* ─── Screens ─────────────────────────────────────────────────────────── */
 
+  /* Either the whole kiosk is switched off, or this one panel has been taken
+     out of service while the others keep selling. */
+  const closed = !settings.is_live || device?.is_active === false;
+
   if (screen === "attract") {
     return (
       <AttractScreen
         settings={settings}
         ads={ads}
-        onStart={() => {
-          if (!settings.is_live) return;
-          setScreen("menu");
-        }}
+        deviceName={device ? deviceLabel(device) : ""}
+        closedMessage={closed ? settings.closed_message : ""}
+        onStart={() => setScreen("menu")}
       />
     );
   }
@@ -260,6 +277,7 @@ export default function KioskApp({ initial }: { initial: KioskData }) {
         logoUrl={settings.logo_url || undefined}
         step={step}
         skip={skip}
+        deviceName={device ? deviceLabel(device) : ""}
         language="English"
         onLanguage={() => { /* Arabic is stored beside every field; wiring the
                               toggle is the next piece of work. */ }}
@@ -350,7 +368,7 @@ export default function KioskApp({ initial }: { initial: KioskData }) {
 
       {/* Ordering switched off in admin, mid-flow. Better a plain notice than a
           screen that takes an order the kitchen will never see. */}
-      {!settings.is_live && (
+      {closed && (
         <div
           className="absolute inset-0 z-[60] flex flex-col items-center justify-center p-[6vh] text-center"
           style={{ background: "rgba(255,255,255,0.97)" }}

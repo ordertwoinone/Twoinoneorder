@@ -8,7 +8,13 @@ import { addonSummary, type AddonSelection } from "@/lib/kalba/addons";
 import { STUDENT_DISCOUNT_PERCENT, type StudentCard } from "@/lib/student-card";
 import { findPrivilegeCard } from "@/lib/kiosk/privilege";
 import { kioskTotals } from "@/lib/kiosk/cart";
-import { kioskOrderCode, DEFAULT_KIOSK_SETTINGS, type KioskItem } from "@/lib/kiosk/types";
+import {
+  deviceLabel,
+  kioskOrderCode,
+  DEFAULT_KIOSK_SETTINGS,
+  type KioskItem,
+} from "@/lib/kiosk/types";
+import { getKioskDevice } from "@/lib/kiosk/server";
 
 /** Only these may be asked for; anything else in the list is ignored. */
 const RECEIPT_CHANNELS = ["sms", "whatsapp"] as const;
@@ -20,6 +26,8 @@ interface OrderBody {
   phone?: string;
   privilegeCode?: string;
   receiptChannels?: string[];
+  /** Which panel sent this, from its URL. Resolved here, never trusted as-is. */
+  deviceSlug?: string;
 }
 
 /**
@@ -92,6 +100,15 @@ export async function POST(request: Request) {
       ? await findPrivilegeCard(body.privilegeCode)
       : null;
 
+  /* The screen sends its slug; the label written on the order comes from the
+     device row, not from the payload. A panel switched off in admin is refused
+     here as well as on screen, so a stale tab cannot keep sending orders from a
+     kiosk that has been taken out of service. */
+  const device = await getKioskDevice(body.deviceSlug);
+  if (device && device.is_active === false) {
+    return NextResponse.json({ error: settings.closed_message }, { status: 409 });
+  }
+
   const privilegePercent = card ? (card.discount_percent ?? STUDENT_DISCOUNT_PERCENT) : 0;
   const totals = kioskTotals(items, qty, addons, privilegePercent);
 
@@ -112,7 +129,13 @@ export async function POST(request: Request) {
 
   const { data, error } = await insertRow("bookings", {
     type: "kiosk",
-    table_section: settings.pickup_counter,
+    kiosk_device_id: device?.id ?? null,
+    /* The live board already prints table_section as the "where" column, so
+       putting the panel's name there makes every existing screen — the board,
+       Order History, the invoice — say which kiosk took it, with no change to
+       any of them. Copied rather than joined: retiring a panel must not blank
+       out the orders it took. */
+    table_section: device ? deviceLabel(device) : settings.pickup_counter,
     guest_name: card?.full_name ?? "",
     phone,
     guests: 1,
@@ -123,7 +146,7 @@ export async function POST(request: Request) {
        on databases that have not re-run order_invoices.sql is still 'cash' and
        would book every kiosk order as settled the moment it was placed. */
     payment_method: "pending",
-    notes: `Kiosk order · ${itemsText} · Total: AED ${totals.total.toFixed(2)}${card ? ` · Privilege ${card.member_id}` : ""}`,
+    notes: `Kiosk order${device ? ` (${deviceLabel(device)})` : ""} · ${itemsText} · Total: AED ${totals.total.toFixed(2)}${card ? ` · Privilege ${card.member_id}` : ""}`,
     items: totals.lines.map((l) => ({
       name: l.item.name,
       qty: l.qty,
@@ -158,6 +181,7 @@ export async function POST(request: Request) {
       saved: totals.totalSaved,
       ready_minutes: [settings.ready_minutes_min, settings.ready_minutes_max],
       pickup_counter: settings.pickup_counter,
+      device: device ? { slug: device.slug, label: deviceLabel(device) } : null,
     },
     { status: 201 },
   );

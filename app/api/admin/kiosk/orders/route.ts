@@ -17,6 +17,7 @@ import { DEFAULT_KIOSK_SETTINGS } from "@/lib/kiosk/types";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const status = (searchParams.get("status") ?? "").trim();
+  const device = (searchParams.get("device") ?? "").trim();
   const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit")) || 200));
 
   let query = supabaseAdminLive
@@ -27,10 +28,18 @@ export async function GET(request: Request) {
     .limit(limit);
 
   if (status) query = query.eq("status", status);
+  // "none" is a real answer: orders from the unnamed /kiosk, or from before
+  // the panels were registered.
+  if (device === "none") query = query.is("kiosk_device_id", null);
+  else if (device) query = query.eq("kiosk_device_id", device);
 
-  const [ordersRes, settingsRes] = await Promise.all([
+  const [ordersRes, settingsRes, devicesRes] = await Promise.all([
     query,
     supabaseAdminLive.from("kiosk_settings").select("order_prefix").limit(1).maybeSingle(),
+    supabaseAdminLive
+      .from("kiosk_devices")
+      .select("id, slug, label")
+      .order("sort_order", { ascending: true }),
   ]);
 
   if (ordersRes.error) {
@@ -40,5 +49,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     orders: ordersRes.data ?? [],
     orderPrefix: settingsRes.data?.order_prefix ?? DEFAULT_KIOSK_SETTINGS.order_prefix,
+    // Empty when the devices table is not there yet; the board just drops the
+    // per-screen filter rather than failing.
+    devices: devicesRes.error ? [] : (devicesRes.data ?? []),
   });
 }

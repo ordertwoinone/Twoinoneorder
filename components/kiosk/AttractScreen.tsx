@@ -21,10 +21,16 @@ import { KioskWordmark } from "./Chrome";
 export default function AttractScreen({
   settings,
   ads,
+  deviceName,
+  closedMessage,
   onStart,
 }: {
   settings: KioskSettings;
   ads: KioskAd[];
+  /** Which panel this is, for whoever is installing four of them. */
+  deviceName?: string;
+  /** Set when this panel is not taking orders. Replaces the Order button. */
+  closedMessage?: string;
   onStart: () => void;
 }) {
   const [index, setIndex] = useState(0);
@@ -61,9 +67,9 @@ export default function AttractScreen({
 
   return (
     <div
-      className="w-full h-full relative overflow-hidden cursor-pointer"
+      className={`w-full h-full relative overflow-hidden ${closedMessage ? "" : "cursor-pointer"}`}
       style={{ background: KIOSK.night }}
-      onClick={onStart}
+      onClick={closedMessage ? undefined : onStart}
     >
       {/* ─── The ad itself ─── */}
       <div className="absolute inset-0">
@@ -102,13 +108,20 @@ export default function AttractScreen({
 
       {/* ─── Foreground ─── */}
       <div className="absolute inset-0 flex flex-col text-white p-[3vh]">
-        <div className="flex items-start">
+        <div className="flex items-start justify-between">
           <KioskWordmark
             name={settings.brand_name}
             subtitle={settings.brand_subtitle}
             logoUrl={settings.logo_url || undefined}
             size="lg"
           />
+          {/* Faint on purpose. It is for the person installing the fourth panel
+              and wondering which one they are standing at, not for a customer. */}
+          {deviceName && (
+            <span className="text-[1.3vh] font-semibold text-white/40 mt-[0.6vh]">
+              {deviceName}
+            </span>
+          )}
         </div>
 
         {headline && (
@@ -132,25 +145,38 @@ export default function AttractScreen({
 
         <div className="flex-1" />
 
-        {/* ─── The invitation ─── */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onStart(); }}
-          className="w-full rounded-[2.4vh] flex items-center justify-center gap-[1.6vh] font-black active:scale-[0.97] transition-transform"
-          style={{
-            background: KIOSK.gold,
-            color: KIOSK.onGold,
-            height: "10vh",
-            fontSize: "4.2vh",
-            boxShadow: "0 1.4vh 3.6vh rgba(0,0,0,0.45)",
-          }}
-        >
-          {settings.order_button_text}
-          <ChevronRight strokeWidth={3} className="w-[4.4vh] h-[4.4vh]" />
-        </button>
+        {/* ─── The invitation, or the reason there is not one ─── */}
+        {closedMessage ? (
+          <div
+            className="w-full rounded-[2.4vh] flex items-center justify-center px-[3vh] py-[3.5vh]"
+            style={{ background: "rgba(255,255,255,0.1)", border: "0.18vh solid rgba(255,255,255,0.3)" }}
+          >
+            <p className="text-center font-bold text-[2.6vh] leading-snug text-white/95">
+              {closedMessage}
+            </p>
+          </div>
+        ) : (
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); onStart(); }}
+              className="w-full rounded-[2.4vh] flex items-center justify-center gap-[1.6vh] font-black active:scale-[0.97] transition-transform"
+              style={{
+                background: KIOSK.gold,
+                color: KIOSK.onGold,
+                height: "10vh",
+                fontSize: "4.2vh",
+                boxShadow: "0 1.4vh 3.6vh rgba(0,0,0,0.45)",
+              }}
+            >
+              {settings.order_button_text}
+              <ChevronRight strokeWidth={3} className="w-[4.4vh] h-[4.4vh]" />
+            </button>
 
-        <p className="text-center mt-[1.8vh] text-[1.9vh] font-medium text-white/85">
-          {settings.touch_hint}
-        </p>
+            <p className="text-center mt-[1.8vh] text-[1.9vh] font-medium text-white/85">
+              {settings.touch_hint}
+            </p>
+          </>
+        )}
 
         {settings.privilege_enabled && settings.privilege_strip && (
           <div

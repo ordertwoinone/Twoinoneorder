@@ -2,14 +2,16 @@ import { getKioskData } from "@/lib/kiosk/server";
 import KioskApp from "./KioskApp";
 
 /**
- * Rendered on the server so the panel paints a finished screen the moment it
- * boots, rather than a spinner in front of the shop. From then on the app
- * re-reads /api/kiosk/menu each time it falls back to idle, so it keeps up with
- * the menu without anyone touching it.
+ * The unnamed kiosk.
+ *
+ * A branch running one panel needs nothing more than this, and it stays working
+ * for a screen whose device has not been registered yet. Orders from here carry
+ * no device, which reads as "Kiosk" on the board rather than as a screen that
+ * has gone missing. Several panels get one URL each — see [device]/page.tsx.
  */
 export const dynamic = "force-dynamic";
 
 export default async function KioskPage() {
   const data = await getKioskData();
-  return <KioskApp initial={data} />;
+  return <KioskApp initial={data} device={null} />;
 }

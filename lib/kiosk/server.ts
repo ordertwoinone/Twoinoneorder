@@ -20,6 +20,7 @@ import {
   type KioskCategory,
   type KioskData,
   type KioskItem,
+  type KioskDevice,
   type KioskSettings,
 } from "@/lib/kiosk/types";
 
@@ -55,4 +56,26 @@ export async function getKioskData(): Promise<KioskData> {
       addon_groups: groupsByItem[item.id] ?? [],
     })),
   };
+}
+
+/**
+ * The panel a slug belongs to, or null for one nobody has registered.
+ *
+ * Null is a working state, not an error: /kiosk with no slug at all is a valid
+ * screen, and a slug typed wrong should still sell food rather than show a page
+ * that looks broken. The order simply goes down without a device against it.
+ */
+export async function getKioskDevice(slug: string | undefined): Promise<KioskDevice | null> {
+  const clean = (slug ?? "").trim().toLowerCase();
+  if (!clean) return null;
+
+  const { data, error } = await supabaseAdminLive
+    .from("kiosk_devices")
+    .select("*")
+    .eq("slug", clean)
+    .maybeSingle();
+
+  // A missing table means devices have not been set up, not a dead screen.
+  if (error || !data) return null;
+  return data as KioskDevice;
 }
