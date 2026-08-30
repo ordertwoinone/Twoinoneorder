@@ -572,3 +572,36 @@ canvas {
   .kiosk-scroll { overflow: visible !important; }
   .kiosk-no-print { display: none !important; }
 }
+
+/* ─── Point of sale ─────────────────────────────────────────────────────────
+   The till, on a landscape tablet. Same reasoning as the kiosk block above:
+   these rules would be hostile on an ordinary page, so they are scoped, and
+   they live here rather than in a <style> tag so they cannot hydrate into
+   something different from what the server sent. */
+
+.pos-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #f6f7f8;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+/* Text is selectable in the till — staff copy an order number out of it —
+   but the chrome around it is not, so a long press does not select the UI. */
+.pos-root .pos-chrome {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.pos-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.pos-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.pos-scroll::-webkit-scrollbar-thumb { background: #cfd4d8; border-radius: 3px; }

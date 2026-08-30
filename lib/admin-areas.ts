@@ -131,6 +131,16 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/kalba"],
   },
   {
+    key: "pos",
+    label: "Point of Sale",
+    hint: "Till accounts and the shifts they work",
+    /* The till itself lives at /pos and is not an admin screen — staff sign in
+       there with an ID and a PIN and never reach this panel. What is claimed
+       here is the admin side: creating accounts and resetting PINs. */
+    paths: ["/admin/pos"],
+    apiPaths: ["/api/admin/pos"],
+  },
+  {
     key: "kiosk",
     label: "Kiosk",
     hint: "The self-order screen, its ads, and the orders it takes",
