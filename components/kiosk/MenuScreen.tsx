@@ -81,6 +81,33 @@ export default function MenuScreen({
     return items.filter((i) => (category === "all" || i.category_id === category) && byFilter(i));
   }, [items, category, filter]);
 
+  /**
+   * On "All", the dishes arrive under their category heading rather than in one
+   * thirty-item wall — the same grouping the branch page uses, and the reason
+   * the categories were given a sort order in the first place. Picking a single
+   * category is already an answer to "which section", so that view stays a plain
+   * grid with no heading repeating the chip lit up above it.
+   */
+  const sections = useMemo(() => {
+    if (category !== "all") return [{ key: "one", emoji: "", label: "", items: shown }];
+
+    const buckets = new Map(categories.map((c) => [c.id, [] as KioskItem[]]));
+    const unfiled: KioskItem[] = [];
+    for (const item of shown) {
+      const bucket = item.category_id ? buckets.get(item.category_id) : undefined;
+      (bucket ?? unfiled).push(item);
+    }
+
+    const filed = categories
+      .map((c) => ({ key: c.id, emoji: c.emoji, label: c.label, items: buckets.get(c.id) ?? [] }))
+      .filter((g) => g.items.length > 0);
+
+    // A dish nobody has filed still has to be orderable.
+    return unfiled.length > 0
+      ? [...filed, { key: "unfiled", emoji: "🍽️", label: "More", items: unfiled }]
+      : filed;
+  }, [categories, shown, category]);
+
   const comboReady = settings.combo_enabled && settings.combo_item_ids.length > 0;
 
   return (
@@ -187,17 +214,40 @@ export default function MenuScreen({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-[1.2vh] mt-[0.4vh]">
-            {shown.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                qty={qty[item.id] ?? 0}
-                onAdd={() => onAdd(item)}
-                onLess={() => onLess(item)}
-              />
-            ))}
-          </div>
+          sections.map((section) => (
+            <section key={section.key} className="mt-[1.8vh] first:mt-[0.4vh]">
+              {section.label && (
+                <div className="flex items-center gap-[1vh] mb-[1.2vh]">
+                  {section.emoji && (
+                    <span
+                      className="rounded-full w-[3.4vh] h-[3.4vh] flex items-center justify-center text-[1.7vh] leading-none shrink-0"
+                      style={{ background: KIOSK.goldSoft }}
+                    >
+                      {section.emoji}
+                    </span>
+                  )}
+                  <h3 className="font-black text-[2vh] shrink-0" style={{ color: KIOSK.ink }}>
+                    {section.label}
+                  </h3>
+                  <span className="text-[1.3vh] font-semibold shrink-0" style={{ color: KIOSK.inkSoft }}>
+                    {section.items.length}
+                  </span>
+                  <span className="flex-1 h-[0.13vh]" style={{ background: KIOSK.line }} />
+                </div>
+              )}
+              <div className="grid grid-cols-4 gap-[1.3vh]">
+                {section.items.map((item) => (
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    qty={qty[item.id] ?? 0}
+                    onAdd={() => onAdd(item)}
+                    onLess={() => onLess(item)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))
         )}
       </div>
 

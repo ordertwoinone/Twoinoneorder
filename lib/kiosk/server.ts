@@ -24,6 +24,18 @@ import {
   type KioskSettings,
 } from "@/lib/kiosk/types";
 
+/**
+ * Whether a dish can be put in front of a paying customer.
+ *
+ * Priced above zero is the whole test. Everything else about an item can be
+ * missing and the card still works — the photo falls back, the description is
+ * optional — but a price cannot.
+ */
+export function sellable(item: { price?: string | number | null }): boolean {
+  const n = parseFloat(String(item.price ?? ""));
+  return Number.isFinite(n) && n > 0;
+}
+
 /** Postgres numeric and jsonb both need coaxing back into plain values. */
 function normaliseSettings(row: Record<string, unknown> | null): KioskSettings {
   if (!row) return DEFAULT_KIOSK_SETTINGS;
@@ -51,10 +63,14 @@ export async function getKioskData(): Promise<KioskData> {
     // A missing kiosk_ads table means no ads, not a dead screen.
     ads: (adsRes.error ? [] : ((adsRes.data ?? []) as KioskAd[])),
     categories: (catsRes.data ?? []) as KioskCategory[],
-    items: ((itemsRes.data ?? []) as KioskItem[]).map((item) => ({
-      ...item,
-      addon_groups: groupsByItem[item.id] ?? [],
-    })),
+    /* A dish with no price is left off the screen entirely.
+       The kiosk takes money unattended, so an unpriced item is not a cosmetic
+       gap — it is a free lunch, added to the basket at AED 0.00 with nobody at
+       the counter to notice. It reappears the moment a price is typed in
+       admin → University Kalba → Popular Items. */
+    items: ((itemsRes.data ?? []) as KioskItem[])
+      .filter((item) => sellable(item))
+      .map((item) => ({ ...item, addon_groups: groupsByItem[item.id] ?? [] })),
   };
 }
 

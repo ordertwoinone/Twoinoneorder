@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, Minus, Plus, Star } from "lucide-react";
+import { useState } from "react";
+import { Minus, Plus, UtensilsCrossed } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { discountedPrice, toPercent } from "@/lib/kalba/pricing";
 import type { KioskItem } from "@/lib/kiosk/types";
@@ -19,10 +20,15 @@ export function itemBadge(item: KioskItem): { text: string; bg: string; fg: stri
 /**
  * One dish, as a card in the grid.
  *
+ * Read standing up, at arm's length, by someone who is deciding rather than
+ * browsing — so the photograph carries the card and the price is the second
+ * thing the eye lands on. The rating and prep time that were here are gone:
+ * nobody at a counter is choosing between two dishes on 4.5 versus 4.6, and
+ * they were crowding the two things that matter.
+ *
  * A dish that asks questions — a choice of side, extra cheese — always shows
  * the plus, never the stepper: tapping + on a second helping would silently
- * copy the first one's answers, and nobody at a kiosk expects that. Tapping it
- * opens the options sheet again instead.
+ * copy the first one's answers, and nobody at a kiosk expects that.
  */
 export default function ItemCard({
   item,
@@ -35,46 +41,110 @@ export default function ItemCard({
   onAdd: () => void;
   onLess: () => void;
 }) {
+  /* A photo that 404s must not leave a grey hole in the grid — the card falls
+     back to a plain tile that still reads as the dish. */
+  const [imageOk, setImageOk] = useState(true);
+
   const list = itemPrice(item);
   const offer = toPercent(item.discount_percent);
   const net = discountedPrice(list, offer);
   const badge = itemBadge(item);
   const asks = (item.addon_groups ?? []).length > 0;
+  const chosen = qty > 0;
 
   return (
-    <div
-      className="rounded-[1.7vh] overflow-hidden flex flex-col bg-white"
+    <button
+      onClick={onAdd}
+      className="group relative text-start rounded-[1.8vh] flex flex-col bg-white active:scale-[0.98] transition-transform"
       style={{
-        border: `0.13vh solid ${qty > 0 ? KIOSK.gold : KIOSK.line}`,
-        boxShadow: qty > 0 ? `0 0 0 0.2vh ${KIOSK.gold}55` : "0 0.2vh 0.8vh rgba(0,0,0,0.04)",
+        border: `0.18vh solid ${chosen ? KIOSK.gold : KIOSK.line}`,
+        boxShadow: chosen
+          ? `0 0 0 0.25vh ${KIOSK.gold}44, 0 0.4vh 1.2vh rgba(0,0,0,0.07)`
+          : "0 0.25vh 1vh rgba(0,0,0,0.05)",
       }}
     >
-      <div className="relative w-full" style={{ aspectRatio: "4 / 3", background: "#F6F6F6" }}>
-        {item.image_url && (
+      {/* ─── The photograph ─── */}
+      <div
+        className="relative w-full shrink-0"
+        style={{
+          aspectRatio: "1 / 1",
+          background: "#F4F4F5",
+          /* Only the photo clips — the add button hangs off its bottom edge and
+             would be sliced in half by an overflow rule on the card. */
+          borderRadius: "1.62vh 1.62vh 0 0",
+        }}
+      >
+        {item.image_url && imageOk ? (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+          <img
+            src={item.image_url}
+            alt=""
+            loading="lazy"
+            onError={() => setImageOk(false)}
+            className="w-full h-full object-cover"
+            style={{ borderRadius: "inherit" }}
+          />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{
+              background: `linear-gradient(140deg, ${KIOSK.goldSoft}, #F4F4F5)`,
+              borderRadius: "inherit",
+            }}
+          >
+            <UtensilsCrossed className="w-[3.4vh] h-[3.4vh]" style={{ color: "#C9BE96" }} />
+          </div>
         )}
+
         {badge && (
           <span
-            className="absolute top-[0.7vh] left-[0.7vh] rounded-[0.6vh] px-[0.8vh] py-[0.35vh] text-[0.95vh] font-extrabold tracking-wide"
+            className="absolute top-[0.8vh] left-[0.8vh] rounded-[0.7vh] px-[0.9vh] py-[0.4vh] text-[1.02vh] font-extrabold tracking-wide"
             style={{ background: badge.bg, color: badge.fg }}
           >
             {badge.text}
           </span>
         )}
-        {qty > 0 && (
+
+        {/* How many are in the basket, over the photo where it cannot be missed. */}
+        {chosen && (
           <span
-            className="absolute top-[0.7vh] right-[0.7vh] rounded-full min-w-[2.4vh] h-[2.4vh] px-[0.6vh] flex items-center justify-center text-[1.2vh] font-black"
+            className="absolute top-[0.8vh] right-[0.8vh] rounded-full min-w-[2.8vh] h-[2.8vh] px-[0.7vh] flex items-center justify-center text-[1.4vh] font-black"
             style={{ background: KIOSK.onGold, color: KIOSK.gold }}
           >
             {qty}
           </span>
         )}
+
+        {/* The controls sit on the photo rather than beside the price: on a
+            250px-wide card the two competed for the same line and "AED" ended
+            up clipped behind the button. The whole card adds, so these only
+            adjust what is already in the basket — hence stopPropagation. */}
+        <span className="absolute -bottom-[1.8vh] right-[0.8vh] flex items-center gap-[0.5vh]">
+          {chosen && !asks && (
+            <span
+              role="button"
+              aria-label={`One less ${item.name}`}
+              onClick={(e) => { e.stopPropagation(); onLess(); }}
+              className="rounded-full w-[3.6vh] h-[3.6vh] flex items-center justify-center active:scale-90 transition-transform"
+              style={{ background: "#fff", color: KIOSK.onGold, border: `0.18vh solid ${KIOSK.gold}` }}
+            >
+              <Minus strokeWidth={3} className="w-[1.8vh] h-[1.8vh]" />
+            </span>
+          )}
+          <span
+            aria-hidden
+            className="rounded-full w-[3.6vh] h-[3.6vh] flex items-center justify-center"
+            style={{ background: KIOSK.gold, color: KIOSK.onGold, boxShadow: "0 0.2vh 0.8vh rgba(0,0,0,0.18)" }}
+          >
+            <Plus strokeWidth={3} className="w-[2.1vh] h-[2.1vh]" />
+          </span>
+        </span>
       </div>
 
-      <div className="px-[1vh] pt-[0.9vh] pb-[1vh] flex flex-col flex-1">
+      {/* ─── Name and price ─── */}
+      <div className="px-[1.1vh] pt-[2.4vh] pb-[1.2vh] flex flex-col flex-1 w-full">
         <p
-          className="font-bold leading-tight text-[1.4vh] mb-[0.6vh]"
+          className="font-bold leading-tight text-[1.4vh] mb-[0.8vh]"
           style={{
             color: KIOSK.ink,
             display: "-webkit-box",
@@ -87,62 +157,18 @@ export default function ItemCard({
           {item.name}
         </p>
 
-        <div className="flex items-center gap-[0.9vh] text-[1.05vh] mb-[0.9vh]" style={{ color: KIOSK.inkSoft }}>
-          <span className="flex items-center gap-[0.3vh] font-semibold">
-            <Star className="fill-amber-400 stroke-amber-400 w-[1.2vh] h-[1.2vh]" />
-            {item.rating}
+        <p className="mt-auto flex items-baseline gap-[0.6vh] leading-none">
+          <span className="font-black text-[1.7vh] whitespace-nowrap" style={{ color: KIOSK.ink }}>
+            <span className="text-[1.1vh] me-[0.35vh]" style={{ color: KIOSK.inkSoft }}>AED</span>
+            {net.toFixed(2)}
           </span>
-          {item.time_text && (
-            <span className="flex items-center gap-[0.3vh]">
-              <Clock className="w-[1.1vh] h-[1.1vh]" />
-              {item.time_text}
+          {offer > 0 && (
+            <span className="text-[1.1vh] line-through" style={{ color: "#B0B0B8" }}>
+              {list.toFixed(2)}
             </span>
           )}
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-[0.6vh]">
-          <div className="leading-none min-w-0">
-            <span className="font-black text-[1.5vh]" style={{ color: KIOSK.ink }}>
-              AED {net.toFixed(2)}
-            </span>
-            {offer > 0 && (
-              <span className="ms-[0.5vh] text-[1vh] line-through" style={{ color: "#9CA3AF" }}>
-                {list.toFixed(2)}
-              </span>
-            )}
-          </div>
-
-          {qty > 0 && !asks ? (
-            <div className="flex items-center gap-[0.5vh] shrink-0">
-              <button
-                onClick={onLess}
-                aria-label={`One less ${item.name}`}
-                className="rounded-full w-[3vh] h-[3vh] flex items-center justify-center active:scale-90 transition-transform"
-                style={{ background: KIOSK.goldSoft, color: KIOSK.onGold }}
-              >
-                <Minus strokeWidth={3} className="w-[1.5vh] h-[1.5vh]" />
-              </button>
-              <button
-                onClick={onAdd}
-                aria-label={`One more ${item.name}`}
-                className="rounded-full w-[3vh] h-[3vh] flex items-center justify-center active:scale-90 transition-transform"
-                style={{ background: KIOSK.gold, color: KIOSK.onGold }}
-              >
-                <Plus strokeWidth={3} className="w-[1.5vh] h-[1.5vh]" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onAdd}
-              aria-label={`Add ${item.name}`}
-              className="rounded-full w-[3.2vh] h-[3.2vh] flex items-center justify-center shrink-0 active:scale-90 transition-transform"
-              style={{ background: KIOSK.gold, color: KIOSK.onGold }}
-            >
-              <Plus strokeWidth={3} className="w-[1.9vh] h-[1.9vh]" />
-            </button>
-          )}
-        </div>
+        </p>
       </div>
-    </div>
+    </button>
   );
 }

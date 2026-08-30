@@ -281,7 +281,6 @@ export default function KioskApp({
         language="English"
         onLanguage={() => { /* Arabic is stored beside every field; wiring the
                               toggle is the next piece of work. */ }}
-        stacked={screen !== "menu"}
       />
 
       {screen === "menu" && (

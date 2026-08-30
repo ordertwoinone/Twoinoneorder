@@ -14,7 +14,7 @@ import {
   DEFAULT_KIOSK_SETTINGS,
   type KioskItem,
 } from "@/lib/kiosk/types";
-import { getKioskDevice } from "@/lib/kiosk/server";
+import { getKioskDevice, sellable } from "@/lib/kiosk/server";
 
 /** Only these may be asked for; anything else in the list is ignored. */
 const RECEIPT_CHANNELS = ["sms", "whatsapp"] as const;
@@ -74,10 +74,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: settings.closed_message }, { status: 409 });
   }
 
-  const items = ((itemsRes.data ?? []) as KioskItem[]).map((item) => ({
-    ...item,
-    addon_groups: groupsByItem[item.id] ?? [],
-  }));
+  /* Same rule the screen applies, applied again here. A tab left open from
+     before a dish lost its price would otherwise still be able to order it. */
+  const items = ((itemsRes.data ?? []) as KioskItem[])
+    .filter((item) => sellable(item))
+    .map((item) => ({ ...item, addon_groups: groupsByItem[item.id] ?? [] }));
 
   if (items.length === 0) {
     return NextResponse.json({ error: "Those dishes are no longer available" }, { status: 409 });

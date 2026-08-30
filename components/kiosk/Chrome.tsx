@@ -143,7 +143,6 @@ export function KioskHeader({
   skip,
   language,
   onLanguage,
-  stacked = false,
 }: {
   brandName: string;
   brandSubtitle: string;
@@ -154,9 +153,6 @@ export function KioskHeader({
   skip?: KioskStepKey[];
   language: string;
   onLanguage: () => void;
-  /* The phone and confirmation screens carry all five steps, which will not sit
-     beside the wordmark — they drop to their own line instead of shrinking. */
-  stacked?: boolean;
 }) {
   return (
     <header
@@ -175,14 +171,11 @@ export function KioskHeader({
             </span>
           )}
         </div>
-        {!stacked && <KioskStepper current={step} skip={skip} />}
         <KioskCornerControls language={language} onLanguage={onLanguage} />
       </div>
-      {stacked && (
-        <div className="mt-[1.4vh]">
-          <KioskStepper current={step} skip={skip} />
-        </div>
-      )}
+      <div className="mt-[1.3vh]">
+        <KioskStepper current={step} skip={skip} />
+      </div>
     </header>
   );
 }

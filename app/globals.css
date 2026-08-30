@@ -518,3 +518,57 @@ canvas {
   .text-\[1\.5rem\] { font-size: 23px; }
   .text-\[1\.6rem\] { font-size: 24.6px; }
 }
+
+
+/* ─── Self-order kiosk ──────────────────────────────────────────────────────
+   Scoped to .kiosk-root, because every rule here is hostile on an ordinary
+   page. Nothing is selectable, nothing rubber-bands, and a long press opens no
+   menu — all three are how a public screen ends up stuck in a state nobody can
+   get it out of.
+
+   In the stylesheet rather than a <style> tag in the kiosk layout: as inline
+   JSX the same CSS hydrated differently on the client, React discarded the
+   server HTML, and the panel re-rendered itself on every load. */
+
+.kiosk-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+.kiosk-root *:focus { outline: none; }
+
+/* The one thing that does take a caret: the phone number field. */
+.kiosk-root input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.kiosk-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.kiosk-scroll::-webkit-scrollbar { display: none; }
+
+/* Print Receipt drives the panel's printer through the browser. Without this
+   the page prints as a cropped photograph of a fixed, clipped screen — so on
+   paper it stops being a screen and becomes a document. */
+@media print {
+  .kiosk-root {
+    position: static;
+    overflow: visible;
+    height: auto;
+  }
+  .kiosk-scroll { overflow: visible !important; }
+  .kiosk-no-print { display: none !important; }
+}

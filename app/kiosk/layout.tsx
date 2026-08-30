@@ -8,7 +8,9 @@ import type { Metadata, Viewport } from "next";
  * what a display standing in the branch shows, all day, to whoever walks up.
  *
  * The panel is portrait, so everything below is built for a tall screen and
- * fills whatever it is given: 1080 × 1920 is what it was drawn for.
+ * fills whatever it is given: 1080 × 1920 is what it was drawn for. The rules
+ * that make it behave like a fixed public screen rather than a web page live in
+ * globals.css under `.kiosk-root`.
  */
 export const metadata: Metadata = {
   title: "Order Here",
@@ -26,52 +28,20 @@ export const viewport: Viewport = {
 };
 
 export default function KioskLayout({ children }: { children: React.ReactNode }) {
+  /*
+   * The kiosk pins its own direction rather than inheriting the site's.
+   *
+   * LocaleScript stamps lang/dir on <html> from the visitor's browser, which is
+   * right for the website — but a kiosk is not a visitor. The panels are
+   * Android tablets, and a tablet set to Arabic was serving an English kiosk
+   * laid out right-to-left: the stepper ran backwards, the keypad read 3-2-1,
+   * and every logical margin in the build flipped. The screen renders English
+   * copy, so it declares English here. When the language toggle is wired up it
+   * will set this from the kiosk's own choice, not from the device's.
+   */
   return (
-    <>
-      {/* Scoped to this route rather than globals.css: every rule here is
-          hostile on an ordinary page. Nothing is selectable, nothing rubber-
-          bands, and a long press opens no menu — all three are how a public
-          screen ends up stuck in a state nobody can get it out of. */}
-      <style>{`
-        .kiosk-root {
-          position: fixed;
-          inset: 0;
-          overflow: hidden;
-          background: #ffffff;
-          -webkit-user-select: none;
-          user-select: none;
-          -webkit-touch-callout: none;
-          -webkit-tap-highlight-color: transparent;
-          overscroll-behavior: none;
-          touch-action: manipulation;
-        }
-        .kiosk-root *:focus { outline: none; }
-        /* The one thing that does take a caret: the phone number field. */
-        .kiosk-root input { -webkit-user-select: text; user-select: text; }
-        .kiosk-scroll {
-          overflow-y: auto;
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior: contain;
-          scrollbar-width: none;
-        }
-        .kiosk-scroll::-webkit-scrollbar { display: none; }
-
-        /* Print Receipt drives the panel's own printer through the browser.
-           Without this the page prints as a cropped photograph of a fixed,
-           clipped screen — so on paper it stops being a screen and becomes a
-           document: it flows, it is black on white, and the buttons that only
-           make sense to a finger are left off. */
-        @media print {
-          .kiosk-root {
-            position: static;
-            overflow: visible;
-            height: auto;
-          }
-          .kiosk-scroll { overflow: visible !important; }
-          .kiosk-no-print { display: none !important; }
-        }
-      `}</style>
-      <div className="kiosk-root">{children}</div>
-    </>
+    <div className="kiosk-root" dir="ltr" lang="en">
+      {children}
+    </div>
   );
 }

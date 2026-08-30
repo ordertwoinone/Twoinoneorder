@@ -77,7 +77,10 @@ export default function PwaProvider({
      would offer the customer app, with customer wording, to someone standing
      in the admin panel. The service worker still registers below, since the
      admin app needs it for order notifications. */
-  const inAdmin = pathname?.startsWith("/admin") ?? false;
+  /* And the kiosk is a screen bolted to a stand in a restaurant. Offering to
+     install an app on it is meaningless, and the card covers the cart bar. */
+  const inAdmin =
+    (pathname?.startsWith("/admin") ?? false) || (pathname?.startsWith("/kiosk") ?? false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
