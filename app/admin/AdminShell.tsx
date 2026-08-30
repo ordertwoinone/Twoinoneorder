@@ -95,7 +95,8 @@ const NAV: NavItem[] = [
     icon: Terminal,
     basePath: "/admin/pos",
     children: [
-      { label: "Staff", href: "/admin/pos/staff", icon: UsersRound },
+      { label: "Staff",    href: "/admin/pos/staff",    icon: UsersRound },
+      { label: "Settings", href: "/admin/pos/settings", icon: Settings   },
     ],
   },
   {

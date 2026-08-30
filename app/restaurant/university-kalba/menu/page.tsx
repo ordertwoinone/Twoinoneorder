@@ -6,6 +6,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { orderWhatsapp } from "@/lib/whatsapp";
 import { getAddonGroupsByItem } from "@/lib/kalba/addons-server";
+import { sellable } from "@/lib/kiosk/server";
 import JsonLd from "@/components/seo/JsonLd";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { breadcrumbSchema } from "@/lib/seo";
@@ -43,10 +44,13 @@ async function getMenuData() {
     hero: { ...hero, whatsapp: orderWhatsapp(hero.whatsapp, settingsRes.data?.whatsapp_number) },
     categories: (catsRes.data ?? []) as KalbaCategory[],
     // Each dish carries its own extras, so the cart never has to go looking.
-    popular: ((popularRes.data ?? []) as KalbaPopularItem[]).map((item) => ({
-      ...item,
-      addon_groups: groupsByItem[item.id] ?? [],
-    })),
+    /* A dish nobody has priced is left off, the same as on the kiosk and the
+       till. It was rendering as "AED 0" beside a real photo, which reads as a
+       free lunch rather than as a gap in the admin panel. It comes back the
+       moment a price is typed in. */
+    popular: ((popularRes.data ?? []) as KalbaPopularItem[])
+      .filter((item) => sellable(item))
+      .map((item) => ({ ...item, addon_groups: groupsByItem[item.id] ?? [] })),
   };
 }
 

@@ -44,8 +44,12 @@ export async function POST(request: Request) {
   if (!passThrough(file)) {
     const webp = await sharp(Buffer.from(arrayBuffer))
       .rotate() // apply EXIF orientation before it gets stripped
-      .resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 85, effort: 3 })
+      /* 1600px at q82 rather than 2000 at q85. What is stored is now what is
+         served — there is no optimizer downstream resizing it for a phone — so
+         the stored file has to be the one a phone should get. A food card is
+         never shown above about 700px, and this still leaves room for retina. */
+      .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82, effort: 4 })
       .toBuffer();
     uploadData = new Uint8Array(webp);
     contentType = "image/webp";
