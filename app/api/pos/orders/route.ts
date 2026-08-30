@@ -61,17 +61,38 @@ export async function GET(request: Request) {
   });
 }
 
-/** Advancing an order: preparing, ready, cancelled. */
+const PAYMENTS = ["cash", "card", "online"];
+
+/**
+ * Advancing an order, and taking the money for one that arrived unpaid.
+ *
+ * A kiosk order is placed without payment — the customer pays at the counter
+ * when they collect. Recording that here does two things, and the second is the
+ * one that matters: it sets how it was paid, and it attaches the order to the
+ * cashier's open shift.
+ *
+ * Without that attachment the money is invisible to the day close, which counts
+ * orders by shift. The cash would sit in the drawer having been rung up
+ * nowhere, and every close would read over by exactly the day's kiosk takings.
+ */
 export async function PUT(request: Request) {
   const staff = await currentStaff();
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
   const status = String(body?.status ?? "");
+  const payment = String(body?.payment ?? "");
   const id = String(body?.id ?? "");
 
-  if (!STATUSES.includes(status) || !id) {
-    return NextResponse.json({ error: "Unknown order or status" }, { status: 400 });
+  if (!id) return NextResponse.json({ error: "Unknown order" }, { status: 400 });
+  if (!status && !payment) {
+    return NextResponse.json({ error: "Nothing to change" }, { status: 400 });
+  }
+  if (status && !STATUSES.includes(status)) {
+    return NextResponse.json({ error: "Unknown status" }, { status: 400 });
+  }
+  if (payment && !PAYMENTS.includes(payment)) {
+    return NextResponse.json({ error: "Unknown payment method" }, { status: 400 });
   }
 
   /* Cancelling is a manager's call. It puts a refund into the day's figures,
@@ -83,9 +104,38 @@ export async function PUT(request: Request) {
     );
   }
 
+  const patch: Record<string, unknown> = {};
+  if (status) patch.status = status;
+
+  if (payment) {
+    patch.payment_method = payment;
+
+    const shift = await openShiftFor(staff.id);
+    if (!shift) {
+      return NextResponse.json(
+        { error: "Open your shift before taking payment" },
+        { status: 409 },
+      );
+    }
+
+    /* Only claimed if it is not already on one. A till order belongs to the
+       shift that rang it up, and re-pointing it at whoever happened to touch it
+       later would move takings between two people's drawers. */
+    const { data: existing } = await supabaseAdminLive
+      .from("bookings")
+      .select("pos_shift_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!(existing as { pos_shift_id?: string | null } | null)?.pos_shift_id) {
+      patch.pos_shift_id = shift.id;
+      patch.pos_staff_uuid = staff.id;
+    }
+  }
+
   const { data, error } = await supabaseAdminLive
     .from("bookings")
-    .update({ status })
+    .update(patch)
     .eq("id", id)
     .in("type", ["pos", "kiosk"])
     .select()

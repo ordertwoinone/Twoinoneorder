@@ -57,6 +57,8 @@ const ORDER_TYPES: { key: PosOrderType; icon: typeof Utensils }[] = [
 ];
 
 export interface PlacedOrder {
+  /** Needed to print it — the receipt is a page, not this screen. */
+  id: string | null;
   code: string;
   total: number;
   payment: PosPayment;
@@ -211,6 +213,7 @@ export default function TillScreen({
         return;
       }
       setPlaced({
+        id: body.id ?? null,
         code: body.code,
         total: body.totals?.total ?? totals.total,
         payment,
@@ -506,7 +509,15 @@ export default function TillScreen({
               active={Boolean(note)}
             />
             <div className="flex-1" />
-            <Tool onClick={() => window.print()} icon={<Printer size={15} />} label="Print" />
+            {/* Reprints the last order rather than the screen. Off until there
+                is one, because a Print that prints the menu is worse than a
+                Print that is greyed out. */}
+            <Tool
+              onClick={() => placed?.id && window.open(`/pos/invoice/${placed.id}?print=1`, "_blank")}
+              icon={<Printer size={15} />}
+              label={placed ? `Reprint ${placed.code}` : "Print"}
+              disabled={!placed?.id}
+            />
           </div>
         </section>
       </div>
@@ -549,10 +560,12 @@ export default function TillScreen({
             </p>
             <div className="mt-5 flex gap-2">
               <button
-                onClick={() => window.print()}
-                className="flex-1 rounded-xl text-sm font-bold"
+                onClick={() => placed.id && window.open(`/pos/invoice/${placed.id}?print=1`, "_blank")}
+                disabled={!placed.id}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-40"
                 style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 46 }}
               >
+                <Printer size={15} />
                 Print receipt
               </button>
               <button
@@ -654,16 +667,19 @@ function Tool({
   icon,
   label,
   active,
+  disabled,
 }: {
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
   active?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-bold"
+      disabled={disabled}
+      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-bold disabled:opacity-40"
       style={{
         background: active ? POS.goodSoft : POS.page,
         color: active ? POS.good : POS.ink,

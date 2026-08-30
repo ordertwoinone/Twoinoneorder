@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MonitorSmartphone, RefreshCw, ShoppingCart } from "lucide-react";
+import { Banknote, CreditCard, Globe, MonitorSmartphone, Printer, RefreshCw, ShoppingCart } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed, posOrderCode } from "@/lib/pos/cart";
 import type { PosStaff } from "@/lib/pos/constants";
@@ -63,7 +63,10 @@ export default function OrdersScreen({
   const [orders, setOrders] = useState<BoardOrder[]>([]);
   const [prefix, setPrefix] = useState("ORD");
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>(kitchenOnly ? "" : "");
+  const [filter, setFilter] = useState<string>("");
+  /** "" = both, or "Till" / "Kiosk". */
+  const [source, setSource] = useState<"" | "Till" | "Kiosk">("");
+  const [paying, setPaying] = useState<BoardOrder | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -98,6 +101,27 @@ export default function OrdersScreen({
     }
   }
 
+  /**
+   * A kiosk order arrives unpaid — the customer pays when they collect. Doing
+   * it here is what puts the money on the cashier's shift, so the day close
+   * counts it and the drawer balances.
+   */
+  async function takePayment(order: BoardOrder, payment: string) {
+    setError("");
+    setPaying(null);
+    const res = await fetch("/api/pos/orders", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: order.id, payment, status: "completed" }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(body?.error || "Could not record that payment.");
+      return;
+    }
+    load();
+  }
+
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const o of orders) map[o.status] = (map[o.status] ?? 0) + 1;
@@ -109,8 +133,10 @@ export default function OrdersScreen({
     const base = kitchenOnly
       ? orders.filter((o) => o.status === "pending" || o.status === "confirmed")
       : orders;
-    return filter ? base.filter((o) => o.status === filter) : base;
-  }, [orders, filter, kitchenOnly]);
+    return base.filter(
+      (o) => (!filter || o.status === filter) && (!source || o.source === source),
+    );
+  }, [orders, filter, source, kitchenOnly]);
 
   return (
     <PosShell
@@ -133,6 +159,23 @@ export default function OrdersScreen({
       }
     >
       <div className="pos-scroll h-full p-4">
+        {!kitchenOnly && (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="me-1 text-[12px] font-bold" style={{ color: POS.inkSoft }}>Where from</span>
+            <Chip label={`Both (${orders.length})`} active={source === ""} onClick={() => setSource("")} />
+            <Chip
+              label={`Till (${orders.filter((o) => o.source === "Till").length})`}
+              active={source === "Till"}
+              onClick={() => setSource("Till")}
+            />
+            <Chip
+              label={`Kiosk (${orders.filter((o) => o.source === "Kiosk").length})`}
+              active={source === "Kiosk"}
+              onClick={() => setSource("Kiosk")}
+            />
+          </div>
+        )}
+
         {!kitchenOnly && (
           <div className="mb-4 flex flex-wrap gap-2">
             <Chip label={`All (${orders.length})`} active={filter === ""} onClick={() => setFilter("")} />
@@ -225,14 +268,24 @@ export default function OrdersScreen({
                     <span className="text-base font-black" style={{ color: POS.ink }}>
                       {money(order.total_amount)}
                     </span>
-                    <span className="text-[11.5px]" style={{ color: POS.inkSoft }}>
-                      {order.payment_method === "pending" || !order.payment_method
-                        ? "unpaid"
-                        : order.payment_method}
-                    </span>
+                    {order.payment_method === "pending" || !order.payment_method ? (
+                      /* Unpaid is not a label here, it is the next thing to do. */
+                      <button
+                        onClick={() => setPaying(order)}
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold"
+                        style={{ background: POS.action, color: "#fff" }}
+                      >
+                        <Banknote size={13} />
+                        Take payment
+                      </button>
+                    ) : (
+                      <span className="text-[11.5px] capitalize" style={{ color: POS.inkSoft }}>
+                        paid · {order.payment_method}
+                      </span>
+                    )}
                   </div>
 
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                     {STATUSES.map((s) => (
                       <button
                         key={s.value}
@@ -248,6 +301,15 @@ export default function OrdersScreen({
                         {s.label}
                       </button>
                     ))}
+                    <span className="flex-1" />
+                    <button
+                      onClick={() => window.open(`/pos/invoice/${order.id}?print=1`, "_blank")}
+                      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold"
+                      style={{ background: POS.page, color: POS.ink }}
+                    >
+                      <Printer size={13} />
+                      Print
+                    </button>
                   </div>
                 </div>
               );
@@ -255,6 +317,48 @@ export default function OrdersScreen({
           </div>
         )}
       </div>
+      {/* ─── Taking the money for an unpaid order ─── */}
+      {paying && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div className="w-full max-w-[380px] rounded-2xl bg-white p-6">
+            <p className="text-center text-[13px] font-semibold" style={{ color: POS.inkSoft }}>
+              {posOrderCode(prefix, paying.order_number)} · amount due
+            </p>
+            <p className="text-center text-4xl font-black" style={{ color: POS.ink }}>
+              {money(paying.total_amount)}
+            </p>
+            <p className="mt-2 text-center text-[12px]" style={{ color: POS.inkSoft }}>
+              This goes onto your shift, so it counts at day close.
+            </p>
+
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {([
+                ["cash", Banknote],
+                ["card", CreditCard],
+                ["online", Globe],
+              ] as const).map(([method, Icon]) => (
+                <button
+                  key={method}
+                  onClick={() => takePayment(paying, method)}
+                  className="flex flex-col items-center gap-1.5 rounded-xl py-3 text-[13px] font-bold capitalize"
+                  style={{ background: POS.page, color: POS.ink, border: `1px solid ${POS.line}` }}
+                >
+                  <Icon size={19} />
+                  {method}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setPaying(null)}
+              className="mt-4 w-full rounded-xl text-sm font-bold"
+              style={{ background: POS.page, color: POS.ink, height: 46 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </PosShell>
   );
 }
