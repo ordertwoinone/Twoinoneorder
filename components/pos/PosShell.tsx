@@ -13,7 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
-import { ROLE_LABEL, type PosStaff } from "@/lib/pos/constants";
+import { handlesCash, ROLE_LABEL, type PosStaff } from "@/lib/pos/constants";
 
 /**
  * The rail and the bar that every till screen sits inside.
@@ -25,12 +25,12 @@ import { ROLE_LABEL, type PosStaff } from "@/lib/pos/constants";
  */
 
 const NAV = [
-  { href: "/pos/till", label: "POS", icon: ShoppingCart },
-  { href: "/pos/orders", label: "Orders", icon: ClipboardList },
-  { href: "/pos/kitchen", label: "Kitchen", icon: ChefHat },
-  { href: "/pos/expenses", label: "Expenses", icon: Receipt },
-  { href: "/pos/reports", label: "Reports", icon: BarChart3 },
-  { href: "/pos/close", label: "Day Close", icon: Wallet },
+  { href: "/pos/till", label: "POS", icon: ShoppingCart, cash: true },
+  { href: "/pos/orders", label: "Orders", icon: ClipboardList, cash: true },
+  { href: "/pos/kitchen", label: "Kitchen", icon: ChefHat, cash: false },
+  { href: "/pos/expenses", label: "Expenses", icon: Receipt, cash: true },
+  { href: "/pos/reports", label: "Reports", icon: BarChart3, cash: true },
+  { href: "/pos/close", label: "Day Close", icon: Wallet, cash: true },
 ] as const;
 
 export default function PosShell({
@@ -38,12 +38,15 @@ export default function PosShell({
   title,
   subtitle,
   actions,
+  warning,
   children,
 }: {
   staff: PosStaff;
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
+  /** The unclosed-day banner, when there is one. Rendered under the bar. */
+  warning?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -68,7 +71,10 @@ export default function PosShell({
           <span style={{ color: POS.brand }}>1</span>
         </p>
 
-        {NAV.map((entry) => {
+        {/* A kitchen screen shows one thing. Everything else on this rail is a
+            till, a drawer or a ledger, and a cook pressing any of it lands on a
+            page that will only send them back. */}
+        {NAV.filter((entry) => !entry.cash || handlesCash(staff.role)).map((entry) => {
           const active = pathname?.startsWith(entry.href) ?? false;
           const Icon = entry.icon;
           return (
@@ -128,6 +134,8 @@ export default function PosShell({
             <span style={{ color: POS.inkSoft }}>· {ROLE_LABEL[staff.role]}</span>
           </span>
         </header>
+
+        {warning}
 
         <div className="flex-1 min-h-0">{children}</div>
       </div>

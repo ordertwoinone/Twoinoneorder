@@ -56,3 +56,20 @@ export interface PosShift {
   opening_counts: Record<string, number>;
   opening_note: string;
 }
+
+/**
+ * A shift left open from a previous day.
+ *
+ * Declared here rather than beside the query that finds them, because the
+ * warning banner is a client component and importing a type out of a module
+ * that holds the service-role key is one careless edit away from shipping it
+ * to the browser.
+ */
+export interface StaleShift {
+  id: string;
+  staff_name: string;
+  shift_label: string;
+  opened_at: string;
+  /** Whole days between it opening and now. 1 is "yesterday's". */
+  days_old: number;
+}

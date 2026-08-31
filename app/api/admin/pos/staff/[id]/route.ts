@@ -5,12 +5,14 @@ import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { hashPin } from "@/lib/pos/auth";
 import { isValidPin, PIN_MAX, PIN_MIN } from "@/lib/pos/constants";
 
+const ROLES = ["cashier", "manager", "kitchen"];
+
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   const body = await request.json().catch(() => ({}));
 
   const patch: Record<string, unknown> = {
     name: String(body?.name ?? "").trim().slice(0, 120),
-    role: body?.role === "manager" ? "manager" : "cashier",
+    role: ROLES.includes(body?.role) ? body.role : "cashier",
     is_active: body?.is_active !== false,
     updated_at: new Date().toISOString(),
   };

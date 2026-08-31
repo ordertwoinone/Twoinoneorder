@@ -2,6 +2,7 @@
 
 import { ArrowRight, CreditCard, Minus, Pencil, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { sizedImage } from "@/lib/image-url";
 import { addonSummary } from "@/lib/kalba/addons";
 import type { AddonSelection } from "@/lib/kalba/addons";
 import { aed, type KioskTotals } from "@/lib/kiosk/cart";
@@ -95,8 +96,9 @@ export default function ReviewPanel({
                   {line.item.image_url && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src={line.item.image_url}
+                      src={sizedImage(line.item.image_url, 200)}
                       alt=""
+                      loading="lazy"
                       className="w-[8vh] h-[8vh] rounded-[1.2vh] object-cover shrink-0"
                     />
                   )}

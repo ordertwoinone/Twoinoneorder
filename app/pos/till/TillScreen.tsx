@@ -17,6 +17,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
+import { sizedImage } from "@/lib/image-url";
 import { toPercent } from "@/lib/kalba/pricing";
 import { addonSummary, defaultSelection, type AddonSelection } from "@/lib/kalba/addons";
 import type { KioskCategory, KioskItem } from "@/lib/kiosk/types";
@@ -34,6 +35,8 @@ import {
   type PosQty,
 } from "@/lib/pos/cart";
 import PosShell from "@/components/pos/PosShell";
+import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
+import type { StaleShift } from "@/lib/pos/shift";
 import PayDialog from "@/components/pos/PayDialog";
 import DiscountDialog from "@/components/pos/DiscountDialog";
 
@@ -71,11 +74,13 @@ export default function TillScreen({
   settings,
   categories,
   items,
+  stale,
 }: {
   staff: PosStaff;
   settings: PosSettings;
   categories: KioskCategory[];
   items: KioskItem[];
+  stale: StaleShift[];
 }) {
   const [qty, setQty] = useState<PosQty>({});
   const [addons, setAddons] = useState<AddonSelection>({});
@@ -235,6 +240,7 @@ export default function TillScreen({
       staff={staff}
       title="POS System"
       subtitle="Two In One · University Kalba"
+      warning={<StaleShiftWarning shifts={stale} />}
       actions={
         <div className="flex items-center gap-2">
           <div className="relative">
@@ -439,7 +445,13 @@ export default function TillScreen({
                       <div className="relative w-full" style={{ aspectRatio: "4 / 3", background: POS.page }}>
                         {item.image_url && (
                           /* eslint-disable-next-line @next/next/no-img-element */
-                          <img src={item.image_url} alt="" loading="lazy" className="w-full h-full object-cover" />
+                          <img
+                            src={sizedImage(item.image_url, 300)}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
                         )}
                         {n > 0 && (
                           <span

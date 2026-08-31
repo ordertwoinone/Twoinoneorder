@@ -17,7 +17,7 @@ export const DEFAULT_POS_SETTINGS: PosSettings = {
   free_delivery_over: 0,
   max_cashier_discount_percent: 10,
   manager_expense_over: 500,
-  expected_float: 500,
+  expected_float: 0,
   whatsapp_report_to: "",
   whatsapp_report_label: "Management",
   whatsapp_auto_send: false,

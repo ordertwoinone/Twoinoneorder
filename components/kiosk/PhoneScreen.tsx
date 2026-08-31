@@ -9,12 +9,13 @@ import type { PrivilegeHolder } from "./ReviewPanel";
 import Keypad from "./Keypad";
 
 /**
- * Step 4 — the phone number, which is optional and says so.
+ * Step 4 — the phone number, now required.
  *
- * It buys the customer a copy of the receipt and a link to follow the order;
- * it is not a condition of being served, so "Skip" sits beside "Done" at the
- * same size rather than hidden as a link. Nobody standing in a queue should
- * have to hand over a number to get their lunch.
+ * It was skippable, and the branch asked for that to go: the number is how the
+ * order reaches the customer and how the counter finds them again, so an order
+ * without one is one nobody can chase. DONE stays off until the number is
+ * long enough for the country code beside it, rather than accepting four digits
+ * and failing later.
  */
 
 /** The country codes worth offering at a kiosk in Kalba. */
@@ -69,7 +70,7 @@ export default function PhoneScreen({
           Enter Your Phone Number
         </h1>
         <p className="mt-[1vh] text-[1.8vh]" style={{ color: KIOSK.inkSoft }}>
-          We&rsquo;ll send your order number and digital receipt — or skip it and just take the number.
+          We&rsquo;ll send your order number and digital receipt by SMS.
         </p>
 
         <div className="mt-[2.6vh] flex gap-[2.4vh] items-start">
@@ -228,17 +229,8 @@ export default function PhoneScreen({
         </button>
 
         <button
-          onClick={() => onDone("", [])}
-          disabled={submitting}
-          className="rounded-[1.4vh] px-[2.4vh] font-bold text-[1.7vh] active:scale-95 transition-transform disabled:opacity-40"
-          style={{ background: "#fff", color: KIOSK.inkSoft, border: `0.16vh solid ${KIOSK.line}`, height: "6.6vh" }}
-        >
-          Skip Phone Number
-        </button>
-
-        <button
-          onClick={() => onDone(complete ? `${dial.code}${national}` : "", channels)}
-          disabled={submitting || (digits.length > 0 && !complete)}
+          onClick={() => onDone(`${dial.code}${national}`, channels)}
+          disabled={submitting || !complete}
           className="flex-1 rounded-[1.4vh] flex items-center justify-center gap-[1.2vh] font-black text-[2.2vh] active:scale-[0.98] transition-transform disabled:opacity-35"
           style={{ background: KIOSK.gold, color: KIOSK.onGold, height: "6.6vh" }}
         >

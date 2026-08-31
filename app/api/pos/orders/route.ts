@@ -25,12 +25,17 @@ export async function GET(request: Request) {
   const status = (searchParams.get("status") ?? "").trim();
   const scope = searchParams.get("scope") ?? "today";
 
+  /* Named columns, not `*`. The board polls itself every few seconds on every
+     tablet in the branch, and a booking row carries an address, a raw payload
+     and a notes blob that no card on this screen renders. */
   let query = supabaseAdminLive
     .from("bookings")
-    .select("*")
+    .select(
+      "id, type, order_number, status, order_type, table_section, guest_name, phone, items, total_amount, payment_method, created_at",
+    )
     .in("type", ["pos", "kiosk"])
     .order("created_at", { ascending: false })
-    .limit(300);
+    .limit(120);
 
   if (STATUSES.includes(status)) query = query.eq("status", status);
 
@@ -93,6 +98,12 @@ export async function PUT(request: Request) {
   }
   if (payment && !PAYMENTS.includes(payment)) {
     return NextResponse.json({ error: "Unknown payment method" }, { status: 400 });
+  }
+
+  /* Moving an order along is the kitchen's whole job; touching the money is
+     not, and they have no shift for it to land on. */
+  if (payment && staff.role === "kitchen") {
+    return NextResponse.json({ error: "Kitchen accounts cannot take payment" }, { status: 403 });
   }
 
   /* Cancelling is a manager's call. It puts a refund into the day's figures,

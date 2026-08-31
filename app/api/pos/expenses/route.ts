@@ -50,6 +50,10 @@ export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
+  if (staff.role === "kitchen") {
+    return NextResponse.json({ error: "Kitchen accounts cannot record expenses" }, { status: 403 });
+  }
+
   const shift = await openShiftFor(staff.id);
   if (!shift) {
     return NextResponse.json({ error: "Open your shift before recording expenses" }, { status: 409 });

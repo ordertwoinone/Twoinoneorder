@@ -17,8 +17,14 @@ import { ROLE_LABEL, type PosStaff } from "@/lib/pos/constants";
  * sent is the count, never the sum.
  */
 
-/** What the drawer is meant to open with, until the count says otherwise. */
-const EXPECTED_FLOAT = 500;
+/**
+ * What the drawer is meant to open with.
+ *
+ * Zero unless a branch sets one in admin → POS → Settings. A figure invented
+ * here would show every count as "short" until it happened to match, and a
+ * screen that cries short on a correct drawer teaches people to ignore it.
+ */
+const EXPECTED_FLOAT = 0;
 
 export default function OpeningCash({
   staff,
@@ -184,14 +190,19 @@ export default function OpeningCash({
 
           {/* ─── Summary ─── */}
           <Card title="Opening Summary" icon={<ClipboardList size={16} />}>
-            <div>
-              <p className="text-[11px] font-semibold" style={{ color: POS.inkSoft }}>Expected Float</p>
-              <p className="text-sm font-bold" style={{ color: POS.ink }}>AED {expectedFloat.toFixed(2)}</p>
-            </div>
+            {expectedFloat > 0 && (
+              <div>
+                <p className="text-[11px] font-semibold" style={{ color: POS.inkSoft }}>Expected Float</p>
+                <p className="text-sm font-bold" style={{ color: POS.ink }}>AED {expectedFloat.toFixed(2)}</p>
+              </div>
+            )}
             <div style={{ borderTop: `1px solid ${POS.line}` }} className="pt-3">
               <p className="text-[11px] font-semibold" style={{ color: POS.inkSoft }}>Counted Cash</p>
               <p className="text-3xl font-black" style={{ color: POS.ink }}>AED {total.toFixed(2)}</p>
             </div>
+            {/* Nothing to be over or short against until a branch has said what
+                the drawer should start with. */}
+            {expectedFloat > 0 && (
             <div>
               <p className="text-[11px] font-semibold" style={{ color: POS.inkSoft }}>Difference</p>
               <div className="mt-0.5 flex items-center gap-2">
@@ -213,6 +224,7 @@ export default function OpeningCash({
                 </span>
               </div>
             </div>
+            )}
 
             <div>
               <p className="mb-1 text-[11px] font-semibold" style={{ color: POS.inkSoft }}>Notes</p>

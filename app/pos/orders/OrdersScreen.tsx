@@ -4,8 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, CreditCard, Globe, MonitorSmartphone, Printer, RefreshCw, ShoppingCart } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed, posOrderCode } from "@/lib/pos/cart";
-import type { PosStaff } from "@/lib/pos/constants";
+import { handlesCash, type PosStaff } from "@/lib/pos/constants";
 import PosShell from "@/components/pos/PosShell";
+import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
+import type { StaleShift } from "@/lib/pos/shift";
 
 /**
  * The board.
@@ -38,6 +40,9 @@ const STATUSES = [
   { value: "cancelled", label: "Cancelled", chip: "#FEE2E2", ink: "#B91C1C" },
 ] as const;
 
+/** What the kitchen can move an order to. Cancelling is a manager's call. */
+const KITCHEN_STATUSES = STATUSES.filter((s) => s.value !== "cancelled");
+
 const REFRESH_MS = 15_000;
 
 function money(v: unknown): string {
@@ -55,10 +60,12 @@ function ago(iso: string): string {
 export default function OrdersScreen({
   staff,
   kitchenOnly = false,
+  stale = [],
 }: {
   staff: PosStaff;
   /** The kitchen view: the same board, trimmed to what is being cooked. */
   kitchenOnly?: boolean;
+  stale?: StaleShift[];
 }) {
   const [orders, setOrders] = useState<BoardOrder[]>([]);
   const [prefix, setPrefix] = useState("ORD");
@@ -68,6 +75,9 @@ export default function OrdersScreen({
   const [source, setSource] = useState<"" | "Till" | "Kiosk">("");
   const [paying, setPaying] = useState<BoardOrder | null>(null);
   const [error, setError] = useState("");
+
+  /** Kitchen staff see the order; everyone else also sees what it is worth. */
+  const showsMoney = handlesCash(staff.role);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/pos/orders?scope=today", { cache: "no-store" });
@@ -80,9 +90,38 @@ export default function OrdersScreen({
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  /**
+   * Polls only while somebody is looking.
+   *
+   * A tablet left on the orders board overnight was asking the database for the
+   * day's orders four times a minute until morning, and a branch with three
+   * screens open did it three times over. Hidden tabs stop, and a tab coming
+   * back refreshes immediately rather than waiting out the interval.
+   */
   useEffect(() => {
-    const t = setInterval(load, REFRESH_MS);
-    return () => clearInterval(t);
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (timer) return;
+      timer = setInterval(load, REFRESH_MS);
+    };
+    const stop = () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else { load(); start(); }
+    };
+
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [load]);
 
   async function setStatus(id: string, status: string) {
@@ -147,6 +186,7 @@ export default function OrdersScreen({
           ? `${shown.length} being worked on · till and kiosk together`
           : `${orders.length} today · till and kiosk together`
       }
+      warning={<StaleShiftWarning shifts={stale} />}
       actions={
         <button
           onClick={() => { setLoading(true); load(); }}
@@ -265,10 +305,12 @@ export default function OrdersScreen({
                     className="mt-2.5 flex items-baseline justify-between pt-2.5"
                     style={{ borderTop: `1px solid ${POS.line}` }}
                   >
+                    {/* A cook is plating food, not taking payment. The total and
+                        whether it is settled are noise on that screen. */}
                     <span className="text-base font-black" style={{ color: POS.ink }}>
-                      {money(order.total_amount)}
+                      {showsMoney ? money(order.total_amount) : ""}
                     </span>
-                    {order.payment_method === "pending" || !order.payment_method ? (
+                    {!showsMoney ? null : order.payment_method === "pending" || !order.payment_method ? (
                       /* Unpaid is not a label here, it is the next thing to do. */
                       <button
                         onClick={() => setPaying(order)}
@@ -286,7 +328,7 @@ export default function OrdersScreen({
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    {STATUSES.map((s) => (
+                    {(showsMoney ? STATUSES : KITCHEN_STATUSES).map((s) => (
                       <button
                         key={s.value}
                         onClick={() => setStatus(order.id, s.value)}
@@ -302,6 +344,7 @@ export default function OrdersScreen({
                       </button>
                     ))}
                     <span className="flex-1" />
+                    {showsMoney && (
                     <button
                       onClick={() => window.open(`/pos/invoice/${order.id}?print=1`, "_blank")}
                       className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold"
@@ -310,6 +353,7 @@ export default function OrdersScreen({
                       <Printer size={13} />
                       Print
                     </button>
+                    )}
                   </div>
                 </div>
               );

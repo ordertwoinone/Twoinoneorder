@@ -129,3 +129,12 @@ INSERT INTO pos_expense_categories (label, sort_order) VALUES
   ('Utilities',         6),
   ('Other',             99)
 ON CONFLICT (label) DO NOTHING;
+
+-- ─── A photograph of whoever signed the day off ──────────────────────────────
+-- Cash reconciliation is the one moment a till can be quietly robbed, and a
+-- name on a row only proves a PIN was known. Taken openly: the close screen
+-- shows the live preview and says the photo is kept, so it is a deterrent
+-- people can see rather than surveillance they cannot.
+
+ALTER TABLE pos_shifts
+  ADD COLUMN IF NOT EXISTS close_photo_url text NOT NULL DEFAULT '';

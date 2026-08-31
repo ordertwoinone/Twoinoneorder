@@ -6,7 +6,14 @@
  * server runtime into a client bundle, and fail the build doing it.
  */
 
-export type PosRole = "cashier" | "manager";
+/**
+ * What someone signed in at a screen is here to do.
+ *
+ * 'kitchen' is not a lesser cashier — it is a different job at a different
+ * screen. They never open a drawer, so they are never asked to count one, and
+ * nothing that touches money is on their rail at all.
+ */
+export type PosRole = "cashier" | "manager" | "kitchen";
 
 export const PIN_MIN = 4;
 export const PIN_MAX = 6;
@@ -31,4 +38,15 @@ export function isValidPin(pin: string): boolean {
 export const ROLE_LABEL: Record<PosRole, string> = {
   cashier: "Cashier",
   manager: "Manager",
+  kitchen: "Kitchen",
 };
+
+/** Kitchen staff have no drawer, so no shift, so no day to close. */
+export function handlesCash(role: PosRole): boolean {
+  return role !== "kitchen";
+}
+
+/** Where someone lands after signing in. */
+export function homeFor(role: PosRole): string {
+  return role === "kitchen" ? "/pos/kitchen" : "/pos/till";
+}

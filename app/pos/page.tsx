@@ -15,8 +15,11 @@ export default async function PosPage() {
   const staff = await currentStaff();
   if (!staff) redirect("/pos/login");
 
+  // Kitchen goes straight to their board — no drawer, so nothing to count.
+  if (staff.role === "kitchen") redirect("/pos/kitchen");
+
   const shift = await openShiftFor(staff.id);
-  // You cannot take money before the drawer has been counted.
+  // Nobody takes money before the drawer has been counted.
   if (!shift) redirect("/pos/shift/open");
 
   redirect("/pos/till");

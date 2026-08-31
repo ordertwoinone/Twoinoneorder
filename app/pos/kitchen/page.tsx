@@ -1,4 +1,4 @@
-import { requireShift } from "@/lib/pos/guard";
+import { requireStaff } from "@/lib/pos/guard";
 import OrdersScreen from "../orders/OrdersScreen";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,6 @@ export const dynamic = "force-dynamic";
  * than it might be.
  */
 export default async function KitchenPage() {
-  const { staff } = await requireShift();
+  const staff = await requireStaff();
   return <OrdersScreen staff={staff} kitchenOnly />;
 }

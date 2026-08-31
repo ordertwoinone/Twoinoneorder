@@ -10,6 +10,9 @@ import type { PosStaff } from "@/lib/pos/constants";
 import type { ShiftTakings } from "@/lib/pos/reconcile";
 import type { PosShift } from "@/lib/pos/shift";
 import PosShell from "@/components/pos/PosShell";
+import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
+import type { StaleShift } from "@/lib/pos/shift";
+import CloseCamera from "@/components/pos/CloseCamera";
 
 /**
  * Day Close.
@@ -25,15 +28,18 @@ import PosShell from "@/components/pos/PosShell";
 export default function DayCloseScreen({
   staff,
   shift: initialShift,
+  stale = [],
 }: {
   staff: PosStaff;
   shift: PosShift;
+  stale?: StaleShift[];
 }) {
   const router = useRouter();
   const [shift] = useState(initialShift);
   const [takings, setTakings] = useState<ShiftTakings | null>(null);
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [note, setNote] = useState("");
+  const [photo, setPhoto] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ summary: string; whatsappUrl: string; difference: number } | null>(null);
@@ -60,10 +66,27 @@ export default function DayCloseScreen({
   async function close() {
     setBusy(true);
     setError("");
+
+    /* The photo goes up first and on its own. If it fails the close still
+       happens — a reconciliation counted by hand must not be lost to a flaky
+       upload, and a shift with no picture is a question, not a disaster. */
+    let photoUrl = "";
+    if (photo) {
+      try {
+        const form = new FormData();
+        form.append("photo", photo, "close.jpg");
+        const up = await fetch("/api/pos/close-photo", { method: "POST", body: form });
+        const body = await up.json().catch(() => null);
+        if (up.ok && body?.url) photoUrl = body.url;
+      } catch {
+        /* carry on without it */
+      }
+    }
+
     const res = await fetch("/api/pos/close", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ counts, note }),
+      body: JSON.stringify({ counts, note, photoUrl }),
     });
     const body = await res.json().catch(() => null);
     setBusy(false);
@@ -148,6 +171,7 @@ export default function DayCloseScreen({
       staff={staff}
       title="Day Close"
       subtitle={`${shift.shift_label} shift · opened ${new Date(shift.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+      warning={<StaleShiftWarning shifts={stale} />}
     >
       <div className="pos-scroll h-full p-4">
         <div className="grid gap-4 xl:grid-cols-[1fr_1fr_320px]">
@@ -255,6 +279,8 @@ export default function DayCloseScreen({
                 </span>
               )}
             </div>
+
+            <CloseCamera onCapture={setPhoto} />
 
             <textarea
               value={note}

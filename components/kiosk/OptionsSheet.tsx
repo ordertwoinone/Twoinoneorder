@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, Minus, Plus, X } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { sizedImage } from "@/lib/image-url";
 import { discountedPrice, roundMoney } from "@/lib/kalba/pricing";
 import {
   addonPrice,
@@ -71,7 +72,7 @@ export default function OptionsSheet({
           {item.image_url && (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={item.image_url}
+              src={sizedImage(item.image_url, 200)}
               alt=""
               className="w-[7vh] h-[7vh] rounded-[1.2vh] object-cover shrink-0"
             />

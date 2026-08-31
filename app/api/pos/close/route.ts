@@ -83,6 +83,8 @@ export async function POST(request: Request) {
       expected_cash: takings.expectedCash,
       difference,
       closing_note: String(body?.note ?? "").trim().slice(0, 500),
+      // Uploaded separately, so a failed photo never costs a counted drawer.
+      close_photo_url: String(body?.photoUrl ?? "").trim().slice(0, 500),
       /* Frozen here rather than recomputed later. The orders can still be
          refunded or amended afterwards; what was signed off must not move. */
       gross_sales: takings.grossSales,

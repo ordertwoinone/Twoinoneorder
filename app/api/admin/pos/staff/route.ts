@@ -5,6 +5,8 @@ import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { hashPin } from "@/lib/pos/auth";
 import { isValidPin, PIN_MAX, PIN_MIN } from "@/lib/pos/constants";
 
+const ROLES = ["cashier", "manager", "kitchen"];
+
 /** Lowercase, no spaces — it is typed on a keypad at the start of every shift. */
 function cleanStaffId(input: unknown): string {
   return String(input ?? "").trim().toLowerCase().replace(/\s+/g, "").slice(0, 40);
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
       {
         staff_id: staffId,
         name: String(body?.name ?? "").trim().slice(0, 120),
-        role: body?.role === "manager" ? "manager" : "cashier",
+        role: ROLES.includes(body?.role) ? body.role : "cashier",
         is_active: body?.is_active !== false,
         pin_hash: hash,
         pin_salt: salt,

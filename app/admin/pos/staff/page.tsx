@@ -167,7 +167,7 @@ export default function PosStaffAdmin() {
                   <td className="px-4 py-3 font-semibold text-gray-800">{s.name || "—"}</td>
                   <td className="px-4 py-3">
                     <span
-                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${s.role === "manager" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"}`}
+                      className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${s.role === "manager" ? "bg-purple-100 text-purple-700" : s.role === "kitchen" ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"}`}
                     >
                       {ROLE_LABEL[s.role]}
                     </span>
@@ -269,6 +269,7 @@ export default function PosStaffAdmin() {
                   >
                     <option value="cashier">Cashier</option>
                     <option value="manager">Manager</option>
+                    <option value="kitchen">Kitchen</option>
                   </select>
                 </div>
                 <div>
@@ -284,8 +285,9 @@ export default function PosStaffAdmin() {
                 </div>
               </div>
               <p className="-mt-2 text-[11px] text-gray-500">
-                A manager can void an order, approve a large expense and close the day. Switching
-                someone off signs them out of every tablet immediately.
+                A manager can void an order, approve a large expense and close the day. A kitchen
+                account only ever sees the kitchen board — no till, no drawer, no prices, and no
+                float to count. Switching someone off signs them out of every tablet immediately.
               </p>
 
               <div>

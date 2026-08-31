@@ -15,8 +15,25 @@ export async function requireShift(): Promise<{ staff: PosStaff; shift: PosShift
   const staff = await currentStaff();
   if (!staff) redirect("/pos/login");
 
+  /* Kitchen has no drawer and so no shift. Sending them to count one would be
+     asking a cook to reconcile a float they will never touch — and they would
+     be stuck there, because they cannot open a till either. */
+  if (staff.role === "kitchen") redirect("/pos/kitchen");
+
   const shift = await openShiftFor(staff.id);
   if (!shift) redirect("/pos/shift/open");
 
   return { staff, shift };
+}
+
+/**
+ * Signed in, and that is all.
+ *
+ * For screens that do not touch cash — the kitchen board, and printing a
+ * receipt for an order somebody else rang up.
+ */
+export async function requireStaff(): Promise<PosStaff> {
+  const staff = await currentStaff();
+  if (!staff) redirect("/pos/login");
+  return staff;
 }

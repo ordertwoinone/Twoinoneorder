@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Minus, Plus, UtensilsCrossed } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { sizedImage } from "@/lib/image-url";
 import { discountedPrice, toPercent } from "@/lib/kalba/pricing";
 import type { KioskItem } from "@/lib/kiosk/types";
 import { itemPrice } from "@/lib/kiosk/cart";
@@ -77,9 +78,10 @@ export default function ItemCard({
         {item.image_url && imageOk ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={item.image_url}
+            src={sizedImage(item.image_url, 600)}
             alt=""
             loading="lazy"
+            decoding="async"
             onError={() => setImageOk(false)}
             className="w-full h-full object-cover"
             style={{ borderRadius: "inherit" }}

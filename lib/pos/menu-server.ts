@@ -36,9 +36,14 @@ export async function getPosMenu(): Promise<PosMenu> {
       .eq("is_active", true)
       .order("sort_order")
       .order("created_at"),
+    /* Named columns. The till needs a name, a price, a picture and its options;
+       the Arabic twins, the top-picks flags and the deals ordering are all
+       dead weight on a payload that is fetched on every navigation. */
     supabaseAdminLive
       .from("kalba_popular_items")
-      .select("*")
+      .select(
+        "id, name, description, price, rating, time_text, image_url, category_id, tags, discount_percent, show_in_top_picks, created_at, sort_order",
+      )
       .eq("is_active", true)
       .order("sort_order"),
     getLiveAddonGroupsByItem(),
