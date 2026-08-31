@@ -42,6 +42,8 @@ export interface KioskTotals {
   privilegeDiscount: number;
   /** Offers and card together — the "You save" figure. */
   totalSaved: number;
+  /** Charged on a delivery order, waived over the threshold. Never discounted. */
+  deliveryCharge: number;
   /** What the customer owes. */
   total: number;
   /** The VAT already inside `total`, not a charge on top of it. */
@@ -88,6 +90,7 @@ export function kioskTotals(
   qty: KioskQty,
   addons: AddonSelection,
   privilegePercent = 0,
+  delivery?: { charge: number; freeOver: number } | null,
 ): KioskTotals {
   const lines = items
     .filter((item) => (qty[item.id] ?? 0) > 0)
@@ -98,7 +101,14 @@ export function kioskTotals(
 
   const percent = toPercent(privilegePercent);
   const privilegeDiscount = percent > 0 ? roundMoney((subtotal * percent) / 100) : 0;
-  const total = roundMoney(subtotal - privilegeDiscount);
+  /* Added after the card comes off, and never discounted by it: 10% off a
+     customer's lunch should not take 10% off the driver's fee. */
+  const deliveryCharge =
+    delivery && subtotal > 0 && !(delivery.freeOver > 0 && subtotal >= delivery.freeOver)
+      ? roundMoney(delivery.charge)
+      : 0;
+
+  const total = roundMoney(subtotal - privilegeDiscount + deliveryCharge);
 
   return {
     lines,
@@ -107,6 +117,7 @@ export function kioskTotals(
     itemOffers,
     privilegeDiscount,
     totalSaved: roundMoney(itemOffers + privilegeDiscount),
+    deliveryCharge,
     total,
     vat: vatIncludedIn(total),
   };

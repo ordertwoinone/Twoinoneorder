@@ -121,3 +121,19 @@ ALTER TABLE bookings
 INSERT INTO kiosk_settings (brand_name)
 SELECT 'TWO IN ONE'
 WHERE NOT EXISTS (SELECT 1 FROM kiosk_settings);
+
+-- ─── Taking a delivery order at the screen ───────────────────────────────────
+-- The kiosk stands inside the branch, so collection is the common case and
+-- stays the default. Delivery is opt-in per branch: a screen in a food court
+-- that does not deliver should not be offering it.
+--
+-- The charge is applied on top of the food and is never discounted — a
+-- percentage off a customer's bill should not quietly come off the driver's fee.
+
+ALTER TABLE kiosk_settings
+  ADD COLUMN IF NOT EXISTS delivery_enabled    boolean       NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS delivery_charge     numeric(10,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS free_delivery_over  numeric(10,2) NOT NULL DEFAULT 0,
+  -- Shown under the delivery option, e.g. "Within 5km, 30–45 minutes".
+  ADD COLUMN IF NOT EXISTS delivery_note       text          NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS delivery_note_ar    text          NOT NULL DEFAULT '';

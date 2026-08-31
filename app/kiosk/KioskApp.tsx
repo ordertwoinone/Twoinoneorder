@@ -4,7 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { defaultSelection, type AddonSelection } from "@/lib/kalba/addons";
 import { kioskTotals, type KioskQty } from "@/lib/kiosk/cart";
-import { deviceLabel, type KioskData, type KioskDevice, type KioskItem } from "@/lib/kiosk/types";
+import {
+  deviceLabel,
+  type KioskData,
+  type KioskDevice,
+  type KioskFulfilment,
+  type KioskItem,
+} from "@/lib/kiosk/types";
 import { KioskHeader, type KioskStepKey } from "@/components/kiosk/Chrome";
 import AttractScreen from "@/components/kiosk/AttractScreen";
 import MenuScreen from "@/components/kiosk/MenuScreen";
@@ -67,6 +73,11 @@ export default function KioskApp({
   const [privilege, setPrivilege] = useState<PrivilegeHolder | null>(null);
   const [privilegeCode, setPrivilegeCode] = useState("");
 
+  /* Collect unless the customer says otherwise. The screen is standing in the
+     branch they would be collecting from. */
+  const [fulfilment, setFulfilment] = useState<KioskFulfilment>("pickup");
+  const [address, setAddress] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState<KioskConfirmation | null>(null);
@@ -74,8 +85,20 @@ export default function KioskApp({
   const { settings, ads, categories, items } = data;
 
   const totals = useMemo(
-    () => kioskTotals(items, qty, addons, privilege?.discount_percent ?? 0),
-    [items, qty, addons, privilege],
+    () =>
+      kioskTotals(
+        items,
+        qty,
+        addons,
+        privilege?.discount_percent ?? 0,
+        fulfilment === "delivery"
+          ? {
+              charge: Number(settings.delivery_charge) || 0,
+              freeOver: Number(settings.free_delivery_over) || 0,
+            }
+          : null,
+      ),
+    [items, qty, addons, privilege, fulfilment, settings],
   );
 
   /* ─── Going back to sleep ─────────────────────────────────────────────── */
@@ -85,6 +108,8 @@ export default function KioskApp({
     setAddons({});
     setPrivilege(null);
     setPrivilegeCode("");
+    setFulfilment("pickup");
+    setAddress("");
     setReviewOpen(false);
     setPrivilegeOpen(false);
     setSheet(null);
@@ -201,6 +226,8 @@ export default function KioskApp({
           privilegeCode,
           receiptChannels: channels,
           deviceSlug: device?.slug ?? "",
+          fulfilment,
+          address,
         }),
       });
       const body = await res.json();
@@ -220,6 +247,10 @@ export default function KioskApp({
         phone,
         privilege: body.privilege ?? null,
         trackUrl: body.id ? `${window.location.origin}/order/${body.id}` : "",
+        /* Taken from the reply, not from what this screen chose: the server has
+           the last word on whether a delivery was accepted. */
+        fulfilment: body.fulfilment === "delivery" ? "delivery" : "pickup",
+        address: body.address ?? "",
       });
       setScreen("done");
     } catch {
@@ -302,6 +333,9 @@ export default function KioskApp({
           settings={settings}
           totals={totals}
           privilege={privilege}
+          fulfilment={fulfilment}
+          address={address}
+          onAddress={setAddress}
           submitting={submitting}
           error={error}
           onBack={() => { setScreen("menu"); setReviewOpen(true); }}
@@ -318,6 +352,9 @@ export default function KioskApp({
         <ReviewPanel
           totals={totals}
           addons={addons}
+          settings={settings}
+          fulfilment={fulfilment}
+          onFulfilment={setFulfilment}
           privilege={privilege}
           privilegeEnabled={settings.privilege_enabled}
           onClose={() => setReviewOpen(false)}

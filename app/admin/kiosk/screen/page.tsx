@@ -267,6 +267,47 @@ export default function KioskScreenAdmin() {
           )}
         </Card>
 
+        {/* ─── Collect or deliver ─── */}
+        <Card title="Delivery">
+          <Toggle
+            label="Offer delivery at the kiosk"
+            hint="Off means every order is for collection and the screen never asks."
+            on={form.delivery_enabled}
+            onChange={(v) => field("delivery_enabled", v)}
+          />
+
+          {form.delivery_enabled && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Num
+                  label="Delivery charge (AED)"
+                  value={Number(form.delivery_charge)}
+                  onChange={(v) => field("delivery_charge", v)}
+                />
+                <Num
+                  label="Free over (AED)"
+                  hint="0 never waives it"
+                  value={Number(form.free_delivery_over)}
+                  onChange={(v) => field("free_delivery_over", v)}
+                />
+              </div>
+              <BilingualField
+                label="Line under the delivery option"
+                value={form.delivery_note}
+                valueAr={form.delivery_note_ar ?? ""}
+                onChange={(v) => field("delivery_note", v)}
+                onChangeAr={(v) => field("delivery_note_ar", v as Form["delivery_note_ar"])}
+                placeholder="Within 5km · 30–45 minutes"
+              />
+              <p className="-mt-2 text-[11px] text-gray-500">
+                A delivery order asks for an address on the keypad screen and will not go to the
+                kitchen without one. The charge is added after any Privilege Card discount, so a
+                discount never comes out of the driver&rsquo;s fee.
+              </p>
+            </>
+          )}
+        </Card>
+
         {/* ─── The flow ─── */}
         <Card title="Checkout steps">
           <Toggle
@@ -387,16 +428,21 @@ function Text({
 
 function Num({
   label,
+  hint,
   value,
   onChange,
 }: {
   label: string;
+  hint?: string;
   value: number;
   onChange: (v: number) => void;
 }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-700 mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+        {label}
+        {hint && <span className="text-gray-400 font-normal"> — {hint}</span>}
+      </label>
       <input
         type="number"
         min={0}

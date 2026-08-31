@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Check, Lock, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Bike, Check, Lock, MapPin, ShieldCheck, ShoppingBag } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { aed, type KioskTotals } from "@/lib/kiosk/cart";
-import type { KioskSettings } from "@/lib/kiosk/types";
+import type { KioskFulfilment, KioskSettings } from "@/lib/kiosk/types";
+import Keyboard from "./Keyboard";
 import type { PrivilegeHolder } from "./ReviewPanel";
 import Keypad from "./Keypad";
 
@@ -39,6 +40,9 @@ export default function PhoneScreen({
   settings,
   totals,
   privilege,
+  fulfilment,
+  address,
+  onAddress,
   submitting,
   error,
   onBack,
@@ -47,6 +51,9 @@ export default function PhoneScreen({
   settings: KioskSettings;
   totals: KioskTotals;
   privilege: PrivilegeHolder | null;
+  fulfilment: KioskFulfilment;
+  address: string;
+  onAddress: (value: string) => void;
   submitting: boolean;
   error: string;
   onBack: () => void;
@@ -63,14 +70,22 @@ export default function PhoneScreen({
 
   const channels = [sms && "sms", whatsapp && "whatsapp"].filter(Boolean) as string[];
 
+  /* A delivery has to have somewhere to go. Short enough to be a typo rather
+     than an address, and the driver is the one who pays for that mistake. */
+  const delivering = fulfilment === "delivery";
+  const addressOk = !delivering || address.trim().length >= 10;
+  const ready = complete && addressOk;
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="kiosk-scroll flex-1 px-[3vh] pt-[2.4vh] pb-[1.6vh]">
         <h1 className="font-black text-[4vh] leading-none" style={{ color: KIOSK.ink }}>
-          Enter Your Phone Number
+          {delivering ? "Where are we delivering?" : "Enter Your Phone Number"}
         </h1>
         <p className="mt-[1vh] text-[1.8vh]" style={{ color: KIOSK.inkSoft }}>
-          We&rsquo;ll send your order number and digital receipt by SMS.
+          {delivering
+            ? "We need a number and an address before the kitchen starts."
+            : "We’ll send your order number and digital receipt by SMS."}
         </p>
 
         <div className="mt-[2.6vh] flex gap-[2.4vh] items-start">
@@ -104,17 +119,54 @@ export default function PhoneScreen({
                   value={pretty(digits)}
                   readOnly
                   placeholder="50 123 4567"
-                  className="w-full bg-transparent font-black text-[2.8vh] tracking-wide"
+                  /* Sized to fit "50 123 4567" in the box beside the country
+                     code, rather than running out of it. */
+                  className="w-full bg-transparent font-black text-[2.2vh] tracking-wide"
                   style={{ color: digits ? KIOSK.ink : "#C7C7CC" }}
                 />
               </div>
             </div>
 
-            <Keypad
-              onDigit={(d) => setDigits((v) => (v.length >= 14 ? v : v + d))}
-              onBackspace={() => setDigits((v) => v.slice(0, -1))}
-              onClear={() => setDigits("")}
-            />
+            {delivering ? (
+              <>
+                <div
+                  className="rounded-[1.3vh] px-[1.6vh] py-[1.2vh] mb-[1.2vh]"
+                  style={{
+                    border: `0.2vh solid ${address ? KIOSK.gold : KIOSK.line}`,
+                    background: address ? "#FFFDF6" : "#fff",
+                    minHeight: "7vh",
+                  }}
+                >
+                  <p
+                    className="flex items-center gap-[0.6vh] text-[1.2vh] font-semibold mb-[0.4vh]"
+                    style={{ color: KIOSK.inkSoft }}
+                  >
+                    <MapPin className="w-[1.4vh] h-[1.4vh]" />
+                    Delivery address
+                  </p>
+                  <p
+                    className="text-[1.9vh] font-bold leading-snug break-words"
+                    style={{ color: address ? KIOSK.ink : "#C7C7CC" }}
+                  >
+                    {address || "Building, street, area"}
+                  </p>
+                </div>
+
+                {/* Letters, because a numeric pad cannot write an address and
+                    the tablet's own keyboard would cover half the panel. */}
+                <Keyboard
+                  onKey={(c) => onAddress(address.length >= 160 ? address : address + c)}
+                  onBackspace={() => onAddress(address.slice(0, -1))}
+                  onSpace={() => onAddress(address.length >= 160 ? address : `${address} `)}
+                />
+              </>
+            ) : (
+              <Keypad
+                onDigit={(d) => setDigits((v) => (v.length >= 14 ? v : v + d))}
+                onBackspace={() => setDigits((v) => v.slice(0, -1))}
+                onClear={() => setDigits("")}
+              />
+            )}
 
             {/* ─── What to do with it ─── */}
             <div className="mt-[1.8vh] space-y-[1vh]">
@@ -151,8 +203,19 @@ export default function PhoneScreen({
               </h2>
             </div>
 
-            <p className="text-[1.4vh] mb-[1.4vh]" style={{ color: KIOSK.inkSoft }}>
+            <p className="text-[1.4vh] mb-[0.8vh]" style={{ color: KIOSK.inkSoft }}>
               {totals.count} item{totals.count === 1 ? "" : "s"}
+            </p>
+            <p
+              className="flex items-center gap-[0.6vh] text-[1.4vh] font-bold mb-[1.4vh]"
+              style={{ color: KIOSK.ink }}
+            >
+              {delivering ? (
+                <Bike className="w-[1.6vh] h-[1.6vh]" />
+              ) : (
+                <ShoppingBag className="w-[1.6vh] h-[1.6vh]" />
+              )}
+              {delivering ? "Delivery" : "Collect at the counter"}
             </p>
 
             <Row label="Subtotal" value={aed(totals.subtotal)} />
@@ -165,6 +228,9 @@ export default function PhoneScreen({
                 value={`− ${aed(totals.privilegeDiscount)}`}
                 good
               />
+            )}
+            {totals.deliveryCharge > 0 && (
+              <Row label="Delivery" value={aed(totals.deliveryCharge)} />
             )}
 
             <div
@@ -230,7 +296,7 @@ export default function PhoneScreen({
 
         <button
           onClick={() => onDone(`${dial.code}${national}`, channels)}
-          disabled={submitting || !complete}
+          disabled={submitting || !ready}
           className="flex-1 rounded-[1.4vh] flex items-center justify-center gap-[1.2vh] font-black text-[2.2vh] active:scale-[0.98] transition-transform disabled:opacity-35"
           style={{ background: KIOSK.gold, color: KIOSK.onGold, height: "6.6vh" }}
         >

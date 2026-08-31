@@ -87,7 +87,18 @@ export interface KioskSettings {
   is_live: boolean;
   closed_message: string;
   closed_message_ar?: string | null;
+
+  /* Collection or delivery. Off means the screen never asks and every order is
+     for the counter, which is what a kiosk in a food court wants. */
+  delivery_enabled: boolean;
+  delivery_charge: number | string;
+  free_delivery_over: number | string;
+  delivery_note: string;
+  delivery_note_ar?: string | null;
 }
+
+/** What the customer chose to happen to the food. */
+export type KioskFulfilment = "pickup" | "delivery";
 
 /**
  * Everything one screen needs, in the one payload /api/kiosk/menu answers.
@@ -156,6 +167,10 @@ export const DEFAULT_KIOSK_SETTINGS: KioskSettings = {
   whatsapp_receipt_enabled: true,
   is_live: true,
   closed_message: "The kiosk is closed right now. Please order at the counter.",
+  delivery_enabled: false,
+  delivery_charge: 0,
+  free_delivery_over: 0,
+  delivery_note: "",
 };
 
 /** "TIO-1048" — what the customer reads out at the counter. */

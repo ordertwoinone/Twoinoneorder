@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, MapPin, Printer, Receipt, RotateCw, ShieldCheck, ShoppingBag } from "lucide-react";
+import { Bike, Check, MapPin, Printer, Receipt, RotateCw, ShieldCheck, ShoppingBag } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { aed } from "@/lib/kiosk/cart";
 import type { KioskSettings } from "@/lib/kiosk/types";
@@ -28,6 +28,9 @@ export interface KioskConfirmation {
   phone: string;
   privilege: { member_id: string; percent: number } | null;
   trackUrl: string;
+  /** Where the food is going, so the screen stops promising a counter. */
+  fulfilment: "pickup" | "delivery";
+  address: string;
 }
 
 /** "+971501234567" → "+971 5X XXX 4567" — enough to recognise, not to read off. */
@@ -101,7 +104,9 @@ export default function DoneScreen({
             {confirmation.code}
           </p>
           <p className="text-[1.5vh]" style={{ color: KIOSK.inkSoft }}>
-            Please show this number at the pickup counter.
+            {confirmation.fulfilment === "delivery"
+              ? "Quote this number if you call about your order."
+              : "Please show this number at the pickup counter."}
           </p>
         </div>
 
@@ -137,16 +142,24 @@ export default function DoneScreen({
               {settings.ready_minutes_min}–{settings.ready_minutes_max} min
             </p>
           </div>
-          <div className="text-end">
+          <div className="text-end max-w-[55%]">
             <p className="text-[1.45vh]" style={{ color: KIOSK.inkSoft }}>
-              Pickup
+              {confirmation.fulfilment === "delivery" ? "Delivering to" : "Pickup"}
             </p>
             <p
-              className="font-bold text-[1.7vh] mt-[0.4vh] flex items-center gap-[0.6vh] justify-end"
+              className="font-bold text-[1.7vh] mt-[0.4vh] flex items-start gap-[0.6vh] justify-end leading-snug"
               style={{ color: KIOSK.ink }}
             >
-              <MapPin className="w-[1.8vh] h-[1.8vh]" />
-              {settings.pickup_counter}
+              {confirmation.fulfilment === "delivery" ? (
+                <Bike className="w-[1.8vh] h-[1.8vh] shrink-0 mt-[0.2vh]" />
+              ) : (
+                <MapPin className="w-[1.8vh] h-[1.8vh] shrink-0 mt-[0.2vh]" />
+              )}
+              <span>
+                {confirmation.fulfilment === "delivery"
+                  ? confirmation.address
+                  : settings.pickup_counter}
+              </span>
             </p>
           </div>
         </div>
@@ -154,7 +167,10 @@ export default function DoneScreen({
         {/* Where it has got to. Nothing is ticked past "Received" yet — the
             kitchen moves it on, and the QR is how the customer follows it. */}
         <div className="mt-[2vh] flex items-center">
-          {["Received", "Preparing", "Ready"].map((stage, i) => (
+          {(confirmation.fulfilment === "delivery"
+            ? ["Received", "Preparing", "On the way"]
+            : ["Received", "Preparing", "Ready"]
+          ).map((stage, i) => (
             <div key={stage} className="flex-1 flex items-center">
               <div className="flex flex-col items-center gap-[0.7vh] shrink-0">
                 <span
@@ -196,7 +212,9 @@ export default function DoneScreen({
             {aed(confirmation.total)}
           </p>
           <p className="text-[1.35vh] mt-[0.5vh]" style={{ color: KIOSK.inkSoft }}>
-            Pay at the counter when you collect.
+            {confirmation.fulfilment === "delivery"
+              ? "Pay the driver when it arrives."
+              : "Pay at the counter when you collect."}
           </p>
           {confirmation.privilege && (
             <span
