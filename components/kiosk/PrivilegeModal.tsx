@@ -15,10 +15,12 @@ import Keypad from "./Keypad";
  * screen never decides what a card is worth.
  */
 export default function PrivilegeModal({
+  t,
   onCancel,
   onApplied,
   onSkip,
 }: {
+  t: (key: string) => string;
   onCancel: () => void;
   onApplied: (holder: PrivilegeHolder, code: string) => void;
   onSkip: () => void;
@@ -79,10 +81,10 @@ export default function PrivilegeModal({
           </span>
           <div className="flex-1 min-w-0">
             <h2 className="font-black text-[2.3vh] leading-tight" style={{ color: KIOSK.ink }}>
-              Privilege Card
+              {t("privilege.title")}
             </h2>
             <p className="text-[1.35vh] mt-[0.3vh]" style={{ color: KIOSK.inkSoft }}>
-              Enter the member number printed on your card
+              {t("privilege.subtitle")}
             </p>
           </div>
           <button
@@ -121,7 +123,7 @@ export default function PrivilegeModal({
             className="text-[1.3vh] text-center mb-[1.6vh] min-h-[2vh]"
             style={{ color: error ? KIOSK.bad : KIOSK.inkSoft }}
           >
-            {error || "Your member id, or the 16 digits on the front"}
+            {error || t("privilege.hint")}
           </p>
 
           <Keypad
@@ -138,7 +140,7 @@ export default function PrivilegeModal({
               className="rounded-[1.4vh] px-[2.4vh] font-bold text-[1.7vh] active:scale-95 transition-transform"
               style={{ background: "#F4F4F4", color: KIOSK.ink, height: "6.4vh" }}
             >
-              No card
+              {t("privilege.noCard")}
             </button>
             <button
               onClick={check}
@@ -146,7 +148,7 @@ export default function PrivilegeModal({
               className="flex-1 rounded-[1.4vh] font-black text-[2vh] active:scale-[0.98] transition-transform disabled:opacity-35"
               style={{ background: KIOSK.gold, color: KIOSK.onGold, height: "6.4vh" }}
             >
-              {checking ? "Checking…" : "Apply Card"}
+              {checking ? t("privilege.checking") : t("privilege.apply")}
             </button>
           </div>
         </div>

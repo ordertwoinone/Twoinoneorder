@@ -2,6 +2,7 @@
 
 import { ArrowRight, CreditCard, Minus, Pencil, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { kioskField, type KioskLang } from "@/lib/kiosk/i18n";
 import { sizedImage } from "@/lib/image-url";
 import { addonSummary } from "@/lib/kalba/addons";
 import type { AddonSelection } from "@/lib/kalba/addons";
@@ -23,6 +24,8 @@ export interface PrivilegeHolder {
 }
 
 export default function ReviewPanel({
+  t,
+  lang,
   totals,
   addons,
   privilege,
@@ -37,6 +40,8 @@ export default function ReviewPanel({
   onContinue,
   continueLabel,
 }: {
+  t: (key: string) => string;
+  lang: KioskLang;
   totals: KioskTotals;
   addons: AddonSelection;
   privilege: PrivilegeHolder | null;
@@ -62,10 +67,10 @@ export default function ReviewPanel({
         >
           <div>
             <h2 className="font-black text-[2.6vh] leading-none" style={{ color: KIOSK.ink }}>
-              Your Order
+              {t("review.title")}
             </h2>
             <p className="text-[1.35vh] mt-[0.6vh]" style={{ color: KIOSK.inkSoft }}>
-              {totals.count} item{totals.count === 1 ? "" : "s"} · check it over before you pay
+              {totals.count} {totals.count === 1 ? t("cart.item") : t("cart.items")} · {t("review.checkOver")}
             </p>
           </div>
           <button
@@ -82,7 +87,7 @@ export default function ReviewPanel({
         <div className="kiosk-scroll flex-1 px-[2.4vh] py-[1.4vh]">
           {totals.lines.length === 0 ? (
             <p className="py-[8vh] text-center text-[1.7vh]" style={{ color: KIOSK.inkSoft }}>
-              Nothing in your order yet.
+              {t("review.empty")}
             </p>
           ) : (
             totals.lines.map((line) => {
@@ -105,7 +110,7 @@ export default function ReviewPanel({
 
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-[1.7vh] leading-tight" style={{ color: KIOSK.ink }}>
-                      {line.item.name}
+                      {kioskField(lang, line.item, "name")}
                     </p>
 
                     {extras && (
@@ -119,11 +124,11 @@ export default function ReviewPanel({
 
                     <div className="flex items-center gap-[1.2vh] mt-[0.6vh]">
                       <span className="text-[1.35vh] font-semibold" style={{ color: KIOSK.inkSoft }}>
-                        {aed(line.unitPrice)} each
+                        {aed(line.unitPrice)} {t("review.each")}
                       </span>
                       {line.offerSaving > 0 && (
                         <span className="text-[1.2vh] font-bold" style={{ color: KIOSK.good }}>
-                          saved {aed(line.offerSaving)}
+                          {t("review.saved")} {aed(line.offerSaving)}
                         </span>
                       )}
                     </div>
@@ -139,7 +144,7 @@ export default function ReviewPanel({
                           style={{ background: KIOSK.goldSoft, color: KIOSK.onGold }}
                         >
                           <Pencil className="w-[1.4vh] h-[1.4vh]" />
-                          Change · {line.qty}
+                          {t("review.change")} · {line.qty}
                         </button>
                       ) : (
                         <div
@@ -208,10 +213,10 @@ export default function ReviewPanel({
                 <ShieldCheck className="w-[2.4vh] h-[2.4vh] shrink-0" style={{ color: KIOSK.good }} />
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-[1.5vh] leading-tight" style={{ color: "#15803D" }}>
-                    Privilege Card applied
+                    {t("review.privilegeApplied")}
                   </p>
                   <p className="text-[1.2vh] truncate" style={{ color: "#166534" }}>
-                    {privilege.member_id} · {privilege.discount_percent}% off
+                    {privilege.member_id} · {privilege.discount_percent}% {t("review.off")}
                   </p>
                 </div>
                 <button
@@ -219,7 +224,7 @@ export default function ReviewPanel({
                   className="text-[1.3vh] font-bold underline shrink-0"
                   style={{ color: "#166534" }}
                 >
-                  Remove
+                  {t("review.remove")}
                 </button>
               </div>
             ) : (
@@ -234,10 +239,10 @@ export default function ReviewPanel({
                     className="block font-bold text-[1.5vh] leading-tight"
                     style={{ color: KIOSK.onGold }}
                   >
-                    Have a Privilege Card?
+                    {t("review.havePrivilege")}
                   </span>
                   <span className="block text-[1.2vh]" style={{ color: "#6B5A12" }}>
-                    Enter your member number for your discount
+                    {t("review.enterMember")}
                   </span>
                 </span>
                 <ArrowRight className="w-[2vh] h-[2vh] shrink-0" style={{ color: KIOSK.onGold }} />
@@ -245,13 +250,13 @@ export default function ReviewPanel({
             )
           )}
 
-          <Money label="Subtotal" value={aed(totals.subtotal)} />
+          <Money label={t("review.subtotal")} value={aed(totals.subtotal)} />
           {totals.itemOffers > 0 && (
-            <Money label="Item offers" value={`− ${aed(totals.itemOffers)}`} good />
+            <Money label={t("review.itemOffers")} value={`− ${aed(totals.itemOffers)}`} good />
           )}
           {totals.privilegeDiscount > 0 && (
             <Money
-              label={`Privilege discount (${privilege?.discount_percent ?? 0}%)`}
+              label={`${t("review.privilegeDiscount")} (${privilege?.discount_percent ?? 0}%)`}
               value={`− ${aed(totals.privilegeDiscount)}`}
               good
             />
@@ -262,14 +267,14 @@ export default function ReviewPanel({
             style={{ borderTop: `0.13vh solid ${KIOSK.line}` }}
           >
             <span className="font-black text-[2vh]" style={{ color: KIOSK.ink }}>
-              Total
+              {t("review.total")}
             </span>
             <span className="font-black text-[3vh]" style={{ color: KIOSK.ink }}>
               {aed(totals.total)}
             </span>
           </div>
           <p className="text-[1.2vh] mt-[0.3vh] text-end" style={{ color: KIOSK.inkSoft }}>
-            Includes {aed(totals.vat)} VAT
+            {t("review.includesVat")} {aed(totals.vat)} {t("review.vat")}
           </p>
 
           <div className="flex gap-[1.2vh] mt-[1.8vh]">
@@ -278,7 +283,7 @@ export default function ReviewPanel({
               className="rounded-[1.4vh] px-[2.4vh] font-bold text-[1.7vh] active:scale-95 transition-transform"
               style={{ background: "#F4F4F4", color: KIOSK.ink, height: "6.2vh" }}
             >
-              Add More
+              {t("review.addMore")}
             </button>
             <button
               onClick={onContinue}

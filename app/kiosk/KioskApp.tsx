@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { dirFor, kioskT, type KioskLang } from "@/lib/kiosk/i18n";
 import { defaultSelection, type AddonSelection } from "@/lib/kalba/addons";
 import { kioskTotals, type KioskQty } from "@/lib/kiosk/cart";
 import {
@@ -77,6 +78,12 @@ export default function KioskApp({
      branch they would be collecting from. */
   const [fulfilment, setFulfilment] = useState<KioskFulfilment>("pickup");
 
+  /* Language is order state, not a preference. A customer who switches to
+     Arabic has not set the screen to Arabic for everybody after them, so it
+     resets with the basket like everything else. */
+  const [lang, setLang] = useState<KioskLang>("en");
+  const t = useMemo(() => kioskT(lang), [lang]);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState<KioskConfirmation | null>(null);
@@ -96,6 +103,7 @@ export default function KioskApp({
     setPrivilege(null);
     setPrivilegeCode("");
     setFulfilment("pickup");
+    setLang("en");
     setReviewOpen(false);
     setPrivilegeOpen(false);
     setSheet(null);
@@ -273,6 +281,8 @@ export default function KioskApp({
       <AttractScreen
         settings={settings}
         ads={ads}
+        lang={lang}
+        onLang={setLang}
         deviceName={device ? deviceLabel(device) : ""}
         closedMessage={closed ? settings.closed_message : ""}
         onStart={() => setScreen("menu")}
@@ -281,8 +291,17 @@ export default function KioskApp({
   }
 
   return (
+    /*
+     * dir and the Arabic face hang here, not on the layout.
+     *
+     * The layout pins the whole route to English so a tablet set to Arabic
+     * cannot mirror a screen nobody asked to be mirrored. The customer's own
+     * choice is a different thing, and it belongs where the choice is kept.
+     */
     <div
-      className="w-full h-full flex flex-col relative bg-white"
+      className="kiosk-lang w-full h-full flex flex-col relative bg-white"
+      dir={dirFor(lang)}
+      lang={lang}
       onPointerDown={bumpIdle}
       onScroll={bumpIdle}
     >
@@ -293,13 +312,15 @@ export default function KioskApp({
         step={step}
         skip={skip}
         deviceName={device ? deviceLabel(device) : ""}
-        language="English"
-        onLanguage={() => { /* Arabic is stored beside every field; wiring the
-                              toggle is the next piece of work. */ }}
+        lang={lang}
+        onLang={setLang}
+        t={t}
       />
 
       {screen === "menu" && (
         <MenuScreen
+          t={t}
+          lang={lang}
           settings={settings}
           categories={categories}
           items={items}
@@ -314,6 +335,7 @@ export default function KioskApp({
 
       {screen === "phone" && (
         <PhoneScreen
+          t={t}
           settings={settings}
           totals={totals}
           privilege={privilege}
@@ -327,12 +349,14 @@ export default function KioskApp({
       )}
 
       {screen === "done" && confirmation && (
-        <DoneScreen settings={settings} confirmation={confirmation} onReset={reset} />
+        <DoneScreen t={t} lang={lang} settings={settings} confirmation={confirmation} onReset={reset} />
       )}
 
       {/* ─── Panels over the menu ─── */}
       {screen === "menu" && reviewOpen && (
         <ReviewPanel
+          t={t}
+          lang={lang}
           totals={totals}
           addons={addons}
           privilege={privilege}
@@ -352,12 +376,14 @@ export default function KioskApp({
               placeOrder("", []);
             }
           }}
-          continueLabel={settings.phone_enabled ? "Continue" : "Place Order"}
+          continueLabel={settings.phone_enabled ? t("review.continue") : t("review.placeOrder")}
         />
       )}
 
       {screen === "menu" && sheet && (
         <OptionsSheet
+          t={t}
+          lang={lang}
           item={sheet.item}
           initialSelection={addons[sheet.item.id]}
           initialQty={sheet.editing ? qty[sheet.item.id] : 1}
@@ -372,6 +398,7 @@ export default function KioskApp({
 
       {privilegeOpen && (
         <PrivilegeModal
+          t={t}
           onCancel={() => setPrivilegeOpen(false)}
           onSkip={() => setPrivilegeOpen(false)}
           onApplied={(holder, code) => {

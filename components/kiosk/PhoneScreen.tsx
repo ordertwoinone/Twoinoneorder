@@ -36,6 +36,7 @@ function pretty(digits: string): string {
 }
 
 export default function PhoneScreen({
+  t,
   settings,
   totals,
   privilege,
@@ -46,6 +47,7 @@ export default function PhoneScreen({
   onBack,
   onDone,
 }: {
+  t: (key: string) => string;
   settings: KioskSettings;
   totals: KioskTotals;
   privilege: PrivilegeHolder | null;
@@ -73,10 +75,10 @@ export default function PhoneScreen({
     <div className="flex-1 flex flex-col min-h-0">
       <div className="kiosk-scroll flex-1 px-[3vh] pt-[2.4vh] pb-[1.6vh]">
         <h1 className="font-black text-[4vh] leading-none" style={{ color: KIOSK.ink }}>
-          Enter Your Phone Number
+          {t("phone.title")}
         </h1>
         <p className="mt-[1vh] text-[1.8vh]" style={{ color: KIOSK.inkSoft }}>
-          We&rsquo;ll send your order number and digital receipt by SMS.
+          {t("phone.subtitle")}
         </p>
 
         {/* Collecting or delivering, asked here because this is the screen the
@@ -84,8 +86,8 @@ export default function PhoneScreen({
             branch takes the address on the phone number above. */}
         <div className="mt-[2vh] grid grid-cols-2 gap-[1.4vh]">
           {([
-            ["pickup", ShoppingBag, "Pickup"],
-            ["delivery", Bike, "Delivery"],
+            ["pickup", ShoppingBag, t("phone.pickup")],
+            ["delivery", Bike, t("phone.delivery")],
           ] as const).map(([key, Icon, label]) => {
             const on = fulfilment === key;
             return (
@@ -160,11 +162,11 @@ export default function PhoneScreen({
             {/* ─── What to do with it ─── */}
             <div className="mt-[1.8vh] space-y-[1vh]">
               {settings.sms_receipt_enabled && (
-                <CheckRow label="Send receipt by SMS" on={sms} onToggle={() => setSms((v) => !v)} />
+                <CheckRow label={t("phone.smsReceipt")} on={sms} onToggle={() => setSms((v) => !v)} />
               )}
               {settings.whatsapp_receipt_enabled && (
                 <CheckRow
-                  label="Send receipt by WhatsApp"
+                  label={t("phone.whatsappReceipt")}
                   on={whatsapp}
                   onToggle={() => setWhatsapp((v) => !v)}
                 />
@@ -176,7 +178,7 @@ export default function PhoneScreen({
               style={{ color: KIOSK.inkSoft }}
             >
               <Lock className="w-[1.5vh] h-[1.5vh]" />
-              Your number is used only for this order.
+              {t("phone.privacy")}
             </p>
           </div>
 
@@ -188,12 +190,12 @@ export default function PhoneScreen({
             <div className="flex items-center gap-[1vh] mb-[1.4vh]">
               <ShoppingBag className="w-[2vh] h-[2vh]" style={{ color: KIOSK.inkSoft }} />
               <h2 className="font-black text-[1.8vh]" style={{ color: KIOSK.ink }}>
-                Final Order Summary
+                {t("phone.summary")}
               </h2>
             </div>
 
             <p className="text-[1.4vh] mb-[0.8vh]" style={{ color: KIOSK.inkSoft }}>
-              {totals.count} item{totals.count === 1 ? "" : "s"}
+              {totals.count} {totals.count === 1 ? t("cart.item") : t("cart.items")}
             </p>
             <p
               className="flex items-center gap-[0.6vh] text-[1.4vh] font-bold mb-[1.4vh]"
@@ -204,16 +206,16 @@ export default function PhoneScreen({
               ) : (
                 <ShoppingBag className="w-[1.6vh] h-[1.6vh]" />
               )}
-              {delivering ? "Delivery" : "Pickup"}
+              {delivering ? t("phone.delivery") : t("phone.pickup")}
             </p>
 
-            <Row label="Subtotal" value={aed(totals.subtotal)} />
+            <Row label={t("review.subtotal")} value={aed(totals.subtotal)} />
             {totals.itemOffers > 0 && (
-              <Row label="Item offers" value={`− ${aed(totals.itemOffers)}`} good />
+              <Row label={t("review.itemOffers")} value={`− ${aed(totals.itemOffers)}`} good />
             )}
             {totals.privilegeDiscount > 0 && (
               <Row
-                label={`Privilege discount (${privilege?.discount_percent ?? 0}%)`}
+                label={`${t("review.privilegeDiscount")} (${privilege?.discount_percent ?? 0}%)`}
                 value={`− ${aed(totals.privilegeDiscount)}`}
                 good
               />
@@ -224,18 +226,18 @@ export default function PhoneScreen({
               style={{ borderTop: `0.13vh solid ${KIOSK.line}` }}
             >
               <p className="text-[1.4vh]" style={{ color: KIOSK.inkSoft }}>
-                Total
+                {t("review.total")}
               </p>
               <p className="font-black text-[3.6vh] leading-tight" style={{ color: KIOSK.ink }}>
                 {aed(totals.total)}
               </p>
               {totals.totalSaved > 0 && (
                 <p className="text-[1.4vh] font-bold mt-[0.3vh]" style={{ color: KIOSK.good }}>
-                  You save {aed(totals.totalSaved)}
+                  {t("cart.youSave")} {aed(totals.totalSaved)}
                 </p>
               )}
               <p className="text-[1.2vh] mt-[0.5vh]" style={{ color: KIOSK.inkSoft }}>
-                Includes {aed(totals.vat)} VAT
+                {t("review.includesVat")} {aed(totals.vat)} {t("review.vat")}
               </p>
             </div>
 
@@ -246,9 +248,7 @@ export default function PhoneScreen({
               >
                 <ShieldCheck className="w-[2vh] h-[2vh] shrink-0" style={{ color: KIOSK.good }} />
                 <span className="text-[1.3vh] font-bold leading-tight" style={{ color: "#15803D" }}>
-                  Privilege Card
-                  <br />
-                  Applied
+                  {t("review.privilegeApplied")}
                 </span>
               </div>
             )}
@@ -277,7 +277,7 @@ export default function PhoneScreen({
           style={{ background: "#F4F4F4", color: KIOSK.ink, height: "6.6vh" }}
         >
           <ArrowLeft strokeWidth={3} className="w-[2vh] h-[2vh]" />
-          Back
+          {t("phone.back")}
         </button>
 
         <button
@@ -286,7 +286,7 @@ export default function PhoneScreen({
           className="flex-1 rounded-[1.4vh] flex items-center justify-center gap-[1.2vh] font-black text-[2.2vh] active:scale-[0.98] transition-transform disabled:opacity-35"
           style={{ background: KIOSK.gold, color: KIOSK.onGold, height: "6.6vh" }}
         >
-          {submitting ? "Sending to the kitchen…" : "DONE"}
+          {submitting ? t("phone.sending") : t("phone.done")}
           {!submitting && <Check strokeWidth={3.5} className="w-[2.4vh] h-[2.4vh]" />}
         </button>
       </div>

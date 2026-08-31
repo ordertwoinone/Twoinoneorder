@@ -3,18 +3,22 @@
 import { useState } from "react";
 import { Minus, Plus, UtensilsCrossed } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { kioskField, type KioskLang } from "@/lib/kiosk/i18n";
 import { sizedImage } from "@/lib/image-url";
 import { discountedPrice, toPercent } from "@/lib/kalba/pricing";
 import type { KioskItem } from "@/lib/kiosk/types";
 import { itemPrice } from "@/lib/kiosk/cart";
 
 /** The corner flash on a card, at most one, strongest claim first. */
-export function itemBadge(item: KioskItem): { text: string; bg: string; fg: string } | null {
+export function itemBadge(
+  item: KioskItem,
+  t: (key: string) => string,
+): { text: string; bg: string; fg: string } | null {
   const offer = toPercent(item.discount_percent);
-  if (offer > 0) return { text: `${offer}% OFF`, bg: KIOSK.good, fg: "#fff" };
-  if (item.show_in_top_picks) return { text: "BEST SELLER", bg: KIOSK.gold, fg: KIOSK.onGold };
-  if ((item.tags ?? []).includes("spicy")) return { text: "SPICY", bg: "#EF4444", fg: "#fff" };
-  if ((item.tags ?? []).includes("veg")) return { text: "VEG", bg: "#15803D", fg: "#fff" };
+  if (offer > 0) return { text: `${offer}% ${t("badge.off")}`, bg: KIOSK.good, fg: "#fff" };
+  if (item.show_in_top_picks) return { text: t("badge.bestSeller"), bg: KIOSK.gold, fg: KIOSK.onGold };
+  if ((item.tags ?? []).includes("spicy")) return { text: t("badge.spicy"), bg: "#EF4444", fg: "#fff" };
+  if ((item.tags ?? []).includes("veg")) return { text: t("badge.veg"), bg: "#15803D", fg: "#fff" };
   return null;
 }
 
@@ -33,11 +37,15 @@ export function itemBadge(item: KioskItem): { text: string; bg: string; fg: stri
  */
 export default function ItemCard({
   item,
+  lang,
+  t,
   qty,
   onAdd,
   onLess,
 }: {
   item: KioskItem;
+  lang: KioskLang;
+  t: (key: string) => string;
   qty: number;
   onAdd: () => void;
   onLess: () => void;
@@ -49,7 +57,7 @@ export default function ItemCard({
   const list = itemPrice(item);
   const offer = toPercent(item.discount_percent);
   const net = discountedPrice(list, offer);
-  const badge = itemBadge(item);
+  const badge = itemBadge(item, t);
   const asks = (item.addon_groups ?? []).length > 0;
   const chosen = qty > 0;
 
@@ -156,7 +164,7 @@ export default function ItemCard({
             minHeight: "3.4vh",
           }}
         >
-          {item.name}
+          {kioskField(lang, item, "name")}
         </p>
 
         <p className="mt-auto flex items-baseline gap-[0.6vh] leading-none">

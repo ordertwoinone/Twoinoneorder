@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Check, Minus, Plus, X } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { kioskField, type KioskLang } from "@/lib/kiosk/i18n";
 import { sizedImage } from "@/lib/image-url";
 import { discountedPrice, roundMoney } from "@/lib/kalba/pricing";
 import {
@@ -31,12 +32,16 @@ import type { KioskItem } from "@/lib/kiosk/types";
  * out leaves whatever was already in the cart exactly as it was.
  */
 export default function OptionsSheet({
+  t,
+  lang,
   item,
   initialSelection,
   initialQty,
   onCancel,
   onConfirm,
 }: {
+  t: (key: string) => string;
+  lang: KioskLang;
   item: KioskItem;
   /** What this dish already had ticked, when re-opened to change an answer. */
   initialSelection?: string[];
@@ -79,14 +84,14 @@ export default function OptionsSheet({
           )}
           <div className="min-w-0 flex-1">
             <h2 className="font-black text-[2.4vh] leading-tight" style={{ color: KIOSK.ink }}>
-              {item.name}
+              {kioskField(lang, item, "name")}
             </h2>
             {item.description && (
               <p
                 className="text-[1.4vh] mt-[0.4vh] truncate"
                 style={{ color: KIOSK.inkSoft }}
               >
-                {item.description}
+                {kioskField(lang, item, "description")}
               </p>
             )}
           </div>
@@ -108,7 +113,7 @@ export default function OptionsSheet({
               <section key={group.id} className="mb-[2.4vh]">
                 <div className="flex items-baseline gap-[1vh] mb-[1.1vh]">
                   <h3 className="font-extrabold text-[1.9vh]" style={{ color: KIOSK.ink }}>
-                    {group.name}
+                    {kioskField(lang, group, "name")}
                   </h3>
                   <span
                     className="text-[1.15vh] font-bold rounded-full px-[1vh] py-[0.25vh]"
@@ -118,11 +123,11 @@ export default function OptionsSheet({
                         : { background: "#F4F4F5", color: KIOSK.inkSoft }
                     }
                   >
-                    {isRequired(group) ? "Required" : "Optional"}
+                    {isRequired(group) ? t("options.required") : t("options.optional")}
                   </span>
                   {!single && group.max_select > 0 && (
                     <span className="text-[1.15vh]" style={{ color: KIOSK.inkSoft }}>
-                      up to {group.max_select}
+                      {t("options.upTo")} {group.max_select}
                     </span>
                   )}
                 </div>
@@ -158,7 +163,7 @@ export default function OptionsSheet({
                             className="block font-bold text-[1.5vh] leading-tight truncate"
                             style={{ color: KIOSK.ink }}
                           >
-                            {option.name}
+                            {kioskField(lang, option, "name")}
                           </span>
                           {price > 0 && (
                             <span
@@ -216,12 +221,12 @@ export default function OptionsSheet({
           >
             {complete ? (
               <>
-                Add to Order
+                {t("options.add")}
                 <span className="opacity-70">·</span>
                 AED {line.toFixed(2)}
               </>
             ) : (
-              `Choose ${missing?.name ?? "your options"}`
+              `${t("options.choose")} ${missing ? kioskField(lang, missing, "name") : ""}`.trim()
             )}
           </button>
         </div>

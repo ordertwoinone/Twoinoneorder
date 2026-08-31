@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Plus, ShoppingBag } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { kioskField, type KioskLang } from "@/lib/kiosk/i18n";
 import { toPercent } from "@/lib/kalba/pricing";
 import { aed, itemPrice, type KioskQty, type KioskTotals } from "@/lib/kiosk/cart";
 import type { KioskCategory, KioskItem, KioskSettings } from "@/lib/kiosk/types";
@@ -24,19 +25,19 @@ const NEW_FOR_DAYS = 21;
 type FilterKey = "all" | "popular" | "cheap" | "veg" | "spicy" | "offers" | "new";
 
 const FILTERS: { key: FilterKey; label: string; test: (i: KioskItem) => boolean }[] = [
-  { key: "all", label: "All", test: () => true },
-  { key: "popular", label: "★ Popular", test: (i) => Boolean(i.show_in_top_picks) },
+  { key: "all", label: "menu.allCategories", test: () => true },
+  { key: "popular", label: "menu.popular", test: (i) => Boolean(i.show_in_top_picks) },
   {
     key: "cheap",
-    label: `Under AED ${CHEAP_UNDER}`,
+    label: "menu.cheap",
     test: (i) => itemPrice(i) > 0 && itemPrice(i) < CHEAP_UNDER,
   },
-  { key: "veg", label: "\u{1F33F} Vegetarian", test: (i) => (i.tags ?? []).includes("veg") },
-  { key: "spicy", label: "\u{1F336} Spicy", test: (i) => (i.tags ?? []).includes("spicy") },
-  { key: "offers", label: "% Offers", test: (i) => toPercent(i.discount_percent) > 0 },
+  { key: "veg", label: "menu.veg", test: (i) => (i.tags ?? []).includes("veg") },
+  { key: "spicy", label: "menu.spicy", test: (i) => (i.tags ?? []).includes("spicy") },
+  { key: "offers", label: "menu.offers", test: (i) => toPercent(i.discount_percent) > 0 },
   {
     key: "new",
-    label: "✦ New",
+    label: "menu.new",
     test: (i) => {
       if (!i.created_at) return false;
       const age = Date.now() - new Date(i.created_at).getTime();
@@ -46,6 +47,8 @@ const FILTERS: { key: FilterKey; label: string; test: (i: KioskItem) => boolean 
 ];
 
 export default function MenuScreen({
+  t,
+  lang,
   settings,
   categories,
   items,
@@ -56,6 +59,8 @@ export default function MenuScreen({
   onReview,
   onAddCombo,
 }: {
+  t: (key: string) => string;
+  lang: KioskLang;
   settings: KioskSettings;
   categories: KioskCategory[];
   items: KioskItem[];
@@ -99,14 +104,14 @@ export default function MenuScreen({
     }
 
     const filed = categories
-      .map((c) => ({ key: c.id, emoji: c.emoji, label: c.label, items: buckets.get(c.id) ?? [] }))
+      .map((c) => ({ key: c.id, emoji: c.emoji, label: kioskField(lang, c, "label"), items: buckets.get(c.id) ?? [] }))
       .filter((g) => g.items.length > 0);
 
     // A dish nobody has filed still has to be orderable.
     return unfiled.length > 0
-      ? [...filed, { key: "unfiled", emoji: "🍽️", label: "More", items: unfiled }]
+      ? [...filed, { key: "unfiled", emoji: "🍽️", label: t("menu.more"), items: unfiled }]
       : filed;
-  }, [categories, shown, category]);
+  }, [categories, shown, category, lang, t]);
 
   const comboReady = settings.combo_enabled && settings.combo_item_ids.length > 0;
 
@@ -121,10 +126,10 @@ export default function MenuScreen({
           >
             <div className="flex-1 p-[2.2vh] min-w-0">
               <h2 className="font-black text-[3.1vh] leading-none" style={{ color: KIOSK.onGold }}>
-                {settings.combo_title}
+                {kioskField(lang, settings, "combo_title")}
               </h2>
               <p className="mt-[0.7vh] text-[1.5vh] font-semibold" style={{ color: "#6B5A12" }}>
-                {settings.combo_subtitle}
+                {kioskField(lang, settings, "combo_subtitle")}
               </p>
               <div className="mt-[1.5vh] flex items-end gap-[1.2vh]">
                 <span className="text-[1.4vh] font-bold" style={{ color: "#6B5A12" }}>
@@ -138,7 +143,7 @@ export default function MenuScreen({
                     className="rounded-[0.8vh] px-[1vh] py-[0.5vh] text-[1.25vh] font-extrabold mb-[0.4vh]"
                     style={{ background: "#fff", color: KIOSK.onGold }}
                   >
-                    Save AED {Number(settings.combo_save).toFixed(0)}
+                    {t("menu.save")} {Number(settings.combo_save).toFixed(0)}
                   </span>
                 )}
               </div>
@@ -147,7 +152,7 @@ export default function MenuScreen({
                 className="mt-[1.6vh] rounded-full px-[2vh] flex items-center gap-[0.8vh] font-bold text-[1.5vh] active:scale-95 transition-transform"
                 style={{ background: "#fff", color: KIOSK.onGold, height: "4.4vh" }}
               >
-                Add Combo
+                {t("menu.addCombo")}
                 <Plus strokeWidth={3} className="w-[1.8vh] h-[1.8vh]" />
               </button>
             </div>
@@ -163,7 +168,7 @@ export default function MenuScreen({
           <div className="kiosk-scroll flex gap-[1.1vh] overflow-x-auto pb-[1.4vh] -mx-[0.4vh] px-[0.4vh]">
             <CategoryChip
               emoji={"\u{1F37D}️"}
-              label="All"
+              label={t("menu.allCategories")}
               active={category === "all"}
               onClick={() => setCategory("all")}
             />
@@ -171,7 +176,7 @@ export default function MenuScreen({
               <CategoryChip
                 key={c.id}
                 emoji={c.emoji}
-                label={c.label}
+                label={kioskField(lang, c, "label")}
                 active={category === c.id}
                 onClick={() => setCategory(c.id)}
               />
@@ -196,7 +201,7 @@ export default function MenuScreen({
                     border: `0.13vh solid ${active ? KIOSK.gold : KIOSK.line}`,
                   }}
                 >
-                  {f.label}
+                  {f.key === "cheap" ? `${t("menu.cheap")} ${CHEAP_UNDER}` : t(f.label)}
                 </button>
               );
             })}
@@ -207,10 +212,10 @@ export default function MenuScreen({
         {shown.length === 0 ? (
           <div className="py-[10vh] text-center">
             <p className="text-[2vh] font-bold" style={{ color: KIOSK.ink }}>
-              Nothing here right now
+              {t("menu.empty")}
             </p>
             <p className="mt-[0.8vh] text-[1.5vh]" style={{ color: KIOSK.inkSoft }}>
-              Try another category.
+              {t("menu.emptyHint")}
             </p>
           </div>
         ) : (
@@ -240,6 +245,8 @@ export default function MenuScreen({
                   <ItemCard
                     key={item.id}
                     item={item}
+                    lang={lang}
+                    t={t}
                     qty={qty[item.id] ?? 0}
                     onAdd={() => onAdd(item)}
                     onLess={() => onLess(item)}
@@ -275,12 +282,12 @@ export default function MenuScreen({
 
         <div className="min-w-0 flex-1">
           <p className="font-bold text-[1.7vh] leading-tight" style={{ color: KIOSK.ink }}>
-            My Order
+            {t("cart.title")}
           </p>
           <p className="text-[1.3vh]" style={{ color: KIOSK.inkSoft }}>
             {totals.count === 0
-              ? "Nothing added yet"
-              : `${totals.count} item${totals.count === 1 ? "" : "s"}`}
+              ? t("cart.empty")
+              : `${totals.count} ${totals.count === 1 ? t("cart.item") : t("cart.items")}`}
           </p>
         </div>
 
@@ -290,7 +297,7 @@ export default function MenuScreen({
           </p>
           {totals.itemOffers > 0 && (
             <p className="text-[1.2vh] font-semibold mt-[0.4vh]" style={{ color: KIOSK.good }}>
-              You save {aed(totals.itemOffers)}
+              {t("cart.youSave")} {aed(totals.itemOffers)}
             </p>
           )}
         </div>
@@ -301,7 +308,7 @@ export default function MenuScreen({
           className="rounded-[1.4vh] px-[2.6vh] flex items-center gap-[1vh] font-black text-[1.9vh] shrink-0 active:scale-95 transition-transform disabled:opacity-35"
           style={{ background: KIOSK.gold, color: KIOSK.onGold, height: "6.2vh" }}
         >
-          Review Order
+          {t("cart.review")}
           <ArrowRight strokeWidth={3} className="w-[2.2vh] h-[2.2vh]" />
         </button>
       </div>

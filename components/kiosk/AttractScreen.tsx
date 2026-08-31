@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronRight, CreditCard } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
+import { kioskField, KIOSK_LANGS, type KioskLang } from "@/lib/kiosk/i18n";
 import { AD_FALLBACK_SECONDS, type KioskAd, type KioskSettings } from "@/lib/kiosk/types";
 import { KioskWordmark } from "./Chrome";
 
@@ -23,6 +24,8 @@ export default function AttractScreen({
   ads,
   deviceName,
   closedMessage,
+  lang,
+  onLang,
   onStart,
 }: {
   settings: KioskSettings;
@@ -31,6 +34,8 @@ export default function AttractScreen({
   deviceName?: string;
   /** Set when this panel is not taking orders. Replaces the Order button. */
   closedMessage?: string;
+  lang: KioskLang;
+  onLang: (next: KioskLang) => void;
   onStart: () => void;
 }) {
   const [index, setIndex] = useState(0);
@@ -62,8 +67,9 @@ export default function AttractScreen({
     el.play().catch(() => { /* a panel that refuses autoplay still shows the poster */ });
   }, [index]);
 
-  const headline = ad?.headline || "";
-  const subline = ad?.subline || "";
+  /* The ad's own Arabic, not a dictionary: these are words an admin typed. */
+  const headline = kioskField(lang, ad, "headline");
+  const subline = kioskField(lang, ad, "subline");
 
   return (
     <div
@@ -117,11 +123,34 @@ export default function AttractScreen({
           />
           {/* Faint on purpose. It is for the person installing the fourth panel
               and wondering which one they are standing at, not for a customer. */}
-          {deviceName && (
-            <span className="text-[1.3vh] font-semibold text-white/40 mt-[0.6vh]">
-              {deviceName}
+          <span className="flex items-center gap-[1.2vh]">
+            {/* The only control on the idle screen besides Order: a customer
+                who does not read English needs to find it before they start. */}
+            <span
+              className="flex items-center gap-[0.3vh] rounded-full p-[0.3vh]"
+              style={{ border: "0.13vh solid rgba(255,255,255,0.3)" }}
+            >
+              {KIOSK_LANGS.map((option) => {
+                const on = lang === option.code;
+                return (
+                  <button
+                    key={option.code}
+                    onClick={(e) => { e.stopPropagation(); onLang(option.code); }}
+                    className="rounded-full px-[1.4vh] py-[0.7vh] text-[1.4vh] font-bold active:scale-95 transition-transform"
+                    style={{
+                      background: on ? KIOSK.gold : "transparent",
+                      color: on ? KIOSK.onGold : "rgba(255,255,255,0.75)",
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </span>
-          )}
+            {deviceName && (
+              <span className="text-[1.3vh] font-semibold text-white/40">{deviceName}</span>
+            )}
+          </span>
         </div>
 
         {headline && (
@@ -168,12 +197,12 @@ export default function AttractScreen({
                 boxShadow: "0 1.4vh 3.6vh rgba(0,0,0,0.45)",
               }}
             >
-              {settings.order_button_text}
+              {kioskField(lang, settings, "order_button_text")}
               <ChevronRight strokeWidth={3} className="w-[4.4vh] h-[4.4vh]" />
             </button>
 
             <p className="text-center mt-[1.8vh] text-[1.9vh] font-medium text-white/85">
-              {settings.touch_hint}
+              {kioskField(lang, settings, "touch_hint")}
             </p>
           </>
         )}
@@ -184,7 +213,7 @@ export default function AttractScreen({
             style={{ background: "rgba(255,255,255,0.09)", border: "0.13vh solid rgba(255,198,41,0.45)" }}
           >
             <CreditCard style={{ color: KIOSK.gold }} className="w-[2.2vh] h-[2.2vh]" />
-            <p className="text-[1.75vh] font-semibold text-white/95">{settings.privilege_strip}</p>
+            <p className="text-[1.75vh] font-semibold text-white/95">{kioskField(lang, settings, "privilege_strip")}</p>
           </div>
         )}
 
