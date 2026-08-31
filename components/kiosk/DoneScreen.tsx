@@ -30,7 +30,6 @@ export interface KioskConfirmation {
   trackUrl: string;
   /** Where the food is going, so the screen stops promising a counter. */
   fulfilment: "pickup" | "delivery";
-  address: string;
 }
 
 /** "+971501234567" → "+971 5X XXX 4567" — enough to recognise, not to read off. */
@@ -157,7 +156,7 @@ export default function DoneScreen({
               )}
               <span>
                 {confirmation.fulfilment === "delivery"
-                  ? confirmation.address
+                  ? "We will call you"
                   : settings.pickup_counter}
               </span>
             </p>
@@ -213,7 +212,7 @@ export default function DoneScreen({
           </p>
           <p className="text-[1.35vh] mt-[0.5vh]" style={{ color: KIOSK.inkSoft }}>
             {confirmation.fulfilment === "delivery"
-              ? "Pay the driver when it arrives."
+              ? "We will call you on the number you gave to arrange delivery."
               : "Pay at the counter when you collect."}
           </p>
           {confirmation.privilege && (

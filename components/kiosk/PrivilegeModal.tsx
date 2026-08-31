@@ -104,13 +104,17 @@ export default function PrivilegeModal({
               background: "#FFFDF6",
             }}
           >
-            <input
-              value={code}
-              readOnly
-              placeholder="KU-00000"
-              className="w-full bg-transparent font-black text-[3vh] tracking-[0.1em] text-center"
-              style={{ color: KIOSK.ink }}
-            />
+            {/* Same reason as the phone field: a readOnly input scrolls its
+                own contents and hides the front of a long card number. */}
+            <p
+              className="w-full font-black tracking-[0.1em] text-center truncate"
+              style={{
+                color: code ? KIOSK.ink : "#C7C7CC",
+                fontSize: code.length > 12 ? "2.2vh" : "3vh",
+              }}
+            >
+              {code || "KU-00000"}
+            </p>
           </div>
 
           <p

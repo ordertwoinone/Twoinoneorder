@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Bike, Check, Lock, MapPin, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Bike, Check, Lock, ShieldCheck, ShoppingBag } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { aed, type KioskTotals } from "@/lib/kiosk/cart";
 import type { KioskFulfilment, KioskSettings } from "@/lib/kiosk/types";
-import Keyboard from "./Keyboard";
 import type { PrivilegeHolder } from "./ReviewPanel";
 import Keypad from "./Keypad";
 
@@ -41,8 +40,7 @@ export default function PhoneScreen({
   totals,
   privilege,
   fulfilment,
-  address,
-  onAddress,
+  onFulfilment,
   submitting,
   error,
   onBack,
@@ -52,8 +50,7 @@ export default function PhoneScreen({
   totals: KioskTotals;
   privilege: PrivilegeHolder | null;
   fulfilment: KioskFulfilment;
-  address: string;
-  onAddress: (value: string) => void;
+  onFulfilment: (choice: KioskFulfilment) => void;
   submitting: boolean;
   error: string;
   onBack: () => void;
@@ -70,103 +67,95 @@ export default function PhoneScreen({
 
   const channels = [sms && "sms", whatsapp && "whatsapp"].filter(Boolean) as string[];
 
-  /* A delivery has to have somewhere to go. Short enough to be a typo rather
-     than an address, and the driver is the one who pays for that mistake. */
   const delivering = fulfilment === "delivery";
-  const addressOk = !delivering || address.trim().length >= 10;
-  const ready = complete && addressOk;
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="kiosk-scroll flex-1 px-[3vh] pt-[2.4vh] pb-[1.6vh]">
         <h1 className="font-black text-[4vh] leading-none" style={{ color: KIOSK.ink }}>
-          {delivering ? "Where are we delivering?" : "Enter Your Phone Number"}
+          Enter Your Phone Number
         </h1>
         <p className="mt-[1vh] text-[1.8vh]" style={{ color: KIOSK.inkSoft }}>
-          {delivering
-            ? "We need a number and an address before the kitchen starts."
-            : "We’ll send your order number and digital receipt by SMS."}
+          We&rsquo;ll send your order number and digital receipt by SMS.
         </p>
 
-        <div className="mt-[2.6vh] flex gap-[2.4vh] items-start">
-          {/* ─── Typing it ─── */}
-          <div className="flex-1 min-w-0">
-            <div className="flex gap-[1.2vh] mb-[1.6vh]">
-              <select
-                value={dial.code}
-                onChange={(e) =>
-                  setDial(DIAL_CODES.find((d) => d.code === e.target.value) ?? DIAL_CODES[0])
-                }
-                className="rounded-[1.3vh] px-[1.4vh] font-bold text-[1.9vh] shrink-0 bg-white"
-                style={{ border: `0.16vh solid ${KIOSK.line}`, height: "8vh", color: KIOSK.ink }}
-              >
-                {DIAL_CODES.map((d) => (
-                  <option key={d.code} value={d.code}>
-                    {d.flag} {d.code}
-                  </option>
-                ))}
-              </select>
-
-              <div
-                className="flex-1 rounded-[1.3vh] flex items-center px-[2vh] min-w-0"
+        {/* Collecting or delivering, asked here because this is the screen the
+            customer is already stopped at. Two buttons and nothing else: the
+            branch takes the address on the phone number above. */}
+        <div className="mt-[2vh] grid grid-cols-2 gap-[1.4vh]">
+          {([
+            ["pickup", ShoppingBag, "Pickup"],
+            ["delivery", Bike, "Delivery"],
+          ] as const).map(([key, Icon, label]) => {
+            const on = fulfilment === key;
+            return (
+              <button
+                key={key}
+                onClick={() => onFulfilment(key)}
+                className="flex items-center justify-center gap-[1.2vh] rounded-[1.6vh] font-black text-[2.4vh] active:scale-[0.98] transition-transform"
                 style={{
-                  height: "8vh",
-                  border: `0.2vh solid ${digits ? KIOSK.gold : KIOSK.line}`,
-                  background: digits ? "#FFFDF6" : "#fff",
+                  height: "8.5vh",
+                  border: `0.25vh solid ${on ? KIOSK.gold : KIOSK.line}`,
+                  background: on ? KIOSK.gold : "#fff",
+                  color: on ? KIOSK.onGold : KIOSK.inkSoft,
                 }}
               >
-                <input
-                  value={pretty(digits)}
-                  readOnly
-                  placeholder="50 123 4567"
-                  /* Sized to fit "50 123 4567" in the box beside the country
-                     code, rather than running out of it. */
-                  className="w-full bg-transparent font-black text-[2.2vh] tracking-wide"
-                  style={{ color: digits ? KIOSK.ink : "#C7C7CC" }}
-                />
-              </div>
-            </div>
+                <Icon className="w-[3vh] h-[3vh]" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
 
-            {delivering ? (
-              <>
-                <div
-                  className="rounded-[1.3vh] px-[1.6vh] py-[1.2vh] mb-[1.2vh]"
-                  style={{
-                    border: `0.2vh solid ${address ? KIOSK.gold : KIOSK.line}`,
-                    background: address ? "#FFFDF6" : "#fff",
-                    minHeight: "7vh",
-                  }}
-                >
-                  <p
-                    className="flex items-center gap-[0.6vh] text-[1.2vh] font-semibold mb-[0.4vh]"
-                    style={{ color: KIOSK.inkSoft }}
-                  >
-                    <MapPin className="w-[1.4vh] h-[1.4vh]" />
-                    Delivery address
-                  </p>
-                  <p
-                    className="text-[1.9vh] font-bold leading-snug break-words"
-                    style={{ color: address ? KIOSK.ink : "#C7C7CC" }}
-                  >
-                    {address || "Building, street, area"}
-                  </p>
-                </div>
+        {/* Full width, above the split. This sat inside the left-hand column
+            between the country code and the order summary, which left about
+            290px for eleven digits — so the number the customer had just keyed
+            was ellipsised and they could not read it back. Nothing else on the
+            screen needs to be beside it. */}
+        <div className="mt-[2vh] flex gap-[1.4vh] items-stretch">
+          <select
+            value={dial.code}
+            onChange={(e) =>
+              setDial(DIAL_CODES.find((d) => d.code === e.target.value) ?? DIAL_CODES[0])
+            }
+            className="rounded-[1.3vh] px-[1.4vh] font-bold text-[2vh] shrink-0 bg-white"
+            style={{ border: `0.16vh solid ${KIOSK.line}`, height: "9vh", color: KIOSK.ink }}
+          >
+            {DIAL_CODES.map((d) => (
+              <option key={d.code} value={d.code}>
+                {d.flag} {d.code}
+              </option>
+            ))}
+          </select>
 
-                {/* Letters, because a numeric pad cannot write an address and
-                    the tablet's own keyboard would cover half the panel. */}
-                <Keyboard
-                  onKey={(c) => onAddress(address.length >= 160 ? address : address + c)}
-                  onBackspace={() => onAddress(address.slice(0, -1))}
-                  onSpace={() => onAddress(address.length >= 160 ? address : `${address} `)}
-                />
-              </>
-            ) : (
-              <Keypad
-                onDigit={(d) => setDigits((v) => (v.length >= 14 ? v : v + d))}
-                onBackspace={() => setDigits((v) => v.slice(0, -1))}
-                onClear={() => setDigits("")}
-              />
-            )}
+          <div
+            className="flex-1 rounded-[1.3vh] flex items-center px-[2.4vh] min-w-0"
+            style={{
+              height: "9vh",
+              border: `0.2vh solid ${digits ? KIOSK.gold : KIOSK.line}`,
+              background: digits ? "#FFFDF6" : "#fff",
+            }}
+          >
+            {/* A plain element, not a readOnly input: an input scrolls its own
+                contents, so the first digits slid out of view as the number
+                grew. The keypad is the only way in, so it need not be a field. */}
+            <p
+              className="w-full font-black tracking-[0.06em] whitespace-nowrap"
+              style={{ color: digits ? KIOSK.ink : "#C7C7CC", fontSize: "3.4vh" }}
+            >
+              {digits ? pretty(digits) : "50 123 4567"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-[2vh] flex gap-[2.4vh] items-start">
+          {/* ─── Typing it ─── */}
+          <div className="flex-1 min-w-0">
+            <Keypad
+              onDigit={(d) => setDigits((v) => (v.length >= 14 ? v : v + d))}
+              onBackspace={() => setDigits((v) => v.slice(0, -1))}
+              onClear={() => setDigits("")}
+            />
 
             {/* ─── What to do with it ─── */}
             <div className="mt-[1.8vh] space-y-[1vh]">
@@ -215,7 +204,7 @@ export default function PhoneScreen({
               ) : (
                 <ShoppingBag className="w-[1.6vh] h-[1.6vh]" />
               )}
-              {delivering ? "Delivery" : "Collect at the counter"}
+              {delivering ? "Delivery" : "Pickup"}
             </p>
 
             <Row label="Subtotal" value={aed(totals.subtotal)} />
@@ -228,9 +217,6 @@ export default function PhoneScreen({
                 value={`− ${aed(totals.privilegeDiscount)}`}
                 good
               />
-            )}
-            {totals.deliveryCharge > 0 && (
-              <Row label="Delivery" value={aed(totals.deliveryCharge)} />
             )}
 
             <div
@@ -296,7 +282,7 @@ export default function PhoneScreen({
 
         <button
           onClick={() => onDone(`${dial.code}${national}`, channels)}
-          disabled={submitting || !ready}
+          disabled={submitting || !complete}
           className="flex-1 rounded-[1.4vh] flex items-center justify-center gap-[1.2vh] font-black text-[2.2vh] active:scale-[0.98] transition-transform disabled:opacity-35"
           style={{ background: KIOSK.gold, color: KIOSK.onGold, height: "6.6vh" }}
         >

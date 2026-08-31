@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowRight, Bike, CreditCard, Minus, Pencil, Plus, ShieldCheck, ShoppingBag, Trash2, X } from "lucide-react";
-import type { KioskFulfilment, KioskSettings } from "@/lib/kiosk/types";
+import { ArrowRight, CreditCard, Minus, Pencil, Plus, ShieldCheck, Trash2, X } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { sizedImage } from "@/lib/image-url";
 import { addonSummary } from "@/lib/kalba/addons";
@@ -26,9 +25,6 @@ export interface PrivilegeHolder {
 export default function ReviewPanel({
   totals,
   addons,
-  settings,
-  fulfilment,
-  onFulfilment,
   privilege,
   privilegeEnabled,
   onClose,
@@ -43,9 +39,6 @@ export default function ReviewPanel({
 }: {
   totals: KioskTotals;
   addons: AddonSelection;
-  settings: KioskSettings;
-  fulfilment: KioskFulfilment;
-  onFulfilment: (choice: KioskFulfilment) => void;
   privilege: PrivilegeHolder | null;
   privilegeEnabled: boolean;
   onClose: () => void;
@@ -206,50 +199,6 @@ export default function ReviewPanel({
           className="shrink-0 px-[2.4vh] py-[1.8vh]"
           style={{ borderTop: `0.13vh solid ${KIOSK.line}`, background: "#FCFCFC" }}
         >
-          {/* Asked before the total, because it changes it. A branch that does
-              not deliver never sees this and every order is for the counter. */}
-          {settings.delivery_enabled && (
-            <div className="mb-[1.6vh]">
-              <p className="mb-[0.8vh] text-[1.4vh] font-bold" style={{ color: KIOSK.ink }}>
-                How would you like it?
-              </p>
-              <div className="grid grid-cols-2 gap-[1vh]">
-                {([
-                  ["pickup", ShoppingBag, "Collect", "At the counter"],
-                  ["delivery", Bike, "Delivery", settings.delivery_note || "To your address"],
-                ] as const).map(([key, Icon, label, hint]) => {
-                  const on = fulfilment === key;
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => onFulfilment(key)}
-                      className="flex items-center gap-[1vh] rounded-[1.3vh] px-[1.4vh] py-[1.2vh] text-start active:scale-[0.98] transition-transform"
-                      style={{
-                        border: `0.18vh solid ${on ? KIOSK.gold : KIOSK.line}`,
-                        background: on ? KIOSK.goldSoft : "#fff",
-                      }}
-                    >
-                      <Icon
-                        className="w-[2.4vh] h-[2.4vh] shrink-0"
-                        style={{ color: on ? KIOSK.onGold : KIOSK.inkSoft }}
-                      />
-                      <span className="min-w-0">
-                        <span
-                          className="block font-bold text-[1.5vh] leading-tight"
-                          style={{ color: on ? KIOSK.onGold : KIOSK.ink }}
-                        >
-                          {label}
-                        </span>
-                        <span className="block text-[1.15vh] truncate" style={{ color: KIOSK.inkSoft }}>
-                          {hint}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
           {privilegeEnabled && (
             privilege ? (
               <div
@@ -306,9 +255,6 @@ export default function ReviewPanel({
               value={`− ${aed(totals.privilegeDiscount)}`}
               good
             />
-          )}
-          {totals.deliveryCharge > 0 && (
-            <Money label="Delivery" value={aed(totals.deliveryCharge)} />
           )}
 
           <div

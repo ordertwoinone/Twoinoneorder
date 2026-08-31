@@ -30,7 +30,6 @@ interface OrderBody {
   deviceSlug?: string;
   /** 'pickup' or 'delivery'. Anything else is treated as collection. */
   fulfilment?: string;
-  address?: string;
 }
 
 /**
@@ -115,26 +114,12 @@ export async function POST(request: Request) {
 
   const privilegePercent = card ? (card.discount_percent ?? STUDENT_DISCOUNT_PERCENT) : 0;
 
-  /* Delivery only if the branch offers it and an address came with it. The
-     charge is read from settings here, never from the screen, and an order
-     claiming delivery without somewhere to go falls back to collection rather
-     than going to the kitchen with nowhere to send it. */
-  const address = String(body.address ?? "").trim().slice(0, 400);
-  const delivering =
-    body.fulfilment === "delivery" && settings.delivery_enabled === true && address.length >= 10;
+  /* Collection or delivery, and that is the whole of it. No address and no
+     charge: the branch calls the number above to arrange where it goes, so
+     what the order has to carry is which of the two it is. */
+  const delivering = body.fulfilment === "delivery";
 
-  const totals = kioskTotals(
-    items,
-    qty,
-    addons,
-    privilegePercent,
-    delivering
-      ? {
-          charge: Number(settings.delivery_charge) || 0,
-          freeOver: Number(settings.free_delivery_over) || 0,
-        }
-      : null,
-  );
+  const totals = kioskTotals(items, qty, addons, privilegePercent);
 
   const phone = String(body.phone ?? "").trim().slice(0, 32);
   const channels = (body.receiptChannels ?? []).filter(
@@ -176,7 +161,7 @@ export async function POST(request: Request) {
       itemsText,
       `Total: AED ${totals.total.toFixed(2)}`,
       card ? `Privilege ${card.member_id}` : "",
-      delivering ? `Deliver to: ${address}` : "",
+
     ]
       .filter(Boolean)
       .join(" · "),
@@ -215,8 +200,6 @@ export async function POST(request: Request) {
       ready_minutes: [settings.ready_minutes_min, settings.ready_minutes_max],
       pickup_counter: settings.pickup_counter,
       fulfilment: delivering ? "delivery" : "pickup",
-      address: delivering ? address : "",
-      delivery_charge: totals.deliveryCharge,
       device: device ? { slug: device.slug, label: deviceLabel(device) } : null,
     },
     { status: 201 },

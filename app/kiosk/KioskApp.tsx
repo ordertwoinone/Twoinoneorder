@@ -76,7 +76,6 @@ export default function KioskApp({
   /* Collect unless the customer says otherwise. The screen is standing in the
      branch they would be collecting from. */
   const [fulfilment, setFulfilment] = useState<KioskFulfilment>("pickup");
-  const [address, setAddress] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -85,20 +84,8 @@ export default function KioskApp({
   const { settings, ads, categories, items } = data;
 
   const totals = useMemo(
-    () =>
-      kioskTotals(
-        items,
-        qty,
-        addons,
-        privilege?.discount_percent ?? 0,
-        fulfilment === "delivery"
-          ? {
-              charge: Number(settings.delivery_charge) || 0,
-              freeOver: Number(settings.free_delivery_over) || 0,
-            }
-          : null,
-      ),
-    [items, qty, addons, privilege, fulfilment, settings],
+    () => kioskTotals(items, qty, addons, privilege?.discount_percent ?? 0),
+    [items, qty, addons, privilege],
   );
 
   /* ─── Going back to sleep ─────────────────────────────────────────────── */
@@ -109,7 +96,6 @@ export default function KioskApp({
     setPrivilege(null);
     setPrivilegeCode("");
     setFulfilment("pickup");
-    setAddress("");
     setReviewOpen(false);
     setPrivilegeOpen(false);
     setSheet(null);
@@ -227,7 +213,6 @@ export default function KioskApp({
           receiptChannels: channels,
           deviceSlug: device?.slug ?? "",
           fulfilment,
-          address,
         }),
       });
       const body = await res.json();
@@ -250,7 +235,6 @@ export default function KioskApp({
         /* Taken from the reply, not from what this screen chose: the server has
            the last word on whether a delivery was accepted. */
         fulfilment: body.fulfilment === "delivery" ? "delivery" : "pickup",
-        address: body.address ?? "",
       });
       setScreen("done");
     } catch {
@@ -334,8 +318,7 @@ export default function KioskApp({
           totals={totals}
           privilege={privilege}
           fulfilment={fulfilment}
-          address={address}
-          onAddress={setAddress}
+          onFulfilment={setFulfilment}
           submitting={submitting}
           error={error}
           onBack={() => { setScreen("menu"); setReviewOpen(true); }}
@@ -352,9 +335,6 @@ export default function KioskApp({
         <ReviewPanel
           totals={totals}
           addons={addons}
-          settings={settings}
-          fulfilment={fulfilment}
-          onFulfilment={setFulfilment}
           privilege={privilege}
           privilegeEnabled={settings.privilege_enabled}
           onClose={() => setReviewOpen(false)}
