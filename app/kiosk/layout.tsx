@@ -16,6 +16,28 @@ export const metadata: Metadata = {
   title: "Order Here",
   // A screen in a room has no business in search results.
   robots: { index: false, follow: false, nocache: true },
+
+  /*
+   * The kiosk installs as its own app.
+   *
+   * A browser decides what it is installing from the manifest linked by the
+   * page in front of it, so without this a panel added to a home screen would
+   * install the customer site — same name, same icon, opening the storefront
+   * rather than the ordering screen. A named panel overrides this with its own
+   * slug so the tile opens that panel; see [device]/page.tsx.
+   */
+  manifest: "/kiosk-app.webmanifest",
+  icons: {
+    icon: "/icons/kiosk-icon-192.png",
+    apple: "/icons/kiosk-apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Order Here",
+    /* black-translucent hands the status bar's space to the page, which is
+       what a kiosk wants: the ad should run to the top of the glass. */
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {

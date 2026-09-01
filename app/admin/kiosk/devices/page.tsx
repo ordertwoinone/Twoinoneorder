@@ -135,10 +135,20 @@ export default function KioskDevicesAdmin() {
       </div>
 
       <div className="mb-5 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3">
-        <p className="text-sm text-blue-900">
-          <strong>Setting a panel up:</strong> add it here, copy its address, and point that
-          panel&rsquo;s browser at it in kiosk mode. That is the whole setup — there is nothing to
-          log in to, so a screen can never end up showing a password prompt to customers.
+        <p className="text-sm font-semibold text-blue-900">Setting a panel up</p>
+        <ol className="mt-1.5 list-decimal space-y-1 ps-5 text-sm text-blue-900">
+          <li>Add the screen here and copy its address.</li>
+          <li>Open that address in Chrome on the panel itself.</li>
+          <li>
+            Chrome menu (⋮) → <strong>Add to Home screen</strong> → Install. The tile installs as
+            its own app, named after this screen, and opens full screen with no browser bar.
+          </li>
+          <li>Launch it from the home-screen icon from then on, not from a browser tab.</li>
+        </ol>
+        <p className="mt-2 text-[12px] text-blue-800">
+          Each screen installs pointing at its own address, so the tile always reopens the panel it
+          belongs to and the orders keep carrying its name. There is nothing to log in to, so a
+          kiosk can never end up showing a password prompt to customers.
         </p>
       </div>
 
