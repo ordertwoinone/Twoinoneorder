@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Banknote, CreditCard, Globe, MonitorSmartphone, Printer, RefreshCw, ShoppingCart } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
-import { aed, posOrderCode } from "@/lib/pos/cart";
-import { handlesCash, type PosStaff } from "@/lib/pos/constants";
+import { aed } from "@/lib/pos/cart";
+import type { OrderChannel } from "@/lib/order-source";
+import type { PosStaff } from "@/lib/pos/constants";
+import { can } from "@/lib/pos/permissions";
+import { printDocument } from "@/lib/print-document";
 import PosShell from "@/components/pos/PosShell";
 import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
 import type { StaleShift } from "@/lib/pos/shift";
@@ -12,15 +15,19 @@ import type { StaleShift } from "@/lib/pos/shift";
 /**
  * The board.
  *
- * Till orders and kiosk orders on one list, because the kitchen does not care
- * where a burger was ordered and making staff watch two screens is how the
- * kiosk order gets missed. Refreshes itself, since a board nobody is refreshing
+ * Counter, kiosk and website orders on one list, because the kitchen does not
+ * care where a burger was ordered and making staff watch three screens is how
+ * one of them gets missed. Refreshes itself, since a board nobody is refreshing
  * is a board nobody trusts.
  */
 
 export interface BoardOrder {
   id: string;
-  source: "Till" | "Kiosk";
+  source: OrderChannel;
+  /** "Kiosk · UNIVERCITY TAB 1" — the panel or the cashier, when known. */
+  source_label: string;
+  /** Issued under that source's own prefix: POS-1124, TIO-1088, WEB-1122. */
+  code: string;
   order_number: number | null;
   status: string;
   order_type: string | null;
@@ -31,6 +38,19 @@ export interface BoardOrder {
   total_amount: number | string | null;
   payment_method: string | null;
   created_at: string;
+  /**
+   * True for an order that came from one of the storefronts.
+   *
+   * It behaves differently in exactly two places, and both are on the card:
+   * it was already paid on the site, and its printed invoice lives with
+   * take.app rather than in our own invoice table. Everything else — the
+   * items, the status chips, the kitchen filter — is the same board.
+   */
+  website?: boolean;
+  /** The customer's own tracking page, for a website order. */
+  tracking_url?: string;
+  /** Whatever the customer typed in the storefront's notes box. */
+  note?: string;
 }
 
 const STATUSES = [
@@ -40,10 +60,19 @@ const STATUSES = [
   { value: "cancelled", label: "Cancelled", chip: "#FEE2E2", ink: "#B91C1C" },
 ] as const;
 
-/** What the kitchen can move an order to. Cancelling is a manager's call. */
+/** What someone without the void permission can move an order to. */
 const KITCHEN_STATUSES = STATUSES.filter((s) => s.value !== "cancelled");
 
 const REFRESH_MS = 15_000;
+
+/** The three ways an order reaches the branch, in the order the chips read. */
+const CHANNELS: OrderChannel[] = ["Counter", "Kiosk", "Website"];
+
+function SourceIcon({ channel }: { channel: OrderChannel }) {
+  if (channel === "Kiosk") return <MonitorSmartphone size={12} />;
+  if (channel === "Website") return <Globe size={12} />;
+  return <ShoppingCart size={12} />;
+}
 
 function money(v: unknown): string {
   const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
@@ -68,24 +97,25 @@ export default function OrdersScreen({
   stale?: StaleShift[];
 }) {
   const [orders, setOrders] = useState<BoardOrder[]>([]);
-  const [prefix, setPrefix] = useState("ORD");
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("");
-  /** "" = both, or "Till" / "Kiosk". */
-  const [source, setSource] = useState<"" | "Till" | "Kiosk">("");
+  /** "" = all three. */
+  const [source, setSource] = useState<"" | OrderChannel>("");
   const [paying, setPaying] = useState<BoardOrder | null>(null);
   const [error, setError] = useState("");
 
-  /** Kitchen staff see the order; everyone else also sees what it is worth. */
-  const showsMoney = handlesCash(staff.role);
+  /* Kitchen staff see the order; anyone who handles the money also sees what
+     it is worth. Taken from the permissions rather than the role, so a
+     supervisor who watches the board without working the till still sees the
+     figures, and a cook granted the board still does not. */
+  const showsMoney = can(staff, "till") || can(staff, "reports");
+  /** Cancelling is a refund the drawer answers for, so it is its own grant. */
+  const canVoid = can(staff, "void_order");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/pos/orders?scope=today", { cache: "no-store" });
     const body = await res.json().catch(() => null);
-    if (body?.orders) {
-      setOrders(body.orders as BoardOrder[]);
-      setPrefix(body.orderPrefix || "ORD");
-    }
+    if (body?.orders) setOrders(body.orders as BoardOrder[]);
     setLoading(false);
   }, []);
 
@@ -183,8 +213,8 @@ export default function OrdersScreen({
       title={kitchenOnly ? "Kitchen" : "Orders"}
       subtitle={
         kitchenOnly
-          ? `${shown.length} being worked on · till and kiosk together`
-          : `${orders.length} today · till and kiosk together`
+          ? `${shown.length} being worked on · counter, kiosk and website`
+          : `${orders.length} today · counter, kiosk and website`
       }
       warning={<StaleShiftWarning shifts={stale} />}
       actions={
@@ -202,17 +232,15 @@ export default function OrdersScreen({
         {!kitchenOnly && (
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <span className="me-1 text-[12px] font-bold" style={{ color: POS.inkSoft }}>Where from</span>
-            <Chip label={`Both (${orders.length})`} active={source === ""} onClick={() => setSource("")} />
-            <Chip
-              label={`Till (${orders.filter((o) => o.source === "Till").length})`}
-              active={source === "Till"}
-              onClick={() => setSource("Till")}
-            />
-            <Chip
-              label={`Kiosk (${orders.filter((o) => o.source === "Kiosk").length})`}
-              active={source === "Kiosk"}
-              onClick={() => setSource("Kiosk")}
-            />
+            <Chip label={`All (${orders.length})`} active={source === ""} onClick={() => setSource("")} />
+            {CHANNELS.map((channel) => (
+              <Chip
+                key={channel}
+                label={`${channel} (${orders.filter((o) => o.source === channel).length})`}
+                active={source === channel}
+                onClick={() => setSource(channel)}
+              />
+            ))}
           </div>
         )}
 
@@ -266,11 +294,11 @@ export default function OrdersScreen({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-lg font-black leading-none" style={{ color: POS.ink }}>
-                        {posOrderCode(prefix, order.order_number)}
+                        {order.code}
                       </p>
                       <p className="mt-1 flex items-center gap-1.5 text-[11.5px]" style={{ color: POS.inkSoft }}>
-                        {order.source === "Kiosk" ? <MonitorSmartphone size={12} /> : <ShoppingCart size={12} />}
-                        {order.source} · {order.order_type || "—"} · {ago(order.created_at)}
+                        <SourceIcon channel={order.source} />
+                        {order.source_label} · {order.order_type || "—"} · {ago(order.created_at)}
                       </p>
                     </div>
                     <span
@@ -285,6 +313,17 @@ export default function OrdersScreen({
                     <p className="mt-1.5 text-[12px] font-semibold" style={{ color: POS.inkSoft }}>
                       {order.table_section}
                       {order.guest_name ? ` · ${order.guest_name}` : ""}
+                    </p>
+                  )}
+
+                  {/* On a website order this is the only thing the customer
+                      could say to the kitchen, so it is not tucked away. */}
+                  {order.note && (
+                    <p
+                      className="mt-2 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
+                      style={{ background: "#FFFBEB", color: "#92400E" }}
+                    >
+                      {order.note}
                     </p>
                   )}
 
@@ -310,7 +349,15 @@ export default function OrdersScreen({
                     <span className="text-base font-black" style={{ color: POS.ink }}>
                       {showsMoney ? money(order.total_amount) : ""}
                     </span>
-                    {!showsMoney ? null : order.payment_method === "pending" || !order.payment_method ? (
+                    {!showsMoney ? null : order.website ? (
+                      /* No "take payment" on a website order. It was settled on
+                         the storefront, it sits on nobody's shift, and money
+                         rung up here would be cash in the drawer that no day
+                         close could account for. */
+                      <span className="text-[11.5px]" style={{ color: POS.inkSoft }}>
+                        {order.payment_method === "online" ? "paid online" : "unpaid on the site"}
+                      </span>
+                    ) : order.payment_method === "pending" || !order.payment_method ? (
                       /* Unpaid is not a label here, it is the next thing to do. */
                       <button
                         onClick={() => setPaying(order)}
@@ -328,7 +375,7 @@ export default function OrdersScreen({
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    {(showsMoney ? STATUSES : KITCHEN_STATUSES).map((s) => (
+                    {(canVoid ? STATUSES : KITCHEN_STATUSES).map((s) => (
                       <button
                         key={s.value}
                         onClick={() => setStatus(order.id, s.value)}
@@ -344,9 +391,24 @@ export default function OrdersScreen({
                       </button>
                     ))}
                     <span className="flex-1" />
-                    {showsMoney && (
+                    {/* A website order has no invoice of ours to print — its
+                        receipt is the storefront's, and the tracking page is
+                        what a customer on the phone is actually asking about. */}
+                    {showsMoney && order.website && order.tracking_url && (
+                      <a
+                        href={order.tracking_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold"
+                        style={{ background: POS.page, color: POS.ink }}
+                      >
+                        <Globe size={13} />
+                        Track
+                      </a>
+                    )}
+                    {showsMoney && !order.website && (
                     <button
-                      onClick={() => window.open(`/pos/invoice/${order.id}?print=1`, "_blank")}
+                      onClick={() => printDocument(`/pos/invoice/${order.id}`)}
                       className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold"
                       style={{ background: POS.page, color: POS.ink }}
                     >
@@ -366,7 +428,7 @@ export default function OrdersScreen({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.5)" }}>
           <div className="w-full max-w-[380px] rounded-2xl bg-white p-6">
             <p className="text-center text-[13px] font-semibold" style={{ color: POS.inkSoft }}>
-              {posOrderCode(prefix, paying.order_number)} · amount due
+              {paying.code} · amount due
             </p>
             <p className="text-center text-4xl font-black" style={{ color: POS.ink }}>
               {money(paying.total_amount)}

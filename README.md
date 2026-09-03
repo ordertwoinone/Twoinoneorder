@@ -112,6 +112,72 @@ anyone refreshing. A minute-timer reload sits under the stream as a safety net.
   and can be copied from Dispatch → Settings → API. Everything else on the
   screen runs on the webhook alone and works without it.
 
+## The till (POS)
+
+Staff sign in at `/pos/login` with a staff ID and a PIN. The rail each person
+sees is built from what their account may actually open, so a branch can put
+eight people on the rota without making any of them a manager to grant one
+screen.
+
+**Access.** A role — cashier, manager, kitchen — sets the starting point; the
+account can then be granted or refused anything by name in **admin → POS →
+Staff**. An account left on "the role's usual access" stores `null` rather than
+a copy of the defaults, so it keeps following the role if those ever change.
+Every screen re-checks its permission on the server: the rail hiding a button is
+a courtesy, not a lock.
+
+**Shift close and day close are two different things**, on two screens.
+
+| | Shift Close (`/pos/close`) | Day Close (`/pos/day-close`) |
+| --- | --- | --- |
+| When | A cashier finishes or hands over | End of the business day |
+| Covers | That one shift's takings | Every shift, combined |
+| Cash | The cashier counts their own drawer | The manager checks the day's totals |
+| After it | The branch keeps trading | The next order starts a new business day |
+| Who | Anyone with `shift_close` | A manager (`day_close`) |
+
+The day's figures are summed from the shifts, never recounted from the orders,
+so takings from both shifts appear in the daily total exactly once and a refund
+next week cannot move a total that has already been reported. A day cannot be
+closed while a shift is still open, and once it is closed nobody can open a
+shift into it.
+
+The trading day rolls over at 5am rather than midnight, so an evening shift that
+runs to half past one belongs to the day it started on.
+
+**Item Availability** (`/pos/availability`) is the branch's own stock switch:
+switching a dish off takes it off the till and the kiosk and leaves the website
+menu alone. That is deliberately not admin → Popular Items → `is_active`, which
+means "we do not sell this" and would take the dish off the public site too.
+
+**Website orders** reach the board as well as counter and kiosk ones. They come
+from take.app into `takeapp_orders` rather than `bookings`, so the branch's
+progress on one is kept in that table's `kitchen_status` — take.app owns
+`order_status` and its webhook rewrites it on every event. A website order was
+paid on the storefront and sits on nobody's shift, so the till offers no way to
+take payment for one; doing that would put cash in the drawer that no day close
+could account for.
+
+**Setting it up.** Run these in the Supabase SQL editor, in this order. All are
+safe to re-run.
+
+1. `supabase/pos.sql` — staff, sessions, shifts
+2. `supabase/pos_operations.sql` — settings, parked orders, expenses
+3. `supabase/pos_permissions.sql` — per-account access
+4. `supabase/pos_item_availability.sql` — the stock switch
+5. `supabase/pos_business_days.sql` — the shift/day split
+6. `supabase/pos_website_orders.sql` — website orders on the board
+
+**Notes**
+
+- Existing accounts keep working after `pos_permissions.sql`: `permissions` is
+  `NULL` for all of them, which means "this role's defaults". An empty array
+  means "nothing at all" and is a decision somebody made on purpose.
+- The slow-changing lookups behind the till — the menu, the settings, the device
+  and staff directory, the unclosed-shift check — are held for a few seconds per
+  process in `lib/pos/cache.ts`. Anything that writes to them clears the entry
+  outright, so an edit in admin reaches a live till on the next tap.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

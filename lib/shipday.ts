@@ -56,6 +56,17 @@ export interface ShipdayCarrier {
   current_order?: number | null;
   plate_number?: string | null;
   vehicle_description?: string | null;
+  /* The roster endpoint reports availability as a flag and the phone number
+     under a longer name; the webhook uses `status` and `phone`. Both spellings
+     are carried so one roster type covers either. */
+  isOnShift?: boolean | null;
+  phoneNumber?: string | null;
+}
+
+/** Whether a driver is available, whichever way Shipday said it. */
+export function carrierIsOnline(carrier: ShipdayCarrier): boolean {
+  if (typeof carrier.isOnShift === "boolean") return carrier.isOnShift;
+  return (carrier.status ?? "").toUpperCase() === "ONLINE";
 }
 
 /** One end of the journey. `location` is where the coordinates live, not the top level. */
@@ -368,7 +379,7 @@ export function webhookToken(): string {
  * and every screen works with the key absent. That is deliberate, because a key
  * that stops authenticating should cost a refresh button, not the section.
  */
-async function get<T>(path: string): Promise<T> {
+async function request<T>(path: string, init?: { method?: string; body?: unknown }): Promise<T> {
   const key = apiKey();
   if (!key) {
     throw new ShipdayError(500, "No Shipday API key is set. Add SHIPDAY_API_KEY to the hosting environment.");
@@ -380,7 +391,13 @@ async function get<T>(path: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
-      headers: { Authorization: `Basic ${key}`, Accept: "application/json" },
+      method: init?.method ?? "GET",
+      headers: {
+        Authorization: `Basic ${key}`,
+        Accept: "application/json",
+        ...(init?.body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
+      ...(init?.body === undefined ? {} : { body: JSON.stringify(init.body) }),
       cache: "no-store",
       signal: controller.signal,
     });
@@ -401,12 +418,290 @@ async function get<T>(path: string): Promise<T> {
     throw new ShipdayError(res.status, message);
   }
 
-  return (await res.json()) as T;
+  /* A 204, or a body that is not JSON, is not a failure worth throwing over —
+     the callers here all tolerate an empty result. */
+  return (await res.json().catch(() => null)) as T;
 }
 
-/** Every delivery Shipday currently holds. Used to backfill the board on demand. */
-export function fetchOrders(): Promise<unknown[]> {
-  return get<unknown[]>("/orders");
+const get = <T>(path: string) => request<T>(path);
+const post = <T>(path: string, body: unknown) => request<T>(path, { method: "POST", body });
+
+/* ── Backfilling from the API ────────────────────────────────────────────────
+   The order list is a different shape from the webhook: camelCase, ISO strings
+   instead of epoch milliseconds, and the two addresses under `pickup`/
+   `delivery` rather than `*_details`. It is mapped to the same row so a
+   backfilled delivery is indistinguishable from a webhook-written one. */
+
+export interface ShipdayApiPlace {
+  id?: number | null;
+  name?: string | null;
+  address?: string | null;
+  formattedAddress?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+}
+
+export interface ShipdayApiOrder {
+  orderId?: number | null;
+  orderNumber?: string | null;
+  status?: string | null;
+  orderSource?: string | null;
+  deliveryNote?: string | null;
+  paymentMethod?: string | null;
+  orderTotal?: number | null;
+  deliveryFee?: number | null;
+  tip?: number | null;
+  discount?: number | null;
+  tax?: number | null;
+  distance?: number | null;
+  placementTime?: string | null;
+  requestedPickupTime?: string | null;
+  requestedDeliveryTime?: string | null;
+  assignedTime?: string | null;
+  startTime?: string | null;
+  pickedupTime?: string | null;
+  arrivedTime?: string | null;
+  deliveryTime?: string | null;
+  carrier?: {
+    id?: number | null;
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    status?: string | null;
+    vehiclePlateNumber?: string | null;
+    vehicleDescription?: string | null;
+  } | null;
+  pickup?: ShipdayApiPlace | null;
+  delivery?: ShipdayApiPlace | null;
+}
+
+/** An ISO string Shipday sent, or null when it is absent or unparseable. */
+function iso(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/**
+ * The API's address block in the webhook's shape.
+ *
+ * Renaming here rather than at the screen means one address shape reaches the
+ * UI, so a backfilled row and a webhook row render through the same code.
+ */
+function placeFromApi(place: ShipdayApiPlace | null | undefined): ShipdayPlace {
+  if (!place) return {};
+  return {
+    id: place.id ?? null,
+    name: place.name ?? null,
+    address: place.address ?? null,
+    formatted_address: place.formattedAddress ?? null,
+    phone: place.phone ?? null,
+    email: place.email ?? null,
+    location: { lat: place.lat ?? null, lng: place.lng ?? null },
+  };
+}
+
+/** Marks a row the API filled in, so the board can tell it from a live event. */
+export const BACKFILL_EVENT = "API_BACKFILL";
+
+export function fromApiOrder(order: ShipdayApiOrder): ShipdayDeliveryRow | null {
+  if (typeof order?.orderId !== "number") return null;
+
+  const carrier = order.carrier ?? null;
+  const times = [
+    iso(order.deliveryTime), iso(order.arrivedTime), iso(order.pickedupTime),
+    iso(order.startTime), iso(order.assignedTime), iso(order.placementTime),
+  ].filter(Boolean) as string[];
+
+  return {
+    id: String(order.orderId),
+    order_number: str(order.orderNumber),
+    provider: "",
+    order_source: str(order.orderSource),
+    last_event: BACKFILL_EVENT,
+    order_status: str(order.status) || "NOT_ASSIGNED",
+    auto_assignment_status: "",
+    /* The latest thing that has happened to it, so a backfill never looks newer
+       than a webhook that already reported a later step. */
+    event_at: times.length > 0 ? times.sort().at(-1)! : null,
+
+    carrier_id: typeof carrier?.id === "number" ? carrier.id : null,
+    carrier_name: str(carrier?.name),
+    carrier_phone: str(carrier?.phone),
+    carrier_email: str(carrier?.email),
+    carrier_status: str(carrier?.status),
+    carrier_plate_number: str(carrier?.vehiclePlateNumber),
+    carrier_vehicle: str(carrier?.vehicleDescription),
+    third_party_name: "",
+
+    total_cost: num(order.orderTotal),
+    delivery_fee: num(order.deliveryFee),
+    tip: num(order.tip),
+    discount_amount: num(order.discount),
+    tax: num(order.tax),
+    payment_method: str(order.paymentMethod),
+
+    delivery_details: placeFromApi(order.delivery),
+    pickup_details: placeFromApi(order.pickup),
+    delivery_note: str(order.deliveryNote),
+
+    driving_distance: Math.trunc(num(order.distance)),
+    driving_duration: 0,
+    eta: null,
+
+    placement_time: iso(order.placementTime),
+    expected_pickup_time: iso(order.requestedPickupTime),
+    expected_delivery_time: iso(order.requestedDeliveryTime),
+    assigned_time: iso(order.assignedTime),
+    start_time: iso(order.startTime),
+    pickedup_time: iso(order.pickedupTime),
+    arrived_time: iso(order.arrivedTime),
+    delivery_time: iso(order.deliveryTime),
+
+    pod_urls: [],
+    raw: order,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * The orders Shipday currently holds.
+ *
+ * A POST despite being a read — that is how Shipday spells this endpoint, and
+ * the filters travel in the body. An empty body asks for the default window.
+ */
+export async function queryOrders(body: Record<string, unknown> = {}): Promise<ShipdayApiOrder[]> {
+  const result = await post<unknown>("/orders/query", body);
+  return Array.isArray(result) ? (result as ShipdayApiOrder[]) : [];
+}
+
+/* ── Active orders ───────────────────────────────────────────────────────────
+   GET /orders is a third shape again: the two ends are `restaurant` and
+   `customer` rather than `pickup`/`delivery`, the driver is `assignedCarrier`,
+   the status is `orderState`, and pickup time gains a capital U. It returns
+   only what is still in flight, which is exactly what a board of ongoing
+   deliveries wants. */
+
+interface ActivePlace {
+  id?: number | null;
+  name?: string | null;
+  address?: string | null;
+  phoneNumber?: string | null;
+  emailAddress?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export interface ShipdayActiveOrder {
+  orderId?: number | null;
+  orderNumber?: string | null;
+  orderState?: string | null;
+  status?: string | null;
+  paymentMethod?: string | null;
+  deliveryInstruction?: string | null;
+  distance?: number | null;
+  etaTime?: string | number | null;
+  totalCost?: number | null;
+  deliveryFee?: number | null;
+  tip?: number | null;
+  cashTip?: number | null;
+  discountAmount?: number | null;
+  tax?: number | null;
+  placementTime?: string | null;
+  expectedPickupTime?: string | null;
+  expectedDeliveryTime?: string | null;
+  assignedTime?: string | null;
+  startTime?: string | null;
+  /* Shipday's own casing differs between endpoints; both are read. */
+  pickedUpTime?: string | null;
+  pickedupTime?: string | null;
+  arrivedTime?: string | null;
+  deliveryTime?: string | null;
+  assignedCarrier?: (ShipdayCarrier & { carrierPhoto?: string | null }) | null;
+  restaurant?: ActivePlace | null;
+  customer?: ActivePlace | null;
+}
+
+function placeFromActive(place: ActivePlace | null | undefined): ShipdayPlace {
+  if (!place) return {};
+  return {
+    id: place.id ?? null,
+    name: place.name ?? null,
+    address: place.address ?? null,
+    formatted_address: place.address ?? null,
+    phone: place.phoneNumber ?? null,
+    email: place.emailAddress ?? null,
+    location: { lat: place.latitude ?? null, lng: place.longitude ?? null },
+  };
+}
+
+export function fromActiveOrder(order: ShipdayActiveOrder): ShipdayDeliveryRow | null {
+  if (typeof order?.orderId !== "number") return null;
+
+  const carrier = order.assignedCarrier ?? null;
+  const pickedUp = iso(order.pickedUpTime) ?? iso(order.pickedupTime);
+  const times = [
+    iso(order.deliveryTime), iso(order.arrivedTime), pickedUp,
+    iso(order.startTime), iso(order.assignedTime), iso(order.placementTime),
+  ].filter(Boolean) as string[];
+
+  return {
+    id: String(order.orderId),
+    order_number: str(order.orderNumber),
+    provider: "",
+    order_source: "",
+    last_event: BACKFILL_EVENT,
+    order_status: str(order.orderState) || str(order.status) || "NOT_ASSIGNED",
+    auto_assignment_status: "",
+    event_at: times.length > 0 ? times.sort().at(-1)! : null,
+
+    carrier_id: typeof carrier?.id === "number" ? carrier.id : null,
+    carrier_name: str(carrier?.name),
+    carrier_phone: str(carrier?.phoneNumber) || str(carrier?.phone),
+    carrier_email: str(carrier?.email),
+    carrier_status: carrier ? (carrierIsOnline(carrier) ? "ONLINE" : "OFFLINE") : "",
+    carrier_plate_number: "",
+    carrier_vehicle: "",
+    third_party_name: "",
+
+    total_cost: num(order.totalCost),
+    delivery_fee: num(order.deliveryFee),
+    tip: num(order.tip) + num(order.cashTip),
+    discount_amount: num(order.discountAmount),
+    tax: num(order.tax),
+    payment_method: str(order.paymentMethod),
+
+    delivery_details: placeFromActive(order.customer),
+    pickup_details: placeFromActive(order.restaurant),
+    delivery_note: str(order.deliveryInstruction),
+
+    driving_distance: Math.trunc(num(order.distance)),
+    driving_duration: 0,
+    /* etaTime is documented loosely enough to arrive either way, so it goes
+       through both readers rather than being assumed. */
+    eta: iso(order.etaTime) ?? etaOf(order.etaTime),
+
+    placement_time: iso(order.placementTime),
+    expected_pickup_time: iso(order.expectedPickupTime),
+    expected_delivery_time: iso(order.expectedDeliveryTime),
+    assigned_time: iso(order.assignedTime),
+    start_time: iso(order.startTime),
+    pickedup_time: pickedUp,
+    arrived_time: iso(order.arrivedTime),
+    delivery_time: iso(order.deliveryTime),
+
+    pod_urls: [],
+    raw: order,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/** The orders still in flight. */
+export async function fetchActiveOrders(): Promise<ShipdayActiveOrder[]> {
+  const result = await get<unknown>("/orders");
+  return Array.isArray(result) ? (result as ShipdayActiveOrder[]) : [];
 }
 
 /** The drivers on the account, for the roster panel. */

@@ -58,6 +58,12 @@ export interface InvoiceSettings {
   /** Printed against the order's Pickup / Delivery. */
   fulfilment_label: string;
   show_fulfilment: boolean;
+  /**
+   * Printed against where the order came from — the kiosk panel by name, the
+   * cashier who rang it up, or the website.
+   */
+  source_label: string;
+  show_source: boolean;
   /** Printed before every amount. Blank for none. */
   currency_symbol: string;
 
@@ -79,6 +85,8 @@ export const DEFAULT_INVOICE_SETTINGS: InvoiceSettings = {
   number_label: "INV #",
 
   order_type_label: "Order Type",
+  source_label: "Order From",
+  show_source: true,
   table_label: "Table Number",
   staff_label: "Staff",
   staff_name: "cashier",

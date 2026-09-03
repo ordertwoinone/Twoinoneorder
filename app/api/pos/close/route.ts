@@ -9,13 +9,18 @@ import { cleanCounts, countTotal } from "@/lib/pos/shift";
 import { getPosSettings } from "@/lib/pos/menu-server";
 import { shiftTakings, whatsappSummary } from "@/lib/pos/reconcile";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { can } from "@/lib/pos/permissions";
 
 /**
- * Closing the day.
+ * Closing one shift. The restaurant's day is closed at /api/pos/day.
  *
  * GET works the shift out without changing anything, so the screen can show the
  * reconciliation while the drawer is still being counted. POST is the act of
  * signing it off: it freezes those figures onto the shift row and shuts it.
+ *
+ * Those frozen figures are what the day close later adds up, which is why they
+ * are written here and never recomputed — a refund tomorrow must not move a
+ * daily total that has already been reported.
  */
 
 export async function GET() {
@@ -44,14 +49,14 @@ export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  /* Signing the day off is a manager's act, as the screen says it is. The
-     button was already hidden from a cashier, but a hidden button is not a
-     control — the check has to be here, where the write happens. A cashier can
-     still count the drawer and read the reconciliation; what they cannot do is
-     close the figures somebody else has to answer for. */
-  if (staff.role !== "manager") {
+  /* Closing your own drawer is the cashier's own job — it is a handover, not a
+     sign-off, and requiring a manager for it is what made the old combined
+     screen unusable at four in the afternoon. It is still a permission rather
+     than a free-for-all: a new starter counts the drawer and someone else ends
+     the shift. The check lives here because a hidden button is not a control. */
+  if (!can(staff, "shift_close")) {
     return NextResponse.json(
-      { error: "A manager has to close the day. Ask one to sign in." },
+      { error: "You are not set up to close a shift. Ask a manager or supervisor." },
       { status: 403 },
     );
   }

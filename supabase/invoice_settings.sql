@@ -69,6 +69,13 @@ CREATE TABLE IF NOT EXISTS invoice_settings (
 ALTER TABLE invoice_settings
   ADD COLUMN IF NOT EXISTS pending_label text NOT NULL DEFAULT 'Unpaid';
 
+-- Where the order came from: a named kiosk panel, the cashier at the till, or
+-- the website. Until this runs the invoice prints the wording below and simply
+-- cannot be renamed from admin.
+ALTER TABLE invoice_settings
+  ADD COLUMN IF NOT EXISTS source_label text NOT NULL DEFAULT 'Order From',
+  ADD COLUMN IF NOT EXISTS show_source  boolean NOT NULL DEFAULT true;
+
 -- Read server-side via the service role key, which bypasses RLS.
 ALTER TABLE invoice_settings ENABLE ROW LEVEL SECURITY;
 

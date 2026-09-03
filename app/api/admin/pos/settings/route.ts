@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { insertRow, updateRow } from "@/lib/admin-write";
 import { DEFAULT_POS_SETTINGS } from "@/lib/pos/settings";
+import { invalidatePosMenu } from "@/lib/pos/menu-server";
 
 async function currentRow() {
   const { data } = await supabaseAdminLive.from("pos_settings").select("*").limit(1).maybeSingle();
@@ -28,5 +29,11 @@ export async function PUT(request: Request) {
     : await insertRow("pos_settings", body);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  /* The till holds these for half a minute (lib/pos/cache.ts). Dropped here so
+     a discount cap or a delivery charge changed in admin is in force on the
+     next tap rather than whenever the window happens to run out. */
+  invalidatePosMenu();
+
   return NextResponse.json(data);
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Banknote, CreditCard, Receipt, Trash2, Wallet } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
+import { can } from "@/lib/pos/permissions";
 import { aed } from "@/lib/pos/cart";
 import type { PosStaff } from "@/lib/pos/constants";
 import PosShell from "@/components/pos/PosShell";
@@ -105,7 +106,7 @@ export default function ExpensesScreen({
     load();
   }
 
-  const needsManager = (Number(form.amount) || 0) >= managerOver && staff.role !== "manager";
+  const needsManager = (Number(form.amount) || 0) >= managerOver && !can(staff, "approve_expense");
 
   return (
     <PosShell

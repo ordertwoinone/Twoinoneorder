@@ -1,5 +1,6 @@
 import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { isValidPin, type PosStaff } from "@/lib/pos/constants";
@@ -101,15 +102,24 @@ export function clearSessionCookie() {
  *
  * Reads the session row every time rather than trusting anything in the cookie:
  * that is what makes ending a session from the admin panel take effect on the
- * next tap instead of whenever the token happens to expire.
+ * next tap instead of whenever the token happens to expire. Withdrawing a
+ * permission works the same way, and for the same reason.
+ *
+ * Deduplicated per request with React's cache(), not held between them. A page
+ * render asks this twice over — the guard, then the screen — and an API route
+ * asks it again on the way to the same answer; that was three round trips for
+ * one question with one answer. Across requests it is deliberately never
+ * cached: this is the check that a sacked cashier's tablet stops working.
  */
-export async function currentStaff(): Promise<PosStaff | null> {
+export const currentStaff = cache(async function currentStaff(): Promise<PosStaff | null> {
   const token = cookies().get(POS_COOKIE)?.value;
   if (!token) return null;
 
   const { data, error } = await supabaseAdminLive
     .from("pos_sessions")
-    .select("id, expires_at, pos_staff!inner(id, staff_id, name, role, is_active)")
+    /* Named columns and an inner join, so one round trip answers "who is this
+       and are they still allowed" — the till asks it on every navigation. */
+    .select("id, expires_at, pos_staff!inner(id, staff_id, name, role, is_active, permissions)")
     .eq("token_hash", tokenHash(token))
     .maybeSingle();
 
@@ -126,7 +136,7 @@ export async function currentStaff(): Promise<PosStaff | null> {
   if (!row.pos_staff?.is_active) return null;
 
   return row.pos_staff;
-}
+});
 
 export async function endSession(): Promise<void> {
   const token = cookies().get(POS_COOKIE)?.value;

@@ -27,6 +27,7 @@ export default function ThermalReceipt({
   settings,
   logoUrl,
   orderCode,
+  sourceLabel,
   footerNote,
 }: {
   order: InvoiceOrder;
@@ -34,6 +35,12 @@ export default function ThermalReceipt({
   logoUrl?: string;
   /** "ORD-1048" as the till prints it, rather than a bare number. */
   orderCode: string;
+  /**
+   * Where the order came from — "Kiosk · UNIVERCITY TAB 1", "Counter · THOMAS",
+   * "Website". Blank prints nothing, so a receipt from before the panels were
+   * named does not grow an empty row.
+   */
+  sourceLabel?: string;
   footerNote?: string;
 }) {
   const s = settings ?? {};
@@ -98,6 +105,9 @@ export default function ThermalReceipt({
       </div>
 
       {order.order_type && <Fact label={s.order_type_label || "Type"} value={order.order_type} />}
+      {s.show_source !== false && sourceLabel && (
+        <Fact label={s.source_label || "Order From"} value={sourceLabel} />
+      )}
       {order.table_id && <Fact label={s.table_label || "Table"} value={order.table_id} />}
       {order.guest_name && <Fact label={s.customer_label || "Customer"} value={order.guest_name} />}
       {order.phone && <Fact label={s.phone_label || "Phone"} value={order.phone} />}

@@ -4,7 +4,9 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { currentStaff } from "@/lib/pos/auth";
 import { cleanCounts, countTotal, shiftLabel } from "@/lib/pos/shift";
-import { openShiftFor } from "@/lib/pos/shift-server";
+import { businessDayClosed, currentBusinessDate, openShiftFor } from "@/lib/pos/shift-server";
+import { can } from "@/lib/pos/permissions";
+import { businessDateLabel } from "@/lib/pos/business-day";
 
 /** The shift the signed-in member of staff currently has open, if any. */
 export async function GET() {
@@ -26,8 +28,28 @@ export async function POST(request: Request) {
   const existing = await openShiftFor(staff.id);
   if (existing) return NextResponse.json({ shift: existing, resumed: true });
 
+  /* Opening a drawer is taking money, so it stands behind the same permission
+     the till does. A kitchen account has never been able to reach this screen;
+     now neither can a cashier whose till has been withdrawn. */
+  if (!can(staff, "till")) {
+    return NextResponse.json({ error: "You are not set up to take orders" }, { status: 403 });
+  }
+
   const body = await request.json().catch(() => ({}));
   const counts = cleanCounts(body?.counts);
+
+  /* A signed-off day is closed for good. Trading into it would put orders on a
+     date whose total has already been counted, printed and sent to management —
+     the figures would be right tomorrow and wrong in everybody's records. */
+  const businessDate = currentBusinessDate();
+  if (await businessDayClosed(businessDate)) {
+    return NextResponse.json(
+      {
+        error: `${businessDateLabel(businessDate)} has already been closed off. A manager has to reopen it before a new shift can start.`,
+      },
+      { status: 409 },
+    );
+  }
 
   const { data, error } = await supabaseAdminLive
     .from("pos_shifts")
@@ -36,6 +58,9 @@ export async function POST(request: Request) {
         staff_uuid: staff.id,
         status: "open",
         shift_label: shiftLabel(),
+        // Which trading day this belongs to, decided once at opening. An
+        // evening shift running past midnight keeps the day it started on.
+        business_date: businessDate,
         opening_counts: counts,
         // Totalled here, never taken from the screen: the float is the figure
         // the whole day reconciles against.

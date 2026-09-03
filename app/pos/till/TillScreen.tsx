@@ -17,6 +17,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
+import { can } from "@/lib/pos/permissions";
 import { sizedImage } from "@/lib/image-url";
 import { toPercent } from "@/lib/kalba/pricing";
 import { addonSummary, defaultSelection, type AddonSelection } from "@/lib/kalba/addons";
@@ -34,6 +35,7 @@ import {
   type PosPayment,
   type PosQty,
 } from "@/lib/pos/cart";
+import { printDocument } from "@/lib/print-document";
 import PosShell from "@/components/pos/PosShell";
 import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
 import type { StaleShift } from "@/lib/pos/shift";
@@ -432,10 +434,17 @@ export default function TillScreen({
                   const offer = toPercent(item.discount_percent);
                   const price = itemPrice(item);
                   const net = offer > 0 ? Math.round(price * (100 - offer)) / 100 : price;
+                  /* Run out, per Item Availability. Drawn greyed and refused
+                     rather than hidden: a cashier facing someone asking for it
+                     needs to find it and say it is finished. A dish that simply
+                     vanished from the grid gets rung up as something else. */
+                  const soldOut = item.is_available === false;
                   return (
                     <button
                       key={item.id}
-                      onClick={() => add(item)}
+                      onClick={() => { if (!soldOut) add(item); }}
+                      disabled={soldOut}
+                      aria-disabled={soldOut}
                       className="relative rounded-xl overflow-hidden bg-white text-start active:scale-[0.98] transition-transform"
                       style={{
                         border: `1px solid ${n > 0 ? POS.action : POS.line}`,
@@ -451,7 +460,16 @@ export default function TillScreen({
                             loading="lazy"
                             decoding="async"
                             className="w-full h-full object-cover"
+                            style={{ opacity: soldOut ? 0.35 : 1 }}
                           />
+                        )}
+                        {soldOut && (
+                          <span
+                            className="absolute inset-x-0 bottom-0 py-1 text-center text-[10.5px] font-extrabold uppercase tracking-wide text-white"
+                            style={{ background: POS.bad }}
+                          >
+                            Out of stock
+                          </span>
                         )}
                         {n > 0 && (
                           <span
@@ -474,7 +492,7 @@ export default function TillScreen({
                         <p
                           className="text-[12px] font-semibold leading-tight"
                           style={{
-                            color: POS.ink,
+                            color: soldOut ? POS.inkSoft : POS.ink,
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: "vertical",
@@ -484,7 +502,10 @@ export default function TillScreen({
                         >
                           {item.name}
                         </p>
-                        <p className="mt-0.5 text-[13px] font-black" style={{ color: POS.ink }}>
+                        <p
+                          className="mt-0.5 text-[13px] font-black"
+                          style={{ color: soldOut ? POS.inkSoft : POS.ink }}
+                        >
                           {net.toFixed(2)}
                           <span className="ms-1 text-[10px] font-bold" style={{ color: POS.inkSoft }}>AED</span>
                         </p>
@@ -525,7 +546,7 @@ export default function TillScreen({
                 is one, because a Print that prints the menu is worse than a
                 Print that is greyed out. */}
             <Tool
-              onClick={() => placed?.id && window.open(`/pos/invoice/${placed.id}?print=1`, "_blank")}
+              onClick={() => placed?.id && printDocument(`/pos/invoice/${placed.id}`)}
               icon={<Printer size={15} />}
               label={placed ? `Reprint ${placed.code}` : "Print"}
               disabled={!placed?.id}
@@ -547,8 +568,8 @@ export default function TillScreen({
         <DiscountDialog
           current={discount}
           itemsTotal={totals.itemsTotal}
-          maxPercent={staff.role === "manager" ? 100 : settings.max_cashier_discount_percent}
-          isManager={staff.role === "manager"}
+          maxPercent={can(staff, "discount_any") ? 100 : settings.max_cashier_discount_percent}
+          isManager={can(staff, "discount_any")}
           onClose={() => setDiscountOpen(false)}
           onApply={(d) => { setDiscount(d); setDiscountOpen(false); }}
         />
@@ -572,7 +593,7 @@ export default function TillScreen({
             </p>
             <div className="mt-5 flex gap-2">
               <button
-                onClick={() => placed.id && window.open(`/pos/invoice/${placed.id}?print=1`, "_blank")}
+                onClick={() => placed.id && printDocument(`/pos/invoice/${placed.id}`)}
                 disabled={!placed.id}
                 className="flex-1 flex items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:opacity-40"
                 style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 46 }}

@@ -4,6 +4,7 @@ import { getBranding } from "@/lib/branding";
 import { getInvoiceSettings } from "@/lib/invoice-settings-server";
 import { isReconstructed, toInvoiceOrder } from "@/lib/invoice";
 import InvoiceSheet from "@/components/admin/InvoiceSheet";
+import { orderSourceFor } from "@/lib/order-source-server";
 import PrintButton from "./PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function InvoicePage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { print?: string };
+  searchParams: { print?: string; embed?: string };
 }) {
   const [row, settings, branding] = await Promise.all([
     getOrder(params.id),
@@ -44,8 +45,12 @@ export default async function InvoicePage({
 
   if (!row) notFound();
 
+  /* A reservation has no source worth printing — it reached us the one way a
+     reservation can. Only the orders say where they came from. */
+  const source = await orderSourceFor(row);
+
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
+    <div className="print-sheet min-h-screen bg-gray-100 print:bg-white">
       {/* Zero page margins are what suppress the browser's own header and
           footer — the site title, the date and the URL it prints at the edges.
           The sheet supplies its own padding so nothing sits on the crease. */}
@@ -56,7 +61,9 @@ export default async function InvoicePage({
         }
       `}</style>
 
-      <PrintButton autoPrint={searchParams.print === "1"} />
+      {/* Rendered in a hidden iframe when printed from a board: no toolbar,
+          and the parent fires the print so this must not fire a second. */}
+      {searchParams.embed !== "1" && <PrintButton autoPrint={searchParams.print === "1"} />}
 
       {/* Screen only. An operator has to know the figures were recovered from a
           note before they hand the paper to a customer. */}
@@ -77,6 +84,7 @@ export default async function InvoicePage({
           order={toInvoiceOrder(row)}
           settings={settings}
           fallbackLogo={branding.logoUrl}
+          sourceLabel={source.label}
         />
       </div>
     </div>

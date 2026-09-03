@@ -52,6 +52,17 @@ export async function POST(request: Request) {
   }
 
   const event = String(payload?.event ?? "");
+
+  /* The driver-location beta posts to this same URL with the same token, but
+     carries only a position — no `order` object at all. Rejecting it as
+     malformed would return 400 to a perfectly valid delivery and have Shipday
+     retry it, so it is acknowledged. The coordinates are not stored yet: that
+     needs somewhere to put them, and the feature is off until Shipday enables
+     it on the account. */
+  if (event === "LOCATION_UPDATE") {
+    return NextResponse.json({ received: true, ignored: "location update" });
+  }
+
   const row = toDeliveryRow(payload);
 
   /* A body we cannot key on is not worth retrying — 400 says so once, where a

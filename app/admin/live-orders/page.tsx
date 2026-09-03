@@ -1,5 +1,6 @@
 "use client";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { printDocument } from "@/lib/print-document";
 import {
   RefreshCw, Volume2, VolumeX, AlertTriangle, Store, Phone, Clock,
   CalendarClock, StickyNote, BellRing, X, Wifi, WifiOff,
@@ -984,17 +985,15 @@ export default function LiveOrdersAdmin() {
                   {/* take.app issues its own invoices off its own numbering, so
                       only our own orders get one from here. */}
                   {r.invoiceable && (
-                    <a
-                      href={`/admin/invoice/${r.id}?print=1`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); printDocument(`/admin/invoice/${r.id}`); }}
                       title="Print invoice"
                       aria-label="Print invoice"
                       className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:text-orange-600 hover:border-orange-300 active:bg-gray-100"
                     >
                       <Printer size={15} />
-                    </a>
+                    </button>
                   )}
                   {r.customerPhone && (
                     <a
@@ -1192,17 +1191,15 @@ export default function LiveOrdersAdmin() {
                         {/* take.app issues its own invoices off its own
                             numbering, so only our own orders get one here. */}
                         {r.invoiceable && (
-                          <a
-                            href={`/admin/invoice/${r.id}?print=1`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); printDocument(`/admin/invoice/${r.id}`); }}
                             title="Print invoice"
                             aria-label="Print invoice"
                             className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50"
                           >
                             <Printer size={14} />
-                          </a>
+                          </button>
                         )}
                         <ChevronDown size={15} className={`transition-transform ${open ? "rotate-180" : ""}`} />
                       </div>

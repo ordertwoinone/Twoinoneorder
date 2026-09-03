@@ -4,6 +4,6 @@ import ExpensesScreen from "./ExpensesScreen";
 export const dynamic = "force-dynamic";
 
 export default async function ExpensesPage() {
-  const { staff, shift } = await requireShift();
+  const { staff, shift } = await requireShift("expenses");
   return <ExpensesScreen staff={staff} openingFloat={Number(shift.opening_float)} />;
 }

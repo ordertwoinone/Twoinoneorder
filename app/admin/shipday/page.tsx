@@ -3,9 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   RefreshCw, AlertTriangle, Phone, Clock, Truck, Wifi, WifiOff, Search,
   ChevronDown, MapPin, User, Bike, Package, CheckCircle2, Camera, StickyNote,
-  Navigation, CreditCard, Users,
+  Navigation, CreditCard, Users, DownloadCloud, Info,
 } from "lucide-react";
-import { statusLook, eventLabel, STATUS_LOOK } from "@/lib/shipday";
+import { statusLook, eventLabel, STATUS_LOOK, carrierIsOnline } from "@/lib/shipday";
 
 /* ── Shapes as /api/admin/shipday returns them ───────────────────────────── */
 
@@ -59,6 +59,7 @@ interface Carrier {
   id?: number | null;
   name?: string | null;
   phone?: string | null;
+  phoneNumber?: string | null;
   email?: string | null;
   status?: string | null;
   isOnShift?: boolean | null;
@@ -151,6 +152,9 @@ export default function ShipdayAdmin() {
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [rosterOpen, setRosterOpen] = useState(false);
+  const [pulling, setPulling] = useState(false);
+  /** What the last pull from Shipday found, shown until the next one. */
+  const [pullNote, setPullNote] = useState("");
   /** Rows the stream has just touched, so a change is visible without a refresh. */
   const [movedIds, setMovedIds] = useState<string[]>([]);
 
@@ -200,6 +204,34 @@ export default function ShipdayAdmin() {
   }, []);
 
   useEffect(() => { loadCarriers(); }, [loadCarriers]);
+
+  /**
+   * Ask Shipday for the orders it already holds.
+   *
+   * The webhook only reports what happens next, so anything Shipday took
+   * before it was connected is invisible until this is pressed. It doubles as
+   * the diagnosis: "Shipday has no orders" is a different problem from "the
+   * webhook is not arriving", and only this can tell them apart.
+   */
+  async function pullFromShipday() {
+    setPulling(true);
+    setPullNote("");
+    try {
+      const res = await fetch("/api/admin/shipday/backfill", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error ?? "Could not reach Shipday.");
+      setPullNote(
+        body.found === 0
+          ? "Shipday returned no orders at all — active or historic — so nothing is reaching Shipday in the first place."
+          : `Shipday had ${body.found} order${body.found === 1 ? "" : "s"} (${body.active} still in flight): ${body.written} written, ${body.skipped} already up to date.`,
+      );
+      await load();
+    } catch (err) {
+      setPullNote(err instanceof Error ? err.message : "Could not reach Shipday.");
+    } finally {
+      setPulling(false);
+    }
+  }
 
   const handleLive = useCallback(({ delivery }: { delivery: Delivery }) => {
     if (!delivery?.id) return;
@@ -283,7 +315,9 @@ export default function ShipdayAdmin() {
     return tally;
   }, [shown]);
 
-  const onShift = carriers.filter((c) => (c.status ?? "").toUpperCase() === "ONLINE").length;
+  /* The roster endpoint reports availability as `isOnShift`, not the webhook's
+     `status: "ONLINE"` — reading only the latter counts every driver offline. */
+  const onShift = carriers.filter(carrierIsOnline).length;
 
   return (
     <div className="p-4 sm:p-8">
@@ -328,6 +362,15 @@ export default function ShipdayAdmin() {
           </button>
 
           <button
+            onClick={pullFromShipday}
+            disabled={pulling}
+            className="flex items-center justify-center gap-2 px-4 h-11 rounded-lg text-sm font-semibold text-white bg-orange-600 hover:bg-orange-700 transition flex-1 sm:flex-none disabled:opacity-60"
+          >
+            <DownloadCloud size={14} className={pulling ? "animate-pulse" : ""} />
+            {pulling ? "Pulling…" : "Pull from Shipday"}
+          </button>
+
+          <button
             onClick={() => load()}
             disabled={loading}
             className="flex items-center justify-center gap-2 px-4 h-11 rounded-lg text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition flex-1 sm:flex-none disabled:opacity-60"
@@ -345,6 +388,13 @@ export default function ShipdayAdmin() {
             <p className="font-semibold">Deliveries could not be loaded</p>
             <p className="text-red-600/90 mt-0.5">{error}</p>
           </div>
+        </div>
+      )}
+
+      {pullNote && (
+        <div className="mb-4 flex items-start gap-2 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-sm">
+          <Info size={16} className="shrink-0 mt-0.5" />
+          <p>{pullNote}</p>
         </div>
       )}
 
@@ -375,17 +425,18 @@ export default function ShipdayAdmin() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {carriers.map((c, i) => {
-                const online = (c.status ?? "").toUpperCase() === "ONLINE";
+                const online = carrierIsOnline(c);
+                const phone = c.phoneNumber || c.phone || "";
                 return (
                   <div key={c.id ?? i} className="flex items-center gap-3 rounded-lg border border-gray-100 px-3 py-2.5">
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${online ? "bg-green-500" : "bg-gray-300"}`} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-800 truncate">{c.name || "Unnamed driver"}</p>
-                      <p className="text-[12px] text-gray-500 truncate">{c.phone || c.email || "—"}</p>
+                      <p className="text-[12px] text-gray-500 truncate">{phone || c.email || "—"}</p>
                     </div>
-                    {c.phone && (
+                    {phone && (
                       <a
-                        href={`tel:${c.phone}`}
+                        href={`tel:${phone}`}
                         className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 shrink-0"
                         aria-label={`Call ${c.name || "the driver"}`}
                       >

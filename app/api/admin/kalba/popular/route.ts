@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { invalidatePosMenu } from "@/lib/pos/menu-server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { insertRow } from "@/lib/admin-write";
 import {
@@ -45,6 +46,11 @@ export async function POST(request: Request) {
   if (created?.id && Array.isArray(addon_groups)) {
     ({ droppedColumns } = await syncItemAddonGroups(created.id, addon_groups));
   }
+
+  /* The till and the kiosk hold this menu for a few seconds (lib/pos/cache.ts).
+     Dropped here so a price edited in admin reaches a live till on the next tap
+     rather than at the end of the window. */
+  invalidatePosMenu();
 
   revalidatePath("/restaurant/university-kalba");
   revalidatePath("/restaurant/university-kalba/menu");

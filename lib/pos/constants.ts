@@ -24,6 +24,14 @@ export interface PosStaff {
   name: string;
   role: PosRole;
   is_active: boolean;
+  /**
+   * What this account may actually reach, or null for the role's defaults.
+   *
+   * See lib/pos/permissions.ts. Kept as plain strings here so this module stays
+   * the small shared vocabulary it was — the permission keys are validated
+   * where they are read, not where they are carried.
+   */
+  permissions?: string[] | null;
 }
 
 export function isValidPin(pin: string): boolean {
@@ -46,7 +54,14 @@ export function handlesCash(role: PosRole): boolean {
   return role !== "kitchen";
 }
 
-/** Where someone lands after signing in. */
+/**
+ * Where someone lands after signing in, by role alone.
+ *
+ * Superseded by landingFor() in lib/pos/permissions.ts, which sends people to
+ * the first screen they are actually allowed to open — a cashier with the till
+ * withdrawn used to land on it and be bounced straight back. Kept because the
+ * kitchen redirect is a plain fact about the job rather than a permission.
+ */
 export function homeFor(role: PosRole): string {
   return role === "kitchen" ? "/pos/kitchen" : "/pos/till";
 }

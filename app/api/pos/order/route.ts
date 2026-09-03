@@ -8,6 +8,7 @@ import { getLiveAddonGroupsByItem } from "@/lib/kalba/addons-server";
 import { sellable } from "@/lib/kiosk/server";
 import type { KioskItem } from "@/lib/kiosk/types";
 import { currentStaff } from "@/lib/pos/auth";
+import { can } from "@/lib/pos/permissions";
 import { openShiftFor } from "@/lib/pos/shift-server";
 import { getPosSettings } from "@/lib/pos/menu-server";
 import {
@@ -57,10 +58,11 @@ export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  /* A cook has no till. The shift check below would refuse them anyway, but
-     saying why beats "open your shift" to someone who cannot. */
-  if (staff.role === "kitchen") {
-    return NextResponse.json({ error: "Kitchen accounts cannot take orders" }, { status: 403 });
+  /* A cook has no till, and neither has anyone whose till has been withdrawn.
+     The shift check below would refuse them anyway, but saying why beats
+     "open your shift" to someone who cannot open one. */
+  if (!can(staff, "till")) {
+    return NextResponse.json({ error: "You are not set up to take orders" }, { status: 403 });
   }
 
   const shift = await openShiftFor(staff.id);
@@ -114,10 +116,10 @@ export async function POST(request: Request) {
     addons[item.id] = (body.addons?.[item.id] ?? []).filter((id) => own.has(id));
   }
 
-  /* A cashier's discount is capped; a manager's is not. Checked against the
-     role on the session, not anything the screen claimed about itself. */
+  /* A cashier's discount is capped; someone granted the override is not.
+     Checked against the session, not anything the screen claimed about itself. */
   const discount = body.discount ?? null;
-  if (discount && discount.value > 0 && staff.role !== "manager") {
+  if (discount && discount.value > 0 && !can(staff, "discount_any")) {
     const asPercent =
       discount.mode === "percent"
         ? discount.value

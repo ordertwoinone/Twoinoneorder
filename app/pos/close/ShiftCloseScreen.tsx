@@ -7,6 +7,7 @@ import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
 import { DENOMINATIONS } from "@/lib/pos/shift";
 import type { PosStaff } from "@/lib/pos/constants";
+import { can } from "@/lib/pos/permissions";
 import type { ShiftTakings } from "@/lib/pos/reconcile";
 import type { PosShift } from "@/lib/pos/shift";
 import PosShell from "@/components/pos/PosShell";
@@ -15,7 +16,17 @@ import type { StaleShift } from "@/lib/pos/shift";
 import CloseCamera from "@/components/pos/CloseCamera";
 
 /**
- * Day Close.
+ * Shift Close — one cashier, one drawer.
+ *
+ * Not the day. This screen ends the shift of whoever is signed into it: count
+ * the drawer, account for the difference, hand over. The restaurant carries on
+ * trading under the next shift, and the day's combined figures are signed off
+ * separately at /pos/day-close, by a manager, once every shift is in.
+ *
+ * The two were one screen and it served neither. A cashier finishing at four
+ * could not hand the drawer over without signing off the whole restaurant's
+ * day; and the manager who closed at midnight closed only their own shift, so
+ * the morning's takings never appeared in anything anyone called a daily total.
  *
  * Two columns of the same money: what the orders say was taken, and what is
  * actually in the drawer. The difference between them is the only number
@@ -25,7 +36,7 @@ import CloseCamera from "@/components/pos/CloseCamera";
  * from a counter kept during the shift — a running total that has drifted is
  * indistinguishable from a drawer that is short.
  */
-export default function DayCloseScreen({
+export default function ShiftCloseScreen({
   staff,
   shift: initialShift,
   stale = [],
@@ -97,14 +108,14 @@ export default function DayCloseScreen({
     setDone({ summary: body.summary, whatsappUrl: body.whatsappUrl, difference: body.difference });
   }
 
-  /* Closing the day is a manager's signature. A cashier can count the drawer
-     and see the reconciliation, but the shift is signed off by someone who can
-     answer for the difference. */
-  const canClose = staff.role === "manager";
+  /* Closing your own drawer is a cashier's job, not a manager's — that was the
+     rule that made the old combined screen unusable at a handover. What still
+     needs a manager is the day, on its own screen. */
+  const canClose = can(staff, "shift_close");
 
   if (done) {
     return (
-      <PosShell staff={staff} title="Day Close" subtitle="Shift closed">
+      <PosShell staff={staff} title="Shift Close" subtitle="Shift closed">
         <div className="pos-scroll h-full flex items-center justify-center p-6">
           <div className="w-full max-w-[540px] rounded-2xl bg-white p-7 text-center" style={{ border: `1px solid ${POS.line}` }}>
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full" style={{ background: POS.goodSoft }}>
@@ -115,6 +126,12 @@ export default function DayCloseScreen({
               {done.difference === 0
                 ? "The drawer balanced."
                 : `The drawer was ${done.difference > 0 ? "over" : "short"} by ${aed(Math.abs(done.difference))}.`}
+            </p>
+            {/* Said plainly, because the old screen said the opposite by
+                implication and people went home believing the day was done. */}
+            <p className="mt-1 text-[12.5px]" style={{ color: POS.inkSoft }}>
+              This closes your shift only. The restaurant keeps trading, and a manager signs the
+              business day off at the end of it.
             </p>
 
             <pre
@@ -169,8 +186,8 @@ export default function DayCloseScreen({
   return (
     <PosShell
       staff={staff}
-      title="Day Close"
-      subtitle={`${shift.shift_label} shift · opened ${new Date(shift.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+      title="Shift Close"
+      subtitle={`${shift.shift_label} shift · ${staff.name || staff.staff_id} · opened ${new Date(shift.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
       warning={<StaleShiftWarning shifts={stale} />}
     >
       <div className="pos-scroll h-full p-4">
@@ -296,7 +313,8 @@ export default function DayCloseScreen({
                 className="rounded-lg px-3 py-2.5 text-[12px] font-semibold"
                 style={{ background: POS.badSoft, color: POS.bad }}
               >
-                A manager has to sign the day off. Count the drawer, then ask one to sign in.
+                You are not set up to close a shift. Count the drawer, then ask a manager or
+                supervisor to sign it off.
               </p>
             )}
 
@@ -316,7 +334,7 @@ export default function DayCloseScreen({
               style={{ background: POS.night, height: 52 }}
             >
               <Lock size={16} />
-              {busy ? "Closing…" : "Close shift & print report"}
+              {busy ? "Closing…" : "Close shift & hand over"}
             </button>
           </Card>
         </div>

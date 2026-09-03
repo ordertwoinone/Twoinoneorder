@@ -611,3 +611,41 @@ canvas {
 .kiosk-lang[dir="rtl"] {
   font-family: var(--font-ar), Inter, system-ui, sans-serif;
 }
+
+/* Printing anything under /pos.
+ *
+ * .pos-root is fixed and clipped, which is right on a tablet and fatal on
+ * paper: a fixed, overflow-hidden box has no flow content to paginate, so the
+ * printer was handed blank pages. Windows happened to rasterise something
+ * anyway; Android's print framework did not, and produced three empty sheets.
+ *
+ * The same reset the kiosk already had. On paper the till stops being a screen
+ * and becomes a document: it flows, it is black on white, and the chrome that
+ * only makes sense to a finger is left off. */
+@media print {
+  .pos-root {
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    background: #fff !important;
+  }
+
+  .pos-scroll {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .pos-chrome,
+  .pos-no-print {
+    display: none !important;
+  }
+
+  /* A receipt is as tall as the receipt. min-h-screen on the wrapper is a
+     viewport's worth of empty paper at 72mm wide — several sheets of it. */
+  .print-sheet {
+    min-height: 0 !important;
+    background: #fff !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+}

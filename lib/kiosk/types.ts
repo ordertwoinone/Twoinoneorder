@@ -13,14 +13,17 @@ export type KioskCategory = KalbaCategory;
 /**
  * A Kalba dish as the kiosk reads it.
  *
- * The two extra fields are columns the Kalba pages never needed but the kiosk
- * uses to sort the grid: the top-picks flag becomes the "Popular" filter and
- * the BEST SELLER flash, and created_at is what makes a dish count as new.
+ * The extra fields are columns the Kalba pages never needed but the screens in
+ * the building do: the top-picks flag becomes the "Popular" filter and the BEST
+ * SELLER flash, created_at is what makes a dish count as new, and is_available
+ * is the branch's own stock switch — off means the kitchen has run out today,
+ * which is not the same as is_active, which means it is not on the menu at all.
  */
 export type KioskItem = KalbaPopularItem & {
   show_in_top_picks?: boolean | null;
   top_picks_order?: number | null;
   created_at?: string | null;
+  is_available?: boolean | null;
 };
 
 /**

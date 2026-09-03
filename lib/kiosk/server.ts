@@ -67,9 +67,13 @@ export async function getKioskData(): Promise<KioskData> {
        The kiosk takes money unattended, so an unpriced item is not a cosmetic
        gap — it is a free lunch, added to the basket at AED 0.00 with nobody at
        the counter to notice. It reappears the moment a price is typed in
-       admin → University Kalba → Popular Items. */
+       admin → University Kalba → Popular Items.
+
+       One that has run out is left off for the opposite reason: there is nobody
+       standing there to say "sorry, that's finished". The till shows it greyed
+       because a cashier can explain; the kiosk simply does not offer it. */
     items: ((itemsRes.data ?? []) as KioskItem[])
-      .filter((item) => sellable(item))
+      .filter((item) => sellable(item) && item.is_available !== false)
       .map((item) => ({ ...item, addon_groups: groupsByItem[item.id] ?? [] })),
   };
 }

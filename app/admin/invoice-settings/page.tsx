@@ -166,6 +166,7 @@ export default function InvoiceSettingsAdmin() {
             </p>
             <div className="grid sm:grid-cols-2 gap-4">
               <Field label="Order type label" value={form.order_type_label} onChange={(v) => set("order_type_label", v)} />
+              <Field label="Order source label" value={form.source_label} onChange={(v) => set("source_label", v)} />
               <Field label="Table number label" value={form.table_label} onChange={(v) => set("table_label", v)} />
               <Field label="Staff label" value={form.staff_label} onChange={(v) => set("staff_label", v)} />
               <Field label="Staff name" value={form.staff_name} onChange={(v) => set("staff_name", v)} />
@@ -203,6 +204,12 @@ export default function InvoiceSettingsAdmin() {
               <Toggle label="Show payment and total paid" hint="Which method it reads is set per order in Order History." checked={form.show_paid} onChange={(v) => set("show_paid", v)} />
               <Toggle label="Show tips row" hint="" checked={form.show_tips} onChange={(v) => set("show_tips", v)} />
               <Toggle label="Show pickup / delivery row" hint="" checked={form.show_fulfilment} onChange={(v) => set("show_fulfilment", v)} />
+              <Toggle
+                label="Show where the order came from"
+                hint="Names the kiosk panel, or the cashier who rang it up, or says Website."
+                checked={form.show_source}
+                onChange={(v) => set("show_source", v)}
+              />
             </div>
           </Section>
 
@@ -227,7 +234,7 @@ export default function InvoiceSettingsAdmin() {
           </p>
           <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
             <div className="scale-[0.86] origin-top">
-              <InvoiceSheet order={SAMPLE} settings={form} />
+              <InvoiceSheet order={SAMPLE} settings={form} sourceLabel="Kiosk · Counter 1" />
             </div>
           </div>
           <p className="text-[11px] text-gray-400 mt-2">

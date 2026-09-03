@@ -123,7 +123,14 @@ export async function shiftTakings(shiftId: string, openingFloat: number): Promi
   };
 }
 
-/** The message the day-close screen offers to send to management. */
+/**
+ * The message the shift-close screen offers to send.
+ *
+ * One shift, and it says so. It used to be headed "Day Close", which is where
+ * a good deal of the confusion started: a cashier handing over at four sent
+ * management something that read like the day's takings and was a third of it.
+ * The day's own report is built in lib/pos/business-day.ts.
+ */
 export function whatsappSummary(input: {
   branch: string;
   staffName: string;
@@ -140,7 +147,7 @@ export function whatsappSummary(input: {
     new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return [
-    `*${input.branch} — Day Close*`,
+    `*${input.branch} — Shift Close*`,
     `${input.shiftLabel} shift · ${input.staffName}`,
     `${time(input.openedAt)} – ${time(input.closedAt)}`,
     "",

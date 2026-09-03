@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { printDocument } from "@/lib/print-document";
 import { RefreshCw, Search, Printer, Banknote, CreditCard, Download, Clock } from "lucide-react";
 
 const filterCls =
@@ -364,16 +365,15 @@ export default function OrderHistoryAdmin() {
                     </select>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <a
-                      href={`/admin/invoice/${r.id}?print=1`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => printDocument(`/admin/invoice/${r.id}`)}
                       title="Print invoice"
                       aria-label="Print invoice"
                       className="inline-flex w-8 h-8 items-center justify-center rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50"
                     >
                       <Printer size={14} />
-                    </a>
+                    </button>
                   </td>
                 </tr>
               ))

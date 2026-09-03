@@ -4,34 +4,46 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  CalendarCheck,
   ChefHat,
   ClipboardList,
   LayoutGrid,
   LogOut,
   Receipt,
   ShoppingCart,
+  SlidersHorizontal,
   Wallet,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
-import { handlesCash, ROLE_LABEL, type PosStaff } from "@/lib/pos/constants";
+import { ROLE_LABEL, type PosStaff } from "@/lib/pos/constants";
+import { can, type PosPermission } from "@/lib/pos/permissions";
 
 /**
  * The rail and the bar that every till screen sits inside.
  *
  * The order of the rail is the order of a shift: take an order, work the board,
- * feed the kitchen, record what went out of the drawer, close the day. It does
- * not change between screens, because the one thing a tool used for eight hours
- * owes its user is that the button is where it was last time.
+ * feed the kitchen, mark what has run out, record what went out of the drawer,
+ * hand the drawer over, close the restaurant. It does not change between
+ * screens, because the one thing a tool used for eight hours owes its user is
+ * that the button is where it was last time.
+ *
+ * What changes between people is which buttons are there at all. Each entry
+ * names the permission it stands behind, so a rail is drawn from what this
+ * account may actually open — see lib/pos/permissions.ts. It is a courtesy
+ * rather than a control: every one of these pages checks the same permission
+ * again on the server, because a hidden link is not a locked door.
  */
 
-const NAV = [
-  { href: "/pos/till", label: "POS", icon: ShoppingCart, cash: true },
-  { href: "/pos/orders", label: "Orders", icon: ClipboardList, cash: true },
-  { href: "/pos/kitchen", label: "Kitchen", icon: ChefHat, cash: false },
-  { href: "/pos/expenses", label: "Expenses", icon: Receipt, cash: true },
-  { href: "/pos/reports", label: "Reports", icon: BarChart3, cash: true },
-  { href: "/pos/close", label: "Day Close", icon: Wallet, cash: true },
-] as const;
+const NAV: { href: string; label: string; icon: typeof ShoppingCart; key: PosPermission }[] = [
+  { href: "/pos/till", label: "POS", icon: ShoppingCart, key: "till" },
+  { href: "/pos/orders", label: "Orders", icon: ClipboardList, key: "orders" },
+  { href: "/pos/kitchen", label: "Kitchen", icon: ChefHat, key: "kitchen" },
+  { href: "/pos/availability", label: "Item Availability", icon: SlidersHorizontal, key: "availability" },
+  { href: "/pos/expenses", label: "Expenses", icon: Receipt, key: "expenses" },
+  { href: "/pos/reports", label: "Reports", icon: BarChart3, key: "reports" },
+  { href: "/pos/close", label: "Shift Close", icon: Wallet, key: "shift_close" },
+  { href: "/pos/day-close", label: "Day Close", icon: CalendarCheck, key: "day_close" },
+];
 
 export default function PosShell({
   staff,
@@ -71,11 +83,17 @@ export default function PosShell({
           <span style={{ color: POS.brand }}>1</span>
         </p>
 
-        {/* A kitchen screen shows one thing. Everything else on this rail is a
-            till, a drawer or a ledger, and a cook pressing any of it lands on a
-            page that will only send them back. */}
-        {NAV.filter((entry) => !entry.cash || handlesCash(staff.role)).map((entry) => {
-          const active = pathname?.startsWith(entry.href) ?? false;
+        {/* Only what this account can open. A cook's rail is the kitchen board
+            and the availability switch; everything else on it would land them
+            on a page that only sends them back. */}
+        {NAV.filter((entry) => can(staff, entry.key)).map((entry) => {
+          /* Exact match on the two closes. startsWith() made "Shift Close"
+             light up while standing on /pos/day-close, because one path is a
+             prefix of nothing but the other is not — and two lit buttons on a
+             rail is a screen you cannot tell where you are on. */
+          const active =
+            pathname === entry.href ||
+            (pathname?.startsWith(`${entry.href}/`) ?? false);
           const Icon = entry.icon;
           return (
             <Link
@@ -88,7 +106,11 @@ export default function PosShell({
               }}
             >
               <Icon size={19} />
-              <span className="text-[10.5px] font-semibold leading-none">{entry.label}</span>
+              {/* Two lines where a label needs them — "Item Availability" on
+                  one line at this width is four unreadable pixels of text. */}
+              <span className="px-1 text-center text-[10.5px] font-semibold leading-[1.15]">
+                {entry.label}
+              </span>
             </Link>
           );
         })}

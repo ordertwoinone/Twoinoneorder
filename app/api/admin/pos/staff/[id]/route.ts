@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { hashPin } from "@/lib/pos/auth";
 import { isValidPin, PIN_MAX, PIN_MIN } from "@/lib/pos/constants";
+import { cleanPermissions } from "@/lib/pos/permissions";
 
 const ROLES = ["cashier", "manager", "kitchen"];
 
@@ -16,6 +17,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     is_active: body?.is_active !== false,
     updated_at: new Date().toISOString(),
   };
+
+  /* Only written when the field was actually sent. The unlock button reposts
+     the row it has in hand, and a missing `permissions` there would otherwise
+     read as "withdraw everything" — unlocking somebody's PIN would silently
+     take their screens away. */
+  if ("permissions" in (body ?? {})) {
+    patch.permissions = cleanPermissions(body.permissions);
+  }
 
   if (body?.staff_id) {
     patch.staff_id = String(body.staff_id).trim().toLowerCase().replace(/\s+/g, "").slice(0, 40);
@@ -49,7 +58,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     .from("pos_staff")
     .update(patch)
     .eq("id", params.id)
-    .select("id, staff_id, name, role, is_active")
+    .select("id, staff_id, name, role, is_active, permissions")
     .single();
 
   if (error) {

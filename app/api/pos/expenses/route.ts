@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { currentStaff } from "@/lib/pos/auth";
+import { can } from "@/lib/pos/permissions";
 import { openShiftFor } from "@/lib/pos/shift-server";
 import { getPosSettings } from "@/lib/pos/menu-server";
 
@@ -50,8 +51,8 @@ export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  if (staff.role === "kitchen") {
-    return NextResponse.json({ error: "Kitchen accounts cannot record expenses" }, { status: 403 });
+  if (!can(staff, "expenses")) {
+    return NextResponse.json({ error: "You are not set up to record expenses" }, { status: 403 });
   }
 
   const shift = await openShiftFor(staff.id);
@@ -69,10 +70,10 @@ export async function POST(request: Request) {
 
   const settings = await getPosSettings();
 
-  /* Over the threshold a manager has to be the one signed in. Checked against
-     the session's role, never a flag from the screen — an approval that the
-     client could assert is not an approval. */
-  if (amount >= settings.manager_expense_over && staff.role !== "manager") {
+  /* Over the threshold, somebody who can approve one has to be signed in.
+     Checked against the session, never a flag from the screen — an approval
+     the client could assert is not an approval. */
+  if (amount >= settings.manager_expense_over && !can(staff, "approve_expense")) {
     return NextResponse.json(
       {
         error: `Expenses of AED ${settings.manager_expense_over} or more need a manager. Ask one to sign in.`,
@@ -98,7 +99,8 @@ export async function POST(request: Request) {
         vat_included: Boolean(body?.vat_included),
         receipt_url: String(body?.receipt_url ?? "").trim().slice(0, 500),
         note: String(body?.note ?? "").trim().slice(0, 500),
-        approved_by: staff.role === "manager" ? staff.id : null,
+        // Only recorded as approved by someone who could have approved it.
+        approved_by: can(staff, "approve_expense") ? staff.id : null,
       },
     ])
     .select()

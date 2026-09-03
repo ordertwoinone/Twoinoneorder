@@ -1,14 +1,12 @@
 import { requireShift } from "@/lib/pos/guard";
-import { staleShifts } from "@/lib/pos/shift-server";
 import { getPosMenu } from "@/lib/pos/menu-server";
 import TillScreen from "./TillScreen";
 
 export const dynamic = "force-dynamic";
 
 export default async function TillPage() {
-  const { staff } = await requireShift();
-
-  const [{ settings, categories, items }, stale] = await Promise.all([getPosMenu(), staleShifts()]);
+  const { staff, stale } = await requireShift();
+  const { settings, categories, items } = await getPosMenu();
 
   return (
     <TillScreen

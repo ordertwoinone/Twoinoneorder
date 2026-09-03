@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { hashPin } from "@/lib/pos/auth";
 import { isValidPin, PIN_MAX, PIN_MIN } from "@/lib/pos/constants";
+import { cleanPermissions } from "@/lib/pos/permissions";
 
 const ROLES = ["cashier", "manager", "kitchen"];
 
@@ -17,7 +18,12 @@ export async function GET() {
     .from("pos_staff")
     // Never the hash or the salt. Nothing in the admin panel needs them, and a
     // field that is never sent cannot be leaked by a careless render.
-    .select("id, staff_id, name, role, is_active, failed_attempts, locked_until, last_login_at, created_at")
+    /* permissions comes back as stored: an array where somebody has set one,
+       null where the account still follows its role. The screen has to be able
+       to tell those apart — "the manager defaults" and "exactly the manager
+       defaults, pinned" look identical as a list of keys and behave differently
+       the day the defaults change. */
+    .select("id, staff_id, name, role, is_active, permissions, failed_attempts, locked_until, last_login_at, created_at")
     .order("created_at", { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -47,11 +53,14 @@ export async function POST(request: Request) {
         name: String(body?.name ?? "").trim().slice(0, 120),
         role: ROLES.includes(body?.role) ? body.role : "cashier",
         is_active: body?.is_active !== false,
+        // null when the screen sent nothing: a new account follows its role
+        // until somebody deliberately says otherwise.
+        permissions: cleanPermissions(body?.permissions),
         pin_hash: hash,
         pin_salt: salt,
       },
     ])
-    .select("id, staff_id, name, role, is_active")
+    .select("id, staff_id, name, role, is_active, permissions")
     .single();
 
   if (error) {

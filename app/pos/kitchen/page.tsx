@@ -1,4 +1,4 @@
-import { requireStaff } from "@/lib/pos/guard";
+import { requirePermission } from "@/lib/pos/guard";
 import OrdersScreen from "../orders/OrdersScreen";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +11,6 @@ export const dynamic = "force-dynamic";
  * than it might be.
  */
 export default async function KitchenPage() {
-  const staff = await requireStaff();
+  const staff = await requirePermission("kitchen");
   return <OrdersScreen staff={staff} kitchenOnly />;
 }

@@ -5,9 +5,9 @@ import { getInvoiceSettings } from "@/lib/invoice-settings-server";
 import { toInvoiceOrder } from "@/lib/invoice";
 import InvoiceSheet from "@/components/admin/InvoiceSheet";
 import ThermalReceipt, { ROLL_WIDTH_MM } from "@/components/pos/ThermalReceipt";
-import { getPosSettings } from "@/lib/pos/menu-server";
-import { posOrderCode } from "@/lib/pos/cart";
 import { requireStaff } from "@/lib/pos/guard";
+import { KITCHEN_TYPES, sourceOrderCode } from "@/lib/order-source";
+import { orderSourceFor } from "@/lib/order-source-server";
 import PrintBar from "./PrintBar";
 
 export const dynamic = "force-dynamic";
@@ -21,8 +21,9 @@ export const dynamic = "force-dynamic";
  *
  * Its own route rather than reusing /admin/invoice: that one is behind admin
  * middleware, and a cashier has a till session, not an admin account. Scoped to
- * orders the till is responsible for, so a POS session cannot print a table
- * booking's invoice by guessing at its id.
+ * the three kinds of order the branch actually cooks — counter, kiosk and
+ * website — so a POS session cannot print a table booking's invoice by guessing
+ * at its id.
  *
  * Prints to an 80mm roll by default, because that is the printer sitting next
  * to the till. `?format=a4` gives the full-page tax invoice instead, for the
@@ -34,23 +35,25 @@ export default async function PosInvoicePage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { print?: string; format?: string };
+  searchParams: { print?: string; format?: string; embed?: string };
 }) {
   const a4 = searchParams.format === "a4";
+  /* Rendered inside a hidden iframe by lib/print-document: no toolbar to show,
+     and the parent fires the print so this must not fire a second one. */
+  const embedded = searchParams.embed === "1";
   await requireStaff();
 
-  const [orderRes, settings, branding, posSettings] = await Promise.all([
+  const [orderRes, settings, branding] = await Promise.all([
     supabaseAdminLive
       // `*`, because the invoice columns arrive with a hand-run migration and a
       // named list would fail the whole page on a database without them.
       .from("bookings")
       .select("*")
       .eq("id", params.id)
-      .in("type", ["pos", "kiosk"])
+      .in("type", KITCHEN_TYPES as unknown as string[])
       .maybeSingle(),
     getInvoiceSettings(),
     getBranding(),
-    getPosSettings(),
   ]);
 
   if (orderRes.error || !orderRes.data) notFound();
@@ -58,8 +61,12 @@ export default async function PosInvoicePage({
   const row = orderRes.data as unknown as Record<string, unknown>;
   const order = toInvoiceOrder(row);
 
+  /* Which panel, which cashier, or the website — and the prefix that issued
+     this order's number, which is not the till's for the other two. */
+  const source = await orderSourceFor(row);
+
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
+    <div className="print-sheet min-h-screen bg-gray-100 print:bg-white">
       {/*
         The page size is the paper. Naming the roll width in @page is what stops
         the driver treating it as A4 and printing a receipt down the left third
@@ -77,20 +84,26 @@ export default async function PosInvoicePage({
         }
       `}</style>
 
-      <PrintBar autoPrint={searchParams.print === "1"} orderId={params.id} a4={a4} />
+      {!embedded && <PrintBar autoPrint={searchParams.print === "1"} orderId={params.id} a4={a4} />}
 
       {a4 ? (
-        <div className="mx-auto max-w-[820px] p-4 print:p-0">
-          <InvoiceSheet order={order} settings={settings} fallbackLogo={branding.logoUrl} />
+        <div className="print-sheet mx-auto max-w-[820px] p-4 print:p-0">
+          <InvoiceSheet
+            order={order}
+            settings={settings}
+            fallbackLogo={branding.logoUrl}
+            sourceLabel={source.label}
+          />
         </div>
       ) : (
-        <div className="flex justify-center p-4 print:p-0">
+        <div className="print-sheet flex justify-center p-4 print:p-0">
           <div className="bg-white shadow-sm print:shadow-none">
             <ThermalReceipt
               order={order}
               settings={settings}
               logoUrl={branding.logoUrl}
-              orderCode={posOrderCode(posSettings.order_prefix, order.order_number)}
+              orderCode={sourceOrderCode(source, order.order_number)}
+              sourceLabel={source.label}
             />
           </div>
         </div>

@@ -24,11 +24,19 @@ export default function InvoiceSheet({
   order,
   settings,
   fallbackLogo = "",
+  sourceLabel = "",
 }: {
   order: InvoiceOrder;
   settings?: Partial<InvoiceSettings> | null;
   /** admin → Settings logo, used when the invoice has none of its own. */
   fallbackLogo?: string;
+  /**
+   * Where the order came from — "Kiosk · UNIVERCITY TAB 1", "Counter · THOMAS",
+   * "Website". Blank prints nothing: the live preview in admin has no order to
+   * read it off, and an invented panel name there would be a lie about a real
+   * document.
+   */
+  sourceLabel?: string;
 }) {
   const s = normalizeInvoiceSettings(settings);
   const logo = s.logo_url || fallbackLogo;
@@ -77,6 +85,9 @@ export default function InvoiceSheet({
       <dl className="mt-6 space-y-1 text-[13px]">
         {s.order_type_label && (
           <Fact label={s.order_type_label} value={orderTypeLabel(order)} bold />
+        )}
+        {s.show_source && sourceLabel && (
+          <Fact label={s.source_label} value={sourceLabel} bold />
         )}
         {s.table_label && order.table_id && (
           <Fact label={s.table_label} value={order.table_id} bold />

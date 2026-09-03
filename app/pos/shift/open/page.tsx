@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { currentStaff } from "@/lib/pos/auth";
 import { openShiftFor } from "@/lib/pos/shift-server";
+import { can, landingFor } from "@/lib/pos/permissions";
 import { getPosSettings } from "@/lib/pos/menu-server";
 import OpeningCash from "./OpeningCash";
 
@@ -12,8 +13,9 @@ export default async function OpenShiftPage() {
   if (!staff) redirect("/pos/login");
 
   /* A cook has no drawer to count and no till to reach afterwards, so this
-     screen would be a dead end for them. */
-  if (staff.role === "kitchen") redirect("/pos/kitchen");
+     screen would be a dead end for them — and so it is for anybody whose till
+     has been withdrawn, cook or not. Sent to whatever they can open instead. */
+  if (!can(staff, "till")) redirect(landingFor(staff) ?? "/pos/no-access");
 
   // Already counted in: do not offer to count a second float onto the same day.
   if (await openShiftFor(staff.id)) redirect("/pos/till");

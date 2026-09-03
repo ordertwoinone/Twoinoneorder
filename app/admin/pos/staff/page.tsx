@@ -1,7 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ExternalLink, KeyRound, Lock, Pencil, Plus, Trash2, UsersRound, X } from "lucide-react";
+import { ExternalLink, KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2, UsersRound, X } from "lucide-react";
 import { PIN_MAX, PIN_MIN, ROLE_LABEL, type PosRole } from "@/lib/pos/constants";
+import {
+  PERMISSION_GROUPS,
+  PERMISSION_HINT,
+  PERMISSION_LABEL,
+  ROLE_DEFAULTS,
+  type PosPermission,
+} from "@/lib/pos/permissions";
 
 /**
  * admin → POS → Staff.
@@ -12,6 +19,17 @@ import { PIN_MAX, PIN_MIN, ROLE_LABEL, type PosRole } from "@/lib/pos/constants"
  *
  * A PIN can be set and reset here but never read — it is stored hashed, so an
  * account whose PIN is forgotten gets a new one rather than the old one back.
+ *
+ * Access is per person, not per role. A role sets the starting point — what a
+ * cashier normally gets — and an account can then be granted or refused any of
+ * it by name. That distinction is the whole point: a branch with eight people
+ * on the rota has cashiers who are trusted with the drawer count and cashiers
+ * hired last week, and the only way to separate them with a role alone was to
+ * make one of them a manager, which also handed over the day close and the
+ * void button.
+ *
+ * An account left on "the role's usual access" stores null rather than a copy
+ * of the defaults, so it keeps following the role if the defaults ever change.
  */
 
 interface Staff {
@@ -20,12 +38,21 @@ interface Staff {
   name: string;
   role: PosRole;
   is_active: boolean;
+  /** null = follows the role. An array = exactly this, whatever the role says. */
+  permissions: PosPermission[] | null;
   failed_attempts: number;
   locked_until: string | null;
   last_login_at: string | null;
 }
 
-const EMPTY = { staff_id: "", name: "", role: "cashier" as PosRole, is_active: true, pin: "" };
+const EMPTY = {
+  staff_id: "",
+  name: "",
+  role: "cashier" as PosRole,
+  is_active: true,
+  pin: "",
+  permissions: null as PosPermission[] | null,
+};
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -151,7 +178,7 @@ export default function PosStaffAdmin() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                {["Staff ID", "Name", "Role", "Last sign-in", "Status", ""].map((h) => (
+                {["Staff ID", "Name", "Role", "Access", "Last sign-in", "Status", ""].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     {h}
                   </th>
@@ -171,6 +198,16 @@ export default function PosStaffAdmin() {
                     >
                       {ROLE_LABEL[s.role]}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {s.permissions === null ? (
+                      <span className="text-[11.5px] text-gray-500">Role defaults</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700">
+                        <ShieldCheck size={11} />
+                        {s.permissions.length} granted
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">{when(s.last_login_at)}</td>
                   <td className="px-4 py-3">
@@ -199,7 +236,15 @@ export default function PosStaffAdmin() {
                           setModal({
                             open: true,
                             mode: "edit",
-                            data: { id: s.id, staff_id: s.staff_id, name: s.name, role: s.role, is_active: s.is_active, pin: "" },
+                            data: {
+                              id: s.id,
+                              staff_id: s.staff_id,
+                              name: s.name,
+                              role: s.role,
+                              is_active: s.is_active,
+                              pin: "",
+                              permissions: s.permissions ?? null,
+                            },
                           });
                         }}
                         className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
@@ -285,10 +330,98 @@ export default function PosStaffAdmin() {
                 </div>
               </div>
               <p className="-mt-2 text-[11px] text-gray-500">
-                A manager can void an order, approve a large expense and close the day. A kitchen
-                account only ever sees the kitchen board — no till, no drawer, no prices, and no
-                float to count. Switching someone off signs them out of every tablet immediately.
+                The role sets what they start with. A manager can void an order, approve a large
+                expense and close the business day; a kitchen account sees the kitchen board and
+                the availability switch, and nothing that touches money. Switching someone off
+                signs them out of every tablet immediately.
               </p>
+
+              {/* ─── What this person may actually reach ─── */}
+              <div className="rounded-xl border border-gray-200">
+                <label className="flex items-start gap-2.5 px-4 py-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={modal.data.permissions === null}
+                    onChange={(e) =>
+                      setModal((m) => ({
+                        ...m,
+                        data: {
+                          ...m.data,
+                          /* Unticking starts from the role's own list rather
+                             than from nothing, so granting one extra screen is
+                             a single tick instead of rebuilding the job. */
+                          permissions: e.target.checked ? null : [...ROLE_DEFAULTS[m.data.role]],
+                        },
+                      }))
+                    }
+                    className="mt-0.5 h-4 w-4 accent-orange-600"
+                  />
+                  <span>
+                    <span className="block text-xs font-semibold text-gray-800">
+                      Use the role&apos;s usual access
+                    </span>
+                    <span className="block text-[11px] text-gray-500">
+                      Untick to grant or withhold screens for this person alone.
+                    </span>
+                  </span>
+                </label>
+
+                {modal.data.permissions !== null && (
+                  <div className="border-t border-gray-200 px-4 py-3 space-y-4">
+                    {PERMISSION_GROUPS.map((group) => (
+                      <div key={group.title}>
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                          {group.title}
+                        </p>
+                        <p className="mb-2 text-[11px] text-gray-400">{group.hint}</p>
+                        <div className="grid gap-1.5 sm:grid-cols-2">
+                          {group.keys.map((key) => {
+                            const on = modal.data.permissions!.includes(key);
+                            return (
+                              <label
+                                key={key}
+                                title={PERMISSION_HINT[key]}
+                                className="flex items-start gap-2 rounded-lg px-2 py-1.5 cursor-pointer hover:bg-gray-50"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={on}
+                                  onChange={() =>
+                                    setModal((m) => {
+                                      const current = m.data.permissions ?? [];
+                                      return {
+                                        ...m,
+                                        data: {
+                                          ...m.data,
+                                          permissions: on
+                                            ? current.filter((p) => p !== key)
+                                            : [...current, key],
+                                        },
+                                      };
+                                    })
+                                  }
+                                  className="mt-0.5 h-4 w-4 accent-orange-600"
+                                />
+                                <span className="text-[12px] leading-tight text-gray-700">
+                                  {PERMISSION_LABEL[key]}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    {modal.data.permissions.length === 0 && (
+                      <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11.5px] font-medium text-amber-800">
+                        Nothing is ticked. They will be able to sign in and reach no screen at
+                        all — which is a way to suspend somebody without switching them off, if
+                        that is what you meant.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
