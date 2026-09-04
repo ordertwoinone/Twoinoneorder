@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Banknote,
   CreditCard,
@@ -11,6 +11,8 @@ import {
   RefreshCw,
   ShoppingCart,
   Timer,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
@@ -18,6 +20,7 @@ import type { OrderChannel } from "@/lib/order-source";
 import type { PosStaff } from "@/lib/pos/constants";
 import { can } from "@/lib/pos/permissions";
 import { printDocument } from "@/lib/print-document";
+import { useAlertChime } from "@/hooks/useAlertChime";
 import PosShell from "@/components/pos/PosShell";
 import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
 import type { StaleShift } from "@/lib/pos/shift";
@@ -190,12 +193,49 @@ export default function OrdersScreen({
   /** Cancelling is a refund the drawer answers for, so it is its own grant. */
   const canVoid = can(staff, "void_order");
 
+  /* The alert. Remembered per screen, so the board over the pass comes back
+     with its sound on after a reboot rather than silently off. */
+  const { soundOn, toggle: toggleSound, chime } = useAlertChime(
+    kitchenOnly ? "tio-kitchen-alert" : "tio-orders-alert",
+  );
+
+  /* Every order this screen has already shown. The board polls rather than
+     streams, so "new" is whatever was not in the last answer — and the very
+     first answer is taken as the baseline, or opening the screen at lunch
+     would fire thirty chimes at once for orders already half cooked. */
+  const seenIds = useRef<Set<string>>(new Set());
+  const seeded = useRef(false);
+
+  /* Read through a ref rather than closed over. `load` is the dependency of
+     both the first fetch and the polling interval, so taking soundOn as a
+     dependency would tear the poll down and rebuild it — refetching the whole
+     board — every time somebody pressed the speaker button. */
+  const soundRef = useRef(soundOn);
+  soundRef.current = soundOn;
+
   const load = useCallback(async () => {
     const res = await fetch("/api/pos/orders?scope=today", { cache: "no-store" });
     const body = await res.json().catch(() => null);
-    if (body?.orders) setOrders(body.orders as BoardOrder[]);
+
+    if (body?.orders) {
+      const rows = body.orders as BoardOrder[];
+
+      /* Only what somebody still has to cook. A website order that arrived
+         yesterday and is already marked done should not announce itself
+         because the board happened to reload. */
+      const waiting = rows.filter((o) => o.status === "pending" || o.status === "confirmed");
+      const arrived = waiting.filter((o) => !seenIds.current.has(o.id));
+      for (const o of rows) seenIds.current.add(o.id);
+
+      /* One chime for a batch, not one per ticket. Three orders landing in the
+         same fifteen-second poll is a busy minute, not three alarms. */
+      if (seeded.current && arrived.length > 0 && soundRef.current) chime();
+      seeded.current = true;
+
+      setOrders(rows);
+    }
     setLoading(false);
-  }, []);
+  }, [chime]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -296,6 +336,22 @@ export default function OrdersScreen({
       }
       warning={<StaleShiftWarning shifts={stale} />}
       actions={
+        <>
+        {/* Says what it will do, not what it is doing — "Alert off" on a
+            kitchen screen reads as a fault rather than a setting. */}
+        <button
+          onClick={toggleSound}
+          className="flex items-center gap-2 rounded-lg px-3.5 text-[13px] font-bold"
+          style={
+            soundOn
+              ? { background: POS.goodSoft, color: POS.good, border: `1px solid ${POS.good}33`, height: 38 }
+              : { border: `1px solid ${POS.line}`, color: POS.inkSoft, height: 38 }
+          }
+        >
+          {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          {soundOn ? "Alert on" : "Alert off"}
+        </button>
+
         <button
           onClick={() => { setLoading(true); load(); }}
           className="flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-bold"
@@ -304,6 +360,7 @@ export default function OrdersScreen({
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           Refresh
         </button>
+        </>
       }
     >
       <div className="pos-scroll h-full p-4">
