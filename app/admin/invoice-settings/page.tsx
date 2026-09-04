@@ -32,11 +32,19 @@ const SAMPLE: InvoiceOrder = {
   table_section: "",
   guests: 2,
   notes: "",
+  // Shown so the preview proves a note prints, and where.
+  customer_note: "No cutlery please",
   status: "completed",
   payment_method: "card",
   created_at: new Date().toISOString(),
   items: [
-    { name: "Turkish Breakfast 2 Portion", qty: 1, unit_price: 84, line_total: 84 },
+    {
+      name: "Turkish Breakfast 2 Portion",
+      qty: 1,
+      unit_price: 84,
+      line_total: 84,
+      note: "No olives",
+    },
     { name: "Menemen With Soujuk", qty: 1, unit_price: 38, line_total: 38 },
   ],
   subtotal: 116.19,

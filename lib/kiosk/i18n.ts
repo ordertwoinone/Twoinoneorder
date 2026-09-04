@@ -79,6 +79,8 @@ const EN: Dict = {
   "review.havePrivilege": "Have a Privilege Card?",
   "review.enterMember": "Enter your member number for your discount",
   "review.privilegeApplied": "Privilege Card applied",
+  "review.addNote": "Add a note",
+  "review.editNote": "Note",
   "review.off": "off",
   "review.remove": "Remove",
 
@@ -102,6 +104,19 @@ const EN: Dict = {
   "phone.back": "Back",
   "phone.done": "DONE",
   "phone.sending": "Sending to the kitchen…",
+  "phone.orderNote": "Anything else for the kitchen?",
+  "phone.orderNoteHint": "Cutlery, allergies, where to call — anything for the whole order",
+  "phone.orderNoteAdd": "Add a note",
+  "phone.orderNoteEdit": "Change",
+
+  // Notes
+  "note.itemTitle": "Add a note",
+  "note.orderTitle": "A note for the kitchen",
+  "note.orderSubtitle": "For the whole order",
+  "note.placeholder": "Type anything else here",
+  "note.save": "Save note",
+  "note.clear": "Remove note",
+  "note.cancel": "Cancel",
 
   // Done
   "done.title": "Order Confirmed!",
@@ -189,6 +204,8 @@ const AR: Dict = {
   "review.havePrivilege": "هل لديك بطاقة امتيازات؟",
   "review.enterMember": "أدخل رقم العضوية للحصول على الخصم",
   "review.privilegeApplied": "تم تطبيق بطاقة الامتيازات",
+  "review.addNote": "أضف ملاحظة",
+  "review.editNote": "ملاحظة",
   "review.off": "خصم",
   "review.remove": "إزالة",
 
@@ -210,6 +227,19 @@ const AR: Dict = {
   "phone.back": "رجوع",
   "phone.done": "تم",
   "phone.sending": "جارٍ الإرسال إلى المطبخ…",
+  "phone.orderNote": "هل من شيء آخر للمطبخ؟",
+  "phone.orderNoteHint": "أدوات المائدة، الحساسية، وقت الاتصال — أي شيء يخص الطلب كاملاً",
+  "phone.orderNoteAdd": "أضف ملاحظة",
+  "phone.orderNoteEdit": "تعديل",
+
+  // Notes
+  "note.itemTitle": "أضف ملاحظة",
+  "note.orderTitle": "ملاحظة للمطبخ",
+  "note.orderSubtitle": "لكامل الطلب",
+  "note.placeholder": "اكتب أي شيء آخر هنا",
+  "note.save": "حفظ الملاحظة",
+  "note.clear": "إزالة الملاحظة",
+  "note.cancel": "إلغاء",
 
   "done.title": "تم تأكيد الطلب!",
   "done.subtitle": "شكرًا لك — تم إرسال طلبك إلى المطبخ.",

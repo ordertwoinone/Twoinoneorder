@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowRight, CreditCard, Minus, Pencil, Plus, ShieldCheck, Trash2, X } from "lucide-react";
+import {
+  ArrowRight,
+  CreditCard,
+  MessageSquarePlus,
+  Minus,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  X,
+} from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { kioskField, type KioskLang } from "@/lib/kiosk/i18n";
 import { sizedImage } from "@/lib/image-url";
@@ -28,12 +38,14 @@ export default function ReviewPanel({
   lang,
   totals,
   addons,
+  notes,
   privilege,
   privilegeEnabled,
   onClose,
   onMore,
   onLess,
   onEdit,
+  onNote,
   onRemove,
   onPrivilege,
   onDropPrivilege,
@@ -44,12 +56,15 @@ export default function ReviewPanel({
   lang: KioskLang;
   totals: KioskTotals;
   addons: AddonSelection;
+  /** itemId → what the customer wants said about that dish. */
+  notes: Record<string, string>;
   privilege: PrivilegeHolder | null;
   privilegeEnabled: boolean;
   onClose: () => void;
   onMore: (item: KioskItem) => void;
   onLess: (item: KioskItem) => void;
   onEdit: (item: KioskItem) => void;
+  onNote: (item: KioskItem) => void;
   onRemove: (item: KioskItem) => void;
   onPrivilege: () => void;
   onDropPrivilege: () => void;
@@ -92,6 +107,7 @@ export default function ReviewPanel({
           ) : (
             totals.lines.map((line) => {
               const extras = addonSummary(line.groups, addons[line.item.id], (a) => a.name);
+              const note = (notes[line.item.id] ?? "").trim();
               return (
                 <div
                   key={line.item.id}
@@ -119,6 +135,20 @@ export default function ReviewPanel({
                         style={{ color: KIOSK.inkSoft }}
                       >
                         {extras}
+                      </p>
+                    )}
+
+                    {/* Set apart rather than run in with the extras. An extra
+                        is something the customer is paying for; a note is an
+                        instruction to a cook, and the two must not be mistaken
+                        for each other on a ticket. */}
+                    {note && (
+                      <p
+                        className="text-[1.3vh] mt-[0.5vh] leading-snug rounded-[0.8vh] px-[1vh] py-[0.6vh] font-semibold"
+                        style={{ background: KIOSK.goldSoft, color: KIOSK.onGold }}
+                        dir="auto"
+                      >
+                        {note}
                       </p>
                     )}
 
@@ -175,6 +205,23 @@ export default function ReviewPanel({
                           </button>
                         </div>
                       )}
+
+                      {/* Every line gets one, whether or not the dish has
+                          options — "no onions" is a thing you can want about a
+                          dish nobody thought to build a choice group for. */}
+                      <button
+                        onClick={() => onNote(line.item)}
+                        aria-label={`Add a note to ${line.item.name}`}
+                        className="flex items-center gap-[0.6vh] rounded-full px-[1.4vh] h-[3.6vh] text-[1.3vh] font-bold active:scale-95 transition-transform"
+                        style={
+                          note
+                            ? { background: KIOSK.gold, color: KIOSK.onGold }
+                            : { background: "#F4F4F4", color: KIOSK.ink }
+                        }
+                      >
+                        <MessageSquarePlus className="w-[1.5vh] h-[1.5vh]" />
+                        {note ? t("review.editNote") : t("review.addNote")}
+                      </button>
 
                       <button
                         onClick={() => onRemove(line.item)}

@@ -1,5 +1,7 @@
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { hostForAlias, TRACKING_STORES } from "@/lib/order-tracking";
+import { roundMoney, vatIncludedIn } from "@/lib/kalba/pricing";
+import type { InvoiceOrder } from "@/lib/invoice";
 
 /**
  * Website orders, on the same board as everything else.
@@ -84,12 +86,13 @@ function boardStatus(row: TakeAppRow): string {
 }
 
 /** The board's line-item shape, from take.app's. */
-function items(raw: unknown): { name: string; qty: number; extras: string }[] {
+function items(raw: unknown): { name: string; qty: number; extras: string; price: number }[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((entry) => {
     const item = (entry ?? {}) as {
       name?: string;
       quantity?: number;
+      price?: number;
       options?: { name?: string; value?: string }[] | null;
     };
     const extras = Array.isArray(item.options)
@@ -102,6 +105,8 @@ function items(raw: unknown): { name: string; qty: number; extras: string }[] {
       name: String(item.name ?? "").trim(),
       qty: Math.max(1, Math.round(Number(item.quantity) || 1)),
       extras,
+      // Smallest currency unit, as everything from take.app is.
+      price: (Number(item.price) || 0) / MINOR_UNITS,
     };
   });
 }
@@ -184,6 +189,75 @@ export async function websiteOrders(since: string, limit = 120): Promise<Website
       note: (row.remark ?? "").trim(),
     };
   });
+}
+
+/**
+ * A website order as a printable ticket.
+ *
+ * The kitchen prints what it is cooking, and it does not care which table the
+ * order came out of. Without this, the one account that most needs a ticket —
+ * a cook with no till and no reports — had a board full of website orders and
+ * no way to get any of them onto paper.
+ *
+ * It is a ticket, not a tax invoice. The money is take.app's: the storefront
+ * issued the receipt the customer holds, and the figures here are shown so the
+ * counter can check them, not so the branch can re-bill anybody. The VAT split
+ * is derived the same way it is everywhere else on the site, from a total that
+ * already includes it.
+ */
+export async function websiteInvoiceOrder(boardId: string): Promise<InvoiceOrder | null> {
+  const { data, error } = await supabaseAdminLive
+    .from("takeapp_orders")
+    .select(
+      "id, number, store_name, store_alias, order_status, payment_status, customer_name, customer_phone, line_items, total_amount, order_created_at, received_at, remark, kitchen_status",
+    )
+    .eq("id", websiteOrderId(boardId))
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const row = data as TakeAppRow;
+  const total = roundMoney((Number(row.total_amount) || 0) / MINOR_UNITS);
+  const tax = vatIncludedIn(total);
+
+  const lines = items(row.line_items);
+
+  return {
+    id: boardId,
+    /* take.app's own number, which is what the customer quotes and what the
+       label above already prints. Not renumbered under one of our prefixes. */
+    order_number: Number(row.number) || null,
+    type: "website",
+    order_type: "Website",
+    guest_name: (row.customer_name ?? "").trim(),
+    phone: (row.customer_phone ?? "").trim(),
+    table_id: "",
+    table_section: storeLabel(row),
+    guests: 1,
+    notes: "",
+    customer_note: (row.remark ?? "").trim(),
+    status: boardStatus(row),
+    payment_method:
+      (row.payment_status ?? "").trim().toLowerCase() === "paid" ? "online" : "pending",
+    created_at: row.order_created_at ?? row.received_at,
+    items: lines.map((line) => {
+      /* take.app's `price` is the line, not the unit, and the two are only the
+         same at qty 1. Divided back out so a ticket for three of something
+         does not print each of them at the price of all three. */
+      const unit = line.qty > 0 ? roundMoney(line.price / line.qty) : line.price;
+      return {
+        name: line.name,
+        qty: line.qty,
+        unit_price: unit,
+        extras: line.extras || undefined,
+        line_total: roundMoney(line.price),
+      };
+    }),
+    subtotal: roundMoney(total - tax),
+    discount_total: 0,
+    tax_amount: tax,
+    total_amount: total,
+  };
 }
 
 /** The branch's own move on a website order. take.app's status is left alone. */

@@ -1,7 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Banknote, CreditCard, Globe, MonitorSmartphone, Printer, RefreshCw, ShoppingCart } from "lucide-react";
+import {
+  Banknote,
+  CreditCard,
+  Globe,
+  MessageSquare,
+  MonitorSmartphone,
+  Printer,
+  RefreshCw,
+  ShoppingCart,
+  Timer,
+} from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
 import type { OrderChannel } from "@/lib/order-source";
@@ -34,7 +44,7 @@ export interface BoardOrder {
   table_section: string | null;
   guest_name: string;
   phone: string;
-  items: { name?: string; qty?: number; extras?: string }[] | null;
+  items: { name?: string; qty?: number; extras?: string; note?: string }[] | null;
   total_amount: number | string | null;
   payment_method: string | null;
   created_at: string;
@@ -65,6 +75,17 @@ const KITCHEN_STATUSES = STATUSES.filter((s) => s.value !== "cancelled");
 
 const REFRESH_MS = 15_000;
 
+/**
+ * How long a ticket may sit before the clock on it turns red.
+ *
+ * Not a target the kitchen is being judged against — it is the point at which
+ * a customer standing at the counter starts wondering, which is the moment
+ * somebody should look at the ticket again. Green up to it, red past it, and
+ * nothing in between: an amber middle would just mean everything is always
+ * amber at lunch.
+ */
+const LATE_AFTER_MS = 15 * 60_000;
+
 /** The three ways an order reaches the branch, in the order the chips read. */
 const CHANNELS: OrderChannel[] = ["Counter", "Kiosk", "Website"];
 
@@ -77,6 +98,45 @@ function SourceIcon({ channel }: { channel: OrderChannel }) {
 function money(v: unknown): string {
   const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
   return Number.isFinite(n) ? aed(n) : "—";
+}
+
+/**
+ * Minutes and seconds since the order came in, counting up.
+ *
+ * Driven by a `now` ticking in the parent rather than an interval of its own:
+ * a busy board is thirty cards, and thirty timers each waking the browser once
+ * a second on a café tablet is a measurable amount of the battery and a
+ * noticeable amount of the scroll.
+ *
+ * Frozen once the ticket is finished. A completed order whose clock keeps
+ * climbing reads as a problem that is still running.
+ */
+function Elapsed({ from, now, running }: { from: string; now: number; running: boolean }) {
+  const started = new Date(from).getTime();
+  const ms = Math.max(0, (running ? now : started) - started);
+  const total = Math.floor(ms / 1000);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+
+  const late = ms >= LATE_AFTER_MS;
+  const tone = !running ? POS.inkSoft : late ? POS.bad : POS.good;
+
+  return (
+    <span className="flex items-center gap-1.5 shrink-0">
+      <Timer size={17} style={{ color: running ? POS.ink : POS.inkSoft }} />
+      <span className="text-end leading-none">
+        <span
+          className="block text-[19px] font-black tabular-nums leading-none"
+          style={{ color: tone }}
+        >
+          {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+        </span>
+        <span className="block text-[9px] font-semibold mt-0.5" style={{ color: POS.inkSoft }}>
+          min:sec
+        </span>
+      </span>
+    </span>
+  );
 }
 
 function ago(iso: string): string {
@@ -103,6 +163,24 @@ export default function OrdersScreen({
   const [source, setSource] = useState<"" | OrderChannel>("");
   const [paying, setPaying] = useState<BoardOrder | null>(null);
   const [error, setError] = useState("");
+
+  /* One second hand for every card on the board. Ticks only while somebody is
+     looking, for the same reason the poll does: a tablet left on the kitchen
+     board overnight should not be waking the browser 28,800 times before
+     morning to redraw clocks nobody is reading. */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const start = () => { if (!timer) timer = setInterval(() => setNow(Date.now()), 1000); };
+    const stop = () => { if (timer) clearInterval(timer); timer = null; };
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else { setNow(Date.now()); start(); }
+    };
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVisibility); };
+  }, []);
 
   /* Kitchen staff see the order; anyone who handles the money also sees what
      it is worth. Taken from the permissions rather than the role, so a
@@ -309,21 +387,46 @@ export default function OrdersScreen({
                     </span>
                   </div>
 
-                  {order.table_section && (
+                  {/* Phone, then the panel and the clock on one line. A cook
+                      reading this card wants two things at a glance: how long
+                      it has been waiting, and which counter it goes back to. */}
+                  {order.phone && showsMoney && (
                     <p className="mt-1.5 text-[12px] font-semibold" style={{ color: POS.inkSoft }}>
-                      {order.table_section}
-                      {order.guest_name ? ` · ${order.guest_name}` : ""}
+                      {order.phone}
                     </p>
                   )}
 
-                  {/* On a website order this is the only thing the customer
-                      could say to the kitchen, so it is not tucked away. */}
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <span
+                      className="min-w-0 truncate text-[12px] font-bold uppercase tracking-wide"
+                      style={{ color: POS.night }}
+                    >
+                      {order.table_section || " "}
+                      {order.guest_name ? ` · ${order.guest_name}` : ""}
+                    </span>
+                    <Elapsed
+                      from={order.created_at}
+                      now={now}
+                      /* Stops on a finished ticket. Nothing is waiting on a
+                         cancelled order and nobody is late for a done one. */
+                      running={order.status === "pending" || order.status === "confirmed"}
+                    />
+                  </div>
+
+                  {/* The customer's note for the whole ticket. On a website
+                      order it is the only thing they could say to the kitchen,
+                      so it is never tucked away. */}
                   {order.note && (
                     <p
-                      className="mt-2 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
+                      className="mt-2 flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
                       style={{ background: "#FFFBEB", color: "#92400E" }}
+                      dir="auto"
                     >
-                      {order.note}
+                      <MessageSquare size={13} className="mt-0.5 shrink-0" />
+                      <span>
+                        <span className="font-bold">Order comment: </span>
+                        {order.note}
+                      </span>
                     </p>
                   )}
 
@@ -334,6 +437,23 @@ export default function OrdersScreen({
                           <span className="font-bold">{item.qty ?? 1}×</span> {item.name || "Item"}
                           {item.extras && (
                             <span className="text-[11px]" style={{ color: POS.inkSoft }}> · {item.extras}</span>
+                          )}
+                          {/* Its own row under the dish, not appended to the
+                              extras. An extra is something being paid for and
+                              a comment is an instruction to whoever is cooking
+                              — run together, one of them gets skimmed past. */}
+                          {item.note && (
+                            <span
+                              className="mt-1 flex items-start gap-1.5 rounded-lg px-2 py-1 text-[11.5px] font-semibold"
+                              style={{ background: "#FFFBEB", color: "#92400E" }}
+                              dir="auto"
+                            >
+                              <MessageSquare size={12} className="mt-0.5 shrink-0" />
+                              <span>
+                                <span className="font-bold">Item comment: </span>
+                                {item.note}
+                              </span>
+                            </span>
                           )}
                         </li>
                       ))}
@@ -391,9 +511,10 @@ export default function OrdersScreen({
                       </button>
                     ))}
                     <span className="flex-1" />
-                    {/* A website order has no invoice of ours to print — its
-                        receipt is the storefront's, and the tracking page is
-                        what a customer on the phone is actually asking about. */}
+
+                    {/* The tracking page, for the customer on the phone asking
+                        where their website order has got to. Counter staff only:
+                        it is an answer to a question, not part of cooking. */}
                     {showsMoney && order.website && order.tracking_url && (
                       <a
                         href={order.tracking_url}
@@ -406,16 +527,20 @@ export default function OrdersScreen({
                         Track
                       </a>
                     )}
-                    {showsMoney && !order.website && (
+
+                    {/* Not gated on money. Printing the ticket is how the
+                        kitchen works — it goes on the rail above the pass — and
+                        hiding it from the one account that needs it most was
+                        exactly backwards. Encoded because a website order's id
+                        carries a colon. */}
                     <button
-                      onClick={() => printDocument(`/pos/invoice/${order.id}`)}
+                      onClick={() => printDocument(`/pos/invoice/${encodeURIComponent(order.id)}`)}
                       className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold"
                       style={{ background: POS.page, color: POS.ink }}
                     >
                       <Printer size={13} />
                       Print
                     </button>
-                    )}
                   </div>
                 </div>
               );

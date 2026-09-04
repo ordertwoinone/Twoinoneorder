@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KIOSK } from "@/lib/kiosk/theme";
-import { dirFor, kioskT, type KioskLang } from "@/lib/kiosk/i18n";
+import { dirFor, kioskField, kioskT, type KioskLang } from "@/lib/kiosk/i18n";
 import { defaultSelection, type AddonSelection } from "@/lib/kalba/addons";
 import { kioskTotals, type KioskQty } from "@/lib/kiosk/cart";
 import {
@@ -19,6 +19,7 @@ import OptionsSheet from "@/components/kiosk/OptionsSheet";
 import ReviewPanel, { type PrivilegeHolder } from "@/components/kiosk/ReviewPanel";
 import PrivilegeModal from "@/components/kiosk/PrivilegeModal";
 import PhoneScreen from "@/components/kiosk/PhoneScreen";
+import NoteSheet from "@/components/kiosk/NoteSheet";
 import DoneScreen, { type KioskConfirmation } from "@/components/kiosk/DoneScreen";
 
 /**
@@ -74,6 +75,14 @@ export default function KioskApp({
   const [privilege, setPrivilege] = useState<PrivilegeHolder | null>(null);
   const [privilegeCode, setPrivilegeCode] = useState("");
 
+  /* What the customer wants said about the food: one note per dish, and one for
+     the ticket as a whole. Kept beside the basket rather than inside it, so a
+     dish stepped from 1 to 2 and back does not lose what was asked about it. */
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [orderNote, setOrderNote] = useState("");
+  /** The dish whose note is being written, or "order" for the whole ticket. */
+  const [noting, setNoting] = useState<KioskItem | "order" | null>(null);
+
   /* Collect unless the customer says otherwise. The screen is standing in the
      branch they would be collecting from. */
   const [fulfilment, setFulfilment] = useState<KioskFulfilment>("pickup");
@@ -100,6 +109,9 @@ export default function KioskApp({
   const reset = useCallback(() => {
     setQty({});
     setAddons({});
+    setNotes({});
+    setOrderNote("");
+    setNoting(null);
     setPrivilege(null);
     setPrivilegeCode("");
     setFulfilment("pickup");
@@ -172,6 +184,9 @@ export default function KioskApp({
   const remove = useCallback((item: KioskItem) => {
     setQty((q) => without(q, item.id));
     setAddons((a) => without(a, item.id));
+    /* And its note. A dish taken out and put back should not silently arrive
+       carrying "no onions" from a decision the customer already reversed. */
+    setNotes((n) => without(n, item.id));
   }, []);
 
   /**
@@ -221,6 +236,8 @@ export default function KioskApp({
           receiptChannels: channels,
           deviceSlug: device?.slug ?? "",
           fulfilment,
+          notes,
+          orderNote,
         }),
       });
       const body = await res.json();
@@ -341,6 +358,8 @@ export default function KioskApp({
           privilege={privilege}
           fulfilment={fulfilment}
           onFulfilment={setFulfilment}
+          orderNote={orderNote}
+          onOrderNote={() => setNoting("order")}
           submitting={submitting}
           error={error}
           onBack={() => { setScreen("menu"); setReviewOpen(true); }}
@@ -359,12 +378,14 @@ export default function KioskApp({
           lang={lang}
           totals={totals}
           addons={addons}
+          notes={notes}
           privilege={privilege}
           privilegeEnabled={settings.privilege_enabled}
           onClose={() => setReviewOpen(false)}
           onMore={(item) => bump(item, 1)}
           onLess={(item) => bump(item, -1)}
           onEdit={(item) => setSheet({ item, editing: true })}
+          onNote={(item) => setNoting(item)}
           onRemove={remove}
           onPrivilege={() => setPrivilegeOpen(true)}
           onDropPrivilege={() => { setPrivilege(null); setPrivilegeCode(""); }}
@@ -392,6 +413,32 @@ export default function KioskApp({
             setAddons((a) => ({ ...a, [sheet.item.id]: selection }));
             setQty((q) => ({ ...q, [sheet.item.id]: chosenQty }));
             setSheet(null);
+          }}
+        />
+      )}
+
+      {/* Sits outside the `screen === "menu"` panels: the same sheet is opened
+          from the cart and again from the phone screen, and gating it on the
+          menu would have made the order-wide note unreachable exactly where it
+          is asked for. */}
+      {noting && (
+        <NoteSheet
+          t={t}
+          lang={lang}
+          scope={noting === "order" ? "order" : "item"}
+          subject={noting === "order" ? "" : kioskField(lang, noting, "name")}
+          initial={noting === "order" ? orderNote : (notes[noting.id] ?? "")}
+          onCancel={() => setNoting(null)}
+          onSave={(note) => {
+            if (noting === "order") {
+              setOrderNote(note);
+            } else {
+              /* An empty note is dropped rather than stored blank, so the
+                 order that reaches the kitchen carries only real instructions
+                 and a cook is not reading past three empty lines. */
+              setNotes((n) => (note ? { ...n, [noting.id]: note } : without(n, noting.id)));
+            }
+            setNoting(null);
           }}
         />
       )}

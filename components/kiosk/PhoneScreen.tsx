@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Bike, Check, Lock, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Bike, Check, Lock, MessageSquarePlus, ShieldCheck, ShoppingBag } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { aed, type KioskTotals } from "@/lib/kiosk/cart";
 import type { KioskFulfilment, KioskSettings } from "@/lib/kiosk/types";
@@ -42,6 +42,8 @@ export default function PhoneScreen({
   privilege,
   fulfilment,
   onFulfilment,
+  orderNote,
+  onOrderNote,
   submitting,
   error,
   onBack,
@@ -53,6 +55,9 @@ export default function PhoneScreen({
   privilege: PrivilegeHolder | null;
   fulfilment: KioskFulfilment;
   onFulfilment: (choice: KioskFulfilment) => void;
+  /** One note for the whole ticket, written in the same sheet as a dish's. */
+  orderNote: string;
+  onOrderNote: () => void;
   submitting: boolean;
   error: string;
   onBack: () => void;
@@ -158,6 +163,45 @@ export default function PhoneScreen({
               onBackspace={() => setDigits((v) => v.slice(0, -1))}
               onClear={() => setDigits("")}
             />
+
+            {/* ─── Anything else for the kitchen ─── */}
+            {/* Under the keypad rather than above it. The number is what this
+                screen is for and what the DONE button waits on; a note offered
+                first would read as another thing that has to be filled in. */}
+            <button
+              onClick={onOrderNote}
+              className="w-full mt-[1.8vh] flex items-center gap-[1.2vh] rounded-[1.3vh] px-[1.6vh] py-[1.3vh] text-start active:scale-[0.99] transition-transform"
+              style={{
+                border: `0.16vh solid ${orderNote ? KIOSK.gold : KIOSK.line}`,
+                background: orderNote ? KIOSK.goldSoft : "#fff",
+              }}
+            >
+              <MessageSquarePlus
+                className="w-[2.4vh] h-[2.4vh] shrink-0"
+                style={{ color: orderNote ? KIOSK.onGold : KIOSK.inkSoft }}
+              />
+              <span className="flex-1 min-w-0">
+                <span
+                  className="block font-bold text-[1.5vh] leading-tight"
+                  style={{ color: orderNote ? KIOSK.onGold : KIOSK.ink }}
+                >
+                  {t("phone.orderNote")}
+                </span>
+                <span
+                  className="block text-[1.25vh] mt-[0.2vh] truncate"
+                  style={{ color: orderNote ? "#6B5A12" : KIOSK.inkSoft }}
+                  dir="auto"
+                >
+                  {orderNote || t("phone.orderNoteHint")}
+                </span>
+              </span>
+              <span
+                className="shrink-0 text-[1.35vh] font-bold underline"
+                style={{ color: orderNote ? KIOSK.onGold : KIOSK.inkSoft }}
+              >
+                {orderNote ? t("phone.orderNoteEdit") : t("phone.orderNoteAdd")}
+              </span>
+            </button>
 
             {/* ─── What to do with it ─── */}
             <div className="mt-[1.8vh] space-y-[1vh]">

@@ -38,8 +38,22 @@ import {
  */
 const STATUSES = ["pending", "confirmed", "completed", "cancelled"];
 
+const BASE_COLUMNS =
+  "id, type, order_number, status, order_type, table_section, guest_name, phone, items, total_amount, payment_method, created_at, kiosk_device_id, pos_staff_uuid";
+
+/* customer_note comes from supabase/order_notes.sql. Named separately so the
+   retry below knows exactly what to drop: between deploying this and running
+   that file, PostgREST answers the whole select with a 400, and a board that
+   goes blank in a kitchen is worse than one missing a line of a note. */
+const BOARD_COLUMNS = `${BASE_COLUMNS}, customer_note`;
+
 /** What both halves of the board are guaranteed to carry. */
 type BoardRow = Record<string, unknown> & { status: string; created_at: string };
+
+/* The two selects below differ by one column, which makes their inferred row
+   types incompatible even though every caller treats them as the same bag of
+   fields. Narrowed to what is actually read. */
+type BoardQuery = { data: Record<string, unknown>[] | null; error: { message: string } | null };
 
 export async function GET(request: Request) {
   const staff = await currentStaff();
@@ -54,9 +68,7 @@ export async function GET(request: Request) {
      and a notes blob that no card on this screen renders. */
   let query = supabaseAdminLive
     .from("bookings")
-    .select(
-      "id, type, order_number, status, order_type, table_section, guest_name, phone, items, total_amount, payment_method, created_at, kiosk_device_id, pos_staff_uuid",
-    )
+    .select(BOARD_COLUMNS)
     .in("type", KITCHEN_TYPES as unknown as string[])
     .order("created_at", { ascending: false })
     .limit(120);
@@ -80,12 +92,18 @@ export async function GET(request: Request) {
     since = startOfToday();
   }
 
-  const [ordersRes, settings, directory, website] = await Promise.all([
+  const [firstTry, settings, directory, website] = await Promise.all([
     query,
     getPosSettings(),
     loadSourceDirectory(),
     websiteOrders(since),
   ]);
+
+  // The one column that may not exist yet. Asked for again without it.
+  let ordersRes = firstTry as unknown as BoardQuery;
+  if (ordersRes.error) {
+    ordersRes = (await rebuildWithoutNote(request, staff)) as unknown as BoardQuery;
+  }
 
   if (ordersRes.error) {
     return NextResponse.json({ error: ordersRes.error.message }, { status: 500 });
@@ -106,6 +124,9 @@ export async function GET(request: Request) {
       ...row,
       status: String(row.status ?? ""),
       created_at: String(row.created_at ?? ""),
+      /* Under the same key a website order uses, so the card draws one note
+         box rather than knowing which table the order came out of. */
+      note: String(row.customer_note ?? ""),
       source: src.channel,
       source_label: src.label,
       code: sourceOrderCode(src, row.order_number as number | null),
@@ -130,6 +151,38 @@ export async function GET(request: Request) {
     orderPrefix: settings.order_prefix,
     staff,
   });
+}
+
+/**
+ * The same query, without the column that might not be there.
+ *
+ * Rebuilt rather than retried, because a PostgREST builder cannot be re-run
+ * once it has been awaited. Only reached on the error path, so the cost is
+ * paid exactly once per request in the window before the migration is run and
+ * never afterwards.
+ */
+async function rebuildWithoutNote(request: Request, staff: { id: string }) {
+  const { searchParams } = new URL(request.url);
+  const status = (searchParams.get("status") ?? "").trim();
+  const scope = searchParams.get("scope") ?? "today";
+
+  let query = supabaseAdminLive
+    .from("bookings")
+    .select(BASE_COLUMNS)
+    .in("type", KITCHEN_TYPES as unknown as string[])
+    .order("created_at", { ascending: false })
+    .limit(120);
+
+  if (STATUSES.includes(status)) query = query.eq("status", status);
+
+  if (scope === "shift") {
+    const shift = await openShiftFor(staff.id);
+    if (shift) query = query.gte("created_at", shift.opened_at);
+  } else if (scope === "today") {
+    query = query.gte("created_at", startOfToday());
+  }
+
+  return query;
 }
 
 /** Midnight this morning, as an ISO string. */

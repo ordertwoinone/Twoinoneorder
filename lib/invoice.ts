@@ -18,6 +18,15 @@ export interface InvoiceLine {
   extras?: string;
   /** What the extras add per unit. */
   extras_price?: number;
+  /**
+   * "No onions" — what the customer asked about this dish.
+   *
+   * Kept apart from `extras` rather than appended to it, because the two mean
+   * opposite things on a bill: an extra is a charge, a note is an instruction.
+   * Running them together would print "Extra cheese, no onions" against a
+   * price, which reads as though one of them cost money.
+   */
+  note?: string;
   /** qty × (unit + extras). */
   line_total: number;
 }
@@ -33,6 +42,8 @@ export interface InvoiceOrder {
   table_section: string;
   guests: number;
   notes: string;
+  /** The customer's own note for the whole order. See supabase/order_notes.sql. */
+  customer_note: string;
   status: string;
   /** 'pending' until staff mark it cash or card in admin → Order History. */
   payment_method: string;
@@ -88,6 +99,7 @@ export function toInvoiceOrder(row: Record<string, unknown>): InvoiceOrder {
       unit_price: unit,
       extras: item.extras ? String(item.extras) : undefined,
       extras_price: extrasPrice || undefined,
+      note: item.note ? String(item.note) : undefined,
       // Trust the stored line total; fall back to the arithmetic if it is absent.
       line_total: num(item.line_total) || roundMoney((unit + extrasPrice) * qty),
     };
@@ -118,6 +130,7 @@ export function toInvoiceOrder(row: Record<string, unknown>): InvoiceOrder {
     phone: String(row.phone ?? ""),
     table_id: String(row.table_id ?? ""),
     table_section: String(row.table_section ?? ""),
+    customer_note: String(row.customer_note ?? ""),
     guests: Math.round(num(row.guests)),
     notes,
     status: String(row.status ?? ""),

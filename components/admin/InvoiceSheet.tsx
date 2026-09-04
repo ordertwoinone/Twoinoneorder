@@ -129,6 +129,13 @@ export default function InvoiceSheet({
                       {line.extras_price ? ` (${line.extras_price.toFixed(2)})` : ""}
                     </span>
                   )}
+                  {/* What the customer asked for, which is not a charge and so
+                      is not run in with the extras above it. */}
+                  {line.note && (
+                    <span className="block text-[11.5px] font-semibold text-gray-800">
+                      ** {line.note}
+                    </span>
+                  )}
                 </td>
                 <td className="py-1.5 text-right">{line.line_total.toFixed(2)}</td>
               </tr>
@@ -197,6 +204,15 @@ export default function InvoiceSheet({
             )}
           </dl>
         </>
+      )}
+
+      {/* The customer's own words, above the staff summary and marked as
+          theirs. On a bill queried a week later it is the line that explains
+          why the order looked unusual. */}
+      {order.customer_note && (
+        <p className="mt-4 text-[12px] font-semibold leading-snug text-gray-900">
+          Note: {order.customer_note}
+        </p>
       )}
 
       {order.notes && order.items.length > 0 && (

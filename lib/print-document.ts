@@ -11,6 +11,21 @@
  * dialog belongs to the iframe, so its own @page rules apply — which is what
  * keeps the 80mm roll size on a POS receipt — and the page behind it never
  * moves.
+ *
+ * Except on Android, where that is not true.
+ *
+ * Chrome on Android does not print an iframe. Its print path snapshots the
+ * top-level document and hands that to the system print service, so
+ * `iframe.contentWindow.print()` prints the page *behind* the receipt — and
+ * because the till page is `print:hidden` almost throughout, what comes out is
+ * a blank 80mm slip. It works perfectly on a laptop because desktop Chrome
+ * prints the frame that asked. Nothing in the receipt or its @page rules was
+ * ever wrong, which is why the same document was fine from the same button on
+ * a laptop and empty from a tab.
+ *
+ * So Android gets a real window instead, printing itself as the top-level
+ * document, and closing itself again afterwards. Everywhere else keeps the
+ * iframe.
  */
 
 /** Long enough for the logo and the web font; short enough not to feel stuck. */
@@ -19,19 +34,60 @@ const SETTLE_MS = 350;
 /** If afterprint never fires — some browsers skip it — clean up anyway. */
 const CLEANUP_MS = 60_000;
 
+/**
+ * Whether this browser can be trusted to print an iframe.
+ *
+ * User-agent sniffing, which is normally the wrong tool and is the right one
+ * here: this is a rendering-engine bug with no feature to test for. Everything
+ * Android — Chrome, the Samsung browser, and any WebView a kiosk-mode launcher
+ * wraps the till in — shares the same print path and the same fault.
+ */
+function printsIframes(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return !/android/i.test(navigator.userAgent);
+}
+
+/**
+ * The Android path: a real window that prints itself.
+ *
+ * `noopener` is deliberately *not* set. The opened page needs `window.opener`
+ * to know it was opened to be printed rather than navigated to, which is what
+ * lets it close itself when the dialog is dismissed instead of leaving the
+ * orphan tab this whole module exists to avoid.
+ */
+function printInWindow(url: string): void {
+  const separator = url.includes("?") ? "&" : "?";
+  /* `print=1` makes the page open the dialog itself once it has painted;
+     `popup=1` tells it to close afterwards. Called straight out of a click
+     handler, so the popup blocker allows it. */
+  const opened = window.open(`${url}${separator}print=1&popup=1`, "_blank");
+
+  /* Blocked anyway — a locked-down kiosk browser, or a launcher that refuses
+     new windows. Going to the receipt in this tab is worse than a new one but
+     far better than a button that silently does nothing with a customer
+     waiting; the page prints on arrival and has its own Back. */
+  if (!opened) window.location.href = `${url}${separator}print=1`;
+}
+
 export function printDocument(url: string): void {
   if (typeof document === "undefined") return;
 
+  if (!printsIframes()) {
+    printInWindow(url);
+    return;
+  }
+
   const frame = document.createElement("iframe");
-  /* Off-screen rather than display:none. A hidden iframe is not guaranteed to
-     lay out, and a document that never laid out prints blank. */
+  /* Off-screen rather than display:none, and at the size the document expects.
+     A hidden iframe is not guaranteed to lay out, and a document that never
+     laid out prints blank — the 1px, opacity-0 frame this used to be was one
+     browser quirk away from the same empty slip Android produces. */
   frame.setAttribute("aria-hidden", "true");
   frame.style.position = "fixed";
-  frame.style.right = "0";
-  frame.style.bottom = "0";
-  frame.style.width = "1px";
-  frame.style.height = "1px";
-  frame.style.opacity = "0";
+  frame.style.left = "-10000px";
+  frame.style.top = "0";
+  frame.style.width = "380px";
+  frame.style.height = "800px";
   frame.style.border = "0";
   frame.style.pointerEvents = "none";
 

@@ -30,7 +30,33 @@ interface OrderBody {
   deviceSlug?: string;
   /** 'pickup' or 'delivery'. Anything else is treated as collection. */
   fulfilment?: string;
+  /** itemId → what the customer asked about that dish. */
+  notes?: Record<string, string>;
+  /** One note for the whole ticket. */
+  orderNote?: string;
 }
+
+/**
+ * A note, as it is allowed to reach a kitchen ticket.
+ *
+ * Trimmed, capped, and stripped of anything that is not a printable line. The
+ * cap matters more than it looks: this text is printed on 80mm paper and shown
+ * on a board, and a customer holding a key down on the on-screen keyboard could
+ * otherwise push a ticket to several feet of receipt. Newlines go too — a note
+ * is one line under a dish, and a "note" containing twenty of them is a way to
+ * push the total off the bottom of the printed bill.
+ */
+function cleanNote(input: unknown, max: number): string {
+  return String(input ?? "")
+    // Newlines, tabs and runs of space all collapse to one space.
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+/** Matches the caps the kiosk sheet enforces on screen. */
+const ITEM_NOTE_MAX = 120;
+const ORDER_NOTE_MAX = 300;
 
 /**
  * Places an order taken at the kiosk.
@@ -91,11 +117,18 @@ export async function POST(request: Request) {
      dropped rather than charged for. */
   const qty: Record<string, number> = {};
   const addons: AddonSelection = {};
+  /* Keyed by the dishes actually being ordered, so a note against an id that
+     is not in the basket — a dish removed after the note was written, or a
+     key invented by hand — is dropped rather than carried onto the ticket. */
+  const itemNotes: Record<string, string> = {};
   for (const item of items) {
     qty[item.id] = wanted.find(([id]) => id === item.id)?.[1] ?? 0;
     const own = new Set((item.addon_groups ?? []).flatMap((g) => g.options.map((o) => o.id)));
     addons[item.id] = (body.addons?.[item.id] ?? []).filter((id) => own.has(id));
+    itemNotes[item.id] = cleanNote(body.notes?.[item.id], ITEM_NOTE_MAX);
   }
+
+  const orderNote = cleanNote(body.orderNote, ORDER_NOTE_MAX);
 
   // The card is looked up again here: the screen's word for it is not evidence.
   const card: StudentCard | null =
@@ -132,7 +165,12 @@ export async function POST(request: Request) {
   const itemsText = totals.lines
     .map((l) => {
       const extras = addonSummary(l.groups, addons[l.item.id], (a) => a.name);
-      return `${l.item.name} x${l.qty}${extras ? ` (+ ${extras})` : ""}`;
+      const note = itemNotes[l.item.id];
+      /* The note goes in the summary line too, in quotes. Anywhere this order
+         is read as prose rather than as a row of fields — a legacy screen, a
+         copied WhatsApp message — that line is all there is, and a request the
+         customer made must not be the thing that falls out of it. */
+      return `${l.item.name} x${l.qty}${extras ? ` (+ ${extras})` : ""}${note ? ` [“${note}”]` : ""}`;
     })
     .join(", ");
 
@@ -161,10 +199,14 @@ export async function POST(request: Request) {
       itemsText,
       `Total: AED ${totals.total.toFixed(2)}`,
       card ? `Privilege ${card.member_id}` : "",
-
+      orderNote ? `Note: ${orderNote}` : "",
     ]
       .filter(Boolean)
       .join(" · "),
+    /* Its own column as well as inside the note above, so the board and the
+       receipt can draw it as a box rather than the kitchen having to find it
+       in the middle of a sentence about panels and totals. */
+    customer_note: orderNote,
     items: totals.lines.map((l) => ({
       name: l.item.name,
       qty: l.qty,
@@ -172,6 +214,8 @@ export async function POST(request: Request) {
       extras: addonSummary(l.groups, addons[l.item.id], (a) => a.name),
       extras_price: l.extrasPrice,
       line_total: l.lineTotal,
+      // "No onions" — an instruction, not something being charged for.
+      note: itemNotes[l.item.id],
     })),
     // VAT is already inside the price here, as it is everywhere else on the site.
     subtotal: Number((totals.total - totals.vat).toFixed(2)),

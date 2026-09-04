@@ -119,6 +119,13 @@ export default function ThermalReceipt({
         <div key={i} style={{ marginBottom: "4px" }}>
           <p style={{ fontWeight: 700 }}>{item.name}</p>
           {item.extras && <p style={{ fontSize: "10.5px", paddingLeft: "3mm" }}>+ {item.extras}</p>}
+          {/* Bold and marked, because this is the line the cook acts on and
+              the one that costs a remake when it is missed. */}
+          {item.note && (
+            <p style={{ fontSize: "10.5px", paddingLeft: "3mm", fontWeight: 700 }}>
+              ** {item.note}
+            </p>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
             <span>
               {item.qty} × {money(item.unit_price)}
@@ -127,6 +134,16 @@ export default function ThermalReceipt({
           </div>
         </div>
       ))}
+
+      {/* What the customer asked for the whole order, boxed off from the
+          items above it so a cook does not read it as another dish. */}
+      {order.customer_note && (
+        <>
+          <div style={line} />
+          <p style={{ fontSize: "11px", fontWeight: 700 }}>NOTE</p>
+          <p style={{ fontSize: "11px" }}>{order.customer_note}</p>
+        </>
+      )}
 
       <div style={line} />
 
