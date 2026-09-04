@@ -167,6 +167,29 @@ safe to re-run.
 4. `supabase/pos_item_availability.sql` — the stock switch
 5. `supabase/pos_business_days.sql` — the shift/day split
 6. `supabase/pos_website_orders.sql` — website orders on the board
+7. `supabase/order_notes.sql` — per-item and per-order customer notes
+8. `supabase/pos_refunds.sql` — editing an order, refunds, kitchen approval
+
+**Amending an order.** It turns on one question, and the two answers behave
+differently enough that treating them as one operation is what makes a till lose
+track of its own takings.
+
+- **Unpaid** — nothing has moved, so taking a dish off just makes the order
+  smaller and the customer pays less.
+- **Paid** — the charge stands. The line is marked cancelled inside the order and
+  the difference is recorded as a refund, so a receipt printed at the counter and
+  reprinted a month later agree, and the close shows a sale *and* a refund rather
+  than a sale that quietly shrank.
+
+A cancellation on a ticket the kitchen is still cooking is a **request**, not an
+instruction: it appears on the board with Accept / Decline, and nothing is
+refunded until the pass answers. Handing money back for a dish that turns out to
+have been cooked and served is the one outcome worth designing against.
+
+**Payment methods.** Cash, card and online are money arriving. Staff Food, Credit
+and Pending are not, and each is kept out of net sales and drawer cash and named
+on its own line at both closes — a staff meal is a cost, a credit is a debt, a
+pending is a sale that has not happened yet.
 
 **Notes**
 

@@ -6,15 +6,20 @@ import {
   Check,
   ClipboardList,
   CreditCard,
+  MessageSquare,
   Minus,
+  MoreVertical,
   Pause,
   Percent,
   Plus,
   Printer,
   Search,
   ShoppingBag,
+  Ticket,
   Trash2,
+  Undo2,
   Utensils,
+  XCircle,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { can } from "@/lib/pos/permissions";
@@ -76,12 +81,15 @@ export default function TillScreen({
   settings,
   categories,
   items,
+  tables,
   stale,
 }: {
   staff: PosStaff;
   settings: PosSettings;
   categories: KioskCategory[];
   items: KioskItem[];
+  /** Table codes from the floor plan, for the dine-in picker in PayDialog. */
+  tables: string[];
   stale: StaleShift[];
 }) {
   const [qty, setQty] = useState<PosQty>({});
@@ -95,12 +103,19 @@ export default function TillScreen({
   const [address, setAddress] = useState("");
   const [tableId, setTableId] = useState("");
   const [note, setNote] = useState("");
+  /** itemId → what the customer asked about that dish. */
+  const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
+  /** The line whose options are open. One at a time keeps the cart scannable. */
+  const [openLine, setOpenLine] = useState<string | null>(null);
+  const [noteFor, setNoteFor] = useState<{ id: string; name: string } | null>(null);
+  const [orderNoteOpen, setOrderNoteOpen] = useState(false);
 
   const [discount, setDiscount] = useState<PosDiscount | null>(null);
   const [couponCode, setCouponCode] = useState("");
 
   const [payOpen, setPayOpen] = useState(false);
   const [discountOpen, setDiscountOpen] = useState(false);
+  const [couponOpen, setCouponOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
@@ -160,6 +175,14 @@ export default function TillScreen({
       delete copy[item.id];
       return copy;
     });
+    /* And its note. A dish taken off and added back should not silently arrive
+       carrying an instruction the customer already changed their mind about. */
+    setItemNotes((n) => {
+      const copy = { ...n };
+      delete copy[item.id];
+      return copy;
+    });
+    setOpenLine(null);
   }
 
   function clearAll() {
@@ -172,6 +195,8 @@ export default function TillScreen({
     setAddress("");
     setTableId("");
     setNote("");
+    setItemNotes({});
+    setOpenLine(null);
     setError("");
   }
 
@@ -185,7 +210,7 @@ export default function TillScreen({
         label: customerName || tableId || `${totals.count} items`,
         total: totals.total,
         count: totals.count,
-        payload: { qty, addons, orderType, customerName, customerPhone, address, tableId, note },
+        payload: { qty, addons, orderType, customerName, customerPhone, address, tableId, note, itemNotes },
       }),
     }).catch(() => {});
     setBusy(false);
@@ -200,6 +225,7 @@ export default function TillScreen({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          itemNotes,
           qty,
           addons,
           orderType,
@@ -278,13 +304,25 @@ export default function TillScreen({
     >
       <div className="h-full flex min-h-0">
         {/* ─── The order ─── */}
+        {/* On the right, where the eye ends up. A cashier reads the grid, taps
+            a dish and looks at what they have built; with the cart on the left
+            that is a jump backwards across the screen on every single tap. */}
         <aside
-          className="shrink-0 flex flex-col bg-white"
-          style={{ width: 350, borderRight: `1px solid ${POS.line}` }}
+          className="order-2 shrink-0 flex flex-col bg-white"
+          style={{ width: 372, borderLeft: `1px solid ${POS.line}` }}
         >
-          <div className="shrink-0 px-3.5 py-2.5" style={{ background: POS.night }}>
-            <p className="text-sm font-bold text-white">New Order</p>
-            <p className="text-[11px] text-white/60">{ORDER_TYPE_LABEL[orderType]}</p>
+          <div
+            className="shrink-0 flex items-center justify-between gap-2 px-3.5 py-3"
+            style={{ borderBottom: `1px solid ${POS.line}` }}
+          >
+            <p className="text-[17px] font-black" style={{ color: POS.ink }}>New Order</p>
+            <span
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-bold text-white"
+              style={{ background: POS.action }}
+            >
+              {orderType === "delivery" ? <Bike size={13} /> : orderType === "dine_in" ? <Utensils size={13} /> : <ShoppingBag size={13} />}
+              {ORDER_TYPE_LABEL[orderType]}
+            </span>
           </div>
 
           <div className="pos-scroll flex-1 px-3.5 py-3">
@@ -297,9 +335,10 @@ export default function TillScreen({
               {orderType === "delivery" && (
                 <Input value={address} onChange={setAddress} placeholder="Delivery address" multiline />
               )}
-              {orderType === "dine_in" && (
-                <Input value={tableId} onChange={setTableId} placeholder="Table number" />
-              )}
+              {/* No table field here. It is asked for in the pay dialog, where
+                  it is required and cannot be skipped — a dine-in order with no
+                  table is a plate nobody can carry anywhere, and "fill it in
+                  later" is after the customer has left the counter. */}
             </div>
 
             <div className="mt-3" style={{ borderTop: `1px solid ${POS.line}` }} />
@@ -330,7 +369,27 @@ export default function TillScreen({
                       <span className="text-[13px] font-bold" style={{ color: POS.ink }}>
                         {line.lineTotal.toFixed(2)}
                       </span>
+                      <button
+                        onClick={() => setOpenLine((v) => (v === line.item.id ? null : line.item.id))}
+                        aria-label={`Options for ${line.item.name}`}
+                        className="-me-1 flex h-7 w-6 shrink-0 items-center justify-center rounded-lg"
+                        style={{ color: openLine === line.item.id ? POS.ink : POS.inkSoft }}
+                      >
+                        <MoreVertical size={15} />
+                      </button>
                     </div>
+
+                    {/* What the customer asked about this dish. */}
+                    {itemNotes[line.item.id] && (
+                      <p
+                        className="mt-1 rounded-lg px-2 py-1 text-[11.5px] font-semibold"
+                        style={{ background: "#FFFBEB", color: "#92400E" }}
+                        dir="auto"
+                      >
+                        {itemNotes[line.item.id]}
+                      </p>
+                    )}
+
                     <div className="mt-1.5 flex items-center gap-1.5">
                       <Tiny onClick={() => less(line.item)} label="One less">
                         <Minus size={12} />
@@ -342,6 +401,46 @@ export default function TillScreen({
                         <Trash2 size={12} />
                       </Tiny>
                     </div>
+
+                    {/* ─── Item options ─── */}
+                    {openLine === line.item.id && (
+                      <div
+                        className="mt-2 rounded-xl px-2 py-2"
+                        style={{ border: `1px solid ${POS.line}`, background: POS.page }}
+                      >
+                        <p className="px-1 pb-1.5 text-[11px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+                          Item options
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <LineAction
+                            icon={<MessageSquare size={13} />}
+                            label={itemNotes[line.item.id] ? "Edit item note" : "Add item note"}
+                            onClick={() => {
+                              setNoteFor({ id: line.item.id, name: line.item.name });
+                              setOpenLine(null);
+                            }}
+                          />
+                          {/* Greyed, and it says why. Nothing has been charged
+                              yet, so there is nothing to give back — a refund
+                              lives on the order board once the order exists.
+                              Shown rather than hidden so a cashier looking for
+                              it knows where it went. */}
+                          <LineAction
+                            icon={<Undo2 size={13} />}
+                            label="Refund item"
+                            hint="Available after payment"
+                            disabled
+                            onClick={() => {}}
+                          />
+                          <LineAction
+                            icon={<XCircle size={13} />}
+                            label="Cancel item"
+                            danger
+                            onClick={() => removeLine(line.item)}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -376,40 +475,54 @@ export default function TillScreen({
               </p>
             )}
 
-            <div className="mt-2.5 flex gap-2">
-              <button
-                onClick={clearAll}
-                disabled={totals.count === 0}
-                className="flex items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-bold disabled:opacity-40"
-                style={{ background: POS.badSoft, color: POS.bad, height: 46 }}
-              >
-                <Trash2 size={15} />
-                Clear
-              </button>
-              <button
-                onClick={hold}
-                disabled={totals.count === 0 || busy}
-                className="flex items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-bold disabled:opacity-40"
-                style={{ background: POS.page, color: POS.ink, border: `1px solid ${POS.line}`, height: 46 }}
-              >
-                <Pause size={15} />
-                Hold
-              </button>
-              <button
-                onClick={() => setPayOpen(true)}
-                disabled={totals.count === 0 || busy}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-white disabled:opacity-40"
-                style={{ background: POS.action, height: 46 }}
-              >
-                <CreditCard size={16} />
-                Pay {aed(totals.total)}
-              </button>
+            {/* Paying is the one thing this screen is for, so it gets the full
+                width and everything else sits under it. */}
+            <button
+              onClick={() => setPayOpen(true)}
+              disabled={totals.count === 0 || busy}
+              className="mt-2.5 w-full flex items-center justify-center gap-2 rounded-xl text-[16px] font-bold text-white disabled:opacity-40"
+              style={{ background: POS.action, height: 52 }}
+            >
+              <CreditCard size={17} />
+              Pay {aed(totals.total)}
+            </button>
+
+            {/* ─── Everything else you can do with a basket ─── */}
+            <div className="mt-2 grid grid-cols-5 gap-1.5">
+              <Foot icon={<Pause size={15} />} label="Hold" onClick={hold} disabled={totals.count === 0 || busy} />
+              <Foot icon={<Percent size={15} />} label="Discount" onClick={() => setDiscountOpen(true)} disabled={totals.count === 0} />
+              <Foot icon={<Ticket size={15} />} label="Coupon" onClick={() => setCouponOpen(true)} disabled={totals.count === 0} />
+              <Foot
+                icon={<ClipboardList size={15} />}
+                label="Order Note"
+                onClick={() => setOrderNoteOpen(true)}
+                active={Boolean(note)}
+              />
+              <Foot
+                icon={<Printer size={15} />}
+                label="Print"
+                /* Only ever the order just placed. There is nothing to print
+                   from a basket that has not been rung up — the receipt does
+                   not exist until the order does. */
+                onClick={() => placed && printDocument(`/pos/invoice/${placed.id}`)}
+                disabled={!placed}
+              />
             </div>
+
+            <button
+              onClick={clearAll}
+              disabled={totals.count === 0}
+              className="mt-1.5 w-full flex items-center justify-center gap-1.5 rounded-xl text-[13px] font-bold disabled:opacity-40"
+              style={{ background: POS.badSoft, color: POS.bad, height: 40 }}
+            >
+              <Trash2 size={14} />
+              Clear the order
+            </button>
           </div>
         </aside>
 
         {/* ─── The menu ─── */}
-        <section className="flex-1 min-w-0 flex flex-col">
+        <section className="order-1 flex-1 min-w-0 flex flex-col">
           <div className="pos-scroll shrink-0 flex gap-2 overflow-x-auto px-4 py-3">
             <Chip label="All Items" active={category === "all"} onClick={() => setCategory("all")} />
             {categories.map((c) => (
@@ -524,48 +637,67 @@ export default function TillScreen({
             )}
           </div>
 
-          {/* ─── Tools ─── */}
-          <div
-            className="pos-chrome shrink-0 flex items-center gap-2 px-4 py-2.5 bg-white"
-            style={{ borderTop: `1px solid ${POS.line}` }}
-          >
-            <Tool onClick={() => setDiscountOpen(true)} icon={<Percent size={15} />} label="Discount" />
-            <Tool
-              onClick={() => {
-                const code = window.prompt("Coupon code");
-                if (code !== null) setCouponCode(code.trim().toUpperCase());
-              }}
-              icon={<Check size={15} />}
-              label={couponCode ? `Coupon ${couponCode}` : "Coupon"}
-              active={Boolean(couponCode)}
-            />
-            <Tool
-              onClick={() => {
-                const typed = window.prompt("Note for the kitchen", note);
-                if (typed !== null) setNote(typed);
-              }}
-              icon={<ClipboardList size={15} />}
-              label={note ? "Note added" : "Order Note"}
-              active={Boolean(note)}
-            />
-            <div className="flex-1" />
-            {/* Reprints the last order rather than the screen. Off until there
-                is one, because a Print that prints the menu is worse than a
-                Print that is greyed out. */}
-            <Tool
-              onClick={() => placed?.id && printDocument(`/pos/invoice/${placed.id}`)}
-              icon={<Printer size={15} />}
-              label={placed ? `Reprint ${placed.code}` : "Print"}
-              disabled={!placed?.id}
-            />
-          </div>
         </section>
       </div>
+
+      {/* A note against one dish, and a note against the whole ticket. Same
+          dialog, because they are the same act with a different subject. */}
+      {noteFor && (
+        <NoteDialog
+          title={noteFor.name}
+          subtitle="What should the kitchen know about this dish?"
+          initial={itemNotes[noteFor.id] ?? ""}
+          max={120}
+          onCancel={() => setNoteFor(null)}
+          onSave={(text) => {
+            setItemNotes((n) => {
+              if (!text) {
+                const copy = { ...n };
+                delete copy[noteFor.id];
+                return copy;
+              }
+              return { ...n, [noteFor.id]: text };
+            });
+            setNoteFor(null);
+          }}
+        />
+      )}
+
+      {orderNoteOpen && (
+        <NoteDialog
+          title="Order note"
+          subtitle="For the whole ticket — cutlery, allergies, where to call."
+          initial={note}
+          max={300}
+          onCancel={() => setOrderNoteOpen(false)}
+          onSave={(text) => { setNote(text); setOrderNoteOpen(false); }}
+        />
+      )}
+
+      {couponOpen && (
+        <NoteDialog
+          title="Coupon"
+          subtitle="The code the customer is holding. Checked when the order goes through."
+          initial={couponCode}
+          max={40}
+          uppercase
+          placeholder="CODE"
+          saveLabel="Apply"
+          onCancel={() => setCouponOpen(false)}
+          onSave={(text) => { setCouponCode(text); setCouponOpen(false); }}
+        />
+      )}
 
       {payOpen && (
         <PayDialog
           total={totals.total}
           busy={busy}
+          /* Only dine-in. A takeaway has no table and being asked for one is a
+             field somebody has to think about and then skip on every order. */
+          requireTable={orderType === "dine_in"}
+          tables={tables}
+          table={tableId}
+          onTable={setTableId}
           onCancel={() => setPayOpen(false)}
           onPay={pay}
         />
@@ -660,6 +792,165 @@ function Row({ label, value, good, muted }: { label: string; value: string; good
   );
 }
 
+/** One entry in a cart line's options: an icon, a label, sometimes a reason. */
+/** One of the five squat buttons under the Pay button. */
+/**
+ * A short piece of text, typed at the till.
+ *
+ * One component for the item note, the order note and the coupon, because all
+ * three are "type a thing, keep it or drop it" and three near-identical modals
+ * would drift apart the first time any of them was touched. Unlike the kiosk's,
+ * this one has no on-screen keyboard: the till has a real one, or a tablet
+ * whose browser raises the system keyboard on a focused field.
+ */
+function NoteDialog({
+  title,
+  subtitle,
+  initial,
+  max,
+  uppercase,
+  placeholder,
+  saveLabel = "Save",
+  onCancel,
+  onSave,
+}: {
+  title: string;
+  subtitle: string;
+  initial: string;
+  max: number;
+  uppercase?: boolean;
+  placeholder?: string;
+  saveLabel?: string;
+  onCancel: () => void;
+  onSave: (text: string) => void;
+}) {
+  const [text, setText] = useState(initial);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: "rgba(0,0,0,0.5)" }}
+    >
+      <div className="w-full max-w-[440px] rounded-2xl bg-white p-6">
+        <h2 className="text-lg font-black" style={{ color: POS.ink }}>{title}</h2>
+        <p className="mt-0.5 text-[12.5px]" style={{ color: POS.inkSoft }}>{subtitle}</p>
+
+        <textarea
+          value={text}
+          autoFocus
+          onChange={(e) =>
+            setText(
+              (uppercase ? e.target.value.toUpperCase() : e.target.value).slice(0, max),
+            )
+          }
+          rows={uppercase ? 1 : 3}
+          placeholder={placeholder ?? "Type it here"}
+          dir="auto"
+          className="mt-4 w-full resize-none rounded-xl px-3 py-2.5 text-[15px] font-semibold focus:outline-none"
+          style={{ border: `1px solid ${POS.line}`, color: POS.ink }}
+        />
+        <p className="mt-1 text-end text-[11px]" style={{ color: POS.inkSoft }}>
+          {text.length} / {max}
+        </p>
+
+        <div className="mt-3 flex gap-2">
+          {/* Clearing is its own button. Holding backspace forty times to undo
+              a note is not a thing anybody should do at a counter. */}
+          <button
+            onClick={() => onSave("")}
+            className="rounded-xl px-4 text-sm font-bold"
+            style={{ background: POS.page, color: POS.ink, height: 48 }}
+          >
+            {initial ? "Remove" : "Cancel"}
+          </button>
+          <button
+            onClick={onCancel}
+            className="rounded-xl px-4 text-sm font-bold"
+            style={{ background: POS.page, color: POS.ink, height: 48 }}
+          >
+            Close
+          </button>
+          <button
+            onClick={() => onSave(text.trim())}
+            className="flex-1 rounded-xl text-[15px] font-bold text-white"
+            style={{ background: POS.action, height: 48 }}
+          >
+            {saveLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Foot({
+  icon,
+  label,
+  onClick,
+  disabled,
+  active,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-[10.5px] font-bold leading-none disabled:opacity-35"
+      style={{
+        border: `1px solid ${active ? POS.action : POS.line}`,
+        background: active ? POS.goodSoft : "#fff",
+        color: active ? POS.action : POS.ink,
+      }}
+    >
+      {icon}
+      <span className="text-center">{label}</span>
+    </button>
+  );
+}
+
+function LineAction({
+  icon,
+  label,
+  hint,
+  danger,
+  disabled,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint?: string;
+  danger?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-[12px] font-bold disabled:opacity-50"
+      style={{
+        border: `1px solid ${POS.line}`,
+        color: disabled ? POS.inkSoft : danger ? POS.bad : POS.ink,
+      }}
+    >
+      {icon}
+      <span className="text-start leading-tight">
+        {label}
+        {hint && (
+          <span className="block text-[10px] font-semibold" style={{ color: POS.inkSoft }}>
+            {hint}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
 function Tiny({
   onClick,
   label,
@@ -702,32 +993,3 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
-function Tool({
-  onClick,
-  icon,
-  label,
-  active,
-  disabled,
-}: {
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-bold disabled:opacity-40"
-      style={{
-        background: active ? POS.goodSoft : POS.page,
-        color: active ? POS.good : POS.ink,
-        border: `1px solid ${active ? POS.good : POS.line}`,
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}

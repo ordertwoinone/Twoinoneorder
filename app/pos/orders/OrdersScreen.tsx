@@ -177,6 +177,10 @@ export default function OrdersScreen({
   const [editing, setEditing] = useState<BoardOrder | null>(null);
   const [amendBusy, setAmendBusy] = useState(false);
   const [amendError, setAmendError] = useState("");
+  /* "mine" when the server is filtering to this person's own tickets — a
+     waiter. Said out loud on the screen, because a board that is quietly
+     hiding most of the branch looks like a board that is broken. */
+  const [scope, setScope] = useState<"all" | "mine">("all");
   const [error, setError] = useState("");
 
   /* One second hand for every card on the board. Ticks only while somebody is
@@ -231,6 +235,7 @@ export default function OrdersScreen({
 
     if (body?.orders) {
       const rows = body.orders as BoardOrder[];
+      if (body.scope === "mine" || body.scope === "all") setScope(body.scope);
 
       /* Only what somebody still has to cook. A website order that arrived
          yesterday and is already marked done should not announce itself
@@ -383,7 +388,9 @@ export default function OrdersScreen({
       subtitle={
         kitchenOnly
           ? `${shown.length} being worked on · counter, kiosk and website`
-          : `${orders.length} today · counter, kiosk and website`
+          : scope === "mine"
+            ? `${orders.length} today · your own orders only`
+            : `${orders.length} today · counter, kiosk and website`
       }
       warning={<StaleShiftWarning shifts={stale} />}
       actions={

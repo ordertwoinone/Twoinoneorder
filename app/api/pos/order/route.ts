@@ -48,6 +48,8 @@ interface OrderBody {
   address?: string;
   tableId?: string;
   note?: string;
+  /** itemId → what the customer asked about that dish. */
+  itemNotes?: Record<string, string>;
   discount?: PosDiscount | null;
   couponCode?: string;
   /** A held basket being rung up, so it can be cleared once it is a real order. */
@@ -188,6 +190,12 @@ export async function POST(request: Request) {
   const table = String(body.tableId ?? "").trim().slice(0, 40);
   const staffNote = String(body.note ?? "").trim().slice(0, 500);
 
+  /* One line, no runs of space, capped. Printed on 80mm paper and shown on a
+     board, so a note nobody bounded could push a ticket to several feet of
+     receipt and shove the total off the bottom of the bill. */
+  const cleanNote = (v: unknown, max: number) =>
+    String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+
   const { data, error } = await insertRow("bookings", {
     type: "pos",
     pos_staff_uuid: staff.id,
@@ -212,6 +220,9 @@ export async function POST(request: Request) {
     ]
       .filter(Boolean)
       .join(" · "),
+    // The customer's own note for the whole ticket, in its own column so the
+    // board can draw it as a box rather than find it inside the staff summary.
+    customer_note: staffNote,
     items: totals.lines.map((l) => ({
       name: l.item.name,
       qty: l.qty,
@@ -219,6 +230,8 @@ export async function POST(request: Request) {
       extras: addonSummary(l.groups, addons[l.item.id], (a) => a.name),
       extras_price: l.extrasPrice,
       line_total: l.lineTotal,
+      // "No onions" — an instruction, not something being charged for.
+      note: cleanNote(body.itemNotes?.[l.item.id], 120),
     })),
     subtotal: Number((totals.total - totals.vat).toFixed(2)),
     discount_total: totals.totalSaved,
