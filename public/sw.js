@@ -4,7 +4,9 @@
 /* v4: the manifest's launch icons changed, and the old one is precached — a
    version bump is the only thing that gets an installed app to take the new
    splash artwork instead of the logo it was installed with. */
-const CACHE_VERSION = "v4";
+/* v5: /pos stopped being cached. Bumped so tablets already carrying till pages
+   in tio-pages-v4 drop them rather than keep serving them offline. */
+const CACHE_VERSION = "v5";
 const STATIC_CACHE = `tio-static-${CACHE_VERSION}`;
 const PAGES_CACHE = `tio-pages-${CACHE_VERSION}`;
 const IMAGE_CACHE = `tio-images-${CACHE_VERSION}`;
@@ -72,6 +74,30 @@ self.addEventListener("fetch", (event) => {
       url.pathname.startsWith("/admin") ||
       url.pathname.startsWith("/auth/"))
   ) {
+    return;
+  }
+
+  /*
+   * The till, which must never be answered from a cache.
+   *
+   * Every page under /pos is rendered for whoever is signed in and for the
+   * menu as it stands this minute: the cashier's name, their open shift, and
+   * today's prices are all baked into the HTML. Serving a stored copy of that
+   * would hand the next person the last person's screen — and quietly sell
+   * yesterday's prices out of a dish that has since run out.
+   *
+   * It mattered less while the till was a browser tab that mostly had a
+   * network. Installed as its own app it runs through this worker every time
+   * it is opened, which is exactly when a stale page would be served.
+   *
+   * Answered with the offline page rather than passed through, so a tablet
+   * that loses the wifi mid-shift gets a sentence explaining it instead of the
+   * browser's own error — but never, under any circumstances, a till.
+   */
+  if (sameOrigin && url.pathname.startsWith("/pos")) {
+    if (request.mode === "navigate") {
+      event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    }
     return;
   }
 

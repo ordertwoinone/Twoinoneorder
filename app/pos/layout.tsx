@@ -14,6 +14,31 @@ import type { Metadata, Viewport } from "next";
 export const metadata: Metadata = {
   title: "Two In One POS",
   robots: { index: false, follow: false, nocache: true },
+
+  /*
+   * The till installs as its own app.
+   *
+   * A browser decides what it is installing from the manifest linked by the
+   * page in front of it, so without this a counter tablet added to a home
+   * screen would install the customer site — the storefront's name, the
+   * storefront's icon, opening the storefront. The kitchen board overrides
+   * this with its own screen so its tile opens the pass; see kitchen/page.tsx.
+   */
+  manifest: "/pos-app.webmanifest",
+  icons: {
+    icon: "/icons/pos-icon-192.png",
+    apple: "/icons/pos-apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    // What iOS writes under the home-screen icon.
+    title: "POS",
+    /* Not "black-translucent". That hands the status bar's space to the page,
+       and the till's own header — the screen title and the signed-in name —
+       would be drawn under the clock. A staff tool wants the status bar
+       visible and out of the way, not overlapping the chrome. */
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {

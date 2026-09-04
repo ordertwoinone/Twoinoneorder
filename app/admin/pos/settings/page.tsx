@@ -84,6 +84,29 @@ export default function PosSettingsAdmin() {
         </button>
       </div>
 
+      {/* Where somebody setting a tablet up is already looking. The kiosk's
+          equivalent lives on admin → Kiosk → Screens for the same reason. */}
+      <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+        <p className="text-sm font-semibold text-blue-900">Installing the till on a tablet</p>
+        <ol className="mt-1.5 list-decimal space-y-1 ps-5 text-sm text-blue-900">
+          <li>
+            Open <code className="rounded bg-white/70 px-1">/pos/till</code> in Chrome on the
+            tablet itself — or <code className="rounded bg-white/70 px-1">/pos/kitchen</code> on
+            the screen over the pass.
+          </li>
+          <li>
+            Chrome menu (⋮) → <strong>Add to Home screen</strong> → Install.
+          </li>
+          <li>Launch it from the home-screen icon from then on, not from a browser tab.</li>
+        </ol>
+        <p className="mt-2 text-[12px] text-blue-800">
+          The till and the kitchen board install as two separate apps, each opening its own screen
+          — so the tablet at the counter and the screen at the pass cannot be mixed up, and neither
+          launches the customer site. It opens landscape with no browser bar, and keeps the
+          tablet&apos;s status bar so staff can still see the wifi and the battery.
+        </p>
+      </div>
+
       <div className="space-y-6">
         <Card title="Orders">
           <div className="grid grid-cols-2 gap-3">
