@@ -2,7 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Check, Lock, Minus, Plus, Printer, Wallet } from "lucide-react";
+import {
+  BarChart3,
+  Check,
+  Clock,
+  Lock,
+  Minus,
+  Plus,
+  Printer,
+  Undo2,
+  UserRound,
+  Utensils,
+  Wallet,
+  XCircle,
+} from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
 import { DENOMINATIONS } from "@/lib/pos/shift";
@@ -200,7 +213,23 @@ export default function ShiftCloseScreen({
               <>
                 <Row label="Gross sales" value={aed(takings.grossSales)} />
                 <Row label="Discounts" value={`− ${aed(takings.discountTotal)}`} tone={POS.bad} />
-                <Row label="Refunds" value={`− ${aed(takings.refundTotal)}`} tone={POS.bad} />
+                <Row
+                  label="Refunded payments"
+                  value={takings.refundTotal > 0 ? `− ${aed(takings.refundTotal)}` : aed(0)}
+                  tone={takings.refundTotal > 0 ? POS.bad : undefined}
+                />
+                <Row
+                  label="Cancelled order payments"
+                  value={takings.cancelledTotal > 0 ? `− ${aed(takings.cancelledTotal)}` : aed(0)}
+                  tone={takings.cancelledTotal > 0 ? POS.bad : undefined}
+                />
+                {takings.staffFoodTotal > 0 && (
+                  <Row
+                    label="Staff Food (not paid)"
+                    value={`− ${aed(takings.staffFoodTotal)}`}
+                    tone={POS.brand}
+                  />
+                )}
                 <Row label="VAT (included)" value={aed(takings.vatTotal)} muted />
                 <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${POS.line}` }}>
                   <p className="text-[11.5px]" style={{ color: POS.inkSoft }}>Net sales</p>
@@ -213,7 +242,7 @@ export default function ShiftCloseScreen({
 
                 <div className="mt-3 pt-3 space-y-1" style={{ borderTop: `1px solid ${POS.line}` }}>
                   <p className="mb-1 text-[11.5px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
-                    Payment breakdown
+                    Collected payments
                   </p>
                   <Row label="Cash" value={aed(takings.cashSales)} />
                   <Row label="Card" value={aed(takings.cardSales)} />
@@ -221,6 +250,55 @@ export default function ShiftCloseScreen({
                   {takings.expenseTotal > 0 && (
                     <Row label="Expenses paid out" value={`− ${aed(takings.expenseTotal)}`} tone={POS.bad} />
                   )}
+                </div>
+
+                {/* Food that went out with no money arriving. Kept apart from
+                    the takings above rather than netted against them: each of
+                    these is a different question — a staff meal is a cost, a
+                    credit is a debt, a pending is a sale that has not happened
+                    yet — and a manager needs to see all three named. */}
+                <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${POS.line}` }}>
+                  <p className="mb-1 text-[11.5px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+                    Not collected / non-revenue
+                  </p>
+                  <Tally
+                    icon={<Utensils size={14} />}
+                    label="Staff Food"
+                    count={takings.staffFoodCount}
+                    value={aed(takings.staffFoodTotal)}
+                    note="Excluded from net sales and drawer cash."
+                  />
+                  <Tally
+                    icon={<UserRound size={14} />}
+                    label="Credit"
+                    count={takings.creditCount}
+                    value={aed(takings.creditTotal)}
+                  />
+                  <Tally
+                    icon={<Clock size={14} />}
+                    label="Pending"
+                    count={takings.pendingCount}
+                    value={aed(takings.pendingTotal)}
+                  />
+                </div>
+
+                <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${POS.line}` }}>
+                  <p className="mb-1 text-[11.5px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+                    Payment adjustments
+                  </p>
+                  <Tally
+                    icon={<Undo2 size={14} />}
+                    label="Refunded Payments"
+                    count={takings.refundedCount}
+                    value={aed(takings.refundTotal)}
+                  />
+                  <Tally
+                    icon={<XCircle size={14} />}
+                    label="Cancelled Order Payments"
+                    count={takings.cancelledCount}
+                    value={aed(takings.cancelledTotal)}
+                    note="Excluded from net sales and drawer cash."
+                  />
                 </div>
               </>
             )}
@@ -361,6 +439,43 @@ function Row({ label, value, tone, muted }: { label: string; value: string; tone
       <span className="text-[12.5px]" style={{ color: POS.inkSoft }}>{label}</span>
       <span className="text-[13px] font-semibold" style={{ color: tone ?? (muted ? POS.inkSoft : POS.ink) }}>
         {value}
+      </span>
+    </div>
+  );
+}
+
+/** A named non-sale: what it is, how many, what it came to, and why it is here. */
+function Tally({
+  icon,
+  label,
+  count,
+  value,
+  note,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  value: string;
+  note?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <span className="flex min-w-0 items-start gap-2">
+        <span className="mt-0.5 shrink-0" style={{ color: POS.inkSoft }}>{icon}</span>
+        <span className="min-w-0">
+          <span className="block text-[12.5px] font-semibold" style={{ color: POS.ink }}>
+            {label}
+          </span>
+          {note && count > 0 && (
+            <span className="block text-[11px]" style={{ color: POS.brand }}>{note}</span>
+          )}
+        </span>
+      </span>
+      <span className="shrink-0 text-end">
+        <span className="block text-[13px] font-semibold" style={{ color: POS.ink }}>{value}</span>
+        <span className="block text-[11px]" style={{ color: POS.inkSoft }}>
+          {count} order{count === 1 ? "" : "s"}
+        </span>
       </span>
     </div>
   );

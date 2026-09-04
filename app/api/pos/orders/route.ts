@@ -41,11 +41,16 @@ const STATUSES = ["pending", "confirmed", "completed", "cancelled"];
 const BASE_COLUMNS =
   "id, type, order_number, status, order_type, table_section, guest_name, phone, items, total_amount, payment_method, created_at, kiosk_device_id, pos_staff_uuid";
 
+/* From supabase/pos_refunds.sql. Grouped with customer_note in the retry
+   below, because they arrive with different hand-run files and a board that
+   goes blank between a deploy and a migration is a kitchen with no tickets. */
+const AMEND_COLUMNS = "refunded_total, cancel_state";
+
 /* customer_note comes from supabase/order_notes.sql. Named separately so the
    retry below knows exactly what to drop: between deploying this and running
    that file, PostgREST answers the whole select with a 400, and a board that
    goes blank in a kitchen is worse than one missing a line of a note. */
-const BOARD_COLUMNS = `${BASE_COLUMNS}, customer_note`;
+const BOARD_COLUMNS = `${BASE_COLUMNS}, customer_note, ${AMEND_COLUMNS}`;
 
 /** What both halves of the board are guaranteed to carry. */
 type BoardRow = Record<string, unknown> & { status: string; created_at: string };
@@ -75,6 +80,12 @@ export async function GET(request: Request) {
 
   if (STATUSES.includes(status)) query = query.eq("status", status);
 
+  /* A waiter sees their own tables and nobody else's. Filtered here rather
+     than in the browser, because "only shows" and "only sends" are different
+     promises and the second is the one worth making. */
+  const mineOnly = !can(staff, "all_orders");
+  if (mineOnly) query = query.eq("pos_staff_uuid", staff.id);
+
   /* "Today" means since this shift opened, not since midnight — an evening
      shift running past twelve should keep showing its own orders. */
   let since: string;
@@ -96,13 +107,15 @@ export async function GET(request: Request) {
     query,
     getPosSettings(),
     loadSourceDirectory(),
-    websiteOrders(since),
+    /* Nothing from the storefronts on a waiter's board: a website order has no
+       waiter, so it is nobody's table. */
+    mineOnly ? Promise.resolve([]) : websiteOrders(since),
   ]);
 
   // The one column that may not exist yet. Asked for again without it.
   let ordersRes = firstTry as unknown as BoardQuery;
   if (ordersRes.error) {
-    ordersRes = (await rebuildWithoutNote(request, staff)) as unknown as BoardQuery;
+    ordersRes = (await rebuildWithoutNote(request, staff, mineOnly)) as unknown as BoardQuery;
   }
 
   if (ordersRes.error) {
@@ -149,6 +162,9 @@ export async function GET(request: Request) {
   return NextResponse.json({
     orders: merged,
     orderPrefix: settings.order_prefix,
+    /* So the board can say whose it is showing rather than looking broken and
+       empty on a quiet shift. */
+    scope: mineOnly ? "mine" : "all",
     staff,
   });
 }
@@ -161,7 +177,15 @@ export async function GET(request: Request) {
  * paid exactly once per request in the window before the migration is run and
  * never afterwards.
  */
-async function rebuildWithoutNote(request: Request, staff: { id: string }) {
+async function rebuildWithoutNote(
+  request: Request,
+  staff: { id: string },
+  /* Passed in rather than worked out again. The filter that keeps a waiter to
+     their own tables has to survive this fallback path too — a board that
+     showed the whole branch whenever one column was missing would be a leak
+     that only appeared between a deploy and a migration. */
+  mineOnly: boolean,
+) {
   const { searchParams } = new URL(request.url);
   const status = (searchParams.get("status") ?? "").trim();
   const scope = searchParams.get("scope") ?? "today";
@@ -174,6 +198,11 @@ async function rebuildWithoutNote(request: Request, staff: { id: string }) {
     .limit(120);
 
   if (STATUSES.includes(status)) query = query.eq("status", status);
+
+  /* A waiter sees their own tables and nobody else's. Filtered here rather
+     than in the browser, because "only shows" and "only sends" are different
+     promises and the second is the one worth making. */
+  if (mineOnly) query = query.eq("pos_staff_uuid", staff.id);
 
   if (scope === "shift") {
     const shift = await openShiftFor(staff.id);

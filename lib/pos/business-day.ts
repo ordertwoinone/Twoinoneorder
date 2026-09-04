@@ -81,6 +81,13 @@ export interface DayShift {
   expected_cash: number;
   closing_cash: number;
   difference: number;
+  /* Frozen at shift close alongside the rest. Absent on shifts closed before
+     supabase/pos_refunds.sql, which read as zero — right, since nothing could
+     have been refunded through a flow that did not exist. */
+  cancelled_total: number;
+  staff_food_total: number;
+  credit_total: number;
+  pending_total: number;
 }
 
 /** The day's combined figures. Summed from the shifts, never recounted. */
@@ -90,6 +97,10 @@ export interface DayTotals {
   grossSales: number;
   discountTotal: number;
   refundTotal: number;
+  cancelledTotal: number;
+  staffFoodTotal: number;
+  creditTotal: number;
+  pendingTotal: number;
   vatTotal: number;
   netSales: number;
   cashSales: number;
@@ -121,6 +132,10 @@ export function sumShifts(shifts: DayShift[]): DayTotals {
     grossSales: add((s) => s.gross_sales),
     discountTotal: add((s) => s.discount_total),
     refundTotal: add((s) => s.refund_total),
+    cancelledTotal: add((s) => s.cancelled_total),
+    staffFoodTotal: add((s) => s.staff_food_total),
+    creditTotal: add((s) => s.credit_total),
+    pendingTotal: add((s) => s.pending_total),
     vatTotal: add((s) => s.vat_total),
     netSales: add((s) => s.net_sales),
     cashSales: add((s) => s.cash_sales),
@@ -163,7 +178,11 @@ export function dayReport(input: {
     `Orders: ${t.orderCount}`,
     `Gross sales: ${money(t.grossSales)}`,
     t.discountTotal > 0 ? `Discounts: -${money(t.discountTotal)}` : "",
-    t.refundTotal > 0 ? `Refunds: -${money(t.refundTotal)}` : "",
+    t.refundTotal > 0 ? `Refunded payments: -${money(t.refundTotal)}` : "",
+    t.cancelledTotal > 0 ? `Cancelled orders: -${money(t.cancelledTotal)}` : "",
+    t.staffFoodTotal > 0 ? `Staff food (not paid): ${money(t.staffFoodTotal)}` : "",
+    t.creditTotal > 0 ? `On credit: ${money(t.creditTotal)}` : "",
+    t.pendingTotal > 0 ? `Still to pay: ${money(t.pendingTotal)}` : "",
     `*Net sales: ${money(t.netSales)}*`,
     `VAT included: ${money(t.vatTotal)}`,
     "",

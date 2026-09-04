@@ -22,6 +22,7 @@ import type { PosRole } from "@/lib/pos/constants";
 export const POS_PERMISSIONS = [
   "till",
   "orders",
+  "all_orders",
   "kitchen",
   "availability",
   "expenses",
@@ -45,7 +46,7 @@ export const PERMISSION_GROUPS: {
   {
     title: "Screens",
     hint: "What appears on their rail. A screen they cannot reach is not on it.",
-    keys: ["till", "orders", "kitchen", "availability", "expenses", "reports"],
+    keys: ["till", "orders", "all_orders", "kitchen", "availability", "expenses", "reports"],
   },
   {
     title: "Closing up",
@@ -62,6 +63,7 @@ export const PERMISSION_GROUPS: {
 export const PERMISSION_LABEL: Record<PosPermission, string> = {
   till: "Take orders",
   orders: "Order board",
+  all_orders: "See everyone's orders",
   kitchen: "Kitchen board",
   availability: "Item availability",
   expenses: "Record expenses",
@@ -77,6 +79,7 @@ export const PERMISSION_LABEL: Record<PosPermission, string> = {
 export const PERMISSION_HINT: Record<PosPermission, string> = {
   till: "Ring up a sale and take payment.",
   orders: "See and advance everything the branch is working on.",
+  all_orders: "Without this, the board shows only the orders they took themselves.",
   kitchen: "The cooking board only — no prices, no drawer.",
   availability: "Switch a dish off when it runs out, and back on again.",
   expenses: "Record money paid out of the drawer.",
@@ -98,9 +101,14 @@ export const PERMISSION_HINT: Record<PosPermission, string> = {
  * to explain is withheld until it is granted by name.
  */
 export const ROLE_DEFAULTS: Record<PosRole, PosPermission[]> = {
-  cashier: ["till", "orders", "availability", "expenses", "shift_close"],
+  cashier: ["till", "orders", "all_orders", "availability", "expenses", "shift_close"],
   manager: [...POS_PERMISSIONS],
-  kitchen: ["kitchen", "availability"],
+  kitchen: ["kitchen", "all_orders", "availability"],
+  /* A waiter takes orders and settles them, and sees their own tickets and no
+     one else's — deliberately without "all_orders". A floor of six waiters
+     each scrolling past everybody else's tables to find their own is how a
+     table gets missed. */
+  waiter: ["till", "orders", "availability", "shift_close"],
 };
 
 export interface PermissionSubject {

@@ -459,7 +459,14 @@ export default function TillScreen({
                             alt=""
                             loading="lazy"
                             decoding="async"
-                            className="w-full h-full object-cover"
+                            /* Contained, not cropped. object-cover fills the
+                               tile by cutting the photo, and on a portrait
+                               shot of a plated dish that took the top off
+                               everything — a cashier picking by sight was
+                               choosing between half-pictures. Letterboxing on
+                               the soft page grey costs a little space and
+                               shows the whole dish. */
+                            className="w-full h-full object-contain"
                             style={{ opacity: soldOut ? 0.35 : 1 }}
                           />
                         )}

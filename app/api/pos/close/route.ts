@@ -102,6 +102,13 @@ export async function POST(request: Request) {
       online_sales: takings.onlineSales,
       expense_total: takings.expenseTotal,
       order_count: takings.orderCount,
+      /* Frozen here too, or the day close — which sums the shifts rather than
+         recounting the orders — would report a day's refunds and staff meals
+         as zero while every shift on it showed its own correctly. */
+      cancelled_total: takings.cancelledTotal,
+      staff_food_total: takings.staffFoodTotal,
+      credit_total: takings.creditTotal,
+      pending_total: takings.pendingTotal,
       updated_at: closedAt,
     })
     .eq("id", shift.id)

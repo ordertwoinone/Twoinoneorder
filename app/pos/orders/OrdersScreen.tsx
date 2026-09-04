@@ -10,9 +10,12 @@ import {
   Printer,
   RefreshCw,
   ShoppingCart,
+  Pencil,
   Timer,
+  Undo2,
   Volume2,
   VolumeX,
+  XCircle,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
@@ -21,6 +24,8 @@ import type { PosStaff } from "@/lib/pos/constants";
 import { can } from "@/lib/pos/permissions";
 import { printDocument } from "@/lib/print-document";
 import { useAlertChime } from "@/hooks/useAlertChime";
+import EditOrderDialog from "@/components/pos/EditOrderDialog";
+import { isPaid, needsKitchenApproval, type OrderLine } from "@/lib/pos/amend";
 import PosShell from "@/components/pos/PosShell";
 import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
 import type { StaleShift } from "@/lib/pos/shift";
@@ -47,7 +52,11 @@ export interface BoardOrder {
   table_section: string | null;
   guest_name: string;
   phone: string;
-  items: { name?: string; qty?: number; extras?: string; note?: string }[] | null;
+  items: OrderLine[] | null;
+  /** What has already been handed back on this order. */
+  refunded_total?: number | string | null;
+  /** '' | 'requested' | 'declined' — a cancellation waiting on the kitchen. */
+  cancel_state?: string | null;
   total_amount: number | string | null;
   payment_method: string | null;
   created_at: string;
@@ -165,6 +174,9 @@ export default function OrdersScreen({
   /** "" = all three. */
   const [source, setSource] = useState<"" | OrderChannel>("");
   const [paying, setPaying] = useState<BoardOrder | null>(null);
+  const [editing, setEditing] = useState<BoardOrder | null>(null);
+  const [amendBusy, setAmendBusy] = useState(false);
+  const [amendError, setAmendError] = useState("");
   const [error, setError] = useState("");
 
   /* One second hand for every card on the board. Ticks only while somebody is
@@ -305,6 +317,45 @@ export default function OrdersScreen({
       const body = await res.json().catch(() => null);
       setError(body?.error || "Could not record that payment.");
       return;
+    }
+    load();
+  }
+
+  /** Taking lines off an order, or asking the kitchen to. */
+  async function amend(order: BoardOrder, input: {
+    cancelIndexes: number[];
+    cancelOrder: boolean;
+    reason: string;
+  }) {
+    setAmendBusy(true);
+    setAmendError("");
+    const res = await fetch(`/api/pos/order/${encodeURIComponent(order.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const body = await res.json().catch(() => null);
+    setAmendBusy(false);
+
+    if (!res.ok) {
+      setAmendError(body?.error || "That did not go through.");
+      return;
+    }
+    setEditing(null);
+    load();
+  }
+
+  /** The pass answering a cancellation the counter asked for. */
+  async function decide(order: BoardOrder, decision: "accept" | "decline") {
+    setError("");
+    const res = await fetch(`/api/pos/order/${encodeURIComponent(order.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(body?.error || "Could not answer that cancellation.");
     }
     load();
   }
@@ -470,6 +521,55 @@ export default function OrdersScreen({
                     />
                   </div>
 
+                  {/* ─── A cancellation the counter has asked for ─── */}
+                  {/* The loudest thing on the card, because it is the only one
+                      that stops the food. A dish that goes on being cooked
+                      after the customer cancelled it is thrown away. */}
+                  {order.cancel_state === "requested" && (
+                    <div
+                      className="mt-2.5 rounded-lg px-2.5 py-2"
+                      style={{ background: POS.badSoft, border: `1px solid ${POS.bad}33` }}
+                    >
+                      <p className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color: POS.bad }}>
+                        <XCircle size={13} />
+                        Cancellation requested
+                      </p>
+                      <p className="mt-0.5 text-[11.5px]" style={{ color: POS.bad }}>
+                        {items.filter((i) => i.cancel_requested).length || "All"} item
+                        {items.filter((i) => i.cancel_requested).length === 1 ? "" : "s"} — accept
+                        only if it has not been made.
+                      </p>
+                      <div className="mt-2 flex gap-1.5">
+                        <button
+                          onClick={() => decide(order, "accept")}
+                          className="flex-1 rounded-lg py-1.5 text-[12px] font-bold text-white"
+                          style={{ background: POS.bad }}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => decide(order, "decline")}
+                          className="flex-1 rounded-lg py-1.5 text-[12px] font-bold"
+                          style={{ background: "#fff", color: POS.ink, border: `1px solid ${POS.line}` }}
+                        >
+                          Decline — already made
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* The kitchen said no, and the counter needs to know before
+                      they tell the customer their money is coming back. */}
+                  {order.cancel_state === "declined" && (
+                    <p
+                      className="mt-2.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-bold"
+                      style={{ background: "#FFFBEB", color: "#92400E" }}
+                    >
+                      <XCircle size={13} />
+                      Kitchen declined the cancellation — it was already made.
+                    </p>
+                  )}
+
                   {/* The customer's note for the whole ticket. On a website
                       order it is the only thing they could say to the kitchen,
                       so it is never tucked away. */}
@@ -490,8 +590,20 @@ export default function OrdersScreen({
                   {items.length > 0 && (
                     <ul className="mt-2.5 space-y-1">
                       {items.map((item, i) => (
-                        <li key={i} className="text-[13px]" style={{ color: POS.ink }}>
+                        <li
+                          key={i}
+                          className="text-[13px]"
+                          style={{
+                            color: item.cancelled ? POS.inkSoft : POS.ink,
+                            textDecoration: item.cancelled ? "line-through" : "none",
+                          }}
+                        >
                           <span className="font-bold">{item.qty ?? 1}×</span> {item.name || "Item"}
+                          {item.cancel_requested && !item.cancelled && (
+                            <span className="ms-1.5 text-[10.5px] font-bold" style={{ color: POS.bad }}>
+                              CANCEL ASKED
+                            </span>
+                          )}
                           {item.extras && (
                             <span className="text-[11px]" style={{ color: POS.inkSoft }}> · {item.extras}</span>
                           )}
@@ -598,6 +710,19 @@ export default function OrdersScreen({
                       <Printer size={13} />
                       Print
                     </button>
+
+                    {/* Editing a website order is not ours to do — it lives in
+                        take.app's table and the storefront owns its money. */}
+                    {showsMoney && !order.website && order.status !== "cancelled" && (
+                      <button
+                        onClick={() => { setAmendError(""); setEditing(order); }}
+                        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold"
+                        style={{ border: `1px solid ${POS.line}`, color: POS.ink }}
+                      >
+                        {isPaid(order.payment_method) ? <Undo2 size={13} /> : <Pencil size={13} />}
+                        {isPaid(order.payment_method) ? "Refund" : "Edit"}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -605,6 +730,20 @@ export default function OrdersScreen({
           </div>
         )}
       </div>
+      {editing && (
+        <EditOrderDialog
+          code={editing.code}
+          items={Array.isArray(editing.items) ? editing.items : []}
+          paymentMethod={editing.payment_method}
+          refundedTotal={Number(editing.refunded_total) || 0}
+          needsKitchen={needsKitchenApproval(editing.status)}
+          busy={amendBusy}
+          error={amendError}
+          onCancel={() => setEditing(null)}
+          onConfirm={(input) => amend(editing, input)}
+        />
+      )}
+
       {/* ─── Taking the money for an unpaid order ─── */}
       {paying && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.5)" }}>

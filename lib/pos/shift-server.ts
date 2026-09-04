@@ -84,17 +84,29 @@ export const staleShifts = memo<StaleShift[]>("pos:stale-shifts", TTL.stale, asy
  * to say who. See supabase/pos_business_days.sql for why the day is a stored
  * column rather than a date range over opened_at.
  */
-export async function shiftsForBusinessDay(date: string): Promise<DayShift[]> {
-  const { data, error } = await supabaseAdminLive
-    .from("pos_shifts")
-    .select(
-      "id, status, shift_label, opened_at, closed_at, opening_float, gross_sales, discount_total, refund_total, vat_total, net_sales, cash_sales, card_sales, online_sales, expense_total, order_count, expected_cash, closing_cash, difference, opened_by:pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id)",
-    )
-    // Named foreign key for the same reason staleShifts() names one: pos_shifts
-    // points at pos_staff twice and PostgREST refuses to guess.
-    .eq("business_date", date)
-    .order("opened_at", { ascending: true });
+const SHIFT_COLUMNS =
+  "id, status, shift_label, opened_at, closed_at, opening_float, gross_sales, discount_total, refund_total, vat_total, net_sales, cash_sales, card_sales, online_sales, expense_total, order_count, expected_cash, closing_cash, difference, opened_by:pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id)";
 
+/* The four columns supabase/pos_refunds.sql adds. Asked for separately so the
+   day close can fall back to the rest of the row before that file is run —
+   PostgREST fails the whole select on one unknown column, and a manager
+   staring at an empty day close would have no idea why. */
+const SHIFT_EXTRAS = "cancelled_total, staff_food_total, credit_total, pending_total";
+
+export async function shiftsForBusinessDay(date: string): Promise<DayShift[]> {
+  const query = (columns: string) =>
+    supabaseAdminLive
+      .from("pos_shifts")
+      .select(columns)
+      // Named foreign key for the same reason staleShifts() names one:
+      // pos_shifts points at pos_staff twice and PostgREST refuses to guess.
+      .eq("business_date", date)
+      .order("opened_at", { ascending: true });
+
+  let res = await query(`${SHIFT_COLUMNS}, ${SHIFT_EXTRAS}`);
+  if (res.error) res = await query(SHIFT_COLUMNS);
+
+  const { data, error } = res;
   if (error || !data) return [];
 
   const num = (v: unknown) => {
@@ -125,6 +137,12 @@ export async function shiftsForBusinessDay(date: string): Promise<DayShift[]> {
       expected_cash: num(row.expected_cash),
       closing_cash: num(row.closing_cash),
       difference: num(row.difference),
+      // Zero on a shift closed before these columns existed, which is right:
+      // nothing could have been refunded through a flow that did not exist.
+      cancelled_total: num(row.cancelled_total),
+      staff_food_total: num(row.staff_food_total),
+      credit_total: num(row.credit_total),
+      pending_total: num(row.pending_total),
     };
   });
 }

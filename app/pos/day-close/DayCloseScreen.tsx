@@ -7,9 +7,14 @@ import {
   BarChart3,
   Check,
   CircleDot,
+  Clock,
   Lock,
   Printer,
+  Undo2,
+  UserRound,
   Users,
+  Utensils,
+  XCircle,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
@@ -278,7 +283,18 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
                   </p>
                   <Row label="Gross sales" value={aed(totals.grossSales)} />
                   <Row label="Discounts" value={`− ${aed(totals.discountTotal)}`} tone={POS.bad} />
-                  <Row label="Refunds" value={`− ${aed(totals.refundTotal)}`} tone={POS.bad} />
+                  <Row
+                    label="Refunds"
+                    value={totals.refundTotal > 0 ? `− ${aed(totals.refundTotal)}` : aed(0)}
+                    tone={totals.refundTotal > 0 ? POS.bad : undefined}
+                  />
+                  {totals.staffFoodTotal > 0 && (
+                    <Row
+                      label="Staff Food (not paid)"
+                      value={`− ${aed(totals.staffFoodTotal)}`}
+                      tone={POS.brand}
+                    />
+                  )}
                   <Row label="VAT (included)" value={aed(totals.vatTotal)} muted />
                   <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${POS.line}` }}>
                     <p className="text-[11.5px]" style={{ color: POS.inkSoft }}>Net sales for the day</p>
@@ -300,7 +316,30 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
                   {totals.expenseTotal > 0 && (
                     <Row label="Expenses paid out" value={`− ${aed(totals.expenseTotal)}`} tone={POS.bad} />
                   )}
-                  <div className="mt-2 pt-2 space-y-0.5" style={{ borderTop: `1px solid ${POS.line}` }}>
+
+                  {/* Food that went out with no money arriving, and money that
+                      came in and went back out. Named rather than netted into
+                      the figures above: each is a different question the next
+                      morning, and a total that has quietly absorbed them all
+                      cannot answer any of them. */}
+                  <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${POS.line}` }}>
+                    <p className="mb-1 text-[11.5px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+                      Not collected / non-revenue
+                    </p>
+                    <Tally icon={<Utensils size={14} />} label="Staff Food" value={aed(totals.staffFoodTotal)} note={totals.staffFoodTotal > 0 ? "Excluded from net sales and drawer cash." : ""} />
+                    <Tally icon={<UserRound size={14} />} label="Credit" value={aed(totals.creditTotal)} />
+                    <Tally icon={<Clock size={14} />} label="Pending" value={aed(totals.pendingTotal)} />
+                  </div>
+
+                  <div className="mt-3 pt-3 space-y-1.5" style={{ borderTop: `1px solid ${POS.line}` }}>
+                    <p className="mb-1 text-[11.5px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+                      Payment adjustments
+                    </p>
+                    <Tally icon={<Undo2 size={14} />} label="Refunded Payments" value={aed(totals.refundTotal)} />
+                    <Tally icon={<XCircle size={14} />} label="Cancelled Order Payments" value={aed(totals.cancelledTotal)} note={totals.cancelledTotal > 0 ? "Excluded from net sales and drawer cash." : ""} />
+                  </div>
+
+                  <div className="mt-3 pt-3 space-y-0.5" style={{ borderTop: `1px solid ${POS.line}` }}>
                     <Row label="Expected in drawers" value={aed(totals.expectedCash)} />
                     <Row label="Counted across shifts" value={aed(totals.countedCash)} />
                   </div>
@@ -439,6 +478,32 @@ function Card({ title, icon, children }: { title: string; icon: React.ReactNode;
       </h2>
       {children}
     </section>
+  );
+}
+
+/** A named non-sale: what it is, what it came to, and why it is on its own. */
+function Tally({
+  icon,
+  label,
+  value,
+  note,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  note?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-2">
+      <span className="flex min-w-0 items-start gap-2">
+        <span className="mt-0.5 shrink-0" style={{ color: POS.inkSoft }}>{icon}</span>
+        <span className="min-w-0">
+          <span className="block text-[12.5px] font-semibold" style={{ color: POS.ink }}>{label}</span>
+          {note && <span className="block text-[11px]" style={{ color: POS.brand }}>{note}</span>}
+        </span>
+      </span>
+      <span className="shrink-0 text-[13px] font-semibold" style={{ color: POS.ink }}>{value}</span>
+    </div>
   );
 }
 

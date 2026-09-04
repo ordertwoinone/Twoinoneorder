@@ -24,14 +24,39 @@ export const ORDER_TYPE_LABEL: Record<PosOrderType, string> = {
   delivery: "Delivery",
 };
 
-/** How the money came in. Recorded at the till, unlike a kiosk order. */
-export type PosPayment = "cash" | "card" | "online";
+/**
+ * How the money came in — or did not.
+ *
+ * The last three are not payment methods in the way the first three are, and
+ * the day close treats them differently on purpose:
+ *
+ *   staff_food is a meal given to somebody who works here. It is a cost, not a
+ *   sale, and counting it as revenue would inflate the day's takings by every
+ *   staff lunch. It appears on the close as its own figure.
+ *
+ *   credit is a sale made and not yet collected — a regular who settles at the
+ *   end of the month. Real revenue, no money in the drawer.
+ *
+ *   pending is nothing at all yet: the food is going out and the money is
+ *   coming later today. It is what a kiosk order carries until somebody at the
+ *   counter takes the cash.
+ *
+ * All three used to fall through to "online" for want of anywhere else to go,
+ * which quietly booked every staff lunch as an online sale.
+ */
+export type PosPayment = "cash" | "card" | "online" | "staff_food" | "credit" | "pending";
 
 export const PAYMENT_LABEL: Record<PosPayment, string> = {
   cash: "Cash",
   card: "Card",
   online: "Online",
+  staff_food: "Staff Food",
+  credit: "Credit",
+  pending: "Pending",
 };
+
+/** The three that put money in the branch's hands today. */
+export const SETTLED_PAYMENTS: PosPayment[] = ["cash", "card", "online"];
 
 export type PosQty = Record<string, number>;
 

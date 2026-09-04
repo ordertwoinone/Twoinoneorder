@@ -12,8 +12,13 @@
  * 'kitchen' is not a lesser cashier — it is a different job at a different
  * screen. They never open a drawer, so they are never asked to count one, and
  * nothing that touches money is on their rail at all.
+ *
+ * 'waiter' works the floor. They take orders and settle them, like a cashier,
+ * but the board they look at is their own tables rather than the whole branch —
+ * see the 'all_orders' permission. A floor of six waiters each scrolling past
+ * everyone else's tickets to find their own is how a table gets missed.
  */
-export type PosRole = "cashier" | "manager" | "kitchen";
+export type PosRole = "cashier" | "manager" | "kitchen" | "waiter";
 
 export const PIN_MIN = 4;
 export const PIN_MAX = 6;
@@ -47,6 +52,7 @@ export const ROLE_LABEL: Record<PosRole, string> = {
   cashier: "Cashier",
   manager: "Manager",
   kitchen: "Kitchen",
+  waiter: "Waiter",
 };
 
 /** Kitchen staff have no drawer, so no shift, so no day to close. */
