@@ -35,9 +35,14 @@ interface Report {
   averageOrder: number;
   byDay: { date: string; orders: number; sales: number }[];
   byPayment: { cash: number; card: number; online: number };
-  bySource: { pos: number; kiosk: number };
+  /** One row per named way in: the till, each panel, each storefront. */
+  bySource: { key: string; label: string; sales: number; orders: number }[];
   topDishes: { name: string; qty: number; sales: number }[];
 }
+
+/* Enough to tell four or five rows apart without any of them looking like a
+   warning. Cycled, because a branch can register as many panels as it likes. */
+const SOURCE_COLOURS = ["#0B4A44", "#E8622C", "#2563EB", "#7C3AED", "#0891B2", "#CA8A04"];
 
 const RANGES = [
   { days: 1, label: "Today" },
@@ -203,8 +208,24 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
                     <MonitorSmartphone size={15} style={{ color: POS.inkSoft }} />
                     Where it was ordered
                   </h2>
-                  <Split label="At the till" value={report.bySource.pos} total={report.sales} colour={POS.night} />
-                  <Split label="On the kiosk" value={report.bySource.kiosk} total={report.sales} colour={POS.brand} />
+                  {/* Every way in, named. One combined "kiosk" figure could
+                      not answer the question anybody actually has about the
+                      panels, which is which of them is being used. */}
+                  {report.bySource.length === 0 ? (
+                    <p className="text-[13px]" style={{ color: POS.inkSoft }}>
+                      Nothing sold in this range.
+                    </p>
+                  ) : (
+                    report.bySource.map((entry, i) => (
+                      <Split
+                        key={entry.key}
+                        label={`${entry.label} · ${entry.orders} order${entry.orders === 1 ? "" : "s"}`}
+                        value={entry.sales}
+                        total={report.sales}
+                        colour={SOURCE_COLOURS[i % SOURCE_COLOURS.length]}
+                      />
+                    ))
+                  )}
                 </section>
               </div>
             </div>
