@@ -6,6 +6,7 @@ import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
 import type { PosStaff } from "@/lib/pos/constants";
 import PosShell from "@/components/pos/PosShell";
+import SalesPerformance from "./SalesPerformance";
 
 /**
  * What the branch has been taking.
@@ -14,7 +15,15 @@ import PosShell from "@/components/pos/PosShell";
  * anyone has closed anything — which is the day a manager actually wants to
  * look at. Kiosk and till are added together and also shown apart, because
  * "are people using the screen" is a different question from "how did we do".
+ *
+ * Two reports behind two tabs. Overview is the branch at a glance over a few
+ * days; Sales Performance is the detailed one — per employee, per item, per
+ * category, over any range, exportable. They are separate because they answer
+ * different questions and share almost no controls: one has three buttons, the
+ * other has a filter bar.
  */
+
+type Tab = "overview" | "sales";
 
 interface Report {
   days: number;
@@ -36,6 +45,7 @@ const RANGES = [
 ] as const;
 
 export default function ReportsScreen({ staff }: { staff: PosStaff }) {
+  const [tab, setTab] = useState<Tab>("overview");
   const [days, setDays] = useState(7);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,23 +69,53 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
       subtitle={report ? `${report.orders} orders over ${report.days} day${report.days === 1 ? "" : "s"}` : "Loading"}
       actions={
         <div className="flex gap-2">
-          {RANGES.map((r) => (
-            <button
-              key={r.days}
-              onClick={() => setDays(r.days)}
-              className="rounded-lg px-3 py-2 text-[13px] font-bold"
-              style={{
-                background: days === r.days ? POS.night : "#fff",
-                color: days === r.days ? "#fff" : POS.inkSoft,
-                border: `1px solid ${days === r.days ? POS.night : POS.line}`,
-              }}
-            >
-              {r.label}
-            </button>
-          ))}
+          {/* Only Overview takes a day range. Sales Performance has its own
+              from/to inside it, and two competing range pickers on one screen
+              is a report nobody can tell the shape of. */}
+          {tab === "overview" &&
+            RANGES.map((r) => (
+              <button
+                key={r.days}
+                onClick={() => setDays(r.days)}
+                className="rounded-lg px-3 py-2 text-[13px] font-bold"
+                style={{
+                  background: days === r.days ? POS.night : "#fff",
+                  color: days === r.days ? "#fff" : POS.inkSoft,
+                  border: `1px solid ${days === r.days ? POS.night : POS.line}`,
+                }}
+              >
+                {r.label}
+              </button>
+            ))}
         </div>
       }
     >
+      {/* ─── Which report ─── */}
+      <div
+        className="pos-chrome shrink-0 flex gap-1 bg-white px-4"
+        style={{ borderBottom: `1px solid ${POS.line}` }}
+      >
+        {([
+          ["overview", "Overview"],
+          ["sales", "Sales Performance"],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className="px-3 py-3 text-[13.5px] font-bold"
+            style={{
+              color: tab === key ? POS.brand : POS.inkSoft,
+              borderBottom: `2.5px solid ${tab === key ? POS.brand : "transparent"}`,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "sales" ? (
+        <SalesPerformance />
+      ) : (
       <div className="pos-scroll h-full p-4">
         {loading && !report ? (
           <p className="py-16 text-center text-sm" style={{ color: POS.inkSoft }}>Working it out…</p>
@@ -167,6 +207,7 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
           </>
         )}
       </div>
+      )}
     </PosShell>
   );
 }

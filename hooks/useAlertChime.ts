@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * The two-tone chime a screen makes when an order arrives.
+ * The alert a screen sounds when an order arrives.
  *
  * Synthesised rather than played from a file, so no screen carries an audio
  * asset it has to download before it can make a noise — which on a kitchen
  * tablet is the difference between hearing the first order of the day and not.
+ *
+ * It runs for about four and a half seconds at close to full scale. That is
+ * deliberate and it is not politeness: the room it has to carry across has an
+ * extractor fan in it and somebody with their back to the screen.
  *
  * Opt-in, and it has to be. Browsers refuse to make a sound until the page has
  * been touched, so an alert that switched itself on would be an alert that
@@ -36,28 +40,75 @@ export function useAlertChime(storageKey?: string) {
     return ctxRef.current;
   }, []);
 
+  /** True while a burst is still sounding, so two orders do not overlap. */
+  const untilRef = useRef(0);
+
   const chime = useCallback(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
-    /* Two rising notes rather than one. A single beep at kitchen volume is
-       indistinguishable from every other beep in a kitchen; an interval is
-       recognisable across a room and through an extractor fan. */
-    [880, 1320].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      const start = ctx.currentTime + i * 0.18;
-      /* Ramped, not switched. An oscillator started at full gain clicks, and a
-         click through a tablet speaker at volume is unpleasant enough that
-         people turn the alert off. */
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + 0.36);
-    });
+
+    /* A burst already going. A second order landing mid-alert should not start
+       a second one on top of it — two of these at once is not twice as easy to
+       hear, it is mush. The one already sounding says the same thing. */
+    if (ctx.currentTime < untilRef.current) return;
+
+    /*
+     * Long and loud, because of the room it has to carry across.
+     *
+     * The first version was a polite two-note ping, about a third of a second
+     * at a quarter of full scale. That is right for a phone on a desk and
+     * useless over an extractor fan with a pan going — the alert was there and
+     * nobody heard it. This is a repeating figure that runs for four and a half
+     * seconds and is loud enough to be noticed from the other side of a
+     * kitchen: long enough that somebody walking back to the pass catches it,
+     * short enough that it has stopped before it becomes the thing everybody
+     * wants switched off.
+     */
+    const master = ctx.createGain();
+    master.gain.value = 0.9;
+    master.connect(ctx.destination);
+
+    const start = ctx.currentTime + 0.02;
+    /* A rising third, then a fall. Three notes are recognisable as a phrase
+       where two are just a beep, and a phrase is what carries through noise —
+       the ear picks out the shape long after the volume is lost. */
+    const phrase = [880, 1174.7, 1567.98];
+    const noteLength = 0.16;
+    const gap = 0.05;
+    const phraseLength = phrase.length * (noteLength + gap) + 0.35;
+    const repeats = 6;
+
+    for (let r = 0; r < repeats; r += 1) {
+      phrase.forEach((freq, i) => {
+        const at = start + r * phraseLength + i * (noteLength + gap);
+
+        /* Two oscillators an octave apart rather than one. A single sine is
+           a pure tone and a kitchen swallows it; the octave gives the note
+           edges the ear can find. Triangle for the body because a square at
+           this volume is genuinely unpleasant to stand next to all day. */
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, at);
+        gain.gain.exponentialRampToValueAtTime(0.85, at + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, at + noteLength + 0.12);
+        gain.connect(master);
+
+        for (const [wave, mul, level] of [
+          ["triangle", 1, 1],
+          ["sine", 2, 0.45],
+        ] as const) {
+          const osc = ctx.createOscillator();
+          osc.type = wave;
+          osc.frequency.value = freq * mul;
+          const sub = ctx.createGain();
+          sub.gain.value = level;
+          osc.connect(sub).connect(gain);
+          osc.start(at);
+          osc.stop(at + noteLength + 0.14);
+        }
+      });
+    }
+
+    untilRef.current = start + repeats * phraseLength;
   }, []);
 
   const toggle = useCallback(() => {

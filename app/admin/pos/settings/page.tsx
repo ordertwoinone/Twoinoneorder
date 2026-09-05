@@ -100,6 +100,13 @@ export default function PosSettingsAdmin() {
           <li>Launch it from the home-screen icon from then on, not from a browser tab.</li>
         </ol>
         <p className="mt-2 text-[12px] text-blue-800">
+          <strong>Table numbers</strong> on a dine-in order come from{" "}
+          <a href="/admin/booking-tables" className="underline">Book a Table → Tables</a> — the same
+          floor plan the reservation page uses, so a table means the same thing whether it was
+          booked online or sat at the door. Add, rename or retire one there and the till picks it
+          up on the next order.
+        </p>
+        <p className="mt-2 text-[12px] text-blue-800">
           The till and the kitchen board install as two separate apps, each opening its own screen
           — so the tablet at the counter and the screen at the pass cannot be mixed up, and neither
           launches the customer site. It opens landscape with no browser bar, and keeps the
