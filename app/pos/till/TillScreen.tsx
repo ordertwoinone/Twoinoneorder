@@ -102,6 +102,8 @@ export default function TillScreen({
   const [customerPhone, setCustomerPhone] = useState("");
   const [address, setAddress] = useState("");
   const [tableId, setTableId] = useState("");
+  /** Who a staff meal is for. Asked in the pay dialog, only for that method. */
+  const [staffMealFor, setStaffMealFor] = useState("");
   const [note, setNote] = useState("");
   /** itemId → what the customer asked about that dish. */
   const [itemNotes, setItemNotes] = useState<Record<string, string>>({});
@@ -194,6 +196,7 @@ export default function TillScreen({
     setCustomerPhone("");
     setAddress("");
     setTableId("");
+    setStaffMealFor("");
     setNote("");
     setItemNotes({});
     setOpenLine(null);
@@ -226,6 +229,7 @@ export default function TillScreen({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           itemNotes,
+          staffMealFor,
           qty,
           addons,
           orderType,
@@ -734,6 +738,8 @@ export default function TillScreen({
           tables={tables}
           table={tableId}
           onTable={setTableId}
+          staffName={staffMealFor}
+          onStaffName={setStaffMealFor}
           onCancel={() => setPayOpen(false)}
           onPay={pay}
         />

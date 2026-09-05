@@ -77,6 +77,12 @@ interface Report {
 
 const PAGE_SIZE = 10;
 
+/* One size for every control on the filter bar. They were 40px and a mix of
+   widths, which on a counter tablet is a row of things you have to aim at. */
+const CONTROL = { height: 48, borderColor: POS.line, color: POS.ink } as const;
+const SELECT =
+  "rounded-xl border bg-white px-3.5 text-[14.5px] font-semibold focus:outline-none";
+
 /** yyyy-mm-dd for a date this many days back, today included. */
 function daysAgo(n: number): string {
   const d = new Date();
@@ -113,27 +119,64 @@ export default function SalesPerformance() {
 
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Filters have moved since the figures on screen were fetched. */
+  const [dirty, setDirty] = useState(false);
+  const [period, setPeriod] = useState<"today" | "7" | "30" | "month" | "custom">("today");
 
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState<"net" | "qty" | "name">("net");
   const [page, setPage] = useState(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const url = `/api/pos/reports/sales?from=${from}&to=${to}&source=${source}&staff=${employee}`;
-    const res = await fetch(url, { cache: "no-store" });
-    const body = await res.json().catch(() => null);
-    if (body && !body.error) setReport(body as Report);
-    setLoading(false);
-  }, [from, to, source, employee]);
+  /*
+   * Fetched when asked for, not on every touch of the filter bar.
+   *
+   * It used to run on any change to any of four controls, so setting up a
+   * custom range — source, then employee, then two dates — fired four full
+   * reports across every order in the window, three of which were thrown away
+   * before the fourth arrived. On a busy month that is most of a second each.
+   *
+   * `apply` is the only thing that fetches. The presets call it directly,
+   * because picking one is a whole decision on its own; the dates wait for the
+   * button, because a range is two fields and nobody means the half of it they
+   * have typed so far.
+   */
+  const apply = useCallback(
+    async (next?: { from?: string; to?: string; source?: typeof source; employee?: string }) => {
+      const q = {
+        from: next?.from ?? from,
+        to: next?.to ?? to,
+        source: next?.source ?? source,
+        employee: next?.employee ?? employee,
+      };
+      setLoading(true);
+      const res = await fetch(
+        `/api/pos/reports/sales?from=${q.from}&to=${q.to}&source=${q.source}&staff=${q.employee}`,
+        { cache: "no-store" },
+      );
+      const body = await res.json().catch(() => null);
+      if (body && !body.error) setReport(body as Report);
+      setLoading(false);
+      setDirty(false);
+    },
+    [from, to, source, employee],
+  );
 
-  useEffect(() => { load(); }, [load]);
+  // Once, on arrival. Everything after that is somebody asking.
+  useEffect(() => { apply(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  /** A preset is one decision, so it changes the range and runs in one go. */
+  function preset(nextFrom: string, nextTo: string) {
+    setFrom(nextFrom);
+    setTo(nextTo);
+    setPeriod("custom");
+    apply({ from: nextFrom, to: nextTo });
+  }
 
   /* Back to page one whenever the list underneath changes. Staying on page
      three of a list that now has one page shows an empty table and reads as a
      report with no data in it. */
-  useEffect(() => { setPage(0); }, [query, category, sort, from, to, source, employee]);
+  useEffect(() => { setPage(0); }, [query, category, sort, report]);
 
   const shown = useMemo(() => {
     if (!report) return [];
@@ -191,29 +234,82 @@ export default function SalesPerformance() {
           Sales Performance Report
         </h2>
 
-        <div className="mt-3 flex flex-wrap items-end gap-3">
+        {/*
+          Four controls and two buttons, where there were three segmented
+          buttons, two selects, two dates and four more buttons in a row.
+          Every one of those fired a full report across the window on change,
+          so building a custom range cost four queries and threw three away.
+
+          The presets are a dropdown now rather than four buttons of their own:
+          they are one choice, and a choice is what a dropdown is for. The dates
+          only appear when somebody actually wants a custom range, which is the
+          minority of the time and was taking up the middle of the bar always.
+        */}
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <Field label="Period">
+            <select
+              value={period}
+              onChange={(e) => {
+                const next = e.target.value as typeof period;
+                setPeriod(next);
+                if (next === "today") preset(today, today);
+                else if (next === "7") preset(daysAgo(6), today);
+                else if (next === "30") preset(daysAgo(29), today);
+                else if (next === "month") preset(monthStart(), today);
+                else setPeriod("custom");
+              }}
+              className={SELECT}
+              style={{ ...CONTROL, minWidth: 190 }}
+            >
+              <option value="today">Today</option>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="month">This month</option>
+              <option value="custom">Custom range…</option>
+            </select>
+          </Field>
+
+          {period === "custom" && (
+            <>
+              <Field label="From">
+                <input
+                  type="date"
+                  value={from}
+                  max={to}
+                  onChange={(e) => { setFrom(e.target.value); setDirty(true); }}
+                  className={SELECT}
+                  style={CONTROL}
+                />
+              </Field>
+              <Field label="To">
+                <input
+                  type="date"
+                  value={to}
+                  min={from}
+                  max={today}
+                  onChange={(e) => { setTo(e.target.value); setDirty(true); }}
+                  className={SELECT}
+                  style={CONTROL}
+                />
+              </Field>
+            </>
+          )}
+
           <Field label="Sales source">
-            <div className="flex gap-1.5">
-              {([
-                ["all", "All"],
-                ["pos", "Counter"],
-                ["kiosk", "Kiosk"],
-              ] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setSource(key)}
-                  className="rounded-lg px-3 text-[13px] font-bold"
-                  style={{
-                    height: 40,
-                    background: source === key ? POS.action : "#fff",
-                    color: source === key ? "#fff" : POS.ink,
-                    border: `1px solid ${source === key ? POS.action : POS.line}`,
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <select
+              value={source}
+              onChange={(e) => {
+                const next = e.target.value as typeof source;
+                setSource(next);
+                apply({ source: next });
+              }}
+              className={SELECT}
+              style={{ ...CONTROL, minWidth: 170 }}
+            >
+              <option value="all">All sources</option>
+              <option value="pos">Counter</option>
+              <option value="kiosk">Kiosk</option>
+            </select>
           </Field>
 
           {/* Hidden for anyone who only sees their own work — a picker whose
@@ -222,9 +318,9 @@ export default function SalesPerformance() {
             <Field label="Employee">
               <select
                 value={employee}
-                onChange={(e) => setEmployee(e.target.value)}
-                className="rounded-lg bg-white px-3 text-[13.5px] font-semibold focus:outline-none"
-                style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 40, minWidth: 190 }}
+                onChange={(e) => { setEmployee(e.target.value); apply({ employee: e.target.value }); }}
+                className={SELECT}
+                style={{ ...CONTROL, minWidth: 200 }}
               >
                 <option value="">All employees</option>
                 {(report?.employees ?? []).map((e) => (
@@ -234,65 +330,29 @@ export default function SalesPerformance() {
             </Field>
           )}
 
-          <Field label="From">
-            <input
-              type="date"
-              value={from}
-              max={to}
-              onChange={(e) => setFrom(e.target.value)}
-              className="rounded-lg bg-white px-3 text-[13.5px] font-semibold focus:outline-none"
-              style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 40 }}
-            />
-          </Field>
-          <Field label="To">
-            <input
-              type="date"
-              value={to}
-              min={from}
-              max={today}
-              onChange={(e) => setTo(e.target.value)}
-              className="rounded-lg bg-white px-3 text-[13.5px] font-semibold focus:outline-none"
-              style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 40 }}
-            />
-          </Field>
-
-          <Field label="Quick range">
-            <div className="flex flex-wrap gap-1.5">
-              {([
-                ["Today", () => { setFrom(today); setTo(today); }],
-                ["7 days", () => { setFrom(daysAgo(6)); setTo(today); }],
-                ["30 days", () => { setFrom(daysAgo(29)); setTo(today); }],
-                ["This month", () => { setFrom(monthStart()); setTo(today); }],
-              ] as const).map(([label, apply]) => (
-                <button
-                  key={label}
-                  onClick={apply}
-                  className="rounded-lg px-3 text-[12.5px] font-bold"
-                  style={{ height: 40, border: `1px solid ${POS.line}`, color: POS.ink }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </Field>
-
           <div className="flex-1" />
 
           <button
-            onClick={load}
-            className="flex items-center gap-2 rounded-lg px-4 text-[13.5px] font-bold text-white"
-            style={{ background: POS.action, height: 40 }}
+            onClick={() => apply()}
+            disabled={loading}
+            className="flex items-center gap-2 rounded-xl px-6 text-[14.5px] font-bold text-white disabled:opacity-50"
+            style={{
+              // Lit while the filters are ahead of the figures, so the button
+              // says whether there is anything to press it for.
+              background: dirty ? POS.brand : POS.action,
+              height: CONTROL.height,
+            }}
           >
-            <Filter size={15} />
-            Apply
+            <Filter size={16} />
+            {loading ? "Working…" : dirty ? "Show these" : "Refresh"}
           </button>
           <button
             onClick={exportCsv}
             disabled={!report || shown.length === 0}
-            className="flex items-center gap-2 rounded-lg px-4 text-[13.5px] font-bold disabled:opacity-40"
-            style={{ border: `1px solid ${POS.brand}`, color: POS.brand, height: 40 }}
+            className="flex items-center gap-2 rounded-xl px-6 text-[14.5px] font-bold disabled:opacity-40"
+            style={{ border: `1.5px solid ${POS.brand}`, color: POS.brand, height: CONTROL.height }}
           >
-            <Download size={15} />
+            <Download size={16} />
             Export
           </button>
         </div>
@@ -334,15 +394,15 @@ export default function SalesPerformance() {
               <div className="flex-1" />
 
               <label
-                className="flex items-center gap-2 rounded-lg px-3"
-                style={{ border: `1px solid ${POS.line}`, height: 38, minWidth: 200 }}
+                className="flex items-center gap-2 rounded-xl px-3.5"
+                style={{ border: `1px solid ${POS.line}`, height: 44, minWidth: 220 }}
               >
-                <Search size={15} style={{ color: POS.inkSoft }} />
+                <Search size={16} style={{ color: POS.inkSoft }} />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search item"
-                  className="w-full bg-transparent text-[13px] focus:outline-none"
+                  className="w-full bg-transparent text-[14px] focus:outline-none"
                   style={{ color: POS.ink }}
                 />
               </label>
@@ -350,8 +410,8 @@ export default function SalesPerformance() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="rounded-lg bg-white px-3 text-[13px] font-semibold focus:outline-none"
-                style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 38 }}
+                className="rounded-xl bg-white px-3.5 text-[14px] font-semibold focus:outline-none"
+                style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 44 }}
               >
                 <option value="">All categories</option>
                 {report.byCategory.map((c) => (
@@ -362,8 +422,8 @@ export default function SalesPerformance() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as typeof sort)}
-                className="rounded-lg bg-white px-3 text-[13px] font-semibold focus:outline-none"
-                style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 38 }}
+                className="rounded-xl bg-white px-3.5 text-[14px] font-semibold focus:outline-none"
+                style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 44 }}
               >
                 <option value="net">Highest sales</option>
                 <option value="qty">Most sold</option>
@@ -451,7 +511,7 @@ export default function SalesPerformance() {
                     <button
                       key={i}
                       onClick={() => setPage(i)}
-                      className="h-9 w-9 rounded-lg text-[13px] font-bold"
+                      className="h-11 w-11 rounded-xl text-[14px] font-bold"
                       style={{
                         background: page === i ? POS.action : "#fff",
                         color: page === i ? "#fff" : POS.ink,
@@ -582,8 +642,8 @@ function Head() {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-[11.5px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
         {label}
       </span>
       {children}
@@ -658,8 +718,8 @@ function Pager({ onClick, disabled, children }: { onClick: () => void; disabled:
     <button
       onClick={onClick}
       disabled={disabled}
-      className="rounded-lg px-3 text-[13px] font-bold disabled:opacity-35"
-      style={{ height: 36, border: `1px solid ${POS.line}`, color: POS.ink }}
+      className="rounded-xl px-4 text-[14px] font-bold disabled:opacity-35"
+      style={{ height: 44, border: `1px solid ${POS.line}`, color: POS.ink }}
     >
       {children}
     </button>

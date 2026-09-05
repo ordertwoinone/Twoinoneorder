@@ -196,7 +196,15 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
                     <SourceIcon channel={row.source} />
                     <span className="truncate">{row.source_label}</span>
                   </span>
-                  <span className="truncate" style={{ color: POS.ink }}>
+                  <span className="min-w-0 truncate" style={{ color: POS.ink }}>
+                    {row.payment_method === "staff_food" && (
+                      <span
+                        className="me-1.5 rounded px-1.5 py-0.5 text-[10.5px] font-bold"
+                        style={{ background: "#FFF7ED", color: POS.brand }}
+                      >
+                        STAFF
+                      </span>
+                    )}
                     {row.guest_name || row.phone || "—"}
                   </span>
                   <span className="truncate" style={{ color: POS.inkSoft }}>

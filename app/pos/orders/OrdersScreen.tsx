@@ -13,6 +13,7 @@ import {
   Pencil,
   Timer,
   Undo2,
+  Utensils,
   Volume2,
   VolumeX,
   XCircle,
@@ -556,6 +557,19 @@ export default function OrdersScreen({
                       {chip?.label ?? order.status}
                     </span>
                   </div>
+
+                  {/* A staff meal, and whose. Loud enough to notice from the
+                      pass, because the one thing that must not happen to a
+                      staff meal is a customer being handed it and charged. */}
+                  {order.payment_method === "staff_food" && (
+                    <p
+                      className="mt-1.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-bold"
+                      style={{ background: "#FFF7ED", color: POS.brand }}
+                    >
+                      <Utensils size={13} />
+                      Staff food{order.guest_name ? ` · ${order.guest_name}` : ""}
+                    </p>
+                  )}
 
                   {/* Shown to the kitchen too, not just the counter. A cook
                       whose ticket is missing something rings the customer;

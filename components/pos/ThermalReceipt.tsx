@@ -109,7 +109,16 @@ export default function ThermalReceipt({
         <Fact label={s.source_label || "Order From"} value={sourceLabel} />
       )}
       {order.table_id && <Fact label={s.table_label || "Table"} value={order.table_id} />}
-      {order.guest_name && <Fact label={s.customer_label || "Customer"} value={order.guest_name} />}
+      {/* A staff meal says so on the paper, under whose name it went out. The
+          ticket is what ends up in a folder at the end of the month, and a
+          receipt for AED 47 with no indication that nobody paid for it is the
+          one that raises a question nobody can answer. */}
+      {order.payment_method === "staff_food" && (
+        <Fact label="STAFF FOOD" value={order.guest_name || "—"} />
+      )}
+      {order.guest_name && order.payment_method !== "staff_food" && (
+        <Fact label={s.customer_label || "Customer"} value={order.guest_name} />
+      )}
       {order.phone && <Fact label={s.phone_label || "Phone"} value={order.phone} />}
 
       <div style={line} />

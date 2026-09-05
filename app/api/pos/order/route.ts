@@ -70,6 +70,8 @@ interface OrderBody {
   note?: string;
   /** itemId → what the customer asked about that dish. */
   itemNotes?: Record<string, string>;
+  /** Who a staff meal is for. Only meaningful with payment 'staff_food'. */
+  staffMealFor?: string;
   discount?: PosDiscount | null;
   couponCode?: string;
   /** A held basket being rung up, so it can be cleared once it is a real order. */
@@ -223,7 +225,14 @@ export async function POST(request: Request) {
     order_type: ORDER_TYPE_LABEL[orderType],
     table_id: orderType === "dine_in" ? table : "",
     table_section: orderType === "dine_in" && table ? `Table ${table}` : ORDER_TYPE_LABEL[orderType],
-    guest_name: String(body.customerName ?? "").trim().slice(0, 120),
+    /* A staff meal is for whoever is named on it, and that name goes where
+       every screen already looks for "who is this order for" — so the board,
+       the ticket and the history all carry it without any of them being taught
+       about staff meals. */
+    guest_name:
+      payment === "staff_food" && String(body.staffMealFor ?? "").trim()
+        ? String(body.staffMealFor).trim().slice(0, 60)
+        : String(body.customerName ?? "").trim().slice(0, 120),
     phone: String(body.customerPhone ?? "").trim().slice(0, 32),
     guests: 1,
     status: "confirmed",
@@ -234,6 +243,9 @@ export async function POST(request: Request) {
       `POS ${ORDER_TYPE_LABEL[orderType]} by ${staff.name || staff.staff_id}`,
       itemsText,
       `Total: AED ${totals.total.toFixed(2)}`,
+      payment === "staff_food"
+        ? `STAFF FOOD${String(body.staffMealFor ?? "").trim() ? ` for ${String(body.staffMealFor).trim()}` : ""}`
+        : "",
       couponCode ? `Coupon ${couponCode}` : "",
       address ? `Deliver to: ${address}` : "",
       staffNote ? `Note: ${staffNote}` : "",

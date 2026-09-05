@@ -47,6 +47,8 @@ export default function PayDialog({
   tables = [],
   table = "",
   onTable,
+  staffName = "",
+  onStaffName,
   onCancel,
   onPay,
 }: {
@@ -57,6 +59,9 @@ export default function PayDialog({
   tables?: string[];
   table?: string;
   onTable?: (code: string) => void;
+  /** Who the staff meal is for. Required once Staff Food is chosen. */
+  staffName?: string;
+  onStaffName?: (name: string) => void;
   onCancel: () => void;
   onPay: (method: PosPayment) => void;
 }) {
@@ -77,6 +82,12 @@ export default function PayDialog({
      later, because "later" is after the customer has walked away from the
      counter. */
   const needsTable = requireTable && !table.trim();
+
+  /* A staff meal with nobody's name on it is food that left the kitchen and
+     cannot be asked about. The figure on the close screen is only useful if
+     somebody can answer "who?" — otherwise it is a number that grows and
+     nobody owns, which is how a free lunch becomes six free lunches. */
+  const needsName = method === "staff_food" && !staffName.trim();
 
   return (
     <div
@@ -155,6 +166,31 @@ export default function PayDialog({
           })}
         </div>
 
+        {/* ─── Who the staff meal is for ─── */}
+        {method === "staff_food" && (
+          <div className="mt-4">
+            <label className="mb-1.5 block text-[12.5px] font-bold" style={{ color: POS.ink }}>
+              Who is it for? <span style={{ color: POS.bad }}>*</span>
+            </label>
+            <input
+              value={staffName}
+              autoFocus
+              onChange={(e) => onStaffName?.(e.target.value.slice(0, 60))}
+              placeholder="Name of the staff member"
+              className="w-full rounded-lg px-3 text-[15px] font-bold focus:outline-none"
+              style={{
+                border: `1px solid ${needsName ? POS.bad : POS.line}`,
+                color: POS.ink,
+                height: 48,
+              }}
+            />
+            <p className="mt-1.5 text-[11.5px]" style={{ color: POS.inkSoft }}>
+              It prints on the ticket and shows on the order board, so the meal can be accounted
+              for.
+            </p>
+          </div>
+        )}
+
         {/* ─── Change, for cash ─── */}
         {method === "cash" && (
           <div className="mt-4">
@@ -216,6 +252,11 @@ export default function PayDialog({
             Pick the table this is going to.
           </p>
         )}
+        {needsName && (
+          <p className="mt-3 text-[12px] font-semibold" style={{ color: POS.bad }}>
+            Say who the staff meal is for.
+          </p>
+        )}
 
         <div className="mt-5 flex gap-2">
           <button
@@ -228,7 +269,7 @@ export default function PayDialog({
           </button>
           <button
             onClick={() => onPay(method)}
-            disabled={busy || needsTable}
+            disabled={busy || needsTable || needsName}
             className="flex-1 rounded-xl text-[15px] font-bold text-white disabled:opacity-40"
             style={{ background: POS.action, height: 50 }}
           >
