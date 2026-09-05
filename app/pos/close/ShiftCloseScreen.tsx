@@ -284,12 +284,21 @@ export default function ShiftCloseScreen({
                   value={takings.cancelledTotal > 0 ? `− ${aed(takings.cancelledTotal)}` : aed(0)}
                   tone={takings.cancelledTotal > 0 ? POS.bad : undefined}
                 />
+                {/* Deductions, because each is food that left the kitchen and
+                    did not come back as money. Shown only when there is one:
+                    a column of zeroes teaches people to stop reading it. */}
                 {takings.staffFoodTotal > 0 && (
                   <Row
                     label="Staff Food (not paid)"
                     value={`− ${aed(takings.staffFoodTotal)}`}
                     tone={POS.brand}
                   />
+                )}
+                {takings.creditTotal > 0 && (
+                  <Row label="On credit (not collected)" value={`− ${aed(takings.creditTotal)}`} tone={POS.brand} />
+                )}
+                {takings.pendingTotal > 0 && (
+                  <Row label="Still to pay" value={`− ${aed(takings.pendingTotal)}`} tone={POS.brand} />
                 )}
                 <Row label="VAT (included)" value={aed(takings.vatTotal)} muted />
                 <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${POS.line}` }}>

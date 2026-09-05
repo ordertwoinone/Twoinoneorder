@@ -118,6 +118,13 @@ export async function shiftTakings(shiftId: string, openingFloat: number): Promi
       if (!cancelled) {
         staffFoodTotal += total;
         staffFoodCount += 1;
+        /* Into gross, and taken straight back out below. Food that left the
+           kitchen is gross sales whoever ate it — leaving it out entirely made
+           "gross" quietly mean "gross, apart from the staff lunches", and a
+           manager comparing what went out of the pass against the takings had
+           nothing on the screen that reconciled the two. Now it is a line you
+           can point at: this much went out, this much of it was not sold. */
+        grossSales += total;
       }
       continue;
     }
@@ -125,6 +132,7 @@ export async function shiftTakings(shiftId: string, openingFloat: number): Promi
       if (!cancelled) {
         creditTotal += total;
         creditCount += 1;
+        grossSales += total;
       }
       continue;
     }
@@ -132,6 +140,7 @@ export async function shiftTakings(shiftId: string, openingFloat: number): Promi
       if (!cancelled) {
         pendingTotal += total;
         pendingCount += 1;
+        grossSales += total;
       }
       continue;
     }
@@ -184,6 +193,16 @@ export async function shiftTakings(shiftId: string, openingFloat: number): Promi
     if (expense.payment_method === "cash") cashExpenses += amount;
   }
 
+  /*
+   * What the branch actually kept.
+   *
+   * Gross is everything that left the kitchen; net is what came back for it.
+   * Written as the sum of the three collected buckets rather than as gross
+   * minus the deductions, because those are the figures the drawer and the
+   * card machine can be checked against — and the two agree by construction:
+   * gross − discounts − refunds − staff food − credit − pending is exactly
+   * cash + card + online.
+   */
   const netSales = roundMoney(cashSales + cardSales + onlineSales);
 
   return {

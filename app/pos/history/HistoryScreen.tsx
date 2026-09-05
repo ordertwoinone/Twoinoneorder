@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Globe, MonitorSmartphone, Printer, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { Globe, MonitorSmartphone, Printer, Search, ShoppingCart } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
 import type { PosStaff } from "@/lib/pos/constants";
@@ -16,6 +16,12 @@ import PosShell from "@/components/pos/PosShell";
  * cooked, and a month of finished tickets on it would bury the four that
  * matter. This answers the other question, "what happened on the twelfth", and
  * so it has a date range, a search box and pages instead of big status buttons.
+ *
+ * It reads and prints and does not delete. The endpoint behind it still can —
+ * guarded, and refusing anything on a closed shift — but nothing here offers
+ * it: a row of bins down a list of every order the branch has ever taken is a
+ * mis-tap away from a hole in a day's figures, and the thing that undoes an
+ * order properly is cancelling and refunding it, which leaves a trail.
  */
 
 interface Row {
@@ -63,7 +69,6 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [pageSize, setPageSize] = useState(40);
-  const [canDelete, setCanDelete] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState(0);
@@ -71,10 +76,6 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
   const [status, setStatus] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-
-  const [confirm, setConfirm] = useState<Row | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,7 +86,6 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
       setRows(body.orders as Row[]);
       setTotal(body.total ?? 0);
       setPageSize(body.pageSize ?? 40);
-      setCanDelete(Boolean(body.canDelete));
     }
     setLoading(false);
   }, [page, query, status, from, to]);
@@ -94,23 +94,6 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
   /* Back to the first page whenever the filter changes, or a search returning
      one page leaves you looking at an empty page four. */
   useEffect(() => { setPage(0); }, [query, status, from, to]);
-
-  async function remove() {
-    if (!confirm) return;
-    setBusy(true);
-    setError("");
-    const res = await fetch(`/api/pos/history?id=${encodeURIComponent(confirm.id)}`, {
-      method: "DELETE",
-    });
-    const body = await res.json().catch(() => null);
-    setBusy(false);
-    if (!res.ok) {
-      setError(body?.error || "Could not delete that order.");
-      return;
-    }
-    setConfirm(null);
-    load();
-  }
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -174,15 +157,6 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
             </button>
           )}
         </div>
-
-        {error && (
-          <p
-            className="mb-3 rounded-lg px-4 py-2.5 text-sm font-semibold"
-            style={{ background: POS.badSoft, color: POS.bad }}
-          >
-            {error}
-          </p>
-        )}
 
         <div className="overflow-hidden rounded-2xl bg-white" style={{ border: `1px solid ${POS.line}` }}>
           <div
@@ -258,16 +232,6 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
                     >
                       <Printer size={14} />
                     </button>
-                    {canDelete && (
-                      <button
-                        onClick={() => { setError(""); setConfirm(row); }}
-                        aria-label={`Delete ${row.code}`}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg"
-                        style={{ background: POS.badSoft, color: POS.bad }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
                   </span>
                 </div>
               );
@@ -302,58 +266,6 @@ export default function HistoryScreen({ staff }: { staff: PosStaff }) {
         )}
       </div>
 
-      {/* ─── Deleting for good ─── */}
-      {confirm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-        >
-          <div className="w-full max-w-[420px] rounded-2xl bg-white p-6 text-center">
-            <span
-              className="mx-auto flex h-12 w-12 items-center justify-center rounded-full"
-              style={{ background: POS.badSoft }}
-            >
-              <Trash2 size={22} style={{ color: POS.bad }} />
-            </span>
-            <h2 className="mt-3 text-lg font-black" style={{ color: POS.ink }}>
-              Delete {confirm.code}?
-            </h2>
-            <p className="mt-1.5 text-[13px]" style={{ color: POS.inkSoft }}>
-              This removes the order and anything refunded against it, for good. An order on a
-              shift that has already been closed cannot be deleted — its takings are part of a
-              signed-off total, and cancelling and refunding it is the way to undo one of those.
-            </p>
-
-            {error && (
-              <p
-                className="mt-3 rounded-lg px-3 py-2.5 text-[12px] font-semibold"
-                style={{ background: POS.badSoft, color: POS.bad }}
-              >
-                {error}
-              </p>
-            )}
-
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={() => { setConfirm(null); setError(""); }}
-                disabled={busy}
-                className="flex-1 rounded-xl text-sm font-bold disabled:opacity-40"
-                style={{ background: POS.page, color: POS.ink, height: 46 }}
-              >
-                Keep it
-              </button>
-              <button
-                onClick={remove}
-                disabled={busy}
-                className="flex-1 rounded-xl text-sm font-bold text-white disabled:opacity-40"
-                style={{ background: POS.bad, height: 46 }}
-              >
-                {busy ? "Deleting…" : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </PosShell>
   );
 }

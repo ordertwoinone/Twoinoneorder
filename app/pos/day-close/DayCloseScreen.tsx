@@ -314,6 +314,12 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
                       tone={POS.brand}
                     />
                   )}
+                  {totals.creditTotal > 0 && (
+                    <Row label="On credit (not collected)" value={`− ${aed(totals.creditTotal)}`} tone={POS.brand} />
+                  )}
+                  {totals.pendingTotal > 0 && (
+                    <Row label="Still to pay" value={`− ${aed(totals.pendingTotal)}`} tone={POS.brand} />
+                  )}
                   <Row label="VAT (included)" value={aed(totals.vatTotal)} muted />
                   <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${POS.line}` }}>
                     <p className="text-[11.5px]" style={{ color: POS.inkSoft }}>Net sales for the day</p>
