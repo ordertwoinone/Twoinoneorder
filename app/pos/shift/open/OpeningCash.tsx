@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CalendarDays, ClipboardList, LogOut, Minus, Plus, RotateCw, Sun, Wallet } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
-import { DENOMINATIONS } from "@/lib/pos/shift";
+import { DENOMINATIONS, denominationLabel } from "@/lib/pos/shift";
 import { ROLE_LABEL, type PosStaff } from "@/lib/pos/constants";
 
 /**
@@ -158,7 +158,7 @@ export default function OpeningCash({
                   style={{ borderTop: `1px solid ${POS.line}` }}
                 >
                   <span className="text-sm font-semibold" style={{ color: POS.ink }}>
-                    AED {note.toLocaleString()}
+                    {denominationLabel(note)}
                   </span>
                   <span className="flex items-center gap-3">
                     <span className="flex items-center gap-2">

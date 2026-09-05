@@ -12,8 +12,22 @@
  * component and the whole page dies with "supabaseKey is required".
  */
 
-/** The notes and coins a UAE drawer is counted in. */
-export const DENOMINATIONS = [5, 10, 20, 50, 100, 200, 500, 1000] as const;
+/**
+ * The notes and coins a UAE drawer is counted in.
+ *
+ * The coins were missing. A drawer counted in notes alone is short by whatever
+ * silver is in it, every single time — and a cashier who is told they are AED
+ * 3.75 down on a shift they worked honestly stops believing the screen by the
+ * end of the week. Fils are fiddly to count and that is not a reason to leave
+ * them out of the arithmetic.
+ */
+export const DENOMINATIONS = [0.25, 0.5, 1, 5, 10, 20, 50, 100, 200, 500, 1000] as const;
+
+/** "25 fils", "AED 1", "AED 1,000" — how a denomination reads on the count. */
+export function denominationLabel(value: number): string {
+  if (value < 1) return `${Math.round(value * 100)} fils`;
+  return `AED ${value.toLocaleString("en-GB")}`;
+}
 
 /** { "50": 2, "100": 3 } → 400. Anything unrecognised is ignored. */
 export function countTotal(counts: Record<string, number> | null | undefined): number {
@@ -23,6 +37,9 @@ export function countTotal(counts: Record<string, number> | null | undefined): n
     const n = Math.max(0, Math.floor(Number(counts[String(note)]) || 0));
     total += note * n;
   }
+  /* Rounded at the end, not per denomination. Twenty-five-fils pieces are the
+     one thing here that cannot be held exactly in binary, and rounding each
+     line would let the error compound across a drawer full of them. */
   return Math.round(total * 100) / 100;
 }
 

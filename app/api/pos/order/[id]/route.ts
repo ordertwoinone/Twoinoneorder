@@ -87,27 +87,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "That order is already cancelled." }, { status: 409 });
   }
 
-  /* Editing an unpaid order is ordinary counter work — a customer changing
-     their mind before they have paid. Touching a paid one is giving money
-     back, which is somebody's drawer and needs the permission that says so. */
-  const permission = paid ? "void_order" : "till";
-  if (!can(staff, permission)) {
-    return NextResponse.json(
-      {
-        error: paid
-          ? "Refunding needs a manager. Ask one to sign in."
-          : "You are not set up to change an order.",
-      },
-      { status: 403 },
-    );
-  }
-
   /* ─── The kitchen answering ─── */
+  /*
+   * Checked before the counter's permission below, not after it.
+   *
+   * It was after, and it locked the pass out of its own decision: a kitchen
+   * account has neither "till" nor "void_order", so a cook pressing Accept was
+   * refused with "you are not set up to change an order" before the code that
+   * lets them answer was ever reached.
+   *
+   * They are different acts and they need different permissions. Asking for a
+   * cancellation is the counter's, and on a paid order it needs the one that
+   * moves money. Answering it is the pass's, and the money question was already
+   * settled by whoever asked — accepting only confirms the food was not made.
+   */
   if (body.decision === "accept" || body.decision === "decline") {
     /* Whoever is working the food gets to answer. A manager can too — they are
        often the one standing at the pass when it happens. */
     if (!can(staff, "kitchen") && !can(staff, "orders") && !can(staff, "void_order")) {
-      return NextResponse.json({ error: "Not allowed" }, { status: 403 });
+      return NextResponse.json(
+        { error: "You are not set up to answer a cancellation." },
+        { status: 403 },
+      );
     }
 
     const asked = requestedIndexes(items);
@@ -137,6 +138,21 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // Accepted: this is the moment the lines actually come off.
     return applyCancellation(params.id, order, items, asked, staff, body, refundedTotal);
+  }
+
+  /* Editing an unpaid order is ordinary counter work — a customer changing
+     their mind before they have paid. Touching a paid one is giving money
+     back, which is somebody's drawer and needs the permission that says so. */
+  const permission = paid ? "void_order" : "till";
+  if (!can(staff, permission)) {
+    return NextResponse.json(
+      {
+        error: paid
+          ? "Refunding needs a manager. Ask one to sign in."
+          : "You are not set up to change an order.",
+      },
+      { status: 403 },
+    );
   }
 
   const cancelIndexes = Array.isArray(body.cancelIndexes)

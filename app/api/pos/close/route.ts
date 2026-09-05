@@ -10,6 +10,8 @@ import { getPosSettings } from "@/lib/pos/menu-server";
 import { shiftTakings, whatsappSummary } from "@/lib/pos/reconcile";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { can } from "@/lib/pos/permissions";
+import { businessDateFor } from "@/lib/pos/business-day";
+import { isPaid } from "@/lib/pos/amend";
 
 /**
  * Closing one shift. The restaurant's day is closed at /api/pos/day.
@@ -30,10 +32,11 @@ export async function GET() {
   const shift = await openShiftFor(staff.id);
   if (!shift) return NextResponse.json({ error: "No shift is open" }, { status: 409 });
 
-  const [takings, settings, expensesRes] = await Promise.all([
+  const [takings, settings, expensesRes, contributions] = await Promise.all([
     shiftTakings(shift.id, Number(shift.opening_float)),
     getPosSettings(),
     supabaseAdminLive.from("pos_expenses").select("*").eq("shift_id", shift.id).order("spent_at"),
+    dailyContributions(),
   ]);
 
   return NextResponse.json({
@@ -42,7 +45,76 @@ export async function GET() {
     takings,
     settings,
     expenses: expensesRes.data ?? [],
+    contributions,
+    businessDate: businessDateFor(),
   });
+}
+
+/**
+ * Who sold what today, across every shift on the trading day.
+ *
+ * Counted from the orders rather than from the shift rows, because the shift
+ * being closed has not frozen its figures yet — reading those would show the
+ * person doing the closing as having sold nothing, which is the one row they
+ * are certain to check.
+ *
+ * Grouped by the member of staff on the order, not by shift: somebody who
+ * worked a morning and came back for the evening is one person on this table,
+ * which is what "employee contribution" means to whoever reads it.
+ */
+async function dailyContributions() {
+  const date = businessDateFor();
+
+  const { data: shiftRows, error: shiftError } = await supabaseAdminLive
+    .from("pos_shifts")
+    .select("id, shift_label, staff_uuid, pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id)")
+    .eq("business_date", date);
+
+  if (shiftError || !shiftRows || shiftRows.length === 0) return [];
+
+  const shifts = shiftRows as unknown as {
+    id: string;
+    shift_label: string;
+    staff_uuid: string;
+    pos_staff: { name: string; staff_id: string } | null;
+  }[];
+
+  const { data: orderRows } = await supabaseAdminLive
+    .from("bookings")
+    .select("status, payment_method, total_amount, refunded_total, pos_shift_id")
+    .in("pos_shift_id", shifts.map((s) => s.id));
+
+  const byShift = new Map(shifts.map((s) => [s.id, s]));
+  const tally = new Map<string, { name: string; shifts: Set<string>; orders: number; net: number }>();
+
+  for (const row of (orderRows ?? []) as Record<string, unknown>[]) {
+    const shift = byShift.get(String(row.pos_shift_id));
+    if (!shift) continue;
+
+    const method = String(row.payment_method ?? "pending").toLowerCase();
+    const cancelled = String(row.status ?? "").toLowerCase() === "cancelled";
+    // The same rule the shift figures use: only money that actually arrived.
+    if (cancelled || !isPaid(method) || method === "staff_food") continue;
+
+    const key = shift.staff_uuid;
+    const name = shift.pos_staff?.name || shift.pos_staff?.staff_id || "Unknown";
+    const entry = tally.get(key) ?? { name, shifts: new Set<string>(), orders: 0, net: 0 };
+    entry.shifts.add(shift.shift_label);
+    entry.orders += 1;
+    entry.net += (Number(row.total_amount) || 0) - (Number(row.refunded_total) || 0);
+    tally.set(key, entry);
+  }
+
+  const rows = Array.from(tally.values()).map((e) => ({
+    name: e.name,
+    shift: Array.from(e.shifts).join(", "),
+    orders: e.orders,
+    net: Math.round(e.net * 100) / 100,
+  }));
+
+  // Biggest first: the question this table answers is who is selling.
+  rows.sort((a, b) => b.net - a.net);
+  return rows;
 }
 
 export async function POST(request: Request) {
@@ -87,7 +159,18 @@ export async function POST(request: Request) {
       closing_cash: countedCash,
       expected_cash: takings.expectedCash,
       difference,
-      closing_note: String(body?.note ?? "").trim().slice(0, 500),
+      /* The declaration rides in the closing note. A drawer signed off at
+         nothing on a shift that took AED 800 on card is a different fact from
+         one on a shift that took nothing at all, and next month nobody will
+         remember which — so the row says so in its own words. */
+      closing_note: [
+        String(body?.note ?? "").trim(),
+        body?.zeroSales ? "Declared: no sales this shift." : "",
+        body?.zeroCash ? "Declared: no cash received this shift." : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")
+        .slice(0, 500),
       // Uploaded separately, so a failed photo never costs a counted drawer.
       close_photo_url: String(body?.photoUrl ?? "").trim().slice(0, 500),
       /* Frozen here rather than recomputed later. The orders can still be

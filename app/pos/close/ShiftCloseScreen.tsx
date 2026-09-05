@@ -12,13 +12,15 @@ import {
   Printer,
   Undo2,
   UserRound,
+  Users,
   Utensils,
   Wallet,
   XCircle,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
-import { DENOMINATIONS } from "@/lib/pos/shift";
+import { DENOMINATIONS, denominationLabel } from "@/lib/pos/shift";
+import { businessDateLabel } from "@/lib/pos/business-day";
 import type { PosStaff } from "@/lib/pos/constants";
 import { can } from "@/lib/pos/permissions";
 import type { ShiftTakings } from "@/lib/pos/reconcile";
@@ -49,6 +51,14 @@ import CloseCamera from "@/components/pos/CloseCamera";
  * from a counter kept during the shift — a running total that has drifted is
  * indistinguishable from a drawer that is short.
  */
+/** One person's share of the day, as the contribution table lists it. */
+interface Contribution {
+  name: string;
+  shift: string;
+  orders: number;
+  net: number;
+}
+
 export default function ShiftCloseScreen({
   staff,
   shift: initialShift,
@@ -61,12 +71,18 @@ export default function ShiftCloseScreen({
   const router = useRouter();
   const [shift] = useState(initialShift);
   const [takings, setTakings] = useState<ShiftTakings | null>(null);
+  /** Who sold what across the whole trading day, not just this shift. */
+  const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [businessDate, setBusinessDate] = useState("");
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [note, setNote] = useState("");
-  /* Ticked to say the drawer really is empty, as opposed to not counted yet.
-     The two look identical from here — both are zero — and only the person
-     standing at the till can tell them apart. */
-  const [emptyDrawer, setEmptyDrawer] = useState(false);
+  /* Two declarations, and they are not the same statement.
+     "No sales" says nothing was rung up at all. "No cash" says money was taken
+     but none of it in notes — a shift where everything went on card. Each is
+     offered only when the figures make it the actual question, so neither can
+     be ticked to wave away a drawer that simply has not been counted. */
+  const [zeroSales, setZeroSales] = useState(false);
+  const [zeroCash, setZeroCash] = useState(false);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -76,6 +92,8 @@ export default function ShiftCloseScreen({
     const res = await fetch("/api/pos/close", { cache: "no-store" });
     const body = await res.json().catch(() => null);
     if (body?.takings) setTakings(body.takings as ShiftTakings);
+    if (Array.isArray(body?.contributions)) setContributions(body.contributions as Contribution[]);
+    if (body?.businessDate) setBusinessDate(body.businessDate as string);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -91,7 +109,20 @@ export default function ShiftCloseScreen({
      But a drawer really can be empty — a quiet morning with no float and no
      sales — and treating zero as "not started" left that shift with no way to
      close at all. So the tick below is how somebody says which zero this is. */
-  const startedCounting = Object.values(counts).some((n) => n > 0) || emptyDrawer;
+  const countedSomething = Object.values(counts).some((n) => n > 0);
+
+  /* Each declaration is only available when the figures make it true. The
+     screen cannot tell an empty drawer from an uncounted one, but it can tell
+     whether there was anything to put in it — so it asks about the case that
+     is actually in front of the person, and refuses the tick otherwise. */
+  const canDeclareZeroSales = (takings?.netSales ?? 0) === 0;
+  const canDeclareZeroCash = (takings?.cashSales ?? 0) === 0;
+  const declared = (zeroSales && canDeclareZeroSales) || (zeroCash && canDeclareZeroCash);
+
+  const startedCounting = countedSomething || declared;
+
+  /** What the whole day has taken, for the share each person is shown against. */
+  const dayNet = contributions.reduce((sum, r) => sum + r.net, 0);
   const expected = takings?.expectedCash ?? 0;
   const difference = Math.round((counted - expected) * 100) / 100;
 
@@ -118,7 +149,16 @@ export default function ShiftCloseScreen({
     const res = await fetch("/api/pos/close", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ counts, note, photoUrl }),
+      body: JSON.stringify({
+        counts,
+        note,
+        photoUrl,
+        /* Sent so the shift row records which zero this was. A drawer signed
+           off at nothing with nothing rung up is a quiet morning; the same
+           drawer on a shift that took AED 800 on card is a different fact. */
+        zeroSales: zeroSales && canDeclareZeroSales,
+        zeroCash: zeroCash && canDeclareZeroCash,
+      }),
     });
     const body = await res.json().catch(() => null);
     setBusy(false);
@@ -208,7 +248,20 @@ export default function ShiftCloseScreen({
     <PosShell
       staff={staff}
       title="Shift Close"
-      subtitle={`${shift.shift_label} shift · ${staff.name || staff.staff_id} · opened ${new Date(shift.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+      subtitle={`${businessDate ? `${businessDateLabel(businessDate)} · ` : ""}${shift.shift_label} shift · ${staff.name || staff.staff_id} · opened ${new Date(shift.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+      actions={
+        /* Says out loud that this drawer is still taking money. The screen is
+           otherwise indistinguishable from one showing a shift already closed,
+           and a cashier counting a drawer that is still being sold out of will
+           never balance. */
+        <span
+          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-black uppercase tracking-wide"
+          style={{ background: POS.goodSoft, color: POS.good }}
+        >
+          <span className="h-2 w-2 rounded-full" style={{ background: POS.good }} />
+          Current shift · running
+        </span>
+      }
       warning={<StaleShiftWarning shifts={stale} />}
     >
       <div className="pos-scroll h-full p-4">
@@ -323,7 +376,7 @@ export default function ShiftCloseScreen({
                   style={{ borderTop: `1px solid ${POS.line}` }}
                 >
                   <span className="text-[13px] font-semibold" style={{ color: POS.ink }}>
-                    AED {note.toLocaleString()}
+                    {denominationLabel(note)}
                   </span>
                   <span className="flex items-center gap-2">
                     <Step onClick={() => setCounts((c) => ({ ...c, [note]: Math.max(0, (c[note] ?? 0) - 1) }))} disabled={n === 0}>
@@ -383,36 +436,29 @@ export default function ShiftCloseScreen({
               )}
             </div>
 
-            {/* Only when nothing has been counted, because that is the only
-                time the question exists. Once a single note is in, the drawer
-                has plainly been counted and asking again is noise. */}
+            {/* ─── Declaring a zero ─── */}
+            {/* Offered only while the drawer reads zero, because that is the
+                only moment either question exists. Once a single note is in,
+                the drawer has plainly been counted. */}
             {counted === 0 && (
-              <button
-                onClick={() => setEmptyDrawer((v) => !v)}
-                className="mt-2 flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-start"
-                style={{
-                  border: `1px solid ${emptyDrawer ? POS.action : POS.line}`,
-                  background: emptyDrawer ? POS.goodSoft : "#fff",
-                }}
-              >
-                <span
-                  className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded"
-                  style={{
-                    border: `2px solid ${emptyDrawer ? POS.action : "#C9CED3"}`,
-                    background: emptyDrawer ? POS.action : "#fff",
-                  }}
-                >
-                  {emptyDrawer && <Check size={10} strokeWidth={4} color="#fff" />}
-                </span>
-                <span>
-                  <span className="block text-[12.5px] font-bold" style={{ color: POS.ink }}>
-                    I have counted it — the drawer is empty
-                  </span>
-                  <span className="block text-[11.5px]" style={{ color: POS.inkSoft }}>
-                    Tick this to close a shift that took nothing.
-                  </span>
-                </span>
-              </button>
+              <div className="mt-2 space-y-1.5">
+                <Declaration
+                  title="Zero-sales declaration"
+                  detail="I confirm no sales were made during this shift."
+                  unavailable="Available only when net sales are AED 0.00"
+                  available={canDeclareZeroSales}
+                  on={zeroSales}
+                  onToggle={() => setZeroSales((v) => !v)}
+                />
+                <Declaration
+                  title="Zero-cash declaration"
+                  detail="I confirm no cash was received during this shift."
+                  unavailable="Available only when cash sales are AED 0.00"
+                  available={canDeclareZeroCash}
+                  on={zeroCash}
+                  onToggle={() => setZeroCash((v) => !v)}
+                />
+              </div>
             )}
 
             <CloseCamera onCapture={setPhoto} />
@@ -456,6 +502,108 @@ export default function ShiftCloseScreen({
             </button>
           </Card>
         </div>
+
+        {/* ─── Who sold what today ─── */}
+        {/* The whole trading day, not this shift: somebody who worked the
+            morning and came back for the evening is one person here, which is
+            what "employee contribution" means to whoever reads it. Counted from
+            the orders rather than the shift rows, because this shift has not
+            frozen its figures yet and reading those would show the person doing
+            the closing as having sold nothing. */}
+        {contributions.length > 0 && (
+          <section
+            className="mt-4 rounded-2xl bg-white p-4"
+            style={{ border: `1px solid ${POS.line}` }}
+          >
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <h2 className="flex items-center gap-2 text-sm font-bold" style={{ color: POS.ink }}>
+                <Users size={16} style={{ color: POS.inkSoft }} />
+                Employee daily sales contribution
+              </h2>
+              <span className="text-[12px]" style={{ color: POS.inkSoft }}>
+                {businessDate ? businessDateLabel(businessDate) : "Today"}
+              </span>
+            </div>
+
+            <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${POS.line}` }}>
+              <div
+                className="grid gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-wide"
+                style={{
+                  gridTemplateColumns: "1.3fr 1fr 90px 130px 1.2fr",
+                  color: POS.inkSoft,
+                  borderBottom: `1px solid ${POS.line}`,
+                }}
+              >
+                <span>Employee</span>
+                <span>Shift</span>
+                <span className="text-end">Orders</span>
+                <span className="text-end">Net sales</span>
+                <span>Contribution</span>
+              </div>
+
+              {contributions.map((row) => {
+                const share = dayNet > 0 ? (row.net / dayNet) * 100 : 0;
+                return (
+                  <div
+                    key={`${row.name}-${row.shift}`}
+                    className="grid items-center gap-2 px-3 py-2.5"
+                    style={{
+                      gridTemplateColumns: "1.3fr 1fr 90px 130px 1.2fr",
+                      borderBottom: `1px solid ${POS.line}`,
+                    }}
+                  >
+                    <span className="truncate text-[13px] font-bold" style={{ color: POS.ink }}>
+                      {row.name}
+                    </span>
+                    <span className="truncate text-[12.5px]" style={{ color: POS.inkSoft }}>
+                      {row.shift || "—"}
+                    </span>
+                    <span className="text-end text-[13px]" style={{ color: POS.ink }}>
+                      {row.orders}
+                    </span>
+                    <span className="text-end text-[13px] font-semibold" style={{ color: POS.ink }}>
+                      {aed(row.net)}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="text-[12.5px] font-bold tabular-nums"
+                        style={{ color: POS.ink, width: 44 }}
+                      >
+                        {share.toFixed(0)}%
+                      </span>
+                      {/* The bar is the point of the column. Five numbers in a
+                          list is arithmetic; five bars is an answer. */}
+                      <span
+                        className="h-2 flex-1 overflow-hidden rounded-full"
+                        style={{ background: POS.page }}
+                      >
+                        <span
+                          className="block h-full rounded-full"
+                          style={{ width: `${Math.min(100, share)}%`, background: POS.action }}
+                        />
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+
+              <div
+                className="grid items-center gap-2 px-3 py-2.5"
+                style={{ gridTemplateColumns: "1.3fr 1fr 90px 130px 1.2fr", background: POS.page }}
+              >
+                <span className="text-[13px] font-black" style={{ color: POS.ink }}>Daily total</span>
+                <span />
+                <span className="text-end text-[13px] font-black" style={{ color: POS.ink }}>
+                  {contributions.reduce((n, r) => n + r.orders, 0)}
+                </span>
+                <span className="text-end text-[13px] font-black" style={{ color: POS.ink }}>
+                  {aed(dayNet)}
+                </span>
+                <span className="text-[12.5px] font-black" style={{ color: POS.ink }}>100%</span>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </PosShell>
   );
@@ -481,6 +629,60 @@ function Row({ label, value, tone, muted }: { label: string; value: string; tone
         {value}
       </span>
     </div>
+  );
+}
+
+/**
+ * A statement somebody signs rather than a box they clear.
+ *
+ * Greyed with its reason showing when the figures do not support it, instead of
+ * hidden — a cashier looking for "no sales" on a shift that took money needs to
+ * see why it is not on offer, or they will go looking for it somewhere else.
+ */
+function Declaration({
+  title,
+  detail,
+  unavailable,
+  available,
+  on,
+  onToggle,
+}: {
+  title: string;
+  detail: string;
+  unavailable: string;
+  available: boolean;
+  on: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      disabled={!available}
+      className="flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-start disabled:opacity-60"
+      style={{
+        border: `1px solid ${on && available ? POS.action : POS.line}`,
+        background: on && available ? POS.goodSoft : "#fff",
+      }}
+    >
+      <span
+        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded"
+        style={{
+          border: `2px solid ${on && available ? POS.action : "#C9CED3"}`,
+          background: on && available ? POS.action : "#fff",
+        }}
+      >
+        {on && available && <Check size={10} strokeWidth={4} color="#fff" />}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[12.5px] font-bold" style={{ color: POS.ink }}>{title}</span>
+        <span className="block text-[11.5px]" style={{ color: POS.inkSoft }}>{detail}</span>
+        {!available && (
+          <span className="mt-0.5 block text-[11px] font-semibold" style={{ color: POS.warn }}>
+            {unavailable}
+          </span>
+        )}
+      </span>
+    </button>
   );
 }
 
