@@ -240,7 +240,9 @@ function startOfToday(): string {
   return start.toISOString();
 }
 
-const PAYMENTS = ["cash", "card", "online"];
+/* The same six the till offers. A kiosk order collected at the counter can be
+   a staff meal or go on somebody's tab just as easily as one rung up there. */
+const PAYMENTS = ["cash", "card", "online", "staff_food", "credit", "pending"];
 
 /**
  * Advancing an order, and taking the money for one that arrived unpaid.

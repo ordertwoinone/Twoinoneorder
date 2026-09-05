@@ -94,7 +94,8 @@ async function dailyContributions() {
     const method = String(row.payment_method ?? "pending").toLowerCase();
     const cancelled = String(row.status ?? "").toLowerCase() === "cancelled";
     // The same rule the shift figures use: only money that actually arrived.
-    if (cancelled || !isPaid(method) || method === "staff_food") continue;
+    // isPaid already excludes staff food, credit and pending.
+    if (cancelled || !isPaid(method)) continue;
 
     const key = shift.staff_uuid;
     const name = shift.pos_staff?.name || shift.pos_staff?.staff_id || "Unknown";

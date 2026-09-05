@@ -40,17 +40,19 @@ export function useAlertChime(storageKey?: string) {
     return ctxRef.current;
   }, []);
 
-  /** True while a burst is still sounding, so two orders do not overlap. */
+  /**
+   * When the burst now sounding will finish, on the wall clock.
+   *
+   * Deliberately Date.now() and not ctx.currentTime. An AudioContext that the
+   * browser has suspended stops advancing its own clock, so a guard written
+   * against it stays permanently "still playing" once the tab has been idle —
+   * and every alert after that is silently swallowed. That is most of "the
+   * alert sometimes does not work".
+   */
   const untilRef = useRef(0);
 
-  const chime = useCallback(() => {
-    const ctx = ctxRef.current;
-    if (!ctx) return;
-
-    /* A burst already going. A second order landing mid-alert should not start
-       a second one on top of it — two of these at once is not twice as easy to
-       hear, it is mush. The one already sounding says the same thing. */
-    if (ctx.currentTime < untilRef.current) return;
+  /** Schedules the burst on a context that is known to be running. */
+  const play = useCallback((ctx: AudioContext) => {
 
     /*
      * Long and loud, because of the room it has to carry across.
@@ -108,8 +110,36 @@ export function useAlertChime(storageKey?: string) {
       });
     }
 
-    untilRef.current = start + repeats * phraseLength;
+    untilRef.current = Date.now() + repeats * phraseLength * 1000;
   }, []);
+
+  const chime = useCallback(() => {
+    const ctx = context();
+    if (!ctx) return;
+
+    /* A burst already going. A second order landing mid-alert should not start
+       a second one on top of it — two of these at once is not twice as easy to
+       hear, it is mush. The one already sounding says the same thing. */
+    if (Date.now() < untilRef.current) return;
+
+    /*
+     * Woken first, every time.
+     *
+     * Chrome suspends an AudioContext on a tab that has been idle, and a
+     * kitchen display is idle by definition between orders. Resuming only when
+     * the button was pressed meant the alert worked for the first few tickets
+     * of a shift and then quietly stopped — which is the worst way for an
+     * alarm to fail, because the screen goes on claiming it is armed.
+     *
+     * resume() is a promise, so the notes are scheduled after it settles.
+     * Suspended is the common case here, not the exception.
+     */
+    if (ctx.state === "suspended") {
+      ctx.resume().then(() => play(ctx)).catch(() => {});
+    } else {
+      play(ctx);
+    }
+  }, [context, play]);
 
   const toggle = useCallback(() => {
     setSoundOn((on) => {
@@ -151,12 +181,18 @@ export function useAlertChime(storageKey?: string) {
 
     setSoundOn(true);
 
-    const wake = () => { context()?.resume(); };
-    window.addEventListener("pointerdown", wake, { once: true });
-    window.addEventListener("keydown", wake, { once: true });
+    /* Not once. The context can be suspended again at any point — a tab left
+       in the background, a tablet that slept — so anything that says somebody
+       is at the screen is taken as a chance to wake it. Cheap when it is
+       already running: resume() on a running context resolves immediately. */
+    const wake = () => { context()?.resume().catch(() => {}); };
+    window.addEventListener("pointerdown", wake);
+    window.addEventListener("keydown", wake);
+    document.addEventListener("visibilitychange", wake);
     return () => {
       window.removeEventListener("pointerdown", wake);
       window.removeEventListener("keydown", wake);
+      document.removeEventListener("visibilitychange", wake);
     };
   }, [context, storageKey]);
 

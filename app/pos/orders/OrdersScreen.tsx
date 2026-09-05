@@ -255,11 +255,17 @@ export default function OrdersScreen({
   /** Cancelling is a refund the drawer answers for, so it is its own grant. */
   const canVoid = can(staff, "void_order");
 
-  /* The alert. Remembered per screen, so the board over the pass comes back
-     with its sound on after a reboot rather than silently off. */
-  const { soundOn, toggle: toggleSound, chime } = useAlertChime(
-    kitchenOnly ? "tio-kitchen-alert" : "tio-orders-alert",
-  );
+  /*
+   * The alert, remembered under one key for both boards.
+   *
+   * It was two — one for the kitchen screen, one for the orders screen — which
+   * meant switching between them looked exactly like the alert switching
+   * itself off: on over here, off over there, with nothing on screen to
+   * explain it. They are usually two devices anyway, and localStorage is
+   * already per device, so one key still gives the pass and the counter their
+   * own settings while making the two tabs on one tablet agree.
+   */
+  const { soundOn, toggle: toggleSound, chime } = useAlertChime("tio-order-alert");
 
   /* Every order this screen has already shown. The board polls rather than
      streams, so "new" is whatever was not in the last answer — and the very

@@ -111,19 +111,28 @@ export async function shiftTakings(shiftId: string, openingFloat: number): Promi
      * which booked every staff lunch as an online sale and left a manager
      * looking at takings that were never taken.
      */
+    /* Cancelled first, because a staff meal that was cancelled is not a staff
+       meal — it is nothing at all, and counting it would put food the branch
+       never gave away into the figure it uses to decide how much it does. */
     if (method === "staff_food") {
-      staffFoodTotal += total;
-      staffFoodCount += 1;
+      if (!cancelled) {
+        staffFoodTotal += total;
+        staffFoodCount += 1;
+      }
       continue;
     }
     if (method === "credit") {
-      creditTotal += total;
-      creditCount += 1;
+      if (!cancelled) {
+        creditTotal += total;
+        creditCount += 1;
+      }
       continue;
     }
     if (method === "pending" || method === "") {
-      pendingTotal += total;
-      pendingCount += 1;
+      if (!cancelled) {
+        pendingTotal += total;
+        pendingCount += 1;
+      }
       continue;
     }
 

@@ -121,10 +121,11 @@ export async function GET(request: Request) {
     const method = String(row.payment_method ?? "pending").toLowerCase();
     const cancelled = String(row.status ?? "").toLowerCase() === "cancelled";
 
-    /* The same rule the close screens use. A staff meal is a cost, a credit is
-       a debt and a pending is a sale that has not happened — none of them are
-       performance, and counting them would flatter every figure here. */
-    if (cancelled || !isPaid(method) || method === "staff_food" || method === "credit") continue;
+    /* The same rule the close screens use. isPaid means money actually changed
+       hands, so a staff meal, a credit and an unpaid ticket are all excluded —
+       none of them are performance, and counting them would flatter every
+       figure on this page. */
+    if (cancelled || !isPaid(method)) continue;
 
     const total = num(row.total_amount);
     const refunded = num(row.refunded_total);
@@ -279,7 +280,7 @@ async function branchTotal(from: string, toExclusive: string, types: string[]): 
   for (const row of (data ?? []) as Record<string, unknown>[]) {
     const method = String(row.payment_method ?? "pending").toLowerCase();
     if (String(row.status ?? "").toLowerCase() === "cancelled") continue;
-    if (!isPaid(method) || method === "staff_food" || method === "credit") continue;
+    if (!isPaid(method)) continue;
     total += num(row.total_amount) - num(row.refunded_total);
   }
   return roundMoney(total);

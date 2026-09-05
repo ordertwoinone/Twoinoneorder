@@ -36,7 +36,27 @@ import {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ORDER_TYPES: PosOrderType[] = ["dine_in", "takeaway", "delivery"];
-const PAYMENTS: PosPayment[] = ["cash", "card", "online"];
+/*
+ * Every way the till can settle an order, not just the three that are money.
+ *
+ * This was ["cash", "card", "online"], with anything else falling through to
+ * cash below — so Staff Food, Credit and Pending were all quietly booked as
+ * cash sales. That is worse than the figure reading zero, which is how it was
+ * noticed: it told the drawer to expect money for a meal nobody paid for, and
+ * the cashier came up short by the value of every staff lunch on the shift.
+ *
+ * The screen offers six and the server has to accept the same six. Which of
+ * them count as revenue is decided in lib/pos/reconcile.ts, where it belongs —
+ * not by quietly rewriting what the cashier chose.
+ */
+const PAYMENTS: PosPayment[] = [
+  "cash",
+  "card",
+  "online",
+  "staff_food",
+  "credit",
+  "pending",
+];
 
 interface OrderBody {
   qty?: Record<string, number>;

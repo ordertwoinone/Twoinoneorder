@@ -49,10 +49,18 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/** Whether money has actually changed hands on this order. */
+/**
+ * Whether money has actually changed hands on this order.
+ *
+ * Not "has a payment method": a staff meal has one and no money moved, and a
+ * credit is a debt somebody will settle at the end of the month. Taking a dish
+ * off either of those reduces what is owed — it is an edit, not a refund, and
+ * treating it as one would have the till hand cash back for a lunch nobody
+ * paid for.
+ */
 export function isPaid(paymentMethod: string | null | undefined): boolean {
   const m = (paymentMethod ?? "").trim().toLowerCase();
-  return m !== "" && m !== "pending";
+  return m === "cash" || m === "card" || m === "online";
 }
 
 /** What one line is worth, trusting the stored total and falling back to the sum. */
