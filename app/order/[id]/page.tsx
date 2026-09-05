@@ -37,6 +37,10 @@ function stageIndex(status: string): number {
     case "confirmed":
       return 1;
     case "completed":
+    /* Collected is past ready, not before it. Without this a customer who had
+       already walked away with the food watched their tracking page drop back
+       to "Received" the moment the counter marked it picked up. */
+    case "picked_up":
       return 2;
     default:
       return 0;

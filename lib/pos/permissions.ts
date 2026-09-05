@@ -15,6 +15,20 @@
  * Client-safe by construction, like lib/pos/constants.ts — the rail imports it
  * to decide what to draw, and the API routes import it to decide what to allow.
  * Drawing is a courtesy; the check at the write is the control.
+ *
+ * One rule for adding a key here, learned the hard way.
+ *
+ * An account with an explicit list has exactly that list and nothing else, so a
+ * key added later is absent from every account already set up by hand. Phrase a
+ * key as a *grant* and those accounts quietly lose whatever it grants the day
+ * it ships. That is what happened to "all_orders": the kitchen board filtered
+ * itself down to the orders the kitchen account had rung up, which is none, and
+ * the screen simply went empty.
+ *
+ * So anything that takes capability away is written as a restriction the
+ * account has to be given — own_orders_only, not all_orders. Absent means
+ * unrestricted, which is what every account that predates the key already
+ * expects. Grants are for things that were never there to begin with.
  */
 
 import type { PosRole } from "@/lib/pos/constants";
@@ -22,7 +36,7 @@ import type { PosRole } from "@/lib/pos/constants";
 export const POS_PERMISSIONS = [
   "till",
   "orders",
-  "all_orders",
+  "own_orders_only",
   "kitchen",
   "availability",
   "expenses",
@@ -46,7 +60,7 @@ export const PERMISSION_GROUPS: {
   {
     title: "Screens",
     hint: "What appears on their rail. A screen they cannot reach is not on it.",
-    keys: ["till", "orders", "all_orders", "kitchen", "availability", "expenses", "reports"],
+    keys: ["till", "orders", "own_orders_only", "kitchen", "availability", "expenses", "reports"],
   },
   {
     title: "Closing up",
@@ -63,7 +77,7 @@ export const PERMISSION_GROUPS: {
 export const PERMISSION_LABEL: Record<PosPermission, string> = {
   till: "Take orders",
   orders: "Order board",
-  all_orders: "See everyone's orders",
+  own_orders_only: "Only their own orders",
   kitchen: "Kitchen board",
   availability: "Item availability",
   expenses: "Record expenses",
@@ -79,7 +93,7 @@ export const PERMISSION_LABEL: Record<PosPermission, string> = {
 export const PERMISSION_HINT: Record<PosPermission, string> = {
   till: "Ring up a sale and take payment.",
   orders: "See and advance everything the branch is working on.",
-  all_orders: "Without this, the board shows only the orders they took themselves.",
+  own_orders_only: "The board shows only what they rang up themselves. Off means the whole branch.",
   kitchen: "The cooking board only — no prices, no drawer.",
   availability: "Switch a dish off when it runs out, and back on again.",
   expenses: "Record money paid out of the drawer.",
@@ -101,14 +115,15 @@ export const PERMISSION_HINT: Record<PosPermission, string> = {
  * to explain is withheld until it is granted by name.
  */
 export const ROLE_DEFAULTS: Record<PosRole, PosPermission[]> = {
-  cashier: ["till", "orders", "all_orders", "availability", "expenses", "shift_close"],
-  manager: [...POS_PERMISSIONS],
-  kitchen: ["kitchen", "all_orders", "availability"],
-  /* A waiter takes orders and settles them, and sees their own tickets and no
-     one else's — deliberately without "all_orders". A floor of six waiters
-     each scrolling past everybody else's tables to find their own is how a
+  cashier: ["till", "orders", "availability", "expenses", "shift_close"],
+  /* Every key, which for own_orders_only would be wrong — a manager who could
+     only see their own tickets is not a manager. Withheld by name. */
+  manager: POS_PERMISSIONS.filter((k) => k !== "own_orders_only"),
+  kitchen: ["kitchen", "availability"],
+  /* A waiter sees their own tables and nobody else's. A floor of six waiters
+     each scrolling past everybody else's tickets to find their own is how a
      table gets missed. */
-  waiter: ["till", "orders", "availability", "shift_close"],
+  waiter: ["till", "orders", "own_orders_only", "availability", "shift_close"],
 };
 
 export interface PermissionSubject {

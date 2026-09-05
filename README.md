@@ -169,6 +169,7 @@ safe to re-run.
 6. `supabase/pos_website_orders.sql` — website orders on the board
 7. `supabase/order_notes.sql` — per-item and per-order customer notes
 8. `supabase/pos_refunds.sql` — editing an order, refunds, kitchen approval
+9. `supabase/order_prep_time.sql` — how long the kitchen took
 
 **Amending an order.** It turns on one question, and the two answers behave
 differently enough that treating them as one operation is what makes a till lose
@@ -193,6 +194,11 @@ pending is a sale that has not happened yet.
 
 **Notes**
 
+- Anything in `lib/pos/permissions.ts` that *removes* capability is written as a
+  restriction the account has to be given — `own_orders_only`, not `all_orders`.
+  An account with an explicit list has exactly that list, so a key added later is
+  absent from every account already set up by hand; phrase it as a grant and
+  those accounts silently lose something the day it ships.
 - Existing accounts keep working after `pos_permissions.sql`: `permissions` is
   `NULL` for all of them, which means "this role's defaults". An empty array
   means "nothing at all" and is a decision somebody made on purpose.

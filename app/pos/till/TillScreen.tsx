@@ -541,7 +541,10 @@ export default function TillScreen({
                 Nothing matches.
               </p>
             ) : (
-              <div className="grid gap-2.5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(146px, 1fr))" }}>
+              <div
+              className="grid gap-3"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(158px, 1fr))" }}
+            >
                 {shown.map((item) => {
                   const n = qty[item.id] ?? 0;
                   const offer = toPercent(item.discount_percent);
@@ -558,30 +561,59 @@ export default function TillScreen({
                       onClick={() => { if (!soldOut) add(item); }}
                       disabled={soldOut}
                       aria-disabled={soldOut}
-                      className="relative rounded-xl overflow-hidden bg-white text-start active:scale-[0.98] transition-transform"
+                      className="group relative flex flex-col overflow-hidden rounded-2xl bg-white text-start transition-transform active:scale-[0.97]"
                       style={{
-                        border: `1px solid ${n > 0 ? POS.action : POS.line}`,
-                        boxShadow: n > 0 ? `0 0 0 2px ${POS.action}22` : "none",
+                        border: `1.5px solid ${n > 0 ? POS.action : POS.line}`,
+                        boxShadow: n > 0 ? `0 0 0 3px ${POS.action}1f` : "0 1px 2px rgba(16,24,40,0.04)",
                       }}
                     >
-                      <div className="relative w-full" style={{ aspectRatio: "4 / 3", background: POS.page }}>
-                        {item.image_url && (
+                      {/*
+                        Square, and filled.
+
+                        4:3 with object-cover took the top off every portrait
+                        shot; object-contain fixed that and left a card that
+                        was mostly empty grey. A square is the compromise that
+                        is not really a compromise — the photos are square or
+                        near it, so almost nothing is lost to the crop, and
+                        nothing is lost to letterboxing either.
+                      */}
+                      <div className="relative w-full" style={{ aspectRatio: "1 / 1", background: POS.page }}>
+                        {item.image_url ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
                             src={sizedImage(item.image_url, 300)}
                             alt=""
                             loading="lazy"
                             decoding="async"
-                            /* Contained, not cropped. object-cover fills the
-                               tile by cutting the photo, and on a portrait
-                               shot of a plated dish that took the top off
-                               everything — a cashier picking by sight was
-                               choosing between half-pictures. Letterboxing on
-                               the soft page grey costs a little space and
-                               shows the whole dish. */
-                            className="w-full h-full object-contain"
-                            style={{ opacity: soldOut ? 0.35 : 1 }}
+                            className="h-full w-full object-cover"
+                            style={{ opacity: soldOut ? 0.4 : 1 }}
                           />
+                        ) : (
+                          /* No photo. The initial rather than a broken-image
+                             icon, so the tile still has something to aim at. */
+                          <span
+                            className="flex h-full w-full items-center justify-center text-3xl font-black"
+                            style={{ color: "#D3D8DC" }}
+                          >
+                            {item.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+
+                        {offer > 0 && (
+                          <span
+                            className="absolute left-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold text-white"
+                            style={{ background: POS.good }}
+                          >
+                            {offer}% OFF
+                          </span>
+                        )}
+                        {n > 0 && (
+                          <span
+                            className="absolute right-1.5 top-1.5 flex h-7 min-w-[28px] items-center justify-center rounded-full px-1.5 text-[13px] font-black text-white"
+                            style={{ background: POS.action, boxShadow: "0 1px 4px rgba(0,0,0,0.25)" }}
+                          >
+                            {n}
+                          </span>
                         )}
                         {soldOut && (
                           <span
@@ -591,44 +623,48 @@ export default function TillScreen({
                             Out of stock
                           </span>
                         )}
-                        {n > 0 && (
-                          <span
-                            className="absolute top-1.5 right-1.5 flex h-6 min-w-[24px] items-center justify-center rounded-full px-1.5 text-[12px] font-black text-white"
-                            style={{ background: POS.action }}
-                          >
-                            {n}
-                          </span>
-                        )}
-                        {offer > 0 && (
-                          <span
-                            className="absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-extrabold text-white"
-                            style={{ background: POS.good }}
-                          >
-                            {offer}% OFF
-                          </span>
-                        )}
                       </div>
-                      <div className="px-2 py-1.5">
+
+                      {/* The name gets two lines and takes whatever it needs;
+                          the price is pinned to the bottom by flex, so a
+                          one-line dish and a two-line one still line their
+                          prices up across the row. */}
+                      <div className="flex flex-1 flex-col px-2.5 pb-2 pt-1.5">
                         <p
-                          className="text-[12px] font-semibold leading-tight"
+                          className="text-[12.5px] font-semibold leading-[1.25]"
                           style={{
                             color: soldOut ? POS.inkSoft : POS.ink,
                             display: "-webkit-box",
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: "vertical",
                             overflow: "hidden",
-                            minHeight: "2.4em",
                           }}
                         >
                           {item.name}
                         </p>
-                        <p
-                          className="mt-0.5 text-[13px] font-black"
-                          style={{ color: soldOut ? POS.inkSoft : POS.ink }}
-                        >
-                          {net.toFixed(2)}
-                          <span className="ms-1 text-[10px] font-bold" style={{ color: POS.inkSoft }}>AED</span>
-                        </p>
+
+                        <span className="mt-auto flex items-baseline gap-1.5 pt-1.5">
+                          <span
+                            className="text-[15px] font-black leading-none"
+                            style={{ color: soldOut ? POS.inkSoft : POS.ink }}
+                          >
+                            {net.toFixed(2)}
+                          </span>
+                          <span className="text-[10px] font-bold" style={{ color: POS.inkSoft }}>
+                            AED
+                          </span>
+                          {/* What it was, when there is an offer — a cashier
+                              asked "why is that cheaper?" has the answer on
+                              the tile rather than in their head. */}
+                          {offer > 0 && (
+                            <span
+                              className="text-[11px] font-semibold line-through"
+                              style={{ color: POS.inkSoft }}
+                            >
+                              {price.toFixed(2)}
+                            </span>
+                          )}
+                        </span>
                       </div>
                     </button>
                   );

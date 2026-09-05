@@ -36,10 +36,23 @@ import {
  * arrive on the board as blank tickets nobody can cook; they stay in the admin
  * panel, where they are answered.
  */
-const STATUSES = ["pending", "confirmed", "completed", "cancelled"];
+/*
+ * Where an order has got to.
+ *
+ * "completed" is the kitchen's word: the food is made and on the pass.
+ * "picked_up" is the counter's: it is in the customer's hands. They were one
+ * status, which meant a ticket sitting on the pass for ten minutes looked
+ * exactly like one the customer had already walked away with — and the counter
+ * had no way to say which without asking the kitchen.
+ */
+const STATUSES = ["pending", "confirmed", "completed", "picked_up", "cancelled"];
 
 const BASE_COLUMNS =
   "id, type, order_number, status, order_type, table_section, guest_name, phone, items, total_amount, payment_method, created_at, kiosk_device_id, pos_staff_uuid";
+
+/* From supabase/order_prep_time.sql — when the kitchen first said it was done.
+   Grouped with the others in the retry below for the same reason. */
+const PREP_COLUMNS = "ready_at";
 
 /* From supabase/pos_refunds.sql. Grouped with customer_note in the retry
    below, because they arrive with different hand-run files and a board that
@@ -50,7 +63,7 @@ const AMEND_COLUMNS = "refunded_total, cancel_state";
    retry below knows exactly what to drop: between deploying this and running
    that file, PostgREST answers the whole select with a 400, and a board that
    goes blank in a kitchen is worse than one missing a line of a note. */
-const BOARD_COLUMNS = `${BASE_COLUMNS}, customer_note, ${AMEND_COLUMNS}`;
+const BOARD_COLUMNS = `${BASE_COLUMNS}, customer_note, ${AMEND_COLUMNS}, ${PREP_COLUMNS}`;
 
 /** What both halves of the board are guaranteed to carry. */
 type BoardRow = Record<string, unknown> & { status: string; created_at: string };
@@ -82,8 +95,14 @@ export async function GET(request: Request) {
 
   /* A waiter sees their own tables and nobody else's. Filtered here rather
      than in the browser, because "only shows" and "only sends" are different
-     promises and the second is the one worth making. */
-  const mineOnly = !can(staff, "all_orders");
+     promises and the second is the one worth making.
+
+     Read as a restriction rather than as the absence of a grant. An account
+     configured by hand before this key existed has no idea about it, and
+     phrasing it the other way emptied the kitchen board the day it shipped —
+     a kitchen account has rung up nothing, so "only your own orders" is no
+     orders at all. */
+  const mineOnly = can(staff, "own_orders_only");
   if (mineOnly) query = query.eq("pos_staff_uuid", staff.id);
 
   /* "Today" means since this shift opened, not since midnight — an evening
@@ -297,6 +316,13 @@ export async function PUT(request: Request) {
   const patch: Record<string, unknown> = {};
   if (status) patch.status = status;
 
+  /* Stamped the first time the kitchen says it is done, and never again — a
+     ticket reopened and finished twice keeps the time it was first ready,
+     because that is the moment the customer could have had it. Guarded by the
+     is-null filter on the update below rather than by reading it back first,
+     so two tablets pressing Done together cannot each write their own. */
+  const stampReady = status === "completed";
+
   if (payment) {
     patch.payment_method = payment;
 
@@ -332,5 +358,17 @@ export async function PUT(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  /* Its own write, and allowed to fail quietly. The column arrives with a
+     hand-run migration, and a kitchen unable to press Done because a timing
+     figure could not be recorded would be a screen broken by a nicety. */
+  if (stampReady) {
+    await supabaseAdminLive
+      .from("bookings")
+      .update({ ready_at: new Date().toISOString() })
+      .eq("id", id)
+      .is("ready_at", null);
+  }
+
   return NextResponse.json(data);
 }

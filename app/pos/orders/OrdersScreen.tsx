@@ -57,6 +57,8 @@ export interface BoardOrder {
   refunded_total?: number | string | null;
   /** '' | 'requested' | 'declined' — a cancellation waiting on the kitchen. */
   cancel_state?: string | null;
+  /** When the kitchen first marked it done. See supabase/order_prep_time.sql. */
+  ready_at?: string | null;
   total_amount: number | string | null;
   payment_method: string | null;
   created_at: string;
@@ -79,11 +81,27 @@ const STATUSES = [
   { value: "pending", label: "New", chip: "#FEF3C7", ink: "#92400E" },
   { value: "confirmed", label: "Preparing", chip: "#DBEAFE", ink: "#1D4ED8" },
   { value: "completed", label: "Done", chip: "#DCFCE7", ink: "#15803D" },
+  { value: "picked_up", label: "Picked up", chip: "#E0E7FF", ink: "#3730A3" },
   { value: "cancelled", label: "Cancelled", chip: "#FEE2E2", ink: "#B91C1C" },
 ] as const;
 
-/** What someone without the void permission can move an order to. */
-const KITCHEN_STATUSES = STATUSES.filter((s) => s.value !== "cancelled");
+/**
+ * What each board is actually for.
+ *
+ * The kitchen moves food along — new, cooking, on the pass — and has no
+ * business marking an order collected or cancelling one. The counter does the
+ * opposite: it never touches the cooking, it hands the food over and answers
+ * for the money. They were both shown all five, so the counter's card carried
+ * three buttons a cashier should never press and the one they actually needed
+ * did not exist.
+ */
+const KITCHEN_STATUSES = STATUSES.filter(
+  (s) => s.value === "pending" || s.value === "confirmed" || s.value === "completed",
+);
+
+const COUNTER_STATUSES = STATUSES.filter(
+  (s) => s.value === "picked_up" || s.value === "cancelled",
+);
 
 const REFRESH_MS = 15_000;
 
@@ -123,19 +141,47 @@ function money(v: unknown): string {
  * Frozen once the ticket is finished. A completed order whose clock keeps
  * climbing reads as a problem that is still running.
  */
-function Elapsed({ from, now, running }: { from: string; now: number; running: boolean }) {
+function Elapsed({
+  from,
+  readyAt,
+  now,
+  running,
+}: {
+  from: string;
+  /** When the kitchen said it was done, if it has. */
+  readyAt?: string | null;
+  now: number;
+  running: boolean;
+}) {
   const started = new Date(from).getTime();
-  const ms = Math.max(0, (running ? now : started) - started);
+
+  /* Three states, and the middle one is the point.
+     Cooking  — counting up, green until late, then red.
+     Finished — frozen at how long it took, which is the number worth keeping.
+     Neither  — a ticket done before this was recorded, or cancelled. */
+  const ended = readyAt ? new Date(readyAt).getTime() : null;
+  const done = !running && ended !== null;
+
+  if (!running && !done) {
+    return (
+      <span className="flex items-center gap-1.5 shrink-0" style={{ color: POS.inkSoft }}>
+        <Timer size={17} />
+        <span className="text-[13px] font-semibold">—</span>
+      </span>
+    );
+  }
+
+  const ms = Math.max(0, (done ? ended! : now) - started);
   const total = Math.floor(ms / 1000);
   const mins = Math.floor(total / 60);
   const secs = total % 60;
 
   const late = ms >= LATE_AFTER_MS;
-  const tone = !running ? POS.inkSoft : late ? POS.bad : POS.good;
+  const tone = done ? POS.inkSoft : late ? POS.bad : POS.good;
 
   return (
     <span className="flex items-center gap-1.5 shrink-0">
-      <Timer size={17} style={{ color: running ? POS.ink : POS.inkSoft }} />
+      <Timer size={17} style={{ color: done ? POS.inkSoft : POS.ink }} />
       <span className="text-end leading-none">
         <span
           className="block text-[19px] font-black tabular-nums leading-none"
@@ -144,7 +190,7 @@ function Elapsed({ from, now, running }: { from: string; now: number; running: b
           {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
         </span>
         <span className="block text-[9px] font-semibold mt-0.5" style={{ color: POS.inkSoft }}>
-          min:sec
+          {done ? "prep time" : "min:sec"}
         </span>
       </span>
     </span>
@@ -316,7 +362,10 @@ export default function OrdersScreen({
     const res = await fetch("/api/pos/orders", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: order.id, payment, status: "completed" }),
+      /* Paying at the counter is the handover: the customer is standing there
+         with the food. "completed" would have said the kitchen finished it,
+         which was already true and is not what just happened. */
+      body: JSON.stringify({ id: order.id, payment, status: "picked_up" }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
@@ -502,10 +551,11 @@ export default function OrdersScreen({
                     </span>
                   </div>
 
-                  {/* Phone, then the panel and the clock on one line. A cook
-                      reading this card wants two things at a glance: how long
-                      it has been waiting, and which counter it goes back to. */}
-                  {order.phone && showsMoney && (
+                  {/* Shown to the kitchen too, not just the counter. A cook
+                      whose ticket is missing something rings the customer;
+                      hiding it behind the money permission left the pass
+                      looking at an order it could not ask about. */}
+                  {order.phone && (
                     <p className="mt-1.5 text-[12px] font-semibold" style={{ color: POS.inkSoft }}>
                       {order.phone}
                     </p>
@@ -521,6 +571,7 @@ export default function OrdersScreen({
                     </span>
                     <Elapsed
                       from={order.created_at}
+                      readyAt={order.ready_at}
                       now={now}
                       /* Stops on a finished ticket. Nothing is waiting on a
                          cancelled order and nobody is late for a done one. */
@@ -529,40 +580,59 @@ export default function OrdersScreen({
                   </div>
 
                   {/* ─── A cancellation the counter has asked for ─── */}
-                  {/* The loudest thing on the card, because it is the only one
-                      that stops the food. A dish that goes on being cooked
-                      after the customer cancelled it is thrown away. */}
+                  {/*
+                    The buttons live on the kitchen board and nowhere else.
+                    Whoever is at the pan is the only person who knows whether
+                    the dish has been made, and putting Accept in front of the
+                    cashier who asked for the cancellation lets them answer
+                    their own question — which is not an approval, it is a
+                    formality with two extra taps.
+
+                    The counter still needs to know it is pending, because a
+                    customer is standing there waiting to hear about their
+                    money. So it says so, quietly, and offers nothing to press.
+                  */}
                   {order.cancel_state === "requested" && (
-                    <div
-                      className="mt-2.5 rounded-lg px-2.5 py-2"
-                      style={{ background: POS.badSoft, border: `1px solid ${POS.bad}33` }}
-                    >
-                      <p className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color: POS.bad }}>
-                        <XCircle size={13} />
-                        Cancellation requested
-                      </p>
-                      <p className="mt-0.5 text-[11.5px]" style={{ color: POS.bad }}>
-                        {items.filter((i) => i.cancel_requested).length || "All"} item
-                        {items.filter((i) => i.cancel_requested).length === 1 ? "" : "s"} — accept
-                        only if it has not been made.
-                      </p>
-                      <div className="mt-2 flex gap-1.5">
-                        <button
-                          onClick={() => decide(order, "accept")}
-                          className="flex-1 rounded-lg py-1.5 text-[12px] font-bold text-white"
-                          style={{ background: POS.bad }}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => decide(order, "decline")}
-                          className="flex-1 rounded-lg py-1.5 text-[12px] font-bold"
-                          style={{ background: "#fff", color: POS.ink, border: `1px solid ${POS.line}` }}
-                        >
-                          Decline — already made
-                        </button>
+                    kitchenOnly ? (
+                      <div
+                        className="mt-2.5 rounded-lg px-2.5 py-2"
+                        style={{ background: POS.badSoft, border: `1px solid ${POS.bad}33` }}
+                      >
+                        <p className="flex items-center gap-1.5 text-[12px] font-bold" style={{ color: POS.bad }}>
+                          <XCircle size={13} />
+                          Cancellation requested
+                        </p>
+                        <p className="mt-0.5 text-[11.5px]" style={{ color: POS.bad }}>
+                          {items.filter((i) => i.cancel_requested).length || "All"} item
+                          {items.filter((i) => i.cancel_requested).length === 1 ? "" : "s"} — accept
+                          only if it has not been made.
+                        </p>
+                        <div className="mt-2 flex gap-1.5">
+                          <button
+                            onClick={() => decide(order, "accept")}
+                            className="flex-1 rounded-lg py-1.5 text-[12px] font-bold text-white"
+                            style={{ background: POS.bad }}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => decide(order, "decline")}
+                            className="flex-1 rounded-lg py-1.5 text-[12px] font-bold"
+                            style={{ background: "#fff", color: POS.ink, border: `1px solid ${POS.line}` }}
+                          >
+                            Decline — already made
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <p
+                        className="mt-2.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold"
+                        style={{ background: POS.page, color: POS.inkSoft }}
+                      >
+                        <XCircle size={13} />
+                        Cancellation sent to the kitchen — waiting on them.
+                      </p>
+                    )
                   )}
 
                   {/* The kitchen said no, and the counter needs to know before
@@ -671,7 +741,10 @@ export default function OrdersScreen({
                   </div>
 
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    {(canVoid ? STATUSES : KITCHEN_STATUSES).map((s) => (
+                    {(kitchenOnly
+                      ? KITCHEN_STATUSES
+                      : COUNTER_STATUSES.filter((s) => s.value !== "cancelled" || canVoid)
+                    ).map((s) => (
                       <button
                         key={s.value}
                         onClick={() => setStatus(order.id, s.value)}
