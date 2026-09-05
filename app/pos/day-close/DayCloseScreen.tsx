@@ -11,6 +11,7 @@ import {
   Lock,
   Printer,
   Undo2,
+  Unlock,
   UserRound,
   Users,
   Utensils,
@@ -53,6 +54,9 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
   const [day, setDay] = useState<DayState | null>(null);
   const [date, setDate] = useState<string>("");
   const [note, setNote] = useState("");
+  /* Ticked to close a day that took nothing. See the button below for why an
+     empty day needs a deliberate hand on it and a busy one does not. */
+  const [confirmEmpty, setConfirmEmpty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ report: string; whatsappUrl: string; totals: DayTotals } | null>(null);
@@ -70,6 +74,20 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
   useEffect(() => { load(); }, [load]);
 
   const canClose = can(staff, "day_close");
+
+  async function reopen() {
+    setBusy(true);
+    setError("");
+    const res = await fetch(`/api/pos/day?date=${date}`, { method: "DELETE" });
+    setBusy(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(body?.error || "Could not reopen that day.");
+      return;
+    }
+    setConfirmEmpty(false);
+    load(date);
+  }
 
   async function closeDay() {
     setBusy(true);
@@ -210,7 +228,8 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
               <p className="text-[13px]" style={{ color: POS.inkSoft }}>Working it out…</p>
             ) : day.shifts.length === 0 ? (
               <p className="text-[13px]" style={{ color: POS.inkSoft }}>
-                Nothing was traded on {day.label}.
+                Nothing was traded on {day.label}. You can still close the day off — it will be
+                recorded as a day with no takings.
               </p>
             ) : (
               <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${POS.line}` }}>
@@ -374,6 +393,22 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
                   <Printer size={16} />
                   Reprint the report
                 </button>
+
+                {/* Closing a day stops anybody opening a shift into it, so a
+                    day closed by mistake used to lock the branch out of its own
+                    till until the next morning. The shift-open message has
+                    always said a manager could reopen it; now one can. */}
+                {canClose && (
+                  <button
+                    onClick={reopen}
+                    disabled={busy}
+                    className="mt-2 w-full flex items-center justify-center gap-2 rounded-xl text-[13px] font-bold disabled:opacity-40"
+                    style={{ background: POS.badSoft, color: POS.bad, height: 44 }}
+                  >
+                    <Unlock size={15} />
+                    {busy ? "Reopening…" : "Reopen this day"}
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -442,9 +477,61 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
                   </p>
                 )}
 
+                {/*
+                  An empty day needs a deliberate hand on it.
+
+                  This screen opens on today by default, so a manager glancing
+                  at it in the morning sees a day with no shifts and — now that
+                  a zero day can be closed — a live button. One stray tap would
+                  sign off a day nobody had traded yet and lock the branch out
+                  of the till until five the next morning. A busy day cannot be
+                  closed by accident, because it has closed shifts on it and
+                  somebody has been counting drawers; an empty one can.
+                */}
+                {totals && totals.shiftCount === 0 && open.length === 0 && (
+                  <button
+                    onClick={() => setConfirmEmpty((v) => !v)}
+                    className="flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-start"
+                    style={{
+                      border: `1px solid ${confirmEmpty ? POS.bad : POS.line}`,
+                      background: confirmEmpty ? POS.badSoft : "#fff",
+                    }}
+                  >
+                    <span
+                      className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded"
+                      style={{
+                        border: `2px solid ${confirmEmpty ? POS.bad : "#C9CED3"}`,
+                        background: confirmEmpty ? POS.bad : "#fff",
+                      }}
+                    >
+                      {confirmEmpty && <Check size={10} strokeWidth={4} color="#fff" />}
+                    </span>
+                    <span>
+                      <span className="block text-[12.5px] font-bold" style={{ color: POS.ink }}>
+                        Nothing was traded and nothing more will be
+                      </span>
+                      <span className="block text-[11.5px]" style={{ color: POS.inkSoft }}>
+                        No shift can be opened on this date once it is closed.
+                      </span>
+                    </span>
+                  </button>
+                )}
+
                 <button
                   onClick={closeDay}
-                  disabled={busy || !canClose || open.length > 0 || !totals || totals.shiftCount === 0}
+                  /* Not gated on there being any takings. A day that sold
+                     nothing is still a day, and one that cannot be closed is
+                     one the unclosed-day warning shouts about forever. The
+                     only thing still in the way is a drawer somebody is
+                     standing at. */
+                  disabled={
+                    busy ||
+                    !canClose ||
+                    open.length > 0 ||
+                    !totals ||
+                    // A day that traded nothing goes through the tick above.
+                    (totals.shiftCount === 0 && !confirmEmpty)
+                  }
                   className="w-full flex items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-white disabled:opacity-40"
                   style={{ background: POS.night, height: 52 }}
                 >

@@ -91,6 +91,40 @@ export async function GET(request: Request) {
   });
 }
 
+/**
+ * Reopening a day that was closed by mistake.
+ *
+ * The shift-open error has always told people "a manager has to reopen it
+ * before a new shift can start", and until now there was nothing that could —
+ * so a day closed at eleven in the morning locked the branch out of its own
+ * till until five the next morning. A promise the software could not keep.
+ *
+ * It deletes the sign-off rather than flagging it, because a reopened day is
+ * going to be closed again and the second close is the one that counts. The
+ * shifts underneath are untouched; their figures were frozen at their own
+ * close and are what the new sign-off will sum again.
+ */
+export async function DELETE(request: Request) {
+  const staff = await currentStaff();
+  if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (!can(staff, "day_close")) {
+    return NextResponse.json(
+      { error: "Reopening a business day needs a manager." },
+      { status: 403 },
+    );
+  }
+
+  const date = requestedDate(request);
+
+  const { error } = await supabaseAdminLive
+    .from("pos_business_days")
+    .delete()
+    .eq("business_date", date);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true, date });
+}
+
 export async function POST(request: Request) {
   const staff = await currentStaff();
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
@@ -111,12 +145,18 @@ export async function POST(request: Request) {
 
   const shifts = await shiftsForBusinessDay(date);
 
-  if (shifts.length === 0) {
-    return NextResponse.json(
-      { error: `Nothing was traded on ${businessDateLabel(date)}, so there is no day to close.` },
-      { status: 409 },
-    );
-  }
+  /*
+   * A day with no shifts on it can still be closed.
+   *
+   * It used to be refused, on the reasoning that there was nothing to sign off.
+   * That is true of the money and false of the day: a branch that opened, took
+   * nothing and shut still has a manager who wants the day signed and the
+   * report filed saying so, and a public holiday nobody worked is exactly the
+   * day you want a record of. Refusing left those days open forever, and an
+   * open day is what the unclosed-day warning keeps shouting about.
+   *
+   * The one thing still refused is a shift somebody is standing at, below.
+   */
 
   /* An open shift is a drawer nobody has counted. Leaving it out would produce
      a daily total that is short by exactly one cashier's takings and looks

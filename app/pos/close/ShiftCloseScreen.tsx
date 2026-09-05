@@ -63,6 +63,10 @@ export default function ShiftCloseScreen({
   const [takings, setTakings] = useState<ShiftTakings | null>(null);
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [note, setNote] = useState("");
+  /* Ticked to say the drawer really is empty, as opposed to not counted yet.
+     The two look identical from here — both are zero — and only the person
+     standing at the till can tell them apart. */
+  const [emptyDrawer, setEmptyDrawer] = useState(false);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -82,8 +86,12 @@ export default function ShiftCloseScreen({
   );
   /* An untouched drawer is not a short one. Before a single note has been
      counted the difference is the whole float, and shouting "SHORT AED 500" at
-     someone who has not started counting is how a screen loses their trust. */
-  const startedCounting = Object.values(counts).some((n) => n > 0);
+     someone who has not started counting is how a screen loses their trust.
+
+     But a drawer really can be empty — a quiet morning with no float and no
+     sales — and treating zero as "not started" left that shift with no way to
+     close at all. So the tick below is how somebody says which zero this is. */
+  const startedCounting = Object.values(counts).some((n) => n > 0) || emptyDrawer;
   const expected = takings?.expectedCash ?? 0;
   const difference = Math.round((counted - expected) * 100) / 100;
 
@@ -374,6 +382,38 @@ export default function ShiftCloseScreen({
                 </span>
               )}
             </div>
+
+            {/* Only when nothing has been counted, because that is the only
+                time the question exists. Once a single note is in, the drawer
+                has plainly been counted and asking again is noise. */}
+            {counted === 0 && (
+              <button
+                onClick={() => setEmptyDrawer((v) => !v)}
+                className="mt-2 flex w-full items-start gap-2.5 rounded-lg px-3 py-2.5 text-start"
+                style={{
+                  border: `1px solid ${emptyDrawer ? POS.action : POS.line}`,
+                  background: emptyDrawer ? POS.goodSoft : "#fff",
+                }}
+              >
+                <span
+                  className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded"
+                  style={{
+                    border: `2px solid ${emptyDrawer ? POS.action : "#C9CED3"}`,
+                    background: emptyDrawer ? POS.action : "#fff",
+                  }}
+                >
+                  {emptyDrawer && <Check size={10} strokeWidth={4} color="#fff" />}
+                </span>
+                <span>
+                  <span className="block text-[12.5px] font-bold" style={{ color: POS.ink }}>
+                    I have counted it — the drawer is empty
+                  </span>
+                  <span className="block text-[11.5px]" style={{ color: POS.inkSoft }}>
+                    Tick this to close a shift that took nothing.
+                  </span>
+                </span>
+              </button>
+            )}
 
             <CloseCamera onCapture={setPhoto} />
 
