@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, CameraOff, RotateCw } from "lucide-react";
+import { Camera, CameraOff, RotateCw, Upload } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 
 /**
@@ -26,6 +26,13 @@ export default function CloseCamera({
   const streamRef = useRef<MediaStream | null>(null);
   const [shot, setShot] = useState<string>("");
   const [state, setState] = useState<"starting" | "live" | "unavailable">("starting");
+  /* Why it is unavailable, in words. "No camera available" covered three very
+     different problems — permission refused, nothing plugged in, and another
+     app holding the device — and only one of them is the manager's to fix. A
+     screen that will not say which teaches people the photo simply does not
+     work, and that is how a fortnight of closes end up with no picture. */
+  const [reason, setReason] = useState("");
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const stop = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -45,8 +52,18 @@ export default function CloseCamera({
         await videoRef.current.play().catch(() => {});
       }
       setState("live");
-    } catch {
-      // No camera, or permission refused. Say so and carry on.
+      setReason("");
+    } catch (err) {
+      const name = (err as { name?: string })?.name ?? "";
+      setReason(
+        name === "NotAllowedError" || name === "SecurityError"
+          ? "Camera permission was refused. Allow it in the browser's address bar, then try again."
+          : name === "NotFoundError" || name === "OverconstrainedError"
+            ? "No camera on this device."
+            : name === "NotReadableError"
+              ? "The camera is being used by another app."
+              : "The camera could not be started.",
+      );
       setState("unavailable");
     }
   }, []);
@@ -82,6 +99,7 @@ export default function CloseCamera({
   function retake() {
     setShot("");
     onCapture(null);
+    if (fileRef.current) fileRef.current.value = "";
     start();
   }
 
@@ -110,11 +128,12 @@ export default function CloseCamera({
           />
         )}
 
-        {state === "unavailable" && (
+        {state === "unavailable" && !shot && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-3 text-center">
             <CameraOff size={22} style={{ color: "#9CA3AF" }} />
-            <p className="text-[11.5px]" style={{ color: "#D1D5DB" }}>
-              No camera available. You can still close the day.
+            <p className="text-[11.5px]" style={{ color: "#D1D5DB" }}>{reason}</p>
+            <p className="text-[11px]" style={{ color: "#9CA3AF" }}>
+              You can still close the shift.
             </p>
           </div>
         )}
@@ -129,6 +148,44 @@ export default function CloseCamera({
           <Camera size={15} />
           Take photo
         </button>
+      )}
+
+      {/* A way to get a picture when the live preview cannot. On a tablet this
+          opens the camera app; on a laptop it opens the file picker. Either
+          way the shift ends up with the photograph it is supposed to have,
+          rather than a fortnight of empty ones nobody noticed. */}
+      {state === "unavailable" && !shot && (
+        <div className="mt-2 flex gap-2">
+          <button
+            onClick={() => { setState("starting"); start(); }}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg text-[13px] font-bold"
+            style={{ background: POS.page, color: POS.ink, border: `1px solid ${POS.line}`, height: 40 }}
+          >
+            <RotateCw size={15} />
+            Try again
+          </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg text-[13px] font-bold text-white"
+            style={{ background: POS.night, height: 40 }}
+          >
+            <Upload size={15} />
+            Add a photo
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              setShot(URL.createObjectURL(file));
+              onCapture(file);
+            }}
+          />
+        </div>
       )}
 
       {shot && (

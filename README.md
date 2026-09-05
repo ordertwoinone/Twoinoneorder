@@ -187,6 +187,13 @@ instruction: it appears on the board with Accept / Decline, and nothing is
 refunded until the pass answers. Handing money back for a dish that turns out to
 have been cooked and served is the one outcome worth designing against.
 
+**Deleting an order** is refused once its figures have been signed off. A shift
+close freezes what it took onto the shift row and a day close sums those into a
+report somebody has already sent, so deleting an order underneath either leaves a
+total that no longer adds up from the orders behind it. While the shift is still
+open it can go — which covers what the button is for, clearing test orders and
+duplicates. After that, cancel and refund, which leaves a trail.
+
 **Payment methods.** Cash, card and online are money arriving. Staff Food, Credit
 and Pending are not, and each is kept out of net sales and drawer cash and named
 on its own line at both closes — a staff meal is a cost, a credit is a debt, a

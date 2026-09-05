@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   ChefHat,
   ClipboardList,
+  History,
   LayoutGrid,
   LogOut,
   Receipt,
@@ -37,6 +38,7 @@ import { can, type PosPermission } from "@/lib/pos/permissions";
 const NAV: { href: string; label: string; icon: typeof ShoppingCart; key: PosPermission }[] = [
   { href: "/pos/till", label: "POS", icon: ShoppingCart, key: "till" },
   { href: "/pos/orders", label: "Orders", icon: ClipboardList, key: "orders" },
+  { href: "/pos/history", label: "History", icon: History, key: "orders" },
   { href: "/pos/kitchen", label: "Kitchen", icon: ChefHat, key: "kitchen" },
   { href: "/pos/availability", label: "Item Availability", icon: SlidersHorizontal, key: "availability" },
   { href: "/pos/expenses", label: "Expenses", icon: Receipt, key: "expenses" },

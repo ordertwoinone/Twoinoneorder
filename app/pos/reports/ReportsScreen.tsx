@@ -7,6 +7,7 @@ import { aed } from "@/lib/pos/cart";
 import type { PosStaff } from "@/lib/pos/constants";
 import PosShell from "@/components/pos/PosShell";
 import SalesPerformance from "./SalesPerformance";
+import ShiftCloses from "./ShiftCloses";
 
 /**
  * What the branch has been taking.
@@ -23,7 +24,7 @@ import SalesPerformance from "./SalesPerformance";
  * other has a filter bar.
  */
 
-type Tab = "overview" | "sales";
+type Tab = "overview" | "sales" | "closes";
 
 interface Report {
   days: number;
@@ -98,6 +99,7 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
         {([
           ["overview", "Overview"],
           ["sales", "Sales Performance"],
+          ["closes", "Shift Closes"],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -115,6 +117,8 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
 
       {tab === "sales" ? (
         <SalesPerformance />
+      ) : tab === "closes" ? (
+        <ShiftCloses />
       ) : (
       <div className="pos-scroll h-full p-4">
         {loading && !report ? (
