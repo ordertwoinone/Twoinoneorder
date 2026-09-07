@@ -150,6 +150,9 @@ export async function syncItemAddonGroups(
     await supabaseAdminLive.from("kalba_addon_groups").delete().in("id", goneGroupIds);
   }
 
+  /** Every option id the loop below wrote — updated or freshly inserted. */
+  const writtenOptionIds = new Set<string>();
+
   for (const group of clean) {
     const fields = {
       name: group.name,
@@ -180,7 +183,8 @@ export async function syncItemAddonGroups(
       groupId = (data as { id: string }).id;
     }
 
-    await syncGroupOptions(itemId, groupId, group.options, dropped);
+    const ids = await syncGroupOptions(itemId, groupId, group.options, dropped);
+    for (const id of ids) writtenOptionIds.add(id);
   }
 
   /**
@@ -189,10 +193,14 @@ export async function syncItemAddonGroups(
    * Scoped to the item, not the group: an option can be deleted, or moved
    * between groups, or be one of the loose ones being adopted — a per-group
    * sweep misses all three, which is how a deleted option kept coming back.
+   *
+   * Kept is what the writes above actually put in the table, not what the form
+   * sent. An option the admin has just typed has no id until it is inserted, so
+   * a sweep reading ids off the payload found none of them among the rows and
+   * deleted every new option the moment it was created — the whole point of a
+   * size group, gone between the insert and the redirect, leaving the group
+   * behind with nothing in it.
    */
-  const keptOptionIds = new Set(
-    clean.flatMap((g) => g.options.map((o) => o.id).filter(Boolean) as string[]),
-  );
 
   const { data: allOptions } = await supabaseAdminLive
     .from("kalba_item_addons")
@@ -201,7 +209,7 @@ export async function syncItemAddonGroups(
 
   const goneOptionIds = (allOptions ?? [])
     .map((row) => (row as { id: string }).id)
-    .filter((id) => !keptOptionIds.has(id));
+    .filter((id) => !writtenOptionIds.has(id));
 
   if (goneOptionIds.length > 0) {
     await supabaseAdminLive.from("kalba_item_addons").delete().in("id", goneOptionIds);
@@ -215,11 +223,15 @@ async function syncGroupOptions(
   groupId: string,
   options: { id?: string; name: string; name_ar: string; image_url: string; price: number; sort_order: number }[],
   dropped: Set<string>,
-): Promise<void> {
+): Promise<string[]> {
   /* Writes only — removals are swept up once, per item, by the caller. Doing
-     it here per group could not see an option that had moved out of one. */
-  await Promise.all(
-    options.map((option) => {
+     it here per group could not see an option that had moved out of one.
+
+     The ids come back so that sweep can tell a row this call has just written
+     from one the form dropped. An insert has to ask for its id explicitly;
+     without it a new option is indistinguishable from a deleted one. */
+  const written = await Promise.all(
+    options.map(async (option) => {
       const fields = {
         item_id: itemId,
         group_id: groupId,
@@ -230,21 +242,28 @@ async function syncGroupOptions(
         sort_order: option.sort_order,
       };
 
-      return option.id
-        ? tolerate(
-            (f) =>
-              supabaseAdminLive
-                .from("kalba_item_addons")
-                .update({ ...f, updated_at: new Date().toISOString() })
-                .eq("id", option.id as string),
-            dropped,
-          )(fields)
-        : tolerate(
-            (f) => supabaseAdminLive.from("kalba_item_addons").insert([f]),
-            dropped,
-          )(fields);
+      if (option.id) {
+        await tolerate(
+          (f) =>
+            supabaseAdminLive
+              .from("kalba_item_addons")
+              .update({ ...f, updated_at: new Date().toISOString() })
+              .eq("id", option.id as string),
+          dropped,
+        )(fields);
+        return option.id;
+      }
+
+      const result = await tolerate(
+        (f) => supabaseAdminLive.from("kalba_item_addons").insert([f]).select("id").single(),
+        dropped,
+      )(fields);
+
+      return (result.data as { id: string } | null)?.id ?? null;
     }),
   );
+
+  return written.filter((id): id is string => !!id);
 }
 
 /**
@@ -254,11 +273,17 @@ async function syncGroupOptions(
  * been run. Dropping the one field beats losing the edit, and it starts saving
  * the moment the newer file is run.
  */
+interface WriteResult {
+  /** The inserted row, when the caller asked for it back. */
+  data?: unknown;
+  error: { message?: string } | null;
+}
+
 function tolerate<T extends Record<string, unknown>>(
-  attempt: (fields: T) => PromiseLike<{ error: { message?: string } | null }>,
+  attempt: (fields: T) => PromiseLike<WriteResult>,
   dropped: Set<string>,
 ) {
-  return async (fields: T) => {
+  return async (fields: T): Promise<WriteResult> => {
     const result = await attempt(fields);
     const message = result.error?.message;
     if (!message) return result;
