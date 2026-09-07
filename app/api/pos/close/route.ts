@@ -11,6 +11,7 @@ import { shiftTakings, whatsappSummary } from "@/lib/pos/reconcile";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { can } from "@/lib/pos/permissions";
 import { businessDateFor } from "@/lib/pos/business-day";
+import { posOrderCode } from "@/lib/pos/cart";
 import { isPaid } from "@/lib/pos/amend";
 
 /**
@@ -46,8 +47,48 @@ export async function GET() {
     settings,
     expenses: expensesRes.data ?? [],
     contributions,
+    /* Named, not just counted. takings.pendingTotal already says how much is
+       outstanding, and a cashier reading "AED 84.00 still to pay" two minutes
+       before going home cannot do anything with it — they need to know which
+       tickets, so they can go and collect. */
+    pending: await unpaidOrders(shift.id, settings.order_prefix),
     businessDate: businessDateFor(),
   });
+}
+
+/**
+ * Orders on this shift that nobody has taken the money for.
+ *
+ * A kiosk order is placed unpaid and settled at the counter when it is
+ * collected, so an open shift routinely holds a few — and every one still open
+ * at close is either a customer who never came back or, far more often, food
+ * handed over with the payment never rung up. Either way it leaves the shift
+ * short by that amount and the cashier with no way to find out which orders
+ * did it once the shift is shut.
+ */
+async function unpaidOrders(shiftId: string, prefix: string) {
+  const { data } = await supabaseAdminLive
+    .from("bookings")
+    .select("id, order_number, guest_name, order_type, table_section, total_amount, payment_method, status, created_at")
+    .eq("pos_shift_id", shiftId)
+    .order("created_at", { ascending: true });
+
+  return ((data ?? []) as Record<string, unknown>[])
+    .filter((row) => {
+      const method = String(row.payment_method ?? "pending").trim().toLowerCase();
+      // Cancelled is not owed. Staff food and credit are deliberate, and each
+      // already has its own line on the close — this is the accidental one.
+      if (String(row.status ?? "").toLowerCase() === "cancelled") return false;
+      return method === "pending" || method === "";
+    })
+    .map((row) => ({
+      id: String(row.id),
+      code: posOrderCode(prefix, row.order_number as number | null),
+      name: String(row.guest_name ?? "").trim(),
+      where: String(row.table_section ?? row.order_type ?? "").trim(),
+      total: Number(row.total_amount) || 0,
+      at: String(row.created_at ?? ""),
+    }));
 }
 
 /**

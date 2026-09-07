@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   BarChart3,
   Check,
   Clock,
@@ -51,6 +52,16 @@ import CloseCamera from "@/components/pos/CloseCamera";
  * from a counter kept during the shift — a running total that has drifted is
  * indistinguishable from a drawer that is short.
  */
+/** An order on this shift that nobody has taken the money for. */
+interface PendingOrder {
+  id: string;
+  code: string;
+  name: string;
+  where: string;
+  total: number;
+  at: string;
+}
+
 /** One person's share of the day, as the contribution table lists it. */
 interface Contribution {
   name: string;
@@ -77,6 +88,12 @@ export default function ShiftCloseScreen({
   /** Who sold what across the whole trading day, not just this shift. */
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [businessDate, setBusinessDate] = useState("");
+  const [pending, setPending] = useState<PendingOrder[]>([]);
+  /* Shown once. Somebody who has read the list and decided to go ahead anyway
+     — the customer never came back, it is going on tomorrow — must not be
+     stopped by the same dialog every time they press the button. */
+  const [warnPending, setWarnPending] = useState(false);
+  const [pendingSeen, setPendingSeen] = useState(false);
   const [counts, setCounts] = useState<Record<number, number>>({});
   const [note, setNote] = useState("");
   /* Two declarations, and they are not the same statement.
@@ -97,6 +114,7 @@ export default function ShiftCloseScreen({
     if (body?.takings) setTakings(body.takings as ShiftTakings);
     if (Array.isArray(body?.contributions)) setContributions(body.contributions as Contribution[]);
     if (body?.businessDate) setBusinessDate(body.businessDate as string);
+    if (Array.isArray(body?.pending)) setPending(body.pending as PendingOrder[]);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -129,7 +147,28 @@ export default function ShiftCloseScreen({
   const expected = takings?.expectedCash ?? 0;
   const difference = Math.round((counted - expected) * 100) / 100;
 
+  /** The total nobody has collected, for the warning and its heading. */
+  const pendingTotal = pending.reduce((sum, o) => sum + o.total, 0);
+
+  /**
+   * The button. Asks first when there is money outstanding.
+   *
+   * Closing is the last moment anybody can do anything about an unpaid ticket:
+   * afterwards the shift is shut, the figures are frozen, and the cashier who
+   * knows which customer it was has gone home. So the tickets are put in front
+   * of them by name and amount rather than left as a total on a panel further
+   * up the screen, which is a number nobody can act on.
+   */
+  function attemptClose() {
+    if (pending.length > 0 && !pendingSeen) {
+      setWarnPending(true);
+      return;
+    }
+    close();
+  }
+
   async function close() {
+    setWarnPending(false);
     setBusy(true);
     setError("");
 
@@ -504,7 +543,7 @@ export default function ShiftCloseScreen({
             )}
 
             <button
-              onClick={close}
+              onClick={attemptClose}
               disabled={busy || !takings || !canClose || !startedCounting}
               className="w-full flex items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-white disabled:opacity-40"
               style={{ background: POS.night, height: 52 }}
@@ -629,8 +668,94 @@ export default function ShiftCloseScreen({
           </section>
         )}
       </div>
+
+      {/* ─── Money still to collect ─── */}
+      {warnPending && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: "rgba(15,23,42,0.55)" }}
+        >
+          <div
+            className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white"
+            style={{ border: `1px solid ${POS.line}` }}
+          >
+            <div className="flex items-start gap-3 px-5 pt-5">
+              <span
+                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ background: POS.badSoft }}
+              >
+                <AlertTriangle size={18} style={{ color: POS.bad }} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-[17px] font-black" style={{ color: POS.ink }}>
+                  {pending.length} order{pending.length === 1 ? "" : "s"} not paid for
+                </h2>
+                <p className="mt-1 text-[13px] leading-relaxed" style={{ color: POS.inkSoft }}>
+                  {aed(pendingTotal)} on this shift has not been collected. Take the payment on the
+                  Orders screen and it lands on your drawer — close now and it stays outstanding,
+                  with nothing on the shift to say whose it was.
+                </p>
+              </div>
+            </div>
+
+            <div className="mx-5 mt-4 overflow-hidden rounded-xl" style={{ border: `1px solid ${POS.line}` }}>
+              <div className="max-h-[240px] overflow-y-auto">
+                {pending.map((order) => (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between gap-3 px-3 py-2.5"
+                    style={{ borderBottom: `1px solid ${POS.line}` }}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-bold" style={{ color: POS.ink }}>
+                        {order.code}
+                        {order.name ? ` · ${order.name}` : ""}
+                      </span>
+                      <span className="block truncate text-[11.5px]" style={{ color: POS.inkSoft }}>
+                        {[order.where, order.at ? clockOf(order.at) : ""].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[13px] font-black" style={{ color: POS.bad }}>
+                      {aed(order.total)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 px-5 py-4">
+              <button
+                onClick={() => router.push("/pos/orders")}
+                className="flex-1 rounded-xl px-4 py-3 text-[13.5px] font-bold text-white"
+                style={{ background: POS.action }}
+              >
+                Take the payments
+              </button>
+              <button
+                onClick={() => { setPendingSeen(true); close(); }}
+                className="rounded-xl px-4 py-3 text-[13.5px] font-bold"
+                style={{ border: `1px solid ${POS.line}`, color: POS.inkSoft }}
+              >
+                Close anyway
+              </button>
+              <button
+                onClick={() => setWarnPending(false)}
+                className="rounded-xl px-4 py-3 text-[13.5px] font-bold"
+                style={{ color: POS.inkSoft }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PosShell>
   );
+}
+
+/** "14:22" — when the ticket was rung up, so it can be found on the board. */
+function clockOf(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
 function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
