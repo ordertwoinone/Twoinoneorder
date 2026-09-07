@@ -2,13 +2,16 @@
 
 import { useMemo, useState } from "react";
 import {
-  AlertTriangle, CheckCheck, ClipboardList, Coins, Download, FileText, Info, Package, Plus, Trash2,
+  AlertTriangle, BarChart3, CheckCheck, ChevronDown, ClipboardList, Coins, Download, FileText,
+  Info, Package, Pencil, Plus, Trash2,
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
+import { sizedImage } from "@/lib/image-url";
 import {
   STATUS_STYLE,
   aed,
   bookClosing,
+  carryingRate,
   carryingValue,
   prettyDate,
   qty,
@@ -16,11 +19,13 @@ import {
   signed,
   variance,
   writeOffValue,
+  type InventoryItem,
   type SheetPayload,
   type SheetRow,
 } from "@/lib/inventory/types";
 import type { Edits, RowEdit } from "./InventoryScreen";
 import EntryDialog from "./EntryDialog";
+import { DayFlowChart, VarianceChart } from "./charts";
 import { COLUMN_TONE, ErrorNote, Pill, StepCell, Stat } from "./ui";
 
 /**
@@ -52,6 +57,7 @@ export default function StockCountTab({
   onApply,
   onPost,
   onChanged,
+  onEditItem,
 }: {
   sheet: SheetPayload | null;
   rows: SheetRow[];
@@ -64,12 +70,17 @@ export default function StockCountTab({
   onApply: () => void;
   onPost: () => void;
   onChanged: () => void;
+  onEditItem: (item: InventoryItem) => void;
 }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [writeOff, setWriteOff] = useState<"writeoff" | "waste" | null>(null);
   const [confirmPost, setConfirmPost] = useState(false);
+  /* Open by default — the pictures are the reason to glance at this screen when
+     you are not counting. Collapsible because when you *are* counting, they are
+     three hundred pixels between you and the row you are typing into. */
+  const [showCharts, setShowCharts] = useState(true);
   const [removing, setRemoving] = useState("");
   const [error, setError] = useState("");
 
@@ -121,6 +132,41 @@ export default function StockCountTab({
   }, [visible]);
 
   const registerTotal = (sheet?.register ?? []).reduce((sum, m) => sum + writeOffValue(m), 0);
+
+  /* The formula in the blue note above, as six bars. Consumption and the two
+     losses are negated here rather than in the chart, so the waterfall stays a
+     dumb renderer of signed steps and the meaning of "out" lives with the sheet
+     that knows it. */
+  const flowSteps = useMemo(
+    () => [
+      { label: "Opening balance", delta: totals.opening, total: true },
+      { label: "Goods received", delta: totals.received },
+      { label: "Stock consumed", delta: -totals.consumed },
+      { label: "Write-offs", delta: -totals.writeoffs, loss: true },
+      { label: "Waste", delta: -totals.waste, loss: true },
+      { label: "Book closing", delta: totals.book, total: true },
+    ],
+    [totals],
+  );
+
+  const varianceBars = useMemo(
+    () =>
+      visible
+        .filter((row) => row.physical !== null)
+        .map((row) => {
+          const delta = variance(row) ?? 0;
+          return {
+            name: row.item.name,
+            uom: row.item.uom,
+            variance: delta,
+            // What the discrepancy is worth, which is the figure a manager
+            // actually reacts to — four missing bottles of water and four
+            // missing energy drinks are not the same problem.
+            value: delta * carryingRate(row.item),
+          };
+        }),
+    [visible],
+  );
 
   async function removeEntry(id: string) {
     setRemoving(id);
@@ -238,6 +284,29 @@ export default function StockCountTab({
         </div>
       </div>
 
+      {/* ─── The same figures, drawn ─── */}
+      <div>
+        <button
+          onClick={() => setShowCharts((open) => !open)}
+          className="flex items-center gap-2 rounded-lg px-1 py-1 text-[12px] font-bold"
+          style={{ color: POS.inkSoft }}
+        >
+          <BarChart3 size={14} />
+          {showCharts ? "Hide charts" : "Show charts"}
+          <ChevronDown
+            size={13}
+            style={{ transform: showCharts ? "rotate(180deg)" : "none", transition: "transform .2s" }}
+          />
+        </button>
+
+        {showCharts && (
+          <div className="mt-2 grid gap-3 xl:grid-cols-2">
+            <DayFlowChart steps={flowSteps} />
+            <VarianceChart bars={varianceBars} />
+          </div>
+        )}
+      </div>
+
       {error && <ErrorNote message={error} />}
 
       {/* ─── The sheet ─── */}
@@ -321,11 +390,31 @@ export default function StockCountTab({
                   return (
                     <tr key={row.item.id} style={{ borderTop: `1px solid ${POS.line}` }}>
                       <td className="px-2.5 py-2">
-                        <p className="font-bold leading-tight" style={{ color: POS.ink }}>{row.item.name}</p>
-                        <p className="text-[10.5px] leading-tight" style={{ color: POS.inkSoft }}>
-                          {row.item.category}
-                          {row.item.sku ? ` · ${row.item.sku}` : ""}
-                        </p>
+                        <div className="group flex items-center gap-2.5">
+                          <ItemThumb item={row.item} />
+                          <div className="min-w-0">
+                            <p className="truncate font-bold leading-tight" style={{ color: POS.ink }}>
+                              {row.item.name}
+                            </p>
+                            <p className="truncate text-[10.5px] leading-tight" style={{ color: POS.inkSoft }}>
+                              {row.item.category}
+                              {row.item.sku ? ` · ${row.item.sku}` : ""}
+                            </p>
+                          </div>
+                          {/* Always rendered, only visible on hover or focus —
+                              a pencil per row shouting at twenty-eight lines
+                              would drown out the figures the sheet is for, but
+                              one that appears only on hover is unreachable by
+                              keyboard, hence focus-within. */}
+                          <button
+                            onClick={() => onEditItem(row.item)}
+                            className="ms-auto shrink-0 rounded p-1.5 opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
+                            style={{ color: POS.inkSoft }}
+                            aria-label={`Edit ${row.item.name}`}
+                          >
+                            <Pencil size={13} />
+                          </button>
+                        </div>
                       </td>
                       <td className="px-2.5 py-2 text-center" style={{ color: POS.inkSoft }}>{row.item.uom}</td>
                       <td className="px-2.5 py-2 text-center tabular-nums" style={{ color: POS.inkSoft }}>
@@ -629,6 +718,38 @@ export default function StockCountTab({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * An item's photo at the size the sheet draws it.
+ *
+ * The initial rather than a broken-image icon when there is none, the same as
+ * the till grid does — a row without a picture should still have something to
+ * aim a finger at, and a torn-page glyph reads as an error rather than as a
+ * blank a manager could fill in.
+ */
+function ItemThumb({ item }: { item: InventoryItem }) {
+  return (
+    <span
+      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+      style={{ background: POS.page }}
+    >
+      {item.image_url ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={sizedImage(item.image_url, 200)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span className="text-[13px] font-black" style={{ color: "#C9CFD4" }}>
+          {item.name.charAt(0).toUpperCase()}
+        </span>
+      )}
+    </span>
   );
 }
 

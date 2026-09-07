@@ -80,6 +80,10 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [newItem, setNewItem] = useState(false);
+  /* Editing reachable from the count sheet as well as the valuation list.
+     Correcting a cost is nearly always something you decide to do while
+     staring at the row it is wrong on, and that row is usually here. */
+  const [editItem, setEditItem] = useState<InventoryItem | null>(null);
 
   const loadSheet = useCallback(async () => {
     setLoading(true);
@@ -284,6 +288,7 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
               onApply={applyEdits}
               onPost={postCount}
               onChanged={refresh}
+              onEditItem={setEditItem}
             />
           ) : tab === "valuation" ? (
             <ValuationTab items={items} onChanged={() => { loadItems(); loadSheet(); }} />
@@ -303,6 +308,14 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
         <ItemDialog
           onClose={() => setNewItem(false)}
           onSaved={() => { setNewItem(false); refresh(); }}
+        />
+      )}
+
+      {editItem && (
+        <ItemDialog
+          item={editItem}
+          onClose={() => setEditItem(null)}
+          onSaved={() => { setEditItem(null); refresh(); }}
         />
       )}
     </PosShell>

@@ -3,9 +3,11 @@
 import { Fragment, useMemo, useState } from "react";
 import { AlertTriangle, Coins, Package, Pencil, Power, Trash2 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
+import { sizedImage } from "@/lib/image-url";
 import { aed, carryingRate, qty, round2 } from "@/lib/inventory/types";
 import type { ItemWithStock } from "./InventoryScreen";
 import ItemDialog from "./ItemDialog";
+import { CategoryValueChart } from "./charts";
 import { ErrorNote, Pill, Stat } from "./ui";
 
 /**
@@ -72,6 +74,16 @@ export default function ValuationTab({
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [visible]);
 
+  const categoryValues = useMemo(
+    () =>
+      groups.map(([category, list]) => ({
+        category,
+        value: round2(list.reduce((sum, i) => sum + i.on_hand * carryingRate(i), 0)),
+        units: list.reduce((sum, i) => sum + i.on_hand, 0),
+      })),
+    [groups],
+  );
+
   async function toggleActive(item: ItemWithStock) {
     setBusyId(item.id);
     setError("");
@@ -124,6 +136,8 @@ export default function ValuationTab({
           tone={totals.writeDown > 0 || totals.low > 0 ? POS.warn : undefined}
         />
       </div>
+
+      <CategoryValueChart rows={categoryValues} />
 
       {error && <ErrorNote message={error} />}
       {notice && (
@@ -190,16 +204,39 @@ export default function ValuationTab({
                     return (
                       <tr key={item.id} style={{ borderTop: `1px solid ${POS.line}` }}>
                         <td className="px-3 py-2.5">
-                          <p className="flex items-center gap-2 font-bold leading-tight" style={{ color: POS.ink }}>
-                            {item.name}
-                            {!item.is_active && <Pill label="Off" className="bg-gray-100 text-gray-500" />}
-                            {low && <Pill label="Reorder" className="bg-amber-50 text-amber-700" />}
-                          </p>
-                          {(item.sku || item.location) && (
-                            <p className="text-[10.5px] leading-tight" style={{ color: POS.inkSoft }}>
-                              {[item.sku, item.location].filter(Boolean).join(" · ")}
-                            </p>
-                          )}
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg"
+                              style={{ background: POS.page, opacity: item.is_active ? 1 : 0.45 }}
+                            >
+                              {item.image_url ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={sizedImage(item.image_url, 200)}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-[14px] font-black" style={{ color: "#C9CFD4" }}>
+                                  {item.name.charAt(0).toUpperCase()}
+                                </span>
+                              )}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="flex items-center gap-2 font-bold leading-tight" style={{ color: POS.ink }}>
+                                {item.name}
+                                {!item.is_active && <Pill label="Off" className="bg-gray-100 text-gray-500" />}
+                                {low && <Pill label="Reorder" className="bg-amber-50 text-amber-700" />}
+                              </p>
+                              {(item.sku || item.location) && (
+                                <p className="text-[10.5px] leading-tight" style={{ color: POS.inkSoft }}>
+                                  {[item.sku, item.location].filter(Boolean).join(" · ")}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </td>
                         <td className="px-3 py-2.5" style={{ color: POS.inkSoft }}>{item.uom}</td>
                         <td
