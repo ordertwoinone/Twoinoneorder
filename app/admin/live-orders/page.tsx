@@ -74,6 +74,8 @@ interface Booking {
   /** From supabase/order_invoices.sql; absent until that has been run. */
   total_amount?: number | string | null;
   payment_method?: string | null;
+  /** Who rang it up at the till, for a "pos" or "kiosk" row. Blank otherwise. */
+  staff_name?: string | null;
   account?: { name: string; email: string; avatarUrl: string } | null;
 }
 
@@ -117,6 +119,8 @@ interface Row {
   scheduled?: string | null;
   /** Booking rows carry the account that placed them, and an editable status. */
   bookingType?: string;
+  /** The cashier who took it, for a till or kiosk order. */
+  staffName?: string;
   account?: Booking["account"];
   /** Ours to invoice. take.app issues its own, from its own numbering. */
   invoiceable?: boolean;
@@ -195,6 +199,77 @@ function bookingTotal(b: Booking): number | null {
 }
 
 /**
+ * Orders that went out without being paid for, by whoever rang them up.
+ *
+ * The shift close puts this in front of the cashier while they can still do
+ * something about it. This is the same list after the fact, for the office —
+ * collapsed by default because on a good day it is empty and an empty panel
+ * shouting at the top of the orders board teaches people to scroll past it.
+ */
+function PendingPayments({
+  groups,
+  total,
+}: {
+  groups: { staff: string; orders: Booking[]; total: number }[];
+  total: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const count = groups.reduce((n, g) => n + g.orders.length, 0);
+
+  return (
+    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left"
+      >
+        <AlertTriangle size={16} className="shrink-0 text-amber-700" />
+        <span className="text-sm font-semibold text-amber-900">
+          {count} order{count !== 1 ? "s" : ""} not paid for · AED {total.toFixed(2)}
+        </span>
+        <span className="ms-auto text-[12px] font-bold text-amber-700">
+          {open ? "Hide" : `Show by cashier (${groups.length})`}
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-amber-200 px-4 py-3 space-y-3">
+          {groups.map((group) => (
+            <div key={group.staff}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[13px] font-bold text-amber-900">{group.staff}</span>
+                <span className="text-[13px] font-bold text-amber-900">
+                  {group.orders.length} · AED {group.total.toFixed(2)}
+                </span>
+              </div>
+              <div className="mt-1 space-y-0.5">
+                {group.orders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="flex items-baseline justify-between gap-3 text-[12px] text-amber-800"
+                  >
+                    <span className="truncate">
+                      {order.order_number != null ? `#${order.order_number}` : order.id.slice(0, 8)}
+                      {order.guest_name ? ` · ${order.guest_name}` : ""}
+                      {order.table_section ? ` · ${order.table_section}` : ""}
+                      {order.created_at
+                        ? ` · ${new Date(order.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                        : ""}
+                    </span>
+                    <span className="shrink-0 font-semibold tabular-nums">
+                      AED {((bookingTotal(order) ?? 0) / 100).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * Where the order is going, when take.app told us.
  *
  * The pin is the useful half: an address typed into a storefront is often
@@ -264,6 +339,7 @@ function bookingRow(b: Booking): Row {
     note: b.notes,
     scheduled: when || null,
     bookingType: b.type || "table",
+    staffName: b.staff_name ?? "",
     account: b.account ?? null,
     invoiceable: true,
     paymentMethod: b.payment_method ?? undefined,
@@ -626,6 +702,46 @@ export default function LiveOrdersAdmin() {
 
   const newCount = shown.filter((r) => newIds.includes(r.key)).length;
 
+  /*
+   * Till and kiosk orders that went out without the money being taken.
+   *
+   * The same list the cashier is shown when they close their shift, gathered
+   * for the whole branch and grouped by whoever rang each one up — because by
+   * the time it reaches this screen the question is no longer "collect this
+   * now", it is "whose shift did this happen on".
+   *
+   * Read from the bookings rather than from the board's merged rows: a
+   * take.app order is settled on the storefront and has no cashier to name, so
+   * it has no business in a list about who forgot to charge.
+   */
+  const pendingPayments = useMemo(() => {
+    const groups = new Map<string, { staff: string; orders: Booking[]; total: number }>();
+
+    for (const b of bookings) {
+      if (b.type !== "pos" && b.type !== "kiosk") continue;
+      if ((b.status ?? "").toLowerCase() === "cancelled") continue;
+      const method = (b.payment_method ?? "pending").trim().toLowerCase();
+      /* Only the accidental kind. A staff meal and a credit are both deliberate
+         decisions with their own line on the shift close; an order still marked
+         pending is one nobody has made a decision about at all. */
+      if (method !== "pending" && method !== "") continue;
+
+      /* A kiosk order is placed before anybody serves it, so it carries no
+         cashier until one takes the payment — which is exactly the thing that
+         has not happened. Named as the kiosk rather than blamed on nobody. */
+      const staff = b.staff_name?.trim() || (b.type === "kiosk" ? "Kiosk — not yet collected" : "No cashier recorded");
+      const entry = groups.get(staff) ?? { staff, orders: [], total: 0 };
+      entry.orders.push(b);
+      entry.total += (bookingTotal(b) ?? 0) / 100;
+      groups.set(staff, entry);
+    }
+
+    // Biggest first: the question is where the money is, not who is alphabetically first.
+    return Array.from(groups.values()).sort((a, b) => b.total - a.total);
+  }, [bookings]);
+
+  const pendingTotal = pendingPayments.reduce((sum, g) => sum + g.total, 0);
+
   /**
    * A booking's status is ours to set, unlike a take.app order's. Written
    * straight through and rolled back if it does not land — the customer reads
@@ -793,6 +909,10 @@ export default function LiveOrdersAdmin() {
           <BellRing size={16} className="shrink-0" />
           {newCount} new order{newCount !== 1 ? "s" : ""} just came in
         </div>
+      )}
+
+      {pendingPayments.length > 0 && (
+        <PendingPayments groups={pendingPayments} total={pendingTotal} />
       )}
 
       {error && (

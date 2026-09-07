@@ -19,9 +19,34 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const bookings = (data ?? []) as { user_id?: string | null }[];
+  const bookings = (data ?? []) as { user_id?: string | null; pos_staff_uuid?: string | null }[];
+
+  /* Who rang it up, for the orders that came from a till or a kiosk.
+     Read as a second query rather than an embed: pos_staff_uuid arrives with a
+     hand-run migration, and PostgREST answers the whole select with a 400 on an
+     embed it cannot resolve — which would empty the admin board rather than
+     leave one column blank. */
+  const staffIds = Array.from(
+    new Set(bookings.map((b) => b.pos_staff_uuid).filter(Boolean) as string[]),
+  );
+  const staffNames = new Map<string, string>();
+  if (staffIds.length > 0) {
+    const { data: rows } = await supabaseAdminLive
+      .from("pos_staff")
+      .select("id, name, staff_id")
+      .in("id", staffIds);
+    for (const raw of (rows ?? []) as { id: string; name: string; staff_id: string }[]) {
+      staffNames.set(raw.id, raw.name || raw.staff_id);
+    }
+  }
+
+  const withStaff = bookings.map((b) => ({
+    ...b,
+    staff_name: b.pos_staff_uuid ? staffNames.get(b.pos_staff_uuid) ?? "" : "",
+  }));
+
   const userIds = new Set(bookings.map((b) => b.user_id).filter(Boolean) as string[]);
-  if (userIds.size === 0) return NextResponse.json(bookings);
+  if (userIds.size === 0) return NextResponse.json(withStaff);
 
   const { data: list } = await supabaseAdminLive.auth.admin.listUsers({
     page: 1,
@@ -41,6 +66,6 @@ export async function GET() {
   });
 
   return NextResponse.json(
-    bookings.map((b) => ({ ...b, account: b.user_id ? accounts.get(b.user_id) ?? null : null })),
+    withStaff.map((b) => ({ ...b, account: b.user_id ? accounts.get(b.user_id) ?? null : null })),
   );
 }
