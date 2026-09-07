@@ -21,7 +21,7 @@ import {
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
 import type { OrderChannel } from "@/lib/order-source";
-import type { PosStaff } from "@/lib/pos/constants";
+import { LATE_AFTER_MS, type PosStaff } from "@/lib/pos/constants";
 import { can } from "@/lib/pos/permissions";
 import { printDocument } from "@/lib/print-document";
 import { useAlertChime } from "@/hooks/useAlertChime";
@@ -106,16 +106,9 @@ const COUNTER_STATUSES = STATUSES.filter(
 
 const REFRESH_MS = 15_000;
 
-/**
- * How long a ticket may sit before the clock on it turns red.
- *
- * Not a target the kitchen is being judged against — it is the point at which
- * a customer standing at the counter starts wondering, which is the moment
- * somebody should look at the ticket again. Green up to it, red past it, and
- * nothing in between: an amber middle would just mean everything is always
- * amber at lunch.
- */
-const LATE_AFTER_MS = 15 * 60_000;
+/* Green up to it, red past it, and nothing in between: an amber middle would
+   just mean everything is always amber at lunch. The threshold itself lives in
+   lib/pos/constants.ts, shared with the report that lists what went over. */
 
 /** The three ways an order reaches the branch, in the order the chips read. */
 const CHANNELS: OrderChannel[] = ["Counter", "Kiosk", "Website"];

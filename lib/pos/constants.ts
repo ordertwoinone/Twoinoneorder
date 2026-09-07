@@ -23,6 +23,20 @@ export type PosRole = "cashier" | "manager" | "kitchen" | "waiter";
 export const PIN_MIN = 4;
 export const PIN_MAX = 6;
 
+/**
+ * How long a ticket may take before it counts as late.
+ *
+ * Not a target the kitchen is judged against — it is the point at which a
+ * customer standing at the counter starts wondering, which is the moment
+ * somebody should look at the ticket again.
+ *
+ * Shared so the red clock on the orders board and the report that lists what
+ * went over cannot drift apart. A branch reading "12 orders were late" wants
+ * those to be exactly the twelve whose clocks it watched turn red.
+ */
+export const LATE_AFTER_MINUTES = 15;
+export const LATE_AFTER_MS = LATE_AFTER_MINUTES * 60_000;
+
 export interface PosStaff {
   id: string;
   staff_id: string;

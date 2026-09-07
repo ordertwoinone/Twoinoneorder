@@ -9,6 +9,7 @@ import PosShell from "@/components/pos/PosShell";
 import SalesPerformance from "./SalesPerformance";
 import ShiftCloses from "./ShiftCloses";
 import StaffShiftCloses from "./StaffShiftCloses";
+import PrepTimes from "./PrepTimes";
 
 /**
  * What the branch has been taking.
@@ -25,7 +26,7 @@ import StaffShiftCloses from "./StaffShiftCloses";
  * other has a filter bar.
  */
 
-type Tab = "overview" | "sales" | "closes" | "staff";
+type Tab = "overview" | "sales" | "closes" | "staff" | "prep";
 
 interface Report {
   days: number;
@@ -111,6 +112,9 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
              "how has this cashier's drawer behaved" are different questions
              wanting different shapes, and one table cannot be both. */
           ["staff", "By Employee"],
+          /* The board turns a ticket red at fifteen minutes and then the ticket
+             goes away. This is where that goes afterwards. */
+          ["prep", "Late Orders"],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -132,6 +136,8 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
         <ShiftCloses />
       ) : tab === "staff" ? (
         <StaffShiftCloses />
+      ) : tab === "prep" ? (
+        <PrepTimes />
       ) : (
       <div className="pos-scroll h-full p-4">
         {loading && !report ? (
