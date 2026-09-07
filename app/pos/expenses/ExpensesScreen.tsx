@@ -36,6 +36,12 @@ const num = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/** The 5% already inside a VAT-inclusive total — total x 5/105, never x 5%. */
+function vatInside(total: number): number {
+  if (total <= 0) return 0;
+  return Math.round(((total * 5) / 105) * 100) / 100;
+}
+
 export default function ExpensesScreen({
   staff,
   openingFloat,
@@ -56,8 +62,12 @@ export default function ExpensesScreen({
     supplier: "",
     reference: "",
     amount: "",
+    /* Optional, and blank is not zero: "nobody recorded it" is a different fact
+       from "the supplier charged none", and only the second is a claim about
+       the money. Whatever the invoice says goes here — deriving 5% would be
+       wrong on zero-rated goods, a mixed basket, or an unregistered supplier. */
+    vat_amount: "",
     payment_method: "cash" as (typeof METHODS)[number],
-    vat_included: false,
     note: "",
   });
 
@@ -89,7 +99,12 @@ export default function ExpensesScreen({
     const res = await fetch("/api/pos/expenses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, amount: Number(form.amount) || 0 }),
+      body: JSON.stringify({
+        ...form,
+        amount: Number(form.amount) || 0,
+        // Blank travels as blank, so the server can store null rather than 0.
+        vat_amount: form.vat_amount.trim(),
+      }),
     });
     const body = await res.json().catch(() => null);
     setBusy(false);
@@ -97,7 +112,10 @@ export default function ExpensesScreen({
       setError(body?.error || "That did not save.");
       return;
     }
-    setForm((f) => ({ ...f, description: "", supplier: "", reference: "", amount: "", note: "" }));
+    setForm((f) => ({
+      ...f,
+      description: "", supplier: "", reference: "", amount: "", vat_amount: "", note: "",
+    }));
     load();
   }
 
@@ -107,6 +125,12 @@ export default function ExpensesScreen({
   }
 
   const needsManager = (Number(form.amount) || 0) >= managerOver && !can(staff, "approve_expense");
+
+  /* Caught here as well as capped on the server. A cashier who has typed the
+     invoice total into the VAT box wants telling, not silently correcting. */
+  const vatOverAmount =
+    form.vat_amount.trim() !== "" &&
+    (Number(form.vat_amount) || 0) > (Number(form.amount) || 0);
 
   return (
     <PosShell
@@ -215,16 +239,58 @@ export default function ExpensesScreen({
               </Field>
             </div>
 
-            <Field label="Amount (AED)">
-              <input
-                value={form.amount}
-                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value.replace(/[^0-9.]/g, "") }))}
-                inputMode="decimal"
-                placeholder="0.00"
-                className="w-full rounded-lg px-3 text-xl font-black focus:outline-none"
-                style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 48 }}
-              />
-            </Field>
+            <div className="grid gap-2" style={{ gridTemplateColumns: "1fr 1fr" }}>
+              <Field label="Amount (AED)">
+                <input
+                  value={form.amount}
+                  onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value.replace(/[^0-9.]/g, "") }))}
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  className="w-full rounded-lg px-3 text-xl font-black focus:outline-none"
+                  style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 48 }}
+                />
+              </Field>
+
+              {/* Optional. What the invoice states, not what a formula works
+                  out — zero-rated goods, a mixed basket and an unregistered
+                  supplier all put the real figure somewhere other than 5%. The
+                  button beside it fills in the usual case for the common one. */}
+              <Field label="VAT (optional)">
+                <div className="flex gap-1.5">
+                  <input
+                    value={form.vat_amount}
+                    onChange={(e) => setForm((f) => ({ ...f, vat_amount: e.target.value.replace(/[^0-9.]/g, "") }))}
+                    inputMode="decimal"
+                    placeholder="—"
+                    className="w-full min-w-0 rounded-lg px-3 text-xl font-black focus:outline-none"
+                    style={{ border: `1px solid ${POS.line}`, color: POS.ink, height: 48 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        // The VAT already inside the amount, never added on top:
+                        // a supplier's total in the UAE is quoted inclusive.
+                        vat_amount: vatInside(Number(f.amount) || 0).toFixed(2),
+                      }))
+                    }
+                    disabled={!(Number(form.amount) > 0)}
+                    title="Fill in 5% of the amount, VAT-inclusive"
+                    className="shrink-0 rounded-lg px-2.5 text-[12px] font-bold disabled:opacity-40"
+                    style={{ border: `1px solid ${POS.line}`, color: POS.action, height: 48 }}
+                  >
+                    5%
+                  </button>
+                </div>
+              </Field>
+            </div>
+
+            {vatOverAmount && (
+              <p className="text-[12px] font-semibold" style={{ color: POS.bad }}>
+                VAT cannot be more than the amount. It is the tax inside the total, not on top of it.
+              </p>
+            )}
 
             <Field label="Paid with">
               <div className="grid grid-cols-3 gap-2">
@@ -275,7 +341,7 @@ export default function ExpensesScreen({
 
             <button
               onClick={save}
-              disabled={busy || !form.category || !(Number(form.amount) > 0)}
+              disabled={busy || !form.category || !(Number(form.amount) > 0) || vatOverAmount}
               className="w-full rounded-xl text-[14px] font-bold text-white disabled:opacity-40"
               style={{ background: POS.action, height: 48 }}
             >

@@ -84,27 +84,58 @@ export async function POST(request: Request) {
 
   const method = METHODS.includes(body?.payment_method) ? body.payment_method : "cash";
 
-  const { data, error } = await supabaseAdminLive
-    .from("pos_expenses")
-    .insert([
-      {
-        shift_id: shift.id,
-        staff_uuid: staff.id,
-        category: String(body.category).trim().slice(0, 80),
-        description: String(body?.description ?? "").trim().slice(0, 300),
-        supplier: String(body?.supplier ?? "").trim().slice(0, 160),
-        reference: String(body?.reference ?? "").trim().slice(0, 80),
-        amount,
-        payment_method: method,
-        vat_included: Boolean(body?.vat_included),
-        receipt_url: String(body?.receipt_url ?? "").trim().slice(0, 500),
-        note: String(body?.note ?? "").trim().slice(0, 500),
-        // Only recorded as approved by someone who could have approved it.
-        approved_by: can(staff, "approve_expense") ? staff.id : null,
-      },
-    ])
-    .select()
-    .single();
+  /*
+   * The VAT the invoice states, when somebody typed it.
+   *
+   * Left blank is not zero: "nobody recorded it" and "the supplier charged
+   * none" are different facts, and only the second one is a claim about the
+   * money. Blank stays null.
+   *
+   * Capped at the amount, because VAT inside a total cannot exceed the total —
+   * a slip of the keyboard there would otherwise put a reclaim on the books
+   * larger than the purchase it came from.
+   */
+  const rawVat = body?.vat_amount;
+  const vatGiven = rawVat !== undefined && rawVat !== null && String(rawVat).trim() !== "";
+  const vatAmount = vatGiven
+    ? Math.min(amount, Math.max(0, Math.round((Number(rawVat) || 0) * 100) / 100))
+    : null;
+
+  const row = {
+    shift_id: shift.id,
+    staff_uuid: staff.id,
+    category: String(body.category).trim().slice(0, 80),
+    description: String(body?.description ?? "").trim().slice(0, 300),
+    supplier: String(body?.supplier ?? "").trim().slice(0, 160),
+    reference: String(body?.reference ?? "").trim().slice(0, 80),
+    amount,
+    payment_method: method,
+    /* Typing a VAT figure is itself the statement that the amount carries VAT,
+       so the old flag follows the new field rather than needing its own tick —
+       there was never a control for it, which is why every row written before
+       today says false. */
+    vat_included: vatGiven ? true : Boolean(body?.vat_included),
+    vat_amount: vatAmount,
+    receipt_url: String(body?.receipt_url ?? "").trim().slice(0, 500),
+    note: String(body?.note ?? "").trim().slice(0, 500),
+    // Only recorded as approved by someone who could have approved it.
+    approved_by: can(staff, "approve_expense") ? staff.id : null,
+  };
+
+  const write = (fields: Record<string, unknown>) =>
+    supabaseAdminLive.from("pos_expenses").insert([fields]).select().single();
+
+  let { data, error } = await write(row);
+
+  /* vat_amount arrives with supabase/pos_expense_vat.sql. Between deploying
+     this and running that file the insert fails on the unknown column, and
+     losing a cashier's expense over a field they left blank is worse than
+     recording it without the figure. */
+  if (error && String(error.message ?? "").includes("vat_amount")) {
+    const rest: Record<string, unknown> = { ...row };
+    delete rest.vat_amount;
+    ({ data, error } = await write(rest));
+  }
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });

@@ -31,6 +31,9 @@ interface Expense {
   amount: number;
   method: string;
   vatIncluded: boolean;
+  vat: number;
+  /** Nobody typed a figure; 5/105 was assumed. */
+  vatAssumed: boolean;
   approvedBy: string;
   receiptUrl: string;
   note: string;
@@ -46,6 +49,7 @@ interface Report {
     card: number;
     transfer: number;
     vat: number;
+    vatEstimated: number;
     unapproved: number;
   };
   byCategory: { category: string; count: number; total: number }[];
@@ -108,15 +112,15 @@ export default function Expenses() {
   function exportCsv() {
     const head = [
       "Date", "Time", "Shift", "Recorded by", "Category", "Description", "Supplier",
-      "Reference", "Method", "Amount", "VAT included", "Approved by", "Receipt", "Note",
+      "Reference", "Method", "Amount", "VAT", "VAT assumed", "Approved by", "Receipt", "Note",
     ];
     const quote = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const body = shown.map((e) => [
       e.businessDate, clock(e.spentAt), quote(e.shiftLabel), quote(e.staff),
       quote(e.category), quote(e.description), quote(e.supplier), quote(e.reference),
       METHOD_LABEL[e.method] ?? e.method, e.amount.toFixed(2),
-      e.vatIncluded ? "yes" : "no", quote(e.approvedBy), e.receiptUrl ? "yes" : "no",
-      quote(e.note),
+      e.vat.toFixed(2), e.vatAssumed ? "yes" : "no",
+      quote(e.approvedBy), e.receiptUrl ? "yes" : "no", quote(e.note),
     ]);
     const csv = [head.join(","), ...body.map((r) => r.join(","))].join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -225,8 +229,14 @@ export default function Expenses() {
             <Tile
               label="VAT included"
               value={aed(t.vat)}
-              hint={t.unapproved > 0 ? `${t.unapproved} unapproved` : "all approved"}
-              tone={t.unapproved > 0 ? POS.warn : undefined}
+              hint={
+                t.vatEstimated > 0
+                  ? `${t.vatEstimated} assumed at 5%`
+                  : t.unapproved > 0
+                    ? `${t.unapproved} unapproved`
+                    : "as stated on the invoices"
+              }
+              tone={t.vatEstimated > 0 ? POS.warn : undefined}
             />
           </section>
 
@@ -338,8 +348,15 @@ export default function Expenses() {
                           <span className="text-[13px] font-black tabular-nums" style={{ color: POS.ink }}>
                             {aed(e.amount)}
                           </span>
-                          {e.vatIncluded && (
-                            <span className="block text-[10px]" style={{ color: POS.inkSoft }}>incl. VAT</span>
+                          {/* What is reclaimable on this line. Flagged when it
+                              was assumed rather than typed off an invoice. */}
+                          {e.vat > 0 && (
+                            <span
+                              className="block text-[10px]"
+                              style={{ color: e.vatAssumed ? POS.warn : POS.inkSoft }}
+                            >
+                              VAT {aed(e.vat)}{e.vatAssumed ? " (assumed)" : ""}
+                            </span>
                           )}
                           {e.receiptUrl && (
                             <a

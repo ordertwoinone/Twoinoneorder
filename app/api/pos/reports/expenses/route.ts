@@ -37,7 +37,7 @@ function asDate(value: string | null): string | null {
    500s is worse than one missing a receipt link. */
 const BASE =
   "id, shift_id, staff_uuid, category, description, amount, payment_method, approved_by, spent_at";
-const EXTRAS = "supplier, reference, vat_included, receipt_url, note";
+const EXTRAS = "supplier, reference, vat_included, vat_amount, receipt_url, note";
 
 export async function GET(request: Request) {
   const staff = await currentStaff();
@@ -109,10 +109,15 @@ export async function GET(request: Request) {
   const byCategory = new Map<string, { category: string; count: number; total: number }>();
   const byMethod = { cash: 0, card: 0, transfer: 0 };
   let total = 0;
-  /* The VAT already inside the ones marked as carrying it. Not added on top —
-     a supplier's invoice in the UAE is quoted inclusive, the same way a menu
-     price is, so this only names the portion that is reclaimable. */
+  /* The VAT inside the amounts, never on top — a supplier's invoice in the UAE
+     is quoted inclusive, the same way a menu price is, so this only names the
+     portion that is reclaimable.
+
+     What the invoice said wins over what the formula works out. 5/105 is only
+     assumed for a row flagged as carrying VAT from before there was anywhere to
+     type the figure, and for those it is an estimate rather than a claim. */
   let vat = 0;
+  let vatEstimated = 0;
 
   const expenses = rows.map((row) => {
     const amount = num(row.amount);
@@ -120,9 +125,16 @@ export async function GET(request: Request) {
     const category = String(row.category ?? "").trim() || "Uncategorised";
     const shift = row.shift_id ? shifts.get(String(row.shift_id)) : undefined;
     const vatIncluded = row.vat_included === true;
+    const statedVat =
+      row.vat_amount === null || row.vat_amount === undefined ? null : num(row.vat_amount);
+    /* Stated, or assumed, or none at all. Capped at the amount for the same
+       reason the write is: VAT inside a total cannot exceed the total. */
+    const rowVat =
+      statedVat !== null ? Math.min(amount, statedVat) : vatIncluded ? vatIncludedIn(amount) : 0;
 
     total += amount;
-    if (vatIncluded) vat += vatIncludedIn(amount);
+    vat += rowVat;
+    if (statedVat === null && vatIncluded) vatEstimated += 1;
     if (method === "card") byMethod.card += amount;
     else if (method === "transfer") byMethod.transfer += amount;
     else byMethod.cash += amount;
@@ -147,6 +159,10 @@ export async function GET(request: Request) {
       amount,
       method,
       vatIncluded,
+      vat: roundMoney(rowVat),
+      /* True when nobody typed a figure and 5/105 was assumed. Worth saying on
+         a page somebody reclaims tax from. */
+      vatAssumed: statedVat === null && vatIncluded,
       /* Blank means nobody who could approve it was signed in — which is only
          possible below the manager threshold, and is worth being able to see. */
       approvedBy: row.approved_by ? names.get(String(row.approved_by)) ?? "" : "",
@@ -168,6 +184,8 @@ export async function GET(request: Request) {
       card: roundMoney(byMethod.card),
       transfer: roundMoney(byMethod.transfer),
       vat: roundMoney(vat),
+      /* How much of that figure nobody actually typed. */
+      vatEstimated,
       unapproved: expenses.filter((e) => !e.approvedBy).length,
     },
     byCategory: Array.from(byCategory.values())
