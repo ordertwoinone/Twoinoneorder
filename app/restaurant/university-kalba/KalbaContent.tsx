@@ -106,6 +106,21 @@ export interface KalbaPopularItem {
   addon_groups?: KalbaAddonGroup[] | null;
   /** This dish's own offer, as a percentage. 0 or absent means none. */
   discount_percent?: number | string | null;
+  /* Switched off in POS → Item Availability when the kitchen runs out.
+     Absent on a database that has not run supabase/pos_item_availability.sql,
+     which reads as available — the right way round for a missing column. */
+  is_available?: boolean | null;
+}
+
+/**
+ * A dish the kitchen has run out of.
+ *
+ * Shown rather than hidden, unlike the kiosk: someone who came looking for it
+ * needs to find it and be told it is coming back, not be left wondering whether
+ * they misremembered the menu. The card is drawn faded and refuses to be added.
+ */
+export function isSoldOut(item: { is_available?: boolean | null }): boolean {
+  return item.is_available === false;
 }
 
 export interface KalbaStudy {
@@ -955,6 +970,10 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
     if (qty === 0) setCartAddons((prev) => ({ ...prev, [id]: [] }));
   }
 
+  /* The dishes the kitchen has run out of, by id. Both the card and handleAdd
+     check it, so a card rendered before the last poll cannot slip one in. */
+  const soldOutIds = new Set(popular.filter(isSoldOut).map((p) => p.id));
+
   const allCartItems: CartItem[] = [
     ...popular.map((p) => {
       const list = parseFloat(p.price) || 0;
@@ -993,6 +1012,8 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
    * its sheet, because a required question cannot be answered from a card.
    */
   function handleAdd(itemId: string) {
+    // The card is already drawn refusing the tap; this is the same bolt, inside.
+    if (soldOutIds.has(itemId)) return;
     const item = allCartItems.find((i) => i.id === itemId);
     if (!item || item.groups.length === 0) {
       handleQtyChange(itemId, (cartQty[itemId] ?? 0) + 1);
@@ -1195,6 +1216,7 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                   const listPrice = parseFloat(p.price) || 0;
                   const offer = toPercent(p.discount_percent);
                   const netPrice = discountedPrice(listPrice, offer);
+                  const soldOut = isSoldOut(p);
                   return (
                     <div key={p.id}
                       className="bg-white rounded-2xl overflow-hidden border border-gray-100 block group transition-shadow hover:shadow-md"
@@ -1222,10 +1244,25 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                             </span>
                           )}
                         </span>
-                        {offer > 0 && (
+                        {/* A percentage off something nobody can order is noise,
+                            and it sits exactly where the ribbon goes. */}
+                        {offer > 0 && !soldOut && (
                           <span className="absolute bottom-2 start-2 z-10 text-[10px] sm:text-[11px] font-extrabold px-2 py-1 rounded-lg text-white bg-green-600 shadow-md">
                             {t("kalba.cart.percentOff", { value: offer })}
                           </span>
+                        )}
+                        {/* Run out, per POS → Item Availability. Faded and
+                            labelled rather than hidden: someone who came looking
+                            for it needs to find it and be told it is coming
+                            back. The kiosk hides them instead — there is nobody
+                            standing at it to say when. */}
+                        {soldOut && (
+                          <>
+                            <span className="absolute inset-0 z-[5] bg-white/60" />
+                            <span className="absolute inset-x-0 bottom-0 z-[6] py-1 text-center text-[9.5px] sm:text-[10.5px] font-extrabold uppercase tracking-wide text-white bg-gray-500/95">
+                              {t("common.availableSoon")}
+                            </span>
+                          </>
                         )}
                         <FavoriteButton
                           itemKey={`menu:${p.id}`}
@@ -1271,7 +1308,18 @@ export default function KalbaContent({ hero, banner, categories, popular, study,
                         {/* A dish with questions keeps one button, whatever is in
                             the cart: the stepper would add a second helping with
                             the first one's answers, silently. */}
-                        {qty === 0 || (p.addon_groups ?? []).length > 0 ? (
+                        {soldOut ? (
+                          <button
+                            disabled
+                            aria-disabled="true"
+                            className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed"
+                          >
+                            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                            <span className="text-[10px] sm:text-xs font-semibold">
+                              {t("common.availableSoon")}
+                            </span>
+                          </button>
+                        ) : qty === 0 || (p.addon_groups ?? []).length > 0 ? (
                           <button
                             onClick={() => handleAdd(p.id)}
                             className="w-full flex items-center justify-center gap-1 py-1 sm:py-1.5 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 active:bg-orange-200 transition-colors"

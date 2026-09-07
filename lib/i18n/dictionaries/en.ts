@@ -25,6 +25,9 @@ const en = {
     bookTable: "Book Table",
     add: "Add",
     addToCart: "Add to Cart",
+    /** A dish the kitchen has run out of. Deliberately not "Out of stock":
+        it says the thing is coming back, which is what is actually true. */
+    availableSoon: "Available Soon",
     apply: "Apply",
     remove: "Remove",
     close: "Close",

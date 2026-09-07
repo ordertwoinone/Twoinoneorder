@@ -21,6 +21,7 @@ const ar: Dictionary = {
     bookTable: "احجز طاولة",
     add: "إضافة",
     addToCart: "أضف إلى السلة",
+    availableSoon: "متوفر قريباً",
     apply: "تطبيق",
     remove: "إزالة",
     close: "إغلاق",
