@@ -163,22 +163,33 @@ export default function ReviewPanel({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-[1vh] mt-[1vh]">
+                    {/*
+                      Wrapping, and nothing in here allowed to shrink.
+
+                      Three controls — the stepper, the note and the bin — do
+                      not fit across this panel beside a photo and a price, and
+                      a plain flex row solved that by crushing the widest of
+                      them: "Add a note" came out three letters wide, stacked
+                      over three lines, with the icon squashed to a smudge.
+                      Better to let it drop to a second line at full size than
+                      to have a button nobody can read or reliably hit.
+                    */}
+                    <div className="flex flex-wrap items-center gap-[1vh] mt-[1vh]">
                       {/* A dish with questions is re-opened rather than stepped:
                           a second helping would otherwise silently inherit the
                           first one's answers. */}
                       {line.groups.length > 0 ? (
                         <button
                           onClick={() => onEdit(line.item)}
-                          className="flex items-center gap-[0.6vh] rounded-full px-[1.4vh] h-[3.6vh] text-[1.3vh] font-bold active:scale-95 transition-transform"
+                          className="shrink-0 whitespace-nowrap flex items-center gap-[0.6vh] rounded-full px-[1.4vh] h-[3.6vh] text-[1.3vh] font-bold active:scale-95 transition-transform"
                           style={{ background: KIOSK.goldSoft, color: KIOSK.onGold }}
                         >
-                          <Pencil className="w-[1.4vh] h-[1.4vh]" />
+                          <Pencil className="w-[1.4vh] h-[1.4vh] shrink-0" />
                           {t("review.change")} · {line.qty}
                         </button>
                       ) : (
                         <div
-                          className="flex items-center gap-[1.2vh] rounded-full px-[1vh]"
+                          className="shrink-0 flex items-center gap-[1.2vh] rounded-full px-[1vh]"
                           style={{ border: `0.16vh solid ${KIOSK.line}`, height: "3.8vh" }}
                         >
                           <button
@@ -212,21 +223,21 @@ export default function ReviewPanel({
                       <button
                         onClick={() => onNote(line.item)}
                         aria-label={`Add a note to ${line.item.name}`}
-                        className="flex items-center gap-[0.6vh] rounded-full px-[1.4vh] h-[3.6vh] text-[1.3vh] font-bold active:scale-95 transition-transform"
+                        className="shrink-0 whitespace-nowrap flex items-center gap-[0.6vh] rounded-full px-[1.4vh] h-[3.6vh] text-[1.3vh] font-bold active:scale-95 transition-transform"
                         style={
                           note
                             ? { background: KIOSK.gold, color: KIOSK.onGold }
                             : { background: "#F4F4F4", color: KIOSK.ink }
                         }
                       >
-                        <MessageSquarePlus className="w-[1.5vh] h-[1.5vh]" />
+                        <MessageSquarePlus className="w-[1.5vh] h-[1.5vh] shrink-0" />
                         {note ? t("review.editNote") : t("review.addNote")}
                       </button>
 
                       <button
                         onClick={() => onRemove(line.item)}
                         aria-label={`Remove ${line.item.name}`}
-                        className="rounded-full w-[3.6vh] h-[3.6vh] flex items-center justify-center active:scale-90 transition-transform"
+                        className="shrink-0 rounded-full w-[3.6vh] h-[3.6vh] flex items-center justify-center active:scale-90 transition-transform"
                         style={{ background: "#FEF2F2", color: KIOSK.bad }}
                       >
                         <Trash2 className="w-[1.6vh] h-[1.6vh]" />
