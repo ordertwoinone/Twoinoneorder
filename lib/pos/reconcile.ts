@@ -263,15 +263,37 @@ export function whatsappSummary(input: {
     `${input.shiftLabel} shift · ${input.staffName}`,
     `${time(input.openedAt)} – ${time(input.closedAt)}`,
     "",
+    /*
+     * Gross, then everything that comes off it, then net — and the minus signs
+     * have to mean it.
+     *
+     * The deductions are exactly the figures that are inside gross: discounts,
+     * refunds, and the three kinds of food that went out without money coming
+     * back. Take those off gross and you have net, precisely
+     * (shiftTakings builds it that way).
+     *
+     * Cancelled orders are none of those. A voided order never entered gross at
+     * all, so it was printed here with a minus in front of a number nothing had
+     * subtracted — and a manager checking the arithmetic came up short by
+     * exactly the cancellations every time. It is worth knowing and it is not a
+     * deduction, so it sits below the total as what it is.
+     *
+     * "Still to pay" was missing outright, which broke the same sum on any
+     * shift holding an unpaid kiosk order.
+     */
     `Orders: ${t.orderCount}`,
     `Gross sales: ${money(t.grossSales)}`,
     t.discountTotal > 0 ? `Discounts: -${money(t.discountTotal)}` : "",
     t.refundTotal > 0 ? `Refunded payments: -${money(t.refundTotal)}` : "",
-    t.cancelledTotal > 0 ? `Cancelled orders: -${money(t.cancelledTotal)}` : "",
-    t.staffFoodTotal > 0 ? `Staff food (not paid): ${money(t.staffFoodTotal)}` : "",
-    t.creditTotal > 0 ? `On credit: ${money(t.creditTotal)}` : "",
+    t.staffFoodTotal > 0 ? `Staff food (not paid): -${money(t.staffFoodTotal)}` : "",
+    t.creditTotal > 0 ? `On credit: -${money(t.creditTotal)}` : "",
+    t.pendingTotal > 0 ? `Still to pay: -${money(t.pendingTotal)}` : "",
     `*Net sales: ${money(t.netSales)}*`,
     `VAT included: ${money(t.vatTotal)}`,
+    // Below the line, because it was never above it.
+    t.cancelledTotal > 0
+      ? `Cancelled orders: ${money(t.cancelledTotal)} (${t.cancelledCount}, refunded in full)`
+      : "",
     "",
     `Cash: ${money(t.cashSales)}`,
     `Card: ${money(t.cardSales)}`,

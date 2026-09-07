@@ -46,6 +46,70 @@ export function businessDateFor(at: Date = new Date()): string {
   return new Date(asUtc).toISOString().slice(0, 10);
 }
 
+/**
+ * Moving a business date by whole days.
+ *
+ * Date-only arithmetic through UTC, never through the local clock: adding a day
+ * to a Date built at local midnight and then calling toISOString() is the bug
+ * this file exists to prevent, and it is silent in exactly the timezones we run
+ * in — see businessDayStart below.
+ */
+export function addBusinessDays(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  if (!y || !m || !d) return date;
+  return new Date(Date.UTC(y, m - 1, d) + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** The branch's offset from UTC at an instant, in milliseconds. */
+function branchOffsetMs(at: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: BRANCH_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(at);
+
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  const asIfUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour") % 24,
+    get("minute"),
+    get("second"),
+  );
+  return asIfUtc - at.getTime();
+}
+
+/**
+ * The instant a trading day begins — 5am on that date, on the branch's clock.
+ *
+ * Needed by anything that filters orders by `created_at`, which is an instant,
+ * against a business date, which is not. Doing that with a bare
+ * `${date}T00:00:00` string means midnight UTC — 4am in Dubai — so a report for
+ * a day silently covered four hours of the day before and lost four of its own.
+ *
+ * The offset is read at the boundary itself rather than assumed. Dubai has
+ * never observed daylight saving, so one correction is exact; a zone that did
+ * would need a second pass on the corrected instant.
+ */
+export function businessDayStart(date: string): Date {
+  const [y, m, d] = date.split("-").map(Number);
+  if (!y || !m || !d) return new Date(NaN);
+  // Start by pretending the branch is on UTC, then take the real offset off.
+  const guess = Date.UTC(y, m - 1, d, DAY_ROLLOVER_HOUR);
+  return new Date(guess - branchOffsetMs(new Date(guess)));
+}
+
+/** The half-open window [start, end) of instants belonging to a date range. */
+export function businessDayRange(from: string, to: string): { start: Date; end: Date } {
+  return { start: businessDayStart(from), end: businessDayStart(addBusinessDays(to, 1)) };
+}
+
 /** "Wed 3 Sep 2026", for a heading. */
 export function businessDateLabel(date: string): string {
   const [y, m, d] = date.split("-").map(Number);
@@ -177,14 +241,18 @@ export function dayReport(input: {
     "",
     `Orders: ${t.orderCount}`,
     `Gross sales: ${money(t.grossSales)}`,
+    /* The deductions are the figures gross actually contains — see the same
+       block in lib/pos/reconcile.ts. A cancelled order was never in gross, so
+       subtracting it here left the day's arithmetic short by the day's
+       cancellations; it is reported below the total instead. */
     t.discountTotal > 0 ? `Discounts: -${money(t.discountTotal)}` : "",
     t.refundTotal > 0 ? `Refunded payments: -${money(t.refundTotal)}` : "",
-    t.cancelledTotal > 0 ? `Cancelled orders: -${money(t.cancelledTotal)}` : "",
-    t.staffFoodTotal > 0 ? `Staff food (not paid): ${money(t.staffFoodTotal)}` : "",
-    t.creditTotal > 0 ? `On credit: ${money(t.creditTotal)}` : "",
-    t.pendingTotal > 0 ? `Still to pay: ${money(t.pendingTotal)}` : "",
+    t.staffFoodTotal > 0 ? `Staff food (not paid): -${money(t.staffFoodTotal)}` : "",
+    t.creditTotal > 0 ? `On credit: -${money(t.creditTotal)}` : "",
+    t.pendingTotal > 0 ? `Still to pay: -${money(t.pendingTotal)}` : "",
     `*Net sales: ${money(t.netSales)}*`,
     `VAT included: ${money(t.vatTotal)}`,
+    t.cancelledTotal > 0 ? `Cancelled orders: ${money(t.cancelledTotal)} (refunded in full)` : "",
     "",
     `Cash: ${money(t.cashSales)}`,
     `Card: ${money(t.cardSales)}`,

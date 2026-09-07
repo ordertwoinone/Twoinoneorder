@@ -5,6 +5,7 @@ import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { roundMoney } from "@/lib/kalba/pricing";
 import { currentStaff } from "@/lib/pos/auth";
 import { isPaid } from "@/lib/pos/amend";
+import { addBusinessDays, businessDateFor, businessDayStart } from "@/lib/pos/business-day";
 import { deviceLabel, type KioskDevice } from "@/lib/kiosk/types";
 import { TRACKING_STORES } from "@/lib/order-tracking";
 
@@ -31,10 +32,15 @@ export async function GET(request: Request) {
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   const days = Math.min(90, Math.max(1, Number(new URL(request.url).searchParams.get("days")) || 7));
-  const since = new Date();
-  since.setHours(0, 0, 0, 0);
-  since.setDate(since.getDate() - (days - 1));
-  const sinceIso = since.toISOString();
+
+  /* Trading days, on the branch's clock. setHours(0,0,0,0) took midnight in
+     whatever timezone the server happened to boot in — UTC in production, which
+     is 4am in Dubai — so "today" began four hours into the branch's morning and
+     ran four hours past its night. The rest of the till has always counted in
+     business days; this is the same 5am boundary. */
+  const sinceIso = businessDayStart(
+    addBusinessDays(businessDateFor(), -(days - 1)),
+  ).toISOString();
 
   const [ordersRes, websiteRes, devicesRes] = await Promise.all([
     supabaseAdminLive
@@ -125,7 +131,7 @@ export async function GET(request: Request) {
     discounts += num(row.discount_total);
     refunds += num(row.refunded_total);
 
-    addDay(String(row.created_at).slice(0, 10), kept);
+    addDay(businessDateFor(new Date(String(row.created_at))), kept);
     byPayment[method === "cash" || method === "card" ? method : "online"] += kept;
 
     if (String(row.type) === "kiosk") {
@@ -164,7 +170,8 @@ export async function GET(request: Request) {
     // Settled on the site, so it sits with the other card-not-present money.
     byPayment.online += amount;
 
-    addDay(String(row.order_created_at ?? row.received_at ?? "").slice(0, 10), amount);
+    const placedAt = String(row.order_created_at ?? row.received_at ?? "");
+    addDay(placedAt ? businessDateFor(new Date(placedAt)) : "", amount);
 
     const label = storeName(String(row.store_alias ?? ""), String(row.store_name ?? ""));
     addSource(`web:${label}`, `Website · ${label}`, amount);

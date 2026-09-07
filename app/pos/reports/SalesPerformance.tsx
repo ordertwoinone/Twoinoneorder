@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { POS } from "@/lib/pos/theme";
 import { aed } from "@/lib/pos/cart";
+import { addBusinessDays, businessDateFor } from "@/lib/pos/business-day";
 
 /**
  * Sales Performance.
@@ -83,19 +84,25 @@ const CONTROL = { height: 48, borderColor: POS.line, color: POS.ink } as const;
 const SELECT =
   "rounded-xl border bg-white px-3.5 text-[14.5px] font-semibold focus:outline-none";
 
-/** yyyy-mm-dd for a date this many days back, today included. */
+/**
+ * yyyy-mm-dd for a trading day this many days back, today included.
+ *
+ * Both of these used to build a Date at *local* midnight and then call
+ * toISOString(), which converts to UTC — and local midnight in Dubai is 8pm the
+ * previous day in UTC. So "Today" asked the server for yesterday, every day, on
+ * every tablet in the branch. A manager looking at a cashier who had taken
+ * fifty-nine orders since breakfast was shown the two she rang up the night
+ * before.
+ *
+ * businessDateFor is the branch's own clock and the branch's own 5am rollover —
+ * the same day the shift close and the day close are keyed on.
+ */
 function daysAgo(n: number): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
+  return addBusinessDays(businessDateFor(), -n);
 }
 
 function monthStart(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
+  return `${businessDateFor().slice(0, 8)}01`;
 }
 
 function pretty(date: string): string {

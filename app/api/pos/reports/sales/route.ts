@@ -6,6 +6,7 @@ import { roundMoney } from "@/lib/kalba/pricing";
 import { currentStaff } from "@/lib/pos/auth";
 import { can } from "@/lib/pos/permissions";
 import { isPaid } from "@/lib/pos/amend";
+import { businessDateFor, businessDayRange } from "@/lib/pos/business-day";
 
 /**
  * The sales performance report: who sold what, over which days.
@@ -47,16 +48,25 @@ export async function GET(request: Request) {
 
   const params = new URL(request.url).searchParams;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const defaultFrom = today.toISOString().slice(0, 10);
+  const defaultFrom = businessDateFor();
 
   const from = asDate(params.get("from")) ?? defaultFrom;
   const to = asDate(params.get("to")) ?? defaultFrom;
-  /* Inclusive of the "to" day. A manager asking for 1–5 September means the
-     whole of the fifth, not everything before midnight opening it. */
-  const toExclusive = new Date(`${to}T00:00:00`);
-  toExclusive.setDate(toExclusive.getDate() + 1);
+
+  /*
+   * The window, in trading days rather than calendar days.
+   *
+   * It used to be `${from}T00:00:00` to the next midnight, which is three
+   * separate mistakes stacked: a bare timestamp is read as UTC, UTC midnight is
+   * 4am in Dubai, and the branch's own day turns over at 5am anyway. A report
+   * for a day covered the five hours before it and lost its own last five —
+   * which on a branch that trades past midnight is most of an evening shift.
+   * Fifty-nine orders read back as two.
+   *
+   * businessDayRange gives the same boundaries the shift and day closes use, so
+   * a cashier's sales report and their close now describe the same hours.
+   */
+  const { start, end } = businessDayRange(from, to);
 
   const source = (params.get("source") ?? "all").toLowerCase();
   const staffFilter = params.get("staff") ?? "";
@@ -71,8 +81,8 @@ export async function GET(request: Request) {
       "id, type, status, payment_method, total_amount, discount_total, refunded_total, items, created_at, pos_staff_uuid",
     )
     .in("type", types)
-    .gte("created_at", `${from}T00:00:00`)
-    .lt("created_at", toExclusive.toISOString())
+    .gte("created_at", start.toISOString())
+    .lt("created_at", end.toISOString())
     .order("created_at", { ascending: true })
     .limit(5000);
 
@@ -130,7 +140,10 @@ export async function GET(request: Request) {
     const total = num(row.total_amount);
     const refunded = num(row.refunded_total);
     const discount = num(row.discount_total);
-    const day = String(row.created_at).slice(0, 10);
+    /* The trading day, not the UTC date on the timestamp. Slicing the ISO
+       string put an order rung up at 1am into the day before it was sold in,
+       and split one evening shift across two rows of the daily breakdown. */
+    const day = businessDateFor(new Date(String(row.created_at)));
 
     orders += 1;
     gross += total + discount;
@@ -140,18 +153,42 @@ export async function GET(request: Request) {
     const lines = (Array.isArray(row.items) ? row.items : []) as Line[];
     let dayItems = 0;
 
+    /*
+     * What this order's discount is worth to each dish on it.
+     *
+     * The discount is stored once, against the order — the lines carry no share
+     * of it. So the item table's Discounts column was never written to and its
+     * Refunds column never written to either: both were initialised to zero,
+     * carried through the arithmetic as zero, and printed as AED 0.00 on every
+     * row of every report ever run, whatever had actually been given away. Net
+     * was therefore always equal to gross, which overstated every dish by its
+     * share of the discount.
+     *
+     * Split by what each line is worth, with the last line taking the rounding
+     * remainder so the shares add back to the discount exactly rather than
+     * leaving a stray fil to turn up in a total.
+     */
+    const live = lines.filter((l) => !l.cancelled && String(l.name ?? "").trim());
+    const liveValue = live.reduce((sum, l) => sum + num(l.line_total), 0);
+    const shares = new Map<Line, number>();
+    if (discount > 0 && liveValue > 0) {
+      let handedOut = 0;
+      live.forEach((line, i) => {
+        const share =
+          i === live.length - 1
+            ? roundMoney(discount - handedOut)
+            : roundMoney((discount * num(line.line_total)) / liveValue);
+        handedOut = roundMoney(handedOut + share);
+        shares.set(line, share);
+      });
+    }
+
     for (const line of lines) {
-      // A line taken off the order was refunded; it did not sell.
-      if (line.cancelled) continue;
       const name = String(line.name ?? "").trim();
       if (!name) continue;
 
-      const qty = Math.max(0, Math.floor(num(line.qty)) || 0);
       const value = num(line.line_total);
       const category = catalogue.get(name.toLowerCase()) ?? "Uncategorised";
-
-      itemsSold += qty;
-      dayItems += qty;
 
       const entry = items.get(name) ?? {
         name,
@@ -162,13 +199,36 @@ export async function GET(request: Request) {
         discounts: 0,
         refunds: 0,
       };
+
+      /* A line taken off a paid order did not sell — but it was charged for and
+         handed back, and a dish being refunded over and over is the single most
+         useful thing this table can tell a manager. It used to be skipped
+         outright, so a dish nobody could keep down looked like a dish nobody
+         ordered. Counted into gross and straight back out as a refund, never
+         into quantity sold. */
+      if (line.cancelled) {
+        entry.gross += value;
+        entry.refunds += value;
+        items.set(name, entry);
+        continue;
+      }
+
+      const qty = Math.max(0, Math.floor(num(line.qty)) || 0);
+      const share = shares.get(line) ?? 0;
+
+      itemsSold += qty;
+      dayItems += qty;
+
       entry.qty += qty;
       entry.orders += 1;
-      entry.gross += value;
+      // Gross is what the dish was worth before the order's discount came off.
+      entry.gross += value + share;
+      entry.discounts += share;
       items.set(name, entry);
 
       const cat = byCategory.get(category) ?? { category, qty: 0, net: 0 };
       cat.qty += qty;
+      // Categories carry net, so the discount is already off.
       cat.net += value;
       byCategory.set(category, cat);
     }
@@ -184,10 +244,20 @@ export async function GET(request: Request) {
 
   const net = roundMoney(gross - discounts - refunds);
 
+  /* net = gross − discounts − refunds is a real subtraction now rather than a
+     subtraction of two zeroes: gross is the dish at menu value, discounts is
+     what came off it, refunds is what went back, and net is what the branch
+     charged and kept for it.
+
+     It is not expected to equal the net in the header, and never was. The
+     header counts whole orders, which carry a delivery charge that is nobody's
+     dish; this table counts dishes. Its own Total row is the one that adds up. */
   const itemRows = Array.from(items.values())
     .map((i) => ({
       ...i,
       gross: roundMoney(i.gross),
+      discounts: roundMoney(i.discounts),
+      refunds: roundMoney(i.refunds),
       net: roundMoney(i.gross - i.discounts - i.refunds),
     }))
     .sort((a, b) => b.net - a.net);
@@ -197,7 +267,7 @@ export async function GET(request: Request) {
      report is already the whole branch, since it would be the same query. */
   let branchNet = net;
   if (staffFilter && !restricted) {
-    branchNet = await branchTotal(from, toExclusive.toISOString(), types);
+    branchNet = await branchTotal(start.toISOString(), end.toISOString(), types);
   }
 
   const days = Array.from(byDay.values()).map((d) => ({
@@ -267,13 +337,13 @@ async function itemCategories(): Promise<Map<string, string>> {
 }
 
 /** Everything the branch took in the window, for the contribution share. */
-async function branchTotal(from: string, toExclusive: string, types: string[]): Promise<number> {
+async function branchTotal(startIso: string, endIso: string, types: string[]): Promise<number> {
   const { data } = await supabaseAdminLive
     .from("bookings")
     .select("status, payment_method, total_amount, refunded_total")
     .in("type", types)
-    .gte("created_at", `${from}T00:00:00`)
-    .lt("created_at", toExclusive)
+    .gte("created_at", startIso)
+    .lt("created_at", endIso)
     .limit(5000);
 
   let total = 0;
