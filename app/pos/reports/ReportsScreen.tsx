@@ -10,6 +10,7 @@ import SalesPerformance from "./SalesPerformance";
 import ShiftCloses from "./ShiftCloses";
 import StaffShiftCloses from "./StaffShiftCloses";
 import PrepTimes from "./PrepTimes";
+import Expenses from "./Expenses";
 
 /**
  * What the branch has been taking.
@@ -26,7 +27,7 @@ import PrepTimes from "./PrepTimes";
  * other has a filter bar.
  */
 
-type Tab = "overview" | "sales" | "closes" | "staff" | "prep";
+type Tab = "overview" | "sales" | "closes" | "staff" | "prep" | "expenses";
 
 interface Report {
   days: number;
@@ -115,6 +116,9 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
           /* The board turns a ticket red at fifteen minutes and then the ticket
              goes away. This is where that goes afterwards. */
           ["prep", "Late Orders"],
+          /* Money out. It was inside every close and itemised in none of them,
+             and the expenses screen only ever shows the shift you are on. */
+          ["expenses", "Expenses"],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -138,6 +142,8 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
         <StaffShiftCloses />
       ) : tab === "prep" ? (
         <PrepTimes />
+      ) : tab === "expenses" ? (
+        <Expenses />
       ) : (
       <div className="pos-scroll h-full p-4">
         {loading && !report ? (
