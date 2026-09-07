@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
+  Boxes,
   CalendarCheck,
   ChefHat,
   ClipboardList,
@@ -41,6 +42,7 @@ const NAV: { href: string; label: string; icon: typeof ShoppingCart; key: PosPer
   { href: "/pos/history", label: "History", icon: History, key: "orders" },
   { href: "/pos/kitchen", label: "Kitchen", icon: ChefHat, key: "kitchen" },
   { href: "/pos/availability", label: "Item Availability", icon: SlidersHorizontal, key: "availability" },
+  { href: "/pos/inventory", label: "Inventory", icon: Boxes, key: "inventory" },
   { href: "/pos/expenses", label: "Expenses", icon: Receipt, key: "expenses" },
   { href: "/pos/reports", label: "Reports", icon: BarChart3, key: "reports" },
   { href: "/pos/close", label: "Shift Close", icon: Wallet, key: "shift_close" },
