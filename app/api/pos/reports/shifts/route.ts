@@ -24,19 +24,43 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
 
-  const limit = Math.min(
-    100,
-    Math.max(1, Number(new URL(request.url).searchParams.get("limit")) || 30),
-  );
+  const params = new URL(request.url).searchParams;
 
-  const { data, error } = await supabaseAdminLive
+  /* Two callers, one query. The Shift Closes grid asks for the last N closes
+     whenever they happened; the staff report asks for a range of trading days
+     and wants all of them. A range therefore overrides the limit rather than
+     fighting it — a fortnight capped at thirty rows is a report that is quietly
+     missing its oldest week. */
+  const asDate = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const from = asDate(params.get("from"));
+  const to = asDate(params.get("to"));
+  const ranged = Boolean(from && to);
+
+  const limit = ranged
+    ? 1000
+    : Math.min(100, Math.max(1, Number(params.get("limit")) || 30));
+
+  let query = supabaseAdminLive
     .from("pos_shifts")
     .select(
-      "id, shift_label, business_date, opened_at, closed_at, opening_float, closing_cash, expected_cash, difference, net_sales, order_count, closing_note, close_photo_url, opened_by:pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id), closed_by_staff:pos_staff!pos_shifts_closed_by_fkey(name, staff_id)",
+      "id, staff_uuid, shift_label, business_date, opened_at, closed_at, opening_float, closing_cash, expected_cash, difference, net_sales, cash_sales, card_sales, online_sales, expense_total, order_count, closing_note, close_photo_url, opened_by:pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id), closed_by_staff:pos_staff!pos_shifts_closed_by_fkey(name, staff_id)",
     )
-    .eq("status", "closed")
-    .order("closed_at", { ascending: false })
-    .limit(limit);
+    .eq("status", "closed");
+
+  if (ranged) {
+    /* business_date, not closed_at. A shift belongs to the day it was worked,
+       and an evening one is routinely signed off the following morning — dating
+       these by the close would file half the evenings under the wrong day. */
+    query = query
+      .gte("business_date", from as string)
+      .lte("business_date", to as string)
+      .order("business_date", { ascending: false })
+      .order("opened_at", { ascending: true });
+  } else {
+    query = query.order("closed_at", { ascending: false });
+  }
+
+  const { data, error } = await query.limit(limit);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -51,6 +75,9 @@ export async function GET(request: Request) {
       const closed = row.closed_by_staff as { name?: string; staff_id?: string } | null;
       return {
         id: String(row.id),
+        /* The person, not the row. The staff report groups on this, and two
+           people can share a name far more easily than a uuid. */
+        staffKey: String(row.staff_uuid ?? ""),
         label: String(row.shift_label ?? ""),
         businessDate: (row.business_date as string | null) ?? "",
         openedAt: String(row.opened_at ?? ""),
@@ -64,6 +91,10 @@ export async function GET(request: Request) {
         expectedCash: num(row.expected_cash),
         difference: num(row.difference),
         netSales: num(row.net_sales),
+        cashSales: num(row.cash_sales),
+        cardSales: num(row.card_sales),
+        onlineSales: num(row.online_sales),
+        expenseTotal: num(row.expense_total),
         orderCount: Math.round(num(row.order_count)),
         note: String(row.closing_note ?? ""),
         photo: String(row.close_photo_url ?? ""),

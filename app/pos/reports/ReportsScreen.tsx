@@ -8,6 +8,7 @@ import type { PosStaff } from "@/lib/pos/constants";
 import PosShell from "@/components/pos/PosShell";
 import SalesPerformance from "./SalesPerformance";
 import ShiftCloses from "./ShiftCloses";
+import StaffShiftCloses from "./StaffShiftCloses";
 
 /**
  * What the branch has been taking.
@@ -24,7 +25,7 @@ import ShiftCloses from "./ShiftCloses";
  * other has a filter bar.
  */
 
-type Tab = "overview" | "sales" | "closes";
+type Tab = "overview" | "sales" | "closes" | "staff";
 
 interface Report {
   days: number;
@@ -105,6 +106,11 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
           ["overview", "Overview"],
           ["sales", "Sales Performance"],
           ["closes", "Shift Closes"],
+          /* The same closes read the other way round — by the person rather
+             than by the day. Its own tab because "show me the last closes" and
+             "how has this cashier's drawer behaved" are different questions
+             wanting different shapes, and one table cannot be both. */
+          ["staff", "By Employee"],
         ] as const).map(([key, label]) => (
           <button
             key={key}
@@ -124,6 +130,8 @@ export default function ReportsScreen({ staff }: { staff: PosStaff }) {
         <SalesPerformance />
       ) : tab === "closes" ? (
         <ShiftCloses />
+      ) : tab === "staff" ? (
+        <StaffShiftCloses />
       ) : (
       <div className="pos-scroll h-full p-4">
         {loading && !report ? (
