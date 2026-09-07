@@ -362,6 +362,15 @@ export default function OrdersScreen({
    * A kiosk order arrives unpaid — the customer pays when they collect. Doing
    * it here is what puts the money on the cashier's shift, so the day close
    * counts it and the drawer balances.
+   *
+   * Money only. Paying used to mark the order picked up in the same request,
+   * on the reasoning that someone paying at the counter is someone holding
+   * their food — but they are just as often paying for something the kitchen
+   * has not started, and the board then showed it collected while it was still
+   * on the rail. Sixty-three orders on a day, fifty-nine of them "Picked up",
+   * and no way to tell which ones were actually waiting.
+   *
+   * The handover is its own act, and the cashier already has a button for it.
    */
   async function takePayment(order: BoardOrder, payment: string) {
     setError("");
@@ -369,10 +378,7 @@ export default function OrdersScreen({
     const res = await fetch("/api/pos/orders", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      /* Paying at the counter is the handover: the customer is standing there
-         with the food. "completed" would have said the kitchen finished it,
-         which was already true and is not what just happened. */
-      body: JSON.stringify({ id: order.id, payment, status: "picked_up" }),
+      body: JSON.stringify({ id: order.id, payment }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
