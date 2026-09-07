@@ -157,19 +157,35 @@ export async function nextDocumentNumber(kind: "writeoff" | "waste", date: strin
 }
 
 /**
- * Everything the count screen draws, for one date.
+ * Everything the count screen draws, for a date — or for a stretch of them.
  *
  * Two queries carry it: the items, and every movement dated on or before the
- * day. The movements are split in memory rather than by four separate
- * aggregate queries — a beverage store is hundreds of rows a month, and one
- * round trip beats five over café wifi.
+ * end of the period. The movements are split in memory rather than by four
+ * separate aggregate queries — a beverage store is hundreds of rows a month,
+ * and one round trip beats five over café wifi.
+ *
+ * `from` widens the sheet into a period: opening becomes the balance before the
+ * first day, the four movement columns become the whole stretch's totals, and
+ * book closing lands on the last day. The arithmetic across the row is
+ * unchanged — opening + received − consumed − write-offs − waste — because a
+ * period is only a day with more rows folded into each column.
+ *
+ * The count itself still belongs to the end date. You count a shelf at a
+ * moment, not over a week, and the physical figure is what was on it when the
+ * period closed.
  */
 export async function buildSheet(opts: {
   date: string;
+  /** First day of the period. Absent, or after `date`, means the one day. */
+  from?: string;
   location?: string;
   enteredBy?: string;
 }): Promise<SheetPayload> {
   const { date, location = "", enteredBy = "" } = opts;
+  /* A blank or back-to-front range collapses to the single day rather than
+     erroring: the screen sends two free-text date inputs, and a half-typed one
+     should show today's sheet, not a stack trace. */
+  const from = opts.from && opts.from < date ? opts.from : date;
 
   const [itemsRes, movementsRes, count] = await Promise.all([
     supabaseAdminLive
@@ -209,39 +225,44 @@ export async function buildSheet(opts: {
 
   const movements = (movementsRes.data ?? []).map((r) => normaliseMovement(r as Record<string, unknown>));
 
-  /* Opening is the balance of everything strictly before the day; the five
-     columns are that day's own rows. One pass, so the ledger is read once
-     however many items the branch stocks. */
+  /* Opening is the balance of everything strictly before the period; the five
+     columns are the period's own rows. One pass, so the ledger is read once
+     however many items the branch stocks and however long the stretch. */
   const opening = new Map<string, number>();
-  const today = new Map<string, Record<MovementKind, number>>();
+  const inPeriod = new Map<string, Record<MovementKind, number>>();
   const blank = (): Record<MovementKind, number> => ({
     opening: 0, received: 0, consumed: 0, writeoff: 0, waste: 0, count_adjustment: 0,
   });
 
   for (const m of movements) {
-    if (m.movement_date < date) {
+    if (m.movement_date < from) {
       opening.set(m.item_id, (opening.get(m.item_id) ?? 0) + m.quantity * KIND_DIRECTION[m.kind]);
     } else {
-      const day = today.get(m.item_id) ?? blank();
-      day[m.kind] = (day[m.kind] ?? 0) + m.quantity;
-      today.set(m.item_id, day);
+      const bucket = inPeriod.get(m.item_id) ?? blank();
+      bucket[m.kind] = (bucket[m.kind] ?? 0) + m.quantity;
+      inPeriod.set(m.item_id, bucket);
     }
   }
 
   const rows: SheetRow[] = items.map((item) => {
-    const day = today.get(item.id) ?? blank();
+    const bucket = inPeriod.get(item.id) ?? blank();
     const line = counted.get(item.id);
     return {
       item,
       /* A posted count's own adjustment belongs to the day it corrected, so it
          is added into the opening of every later day but never shown as a sixth
          column on its own sheet — the physical count already says what it was.
-         Same reason an opening movement lands here rather than in a column. */
-      opening: round3((opening.get(item.id) ?? 0) + day.opening + day.count_adjustment),
-      received: round3(day.received),
-      consumed: round3(day.consumed),
-      writeoffs: round3(day.writeoff),
-      waste: round3(day.waste),
+         Same reason an opening movement lands here rather than in a column.
+
+         Over a period, an adjustment posted inside the stretch folds into
+         opening for the same reason, and that is what keeps the row's
+         arithmetic honest: opening + in − out is still exactly the balance on
+         the last day, whether the stretch is one day or thirty. */
+      opening: round3((opening.get(item.id) ?? 0) + bucket.opening + bucket.count_adjustment),
+      received: round3(bucket.received),
+      consumed: round3(bucket.consumed),
+      writeoffs: round3(bucket.writeoff),
+      waste: round3(bucket.waste),
       physical: line?.physical ?? null,
       note: line?.note ?? "",
     };
@@ -249,10 +270,14 @@ export async function buildSheet(opts: {
 
   const itemIds = new Set(items.map((i) => i.id));
   const register = movements.filter(
-    (m) => m.movement_date === date && (m.kind === "writeoff" || m.kind === "waste") && itemIds.has(m.item_id),
+    (m) =>
+      m.movement_date >= from &&
+      m.movement_date <= date &&
+      (m.kind === "writeoff" || m.kind === "waste") &&
+      itemIds.has(m.item_id),
   );
 
-  return { count, rows, register };
+  return { count, rows, register, from, to: date };
 }
 
 /**

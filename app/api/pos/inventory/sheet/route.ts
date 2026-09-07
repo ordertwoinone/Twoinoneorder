@@ -22,9 +22,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const date = safeDate(url.searchParams.get("date"));
   const location = text(url.searchParams.get("location"), 120);
+  /* Optional. Absent is the one-day sheet the screen opens on; buildSheet also
+     collapses a range that arrives back-to-front, so a half-typed date input
+     cannot produce an error page. */
+  const fromParam = url.searchParams.get("from");
+  const from = fromParam ? safeDate(fromParam) : undefined;
 
   try {
-    return NextResponse.json(await buildSheet({ date, location, enteredBy: enteredBy(staff) }));
+    return NextResponse.json(await buildSheet({ date, from, location, enteredBy: enteredBy(staff) }));
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

@@ -52,6 +52,9 @@ export default function StockCountTab({
   dirtyCount,
   busy,
   date,
+  from,
+  ranged,
+  onSingleDay,
   onEdit,
   onReset,
   onApply,
@@ -64,7 +67,13 @@ export default function StockCountTab({
   edits: Edits;
   dirtyCount: number;
   busy: boolean;
+  /** End of the period, and the day any count belongs to. */
   date: string;
+  /** First day of the period. Equal to `date` on the working one-day sheet. */
+  from: string;
+  /** More than one day: the columns are totals, so nothing here can be typed. */
+  ranged: boolean;
+  onSingleDay: () => void;
   onEdit: (itemId: string, patch: RowEdit) => void;
   onReset: () => void;
   onApply: () => void;
@@ -85,6 +94,20 @@ export default function StockCountTab({
   const [error, setError] = useState("");
 
   const posted = sheet?.count.status === "posted";
+
+  /*
+   * Nothing on this sheet can be typed into.
+   *
+   * Two different reasons with the same consequence. A posted count is history
+   * and must not move. A period is arithmetic over several days: the received
+   * column might be four deliveries across a fortnight, and a stepper that
+   * wrote one movement would have to invent a date for it and silently discard
+   * the other three. Read the stretch, then narrow to a day to work on it.
+   */
+  const locked = posted || ranged;
+
+  /** "06 Sep 2026", or "01 Sep 2026 — 07 Sep 2026" when it is a stretch. */
+  const period = ranged ? `${prettyDate(from)} — ${prettyDate(date)}` : prettyDate(date);
 
   const categories = useMemo(
     () => Array.from(new Set(rows.map((r) => r.item.category))).sort(),
@@ -201,7 +224,9 @@ export default function StockCountTab({
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${sheet?.count.reference ?? "stock-count"}.csv`;
+    link.download = ranged
+      ? `stock-count-${from}-to-${date}.csv`
+      : `${sheet?.count.reference ?? "stock-count"}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -210,7 +235,7 @@ export default function StockCountTab({
   function whatsappReport() {
     const shortages = visible.filter((r) => rowStatus(r) === "shortage");
     const lines = [
-      `*Stock Count — ${prettyDate(date)}*`,
+      `*Stock Count — ${period}*`,
       sheet?.count.reference ?? "",
       "",
       `Book closing: ${qty(totals.book)} units`,
@@ -237,7 +262,7 @@ export default function StockCountTab({
         <Stat
           label="Book closing stock"
           value={`${qty(totals.book)} units`}
-          hint="What the ledger says is left"
+          hint={ranged ? `What the ledger says is left at ${prettyDate(date)}` : "What the ledger says is left"}
           icon={<Package size={17} />}
         />
         <Stat
@@ -275,8 +300,18 @@ export default function StockCountTab({
           <Info size={16} className="mt-0.5 shrink-0" style={{ color: "#1D4ED8" }} />
           <div className="text-[12.5px] leading-relaxed" style={{ color: "#1E3A8A" }}>
             <span className="font-bold">Stock is measured at the lower of cost and net realisable value.</span>{" "}
-            Manual entries throughout — nothing here is booked until you apply it, and nothing corrects
-            the books until the count is posted.
+            {ranged ? (
+              <>
+                Opening is the balance before {prettyDate(from)}; the four movement columns are
+                everything that happened up to {prettyDate(date)}, and book closing is where that
+                leaves the shelf. Read-only over a stretch of days.
+              </>
+            ) : (
+              <>
+                Manual entries throughout — nothing here is booked until you apply it, and nothing
+                corrects the books until the count is posted.
+              </>
+            )}
             <div className="mt-1 font-semibold">
               Book closing stock = Opening + Goods received − Stock consumed − Write-offs − Waste
             </div>
@@ -432,7 +467,7 @@ export default function StockCountTab({
                           onChange={(next) => onEdit(row.item.id, { received: next ?? 0 })}
                           tone={COLUMN_TONE.received}
                           dirty={edit?.received !== undefined}
-                          disabled={posted}
+                          disabled={locked}
                         />
                       </td>
                       <td className="px-1.5 py-2" style={{ width: 108 }}>
@@ -441,7 +476,7 @@ export default function StockCountTab({
                           onChange={(next) => onEdit(row.item.id, { consumed: next ?? 0 })}
                           tone={COLUMN_TONE.consumed}
                           dirty={edit?.consumed !== undefined}
-                          disabled={posted}
+                          disabled={locked}
                         />
                       </td>
                       {/* Read-only, and deliberately so: a write-off needs a
@@ -462,7 +497,7 @@ export default function StockCountTab({
                           onChange={(next) => onEdit(row.item.id, { physical: next })}
                           tone={COLUMN_TONE.physical}
                           dirty={edit?.physical !== undefined}
-                          disabled={posted}
+                          disabled={locked}
                           placeholder="—"
                         />
                       </td>
@@ -520,7 +555,20 @@ export default function StockCountTab({
             Showing {visible.length} of {rows.length} item{rows.length === 1 ? "" : "s"}
           </p>
 
-          {posted ? (
+          {ranged ? (
+            <>
+              <p className="text-[12.5px]" style={{ color: POS.inkSoft }}>
+                Movement columns are totals for {period}. Counting is a single day.
+              </p>
+              <button
+                onClick={onSingleDay}
+                className="rounded-lg px-4 py-2 text-[12.5px] font-bold"
+                style={{ border: `1px solid ${POS.line}`, color: POS.action }}
+              >
+                Count {prettyDate(date)}
+              </button>
+            </>
+          ) : posted ? (
             <p className="text-[12.5px] font-bold" style={{ color: POS.good }}>
               This count is posted — its figures are in the ledger.
             </p>
@@ -559,10 +607,17 @@ export default function StockCountTab({
           className="flex flex-wrap items-center gap-2 border-b px-4 py-3"
           style={{ borderColor: POS.line }}
         >
-          <h2 className="mr-auto text-sm font-black" style={{ color: POS.ink }}>
-            Write-off &amp; waste register
-          </h2>
-          {!posted && (
+          <div className="mr-auto">
+            <h2 className="text-sm font-black" style={{ color: POS.ink }}>
+              Write-off &amp; waste register
+            </h2>
+            {ranged && (
+              <p className="text-[11.5px]" style={{ color: POS.inkSoft }}>
+                Everything lost across {period}
+              </p>
+            )}
+          </div>
+          {!locked && (
             <>
               <button
                 onClick={() => setWriteOff("writeoff")}
@@ -586,7 +641,7 @@ export default function StockCountTab({
 
         {(sheet?.register.length ?? 0) === 0 ? (
           <p className="py-10 text-center text-[13px]" style={{ color: POS.inkSoft }}>
-            Nothing written off on {prettyDate(date)}.
+            Nothing written off {ranged ? `between ${prettyDate(from)} and ${prettyDate(date)}` : `on ${prettyDate(date)}`}.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -608,6 +663,13 @@ export default function StockCountTab({
                   <tr key={entry.id} style={{ borderTop: `1px solid ${POS.line}` }}>
                     <td className="px-3 py-2.5 font-bold" style={{ color: "#1D4ED8" }}>
                       {entry.reference || "—"}
+                      {/* Which day it was lost on. Only worth the row's height
+                          when the register is holding more than one. */}
+                      {ranged && (
+                        <span className="block text-[10.5px] font-semibold" style={{ color: POS.inkSoft }}>
+                          {prettyDate(entry.movement_date)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 font-semibold" style={{ color: POS.ink }}>
                       {entry.item?.name ?? "—"}
@@ -680,7 +742,7 @@ export default function StockCountTab({
           >
             Send WhatsApp report
           </button>
-          {!posted && (
+          {!locked && (
             <button
               onClick={() => setConfirmPost(true)}
               disabled={busy || totals.counted === 0}

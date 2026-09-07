@@ -99,10 +99,10 @@ export interface InventoryCount {
   posted_at: string | null;
 }
 
-/** One line of the count sheet: the item, the day's movements, and the count. */
+/** One line of the count sheet: the item, the period's movements, and the count. */
 export interface SheetRow {
   item: InventoryItem;
-  /** Balance of everything dated before the sheet's date. */
+  /** Balance of everything dated before the first day of the sheet's period. */
   opening: number;
   received: number;
   consumed: number;
@@ -118,6 +118,10 @@ export interface SheetPayload {
   rows: SheetRow[];
   /** The write-off and waste movements behind the two columns, for the register. */
   register: InventoryMovement[];
+  /* The stretch the movement columns cover. Equal on a one-day sheet, which is
+     what the screen opens on and the only shape that can be counted and posted. */
+  from: string;
+  to: string;
 }
 
 /* ── The arithmetic ───────────────────────────────────────────────────────── */

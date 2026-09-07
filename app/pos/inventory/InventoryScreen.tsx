@@ -69,8 +69,19 @@ export function withEdits(row: SheetRow, edit: RowEdit | undefined): SheetRow {
 
 export default function InventoryScreen({ staff }: { staff: PosStaff }) {
   const [tab, setTab] = useState<TabKey>("count");
+  /* `date` is the end of the period as well as the day a count belongs to.
+     `from` opens the sheet out into a stretch of days; it starts equal, so the
+     screen still opens on today's working count sheet and nothing about the
+     first thing anybody sees has changed. */
   const [date, setDate] = useState(isoDate());
+  const [from, setFrom] = useState(isoDate());
   const [location, setLocation] = useState("");
+
+  /* More than one day. The movement columns then hold a stretch's totals, which
+     no single cell can write back — a cell is one movement on one date. So the
+     sheet reads rather than edits, and says so instead of offering controls
+     that would have to guess at a day. */
+  const ranged = from < date;
 
   const [sheet, setSheet] = useState<SheetPayload | null>(null);
   const [items, setItems] = useState<ItemWithStock[]>([]);
@@ -89,6 +100,7 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
     setLoading(true);
     setError("");
     const params = new URLSearchParams({ date });
+    if (from < date) params.set("from", from);
     if (location) params.set("location", location);
     const res = await fetch(`/api/pos/inventory/sheet?${params}`, { cache: "no-store" });
     const body = await res.json().catch(() => ({}));
@@ -100,7 +112,7 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
       setEdits({});
     }
     setLoading(false);
-  }, [date, location]);
+  }, [date, from, location]);
 
   const loadItems = useCallback(async () => {
     const res = await fetch("/api/pos/inventory/items", { cache: "no-store" });
@@ -127,7 +139,7 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
   }
 
   async function applyEdits() {
-    if (!sheet || dirtyCount === 0) return;
+    if (!sheet || dirtyCount === 0 || ranged) return;
     setBusy(true);
     setError("");
 
@@ -149,7 +161,7 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
   }
 
   async function postCount() {
-    if (!sheet) return;
+    if (!sheet || ranged) return;
     setBusy(true);
     setError("");
 
@@ -181,13 +193,38 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
     <PosShell
       staff={staff}
       title="Stock Control"
-      subtitle={`${prettyDate(date)} · ${sheet?.count.reference ?? "…"}${location ? ` · ${location}` : ""}`}
+      subtitle={
+        `${ranged ? `${prettyDate(from)} — ${prettyDate(date)}` : prettyDate(date)}` +
+        ` · ${sheet?.count.reference ?? "…"}${location ? ` · ${location}` : ""}`
+      }
       actions={
         <div className="flex items-center gap-2">
+          {/* From, then To. Setting From ahead of To would be a range nobody
+              means, so it is pulled back to the day rather than refused —
+              the same thing buildSheet does with one that arrives that way. */}
+          <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+            From
+          </span>
+          <input
+            type="date"
+            value={from}
+            max={date}
+            onChange={(e) => setFrom(e.target.value || date)}
+            className="rounded-lg bg-white px-3 py-2 text-[13px] font-semibold focus:outline-none"
+            style={{ border: `1px solid ${POS.line}`, color: POS.ink }}
+          />
+          <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: POS.inkSoft }}>
+            To
+          </span>
           <input
             type="date"
             value={date}
-            onChange={(e) => setDate(e.target.value || isoDate())}
+            min={from}
+            onChange={(e) => {
+              const next = e.target.value || isoDate();
+              setDate(next);
+              if (from > next) setFrom(next);
+            }}
             className="rounded-lg bg-white px-3 py-2 text-[13px] font-semibold focus:outline-none"
             style={{ border: `1px solid ${POS.line}`, color: POS.ink }}
           />
@@ -283,6 +320,9 @@ export default function InventoryScreen({ staff }: { staff: PosStaff }) {
               dirtyCount={dirtyCount}
               busy={busy}
               date={date}
+              from={from}
+              ranged={ranged}
+              onSingleDay={() => setFrom(date)}
               onEdit={editRow}
               onReset={() => setEdits({})}
               onApply={applyEdits}
