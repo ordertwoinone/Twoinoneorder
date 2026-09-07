@@ -8,6 +8,7 @@ import { getPosSettings } from "@/lib/pos/menu-server";
 import {
   businessDateFor,
   businessDateLabel,
+  businessDayRange,
   dayReport,
   sumShifts,
 } from "@/lib/pos/business-day";
@@ -88,7 +89,68 @@ export async function GET(request: Request) {
     openShifts: shifts.filter((s) => s.status === "open"),
     closedDay: closedRes.data ?? null,
     missed,
+    /* Food that went out and was never charged for, named and put against
+       whoever was on. The day's figures cannot show it — an order nobody took
+       money for contributes nothing to any shift's takings, so a day that lost
+       four hundred dirhams this way balances perfectly and reads as a clean
+       one. This is the only place on the screen that says otherwise. */
+    pending: await unpaidForDay(date),
   });
+}
+
+/**
+ * Every order on a trading day that nobody took the money for, by cashier.
+ *
+ * Read across the whole day rather than per shift, because a kiosk order only
+ * joins a shift when somebody takes its payment — the one thing that has not
+ * happened. Scoped to the day by created_at for the same reason: an order
+ * attached to no shift has no business_date to be filtered on either.
+ */
+async function unpaidForDay(date: string) {
+  const { start, end } = businessDayRange(date, date);
+
+  const [ordersRes, staffRes] = await Promise.all([
+    supabaseAdminLive
+      .from("bookings")
+      .select("id, type, order_number, guest_name, table_section, order_type, total_amount, payment_method, status, created_at, pos_staff_uuid")
+      .in("type", ["pos", "kiosk"])
+      .gte("created_at", start.toISOString())
+      .lt("created_at", end.toISOString())
+      .order("created_at", { ascending: true }),
+    supabaseAdminLive.from("pos_staff").select("id, name, staff_id"),
+  ]);
+
+  const names = new Map<string, string>();
+  for (const raw of (staffRes.data ?? []) as { id: string; name: string; staff_id: string }[]) {
+    names.set(raw.id, raw.name || raw.staff_id);
+  }
+
+  const groups = new Map<string, { who: string; count: number; total: number }>();
+
+  for (const raw of (ordersRes.data ?? []) as unknown as Record<string, unknown>[]) {
+    if (String(raw.status ?? "").toLowerCase() === "cancelled") continue;
+    const method = String(raw.payment_method ?? "pending").trim().toLowerCase();
+    // Staff food and credit are deliberate and already have their own lines.
+    if (method !== "pending" && method !== "") continue;
+
+    const uuid = raw.pos_staff_uuid ? String(raw.pos_staff_uuid) : "";
+    /* A kiosk order carries no cashier until one takes the payment, which is
+       precisely what is missing — named as the kiosk rather than blamed on
+       nobody. */
+    const who =
+      (uuid && names.get(uuid)) ||
+      (String(raw.type) === "kiosk" ? "Kiosk — never collected on" : "No cashier recorded");
+
+    const entry = groups.get(who) ?? { who, count: 0, total: 0 };
+    entry.count += 1;
+    entry.total += Number(raw.total_amount) || 0;
+    groups.set(who, entry);
+  }
+
+  // Biggest first: the question is where the money went, not who is first alphabetically.
+  return Array.from(groups.values())
+    .map((g) => ({ ...g, total: Math.round(g.total * 100) / 100 }))
+    .sort((a, b) => b.total - a.total);
 }
 
 /**

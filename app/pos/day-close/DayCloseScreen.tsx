@@ -39,6 +39,13 @@ import PosShell from "@/components/pos/PosShell";
  * the day exactly as the morning cashier signed them off, and appear once.
  */
 
+/** Food that went out on the day and was never charged for, by cashier. */
+interface PendingGroup {
+  who: string;
+  count: number;
+  total: number;
+}
+
 interface DayState {
   date: string;
   label: string;
@@ -47,6 +54,7 @@ interface DayState {
   openShifts: DayShift[];
   closedDay: { closed_at: string; report: string; difference: number | string } | null;
   missed: string[];
+  pending?: PendingGroup[];
 }
 
 export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
@@ -57,6 +65,10 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
   /* Ticked to close a day that took nothing. See the button below for why an
      empty day needs a deliberate hand on it and a busy one does not. */
   const [confirmEmpty, setConfirmEmpty] = useState(false);
+  /* Shown once. A manager who has read the list and signed off anyway must not
+     be stopped by the same dialog on the next press. */
+  const [warnPending, setWarnPending] = useState(false);
+  const [pendingSeen, setPendingSeen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ report: string; whatsappUrl: string; totals: DayTotals } | null>(null);
@@ -89,7 +101,28 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
     load(date);
   }
 
+  const pending = day?.pending ?? [];
+  const pendingCount = pending.reduce((n, g) => n + g.count, 0);
+  const pendingTotal = pending.reduce((n, g) => n + g.total, 0);
+
+  /**
+   * The button. Asks first when the day is carrying food nobody charged for.
+   *
+   * The day's own figures cannot raise this: an order nobody took money for
+   * contributes nothing to any shift's takings, so a day that gave away four
+   * hundred dirhams balances perfectly and reads as a clean one. Signing it off
+   * is the moment that becomes permanent.
+   */
+  function attemptClose() {
+    if (pendingCount > 0 && !pendingSeen) {
+      setWarnPending(true);
+      return;
+    }
+    closeDay();
+  }
+
   async function closeDay() {
+    setWarnPending(false);
     setBusy(true);
     setError("");
 
@@ -524,7 +557,7 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
                 )}
 
                 <button
-                  onClick={closeDay}
+                  onClick={attemptClose}
                   /* Not gated on there being any takings. A day that sold
                      nothing is still a day, and one that cannot be closed is
                      one the unclosed-day warning shouts about forever. The
@@ -554,6 +587,85 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
           </Card>
         </div>
       </div>
+
+      {/* ─── Food that was never charged for ─── */}
+      {warnPending && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: "rgba(15,23,42,0.55)" }}
+        >
+          <div
+            className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white"
+            style={{ border: `1px solid ${POS.line}` }}
+          >
+            <div className="flex items-start gap-3 px-5 pt-5">
+              <span
+                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ background: POS.badSoft }}
+              >
+                <AlertTriangle size={18} style={{ color: POS.bad }} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-[17px] font-black" style={{ color: POS.ink }}>
+                  {pendingCount} order{pendingCount === 1 ? "" : "s"} never paid for
+                </h2>
+                <p className="mt-1 text-[13px] leading-relaxed" style={{ color: POS.inkSoft }}>
+                  {aed(pendingTotal)} of food went out on {day?.label ?? "this day"} with no payment
+                  recorded against it. None of it is in the figures below — an order nobody charged
+                  for adds nothing to any shift, so the day balances and reads as a clean one.
+                  Signing off makes that permanent.
+                </p>
+              </div>
+            </div>
+
+            <div className="mx-5 mt-4 overflow-hidden rounded-xl" style={{ border: `1px solid ${POS.line}` }}>
+              {pending.map((group) => (
+                <div
+                  key={group.who}
+                  className="flex items-center justify-between gap-3 px-3 py-2.5"
+                  style={{ borderBottom: `1px solid ${POS.line}` }}
+                >
+                  <span className="min-w-0 truncate text-[13px] font-bold" style={{ color: POS.ink }}>
+                    {group.who}
+                  </span>
+                  <span className="shrink-0 text-end">
+                    <span className="block text-[13px] font-black" style={{ color: POS.bad }}>
+                      {aed(group.total)}
+                    </span>
+                    <span className="block text-[11px]" style={{ color: POS.inkSoft }}>
+                      {group.count} order{group.count === 1 ? "" : "s"}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 px-5 py-4">
+              <button
+                onClick={() => router.push("/pos/orders")}
+                className="flex-1 rounded-xl px-4 py-3 text-[13.5px] font-bold text-white"
+                style={{ background: POS.action }}
+              >
+                Look at the orders
+              </button>
+              <button
+                onClick={() => { setPendingSeen(true); closeDay(); }}
+                className="rounded-xl px-4 py-3 text-[13.5px] font-bold"
+                style={{ border: `1px solid ${POS.line}`, color: POS.inkSoft }}
+              >
+                Sign off anyway
+              </button>
+              <button
+                onClick={() => setWarnPending(false)}
+                className="rounded-xl px-4 py-3 text-[13.5px] font-bold"
+                style={{ color: POS.inkSoft }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PosShell>
   );
 }

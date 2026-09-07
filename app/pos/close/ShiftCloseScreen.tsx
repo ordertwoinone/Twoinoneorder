@@ -89,6 +89,10 @@ export default function ShiftCloseScreen({
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [businessDate, setBusinessDate] = useState("");
   const [pending, setPending] = useState<PendingOrder[]>([]);
+  /* Kiosk tickets from today that joined no shift, because nobody ever charged
+     for them. Shown beside the shift's own — a cashier at the counter can still
+     collect on one whose customer is in the building. */
+  const [pendingKiosk, setPendingKiosk] = useState<PendingOrder[]>([]);
   /* Shown once. Somebody who has read the list and decided to go ahead anyway
      — the customer never came back, it is going on tomorrow — must not be
      stopped by the same dialog every time they press the button. */
@@ -115,6 +119,7 @@ export default function ShiftCloseScreen({
     if (Array.isArray(body?.contributions)) setContributions(body.contributions as Contribution[]);
     if (body?.businessDate) setBusinessDate(body.businessDate as string);
     if (Array.isArray(body?.pending)) setPending(body.pending as PendingOrder[]);
+    if (Array.isArray(body?.pendingKiosk)) setPendingKiosk(body.pendingKiosk as PendingOrder[]);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -147,8 +152,9 @@ export default function ShiftCloseScreen({
   const expected = takings?.expectedCash ?? 0;
   const difference = Math.round((counted - expected) * 100) / 100;
 
-  /** The total nobody has collected, for the warning and its heading. */
-  const pendingTotal = pending.reduce((sum, o) => sum + o.total, 0);
+  /** Everything nobody has collected, for the warning and its heading. */
+  const owed = [...pending, ...pendingKiosk];
+  const pendingTotal = owed.reduce((sum, o) => sum + o.total, 0);
 
   /**
    * The button. Asks first when there is money outstanding.
@@ -160,7 +166,7 @@ export default function ShiftCloseScreen({
    * up the screen, which is a number nobody can act on.
    */
   function attemptClose() {
-    if (pending.length > 0 && !pendingSeen) {
+    if (owed.length > 0 && !pendingSeen) {
       setWarnPending(true);
       return;
     }
@@ -688,18 +694,26 @@ export default function ShiftCloseScreen({
               </span>
               <div className="min-w-0">
                 <h2 className="text-[17px] font-black" style={{ color: POS.ink }}>
-                  {pending.length} order{pending.length === 1 ? "" : "s"} not paid for
+                  {owed.length} order{owed.length === 1 ? "" : "s"} not paid for
                 </h2>
                 <p className="mt-1 text-[13px] leading-relaxed" style={{ color: POS.inkSoft }}>
-                  {aed(pendingTotal)} on this shift has not been collected. Take the payment on the
-                  Orders screen and it lands on your drawer — close now and it stays outstanding,
-                  with nothing on the shift to say whose it was.
+                  {aed(pendingTotal)} has not been collected. Take the payment on the Orders screen
+                  and it lands on your drawer — close now and it stays outstanding, with nothing on
+                  the shift to say whose it was.
                 </p>
               </div>
             </div>
 
             <div className="mx-5 mt-4 overflow-hidden rounded-xl" style={{ border: `1px solid ${POS.line}` }}>
               <div className="max-h-[240px] overflow-y-auto">
+                {pendingKiosk.length > 0 && pending.length > 0 && (
+                  <p
+                    className="px-3 py-1.5 text-[10.5px] font-black uppercase tracking-wide"
+                    style={{ background: POS.page, color: POS.inkSoft }}
+                  >
+                    On your shift
+                  </p>
+                )}
                 {pending.map((order) => (
                   <div
                     key={order.id}
@@ -720,6 +734,37 @@ export default function ShiftCloseScreen({
                     </span>
                   </div>
                 ))}
+
+                {pendingKiosk.length > 0 && (
+                  <>
+                    <p
+                      className="px-3 py-1.5 text-[10.5px] font-black uppercase tracking-wide"
+                      style={{ background: POS.page, color: POS.inkSoft }}
+                    >
+                      Kiosk · never collected on
+                    </p>
+                    {pendingKiosk.map((order) => (
+                      <div
+                        key={order.id}
+                        className="flex items-center justify-between gap-3 px-3 py-2.5"
+                        style={{ borderBottom: `1px solid ${POS.line}` }}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-[13px] font-bold" style={{ color: POS.ink }}>
+                            {order.code}
+                            {order.name ? ` · ${order.name}` : ""}
+                          </span>
+                          <span className="block truncate text-[11.5px]" style={{ color: POS.inkSoft }}>
+                            {[order.where, order.at ? clockOf(order.at) : ""].filter(Boolean).join(" · ")}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-[13px] font-black" style={{ color: POS.bad }}>
+                          {aed(order.total)}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
 

@@ -10,7 +10,7 @@ import { getPosSettings } from "@/lib/pos/menu-server";
 import { shiftTakings, whatsappSummary } from "@/lib/pos/reconcile";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { can } from "@/lib/pos/permissions";
-import { businessDateFor } from "@/lib/pos/business-day";
+import { businessDateFor, businessDayRange } from "@/lib/pos/business-day";
 import { posOrderCode } from "@/lib/pos/cart";
 import { isPaid } from "@/lib/pos/amend";
 
@@ -52,43 +52,75 @@ export async function GET() {
        before going home cannot do anything with it — they need to know which
        tickets, so they can go and collect. */
     pending: await unpaidOrders(shift.id, settings.order_prefix),
+    pendingKiosk: await unpaidKiosk(settings.order_prefix),
     businessDate: businessDateFor(),
   });
 }
 
-/**
- * Orders on this shift that nobody has taken the money for.
- *
- * A kiosk order is placed unpaid and settled at the counter when it is
- * collected, so an open shift routinely holds a few — and every one still open
- * at close is either a customer who never came back or, far more often, food
- * handed over with the payment never rung up. Either way it leaves the shift
- * short by that amount and the cashier with no way to find out which orders
- * did it once the shift is shut.
- */
+const UNPAID_COLUMNS =
+  "id, type, order_number, guest_name, order_type, table_section, total_amount, payment_method, status, created_at";
+
+/** Neither cancelled nor settled. Staff food and credit are decisions; this is not. */
+function isUnpaid(row: Record<string, unknown>): boolean {
+  if (String(row.status ?? "").toLowerCase() === "cancelled") return false;
+  const method = String(row.payment_method ?? "pending").trim().toLowerCase();
+  return method === "pending" || method === "";
+}
+
+function asTicket(row: Record<string, unknown>, prefix: string) {
+  return {
+    id: String(row.id),
+    code: posOrderCode(prefix, row.order_number as number | null),
+    name: String(row.guest_name ?? "").trim(),
+    where: String(row.table_section ?? row.order_type ?? "").trim(),
+    total: Number(row.total_amount) || 0,
+    at: String(row.created_at ?? ""),
+  };
+}
+
+/** Orders on this shift that nobody has taken the money for. */
 async function unpaidOrders(shiftId: string, prefix: string) {
   const { data } = await supabaseAdminLive
     .from("bookings")
-    .select("id, order_number, guest_name, order_type, table_section, total_amount, payment_method, status, created_at")
+    .select(UNPAID_COLUMNS)
     .eq("pos_shift_id", shiftId)
     .order("created_at", { ascending: true });
 
-  return ((data ?? []) as Record<string, unknown>[])
-    .filter((row) => {
-      const method = String(row.payment_method ?? "pending").trim().toLowerCase();
-      // Cancelled is not owed. Staff food and credit are deliberate, and each
-      // already has its own line on the close — this is the accidental one.
-      if (String(row.status ?? "").toLowerCase() === "cancelled") return false;
-      return method === "pending" || method === "";
-    })
-    .map((row) => ({
-      id: String(row.id),
-      code: posOrderCode(prefix, row.order_number as number | null),
-      name: String(row.guest_name ?? "").trim(),
-      where: String(row.table_section ?? row.order_type ?? "").trim(),
-      total: Number(row.total_amount) || 0,
-      at: String(row.created_at ?? ""),
-    }));
+  return ((data ?? []) as unknown as Record<string, unknown>[])
+    .filter(isUnpaid)
+    .map((row) => asTicket(row, prefix));
+}
+
+/**
+ * Kiosk orders from today that nobody has collected on, on anybody's shift.
+ *
+ * These are the ones the warning exists for, and the ones it could not see.
+ * A kiosk order is placed unpaid and only joins a shift when a cashier takes
+ * the payment — pos_shift_id is set by that write and by nothing else. So an
+ * order nobody ever charged for is attached to no shift at all, and a warning
+ * scoped to "orders on this shift" is scoped to exactly the orders that are
+ * fine.
+ *
+ * Today's, not all of them: the cashier standing at the counter can still
+ * collect on a lunchtime ticket whose customer is in the building. Last
+ * Tuesday's is the office's problem, and the admin orders board has it.
+ */
+async function unpaidKiosk(prefix: string) {
+  const today = businessDateFor();
+  const { start, end } = businessDayRange(today, today);
+
+  const { data } = await supabaseAdminLive
+    .from("bookings")
+    .select(UNPAID_COLUMNS)
+    .eq("type", "kiosk")
+    .is("pos_shift_id", null)
+    .gte("created_at", start.toISOString())
+    .lt("created_at", end.toISOString())
+    .order("created_at", { ascending: true });
+
+  return ((data ?? []) as unknown as Record<string, unknown>[])
+    .filter(isUnpaid)
+    .map((row) => asTicket(row, prefix));
 }
 
 /**
