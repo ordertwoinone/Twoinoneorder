@@ -58,9 +58,17 @@ export async function GET() {
  * person doing the closing as having sold nothing, which is the one row they
  * are certain to check.
  *
- * Grouped by the member of staff on the order, not by shift: somebody who
- * worked a morning and came back for the evening is one person on this table,
- * which is what "employee contribution" means to whoever reads it.
+ * Grouped by the member of staff, not by shift: somebody who worked a morning
+ * and came back for the evening is one person on this table, which is what
+ * "employee contribution" means to whoever reads it. Their two shifts are added
+ * together into one row, and the row says it covers two.
+ *
+ * Seeded from the shifts, then filled in from the orders. It used to be built
+ * from the orders alone, and that dropped two things on the floor: a shift that
+ * sold nothing put its cashier nowhere on the table at all, and two shifts that
+ * happened to share a label — two "Morning" closes on one day — collapsed into
+ * a single "Morning" because the labels went into a Set. Both read on screen as
+ * the first close having vanished and only the second one counting.
  */
 async function dailyContributions() {
   const date = businessDateFor();
@@ -68,7 +76,9 @@ async function dailyContributions() {
   const { data: shiftRows, error: shiftError } = await supabaseAdminLive
     .from("pos_shifts")
     .select("id, shift_label, staff_uuid, pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id)")
-    .eq("business_date", date);
+    .eq("business_date", date)
+    // So the labels read in the order they were worked, not as they came back.
+    .order("opened_at", { ascending: true });
 
   if (shiftError || !shiftRows || shiftRows.length === 0) return [];
 
@@ -85,7 +95,24 @@ async function dailyContributions() {
     .in("pos_shift_id", shifts.map((s) => s.id));
 
   const byShift = new Map(shifts.map((s) => [s.id, s]));
-  const tally = new Map<string, { name: string; shifts: Set<string>; orders: number; net: number }>();
+  interface Tally { name: string; labels: string[]; shiftCount: number; orders: number; net: number }
+  const tally = new Map<string, Tally>();
+
+  /* Every shift on the day, before a single order is counted. A cashier who
+     opened, sold nothing and closed still worked a shift, and a table that
+     leaves them out cannot be reconciled against the day's shift count. */
+  for (const shift of shifts) {
+    const entry = tally.get(shift.staff_uuid) ?? {
+      name: shift.pos_staff?.name || shift.pos_staff?.staff_id || "Unknown",
+      labels: [],
+      shiftCount: 0,
+      orders: 0,
+      net: 0,
+    };
+    entry.labels.push(String(shift.shift_label ?? "").trim() || "Shift");
+    entry.shiftCount += 1;
+    tally.set(shift.staff_uuid, entry);
+  }
 
   for (const row of (orderRows ?? []) as Record<string, unknown>[]) {
     const shift = byShift.get(String(row.pos_shift_id));
@@ -97,18 +124,16 @@ async function dailyContributions() {
     // isPaid already excludes staff food, credit and pending.
     if (cancelled || !isPaid(method)) continue;
 
-    const key = shift.staff_uuid;
-    const name = shift.pos_staff?.name || shift.pos_staff?.staff_id || "Unknown";
-    const entry = tally.get(key) ?? { name, shifts: new Set<string>(), orders: 0, net: 0 };
-    entry.shifts.add(shift.shift_label);
+    const entry = tally.get(shift.staff_uuid);
+    if (!entry) continue;
     entry.orders += 1;
     entry.net += (Number(row.total_amount) || 0) - (Number(row.refunded_total) || 0);
-    tally.set(key, entry);
   }
 
   const rows = Array.from(tally.values()).map((e) => ({
     name: e.name,
-    shift: Array.from(e.shifts).join(", "),
+    shift: describeShifts(e.labels),
+    shiftCount: e.shiftCount,
     orders: e.orders,
     net: Math.round(e.net * 100) / 100,
   }));
@@ -116,6 +141,21 @@ async function dailyContributions() {
   // Biggest first: the question this table answers is who is selling.
   rows.sort((a, b) => b.net - a.net);
   return rows;
+}
+
+/**
+ * "Morning", "Morning ×2", "Morning, Evening" — the shifts behind one row.
+ *
+ * Repeats are counted rather than deduplicated. Two closes under the same label
+ * is the normal shape of a broken-up day, and showing it once made the row look
+ * like it had lost one of them.
+ */
+function describeShifts(labels: string[]): string {
+  const counts = new Map<string, number>();
+  for (const label of labels) counts.set(label, (counts.get(label) ?? 0) + 1);
+  return Array.from(counts.entries())
+    .map(([label, n]) => (n > 1 ? `${label} ×${n}` : label))
+    .join(", ");
 }
 
 export async function POST(request: Request) {

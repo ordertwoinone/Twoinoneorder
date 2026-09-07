@@ -54,7 +54,10 @@ import CloseCamera from "@/components/pos/CloseCamera";
 /** One person's share of the day, as the contribution table lists it. */
 interface Contribution {
   name: string;
+  /** "Morning", "Morning ×2", "Morning, Evening" — every shift behind the row. */
   shift: string;
+  /** How many shifts it adds up. More than one is worth saying out loud. */
+  shiftCount: number;
   orders: number;
   net: number;
 }
@@ -554,7 +557,7 @@ export default function ShiftCloseScreen({
                 const share = dayNet > 0 ? (row.net / dayNet) * 100 : 0;
                 return (
                   <div
-                    key={`${row.name}-${row.shift}`}
+                    key={row.name}
                     className="grid items-center gap-2 px-3 py-2.5"
                     style={{
                       gridTemplateColumns: "1.3fr 1fr 90px 130px 1.2fr",
@@ -564,8 +567,20 @@ export default function ShiftCloseScreen({
                     <span className="truncate text-[13px] font-bold" style={{ color: POS.ink }}>
                       {row.name}
                     </span>
-                    <span className="truncate text-[12.5px]" style={{ color: POS.inkSoft }}>
-                      {row.shift || "—"}
+                    {/* The row is one person's whole day. When that is more
+                        than one shift it has to say so — the money was always
+                        added up correctly, but a row reading "Morning" after
+                        somebody had closed twice looked like the first close
+                        had been dropped. */}
+                    <span className="min-w-0">
+                      <span className="block truncate text-[12.5px]" style={{ color: POS.inkSoft }}>
+                        {row.shift || "—"}
+                      </span>
+                      {row.shiftCount > 1 && (
+                        <span className="block text-[11px] font-bold" style={{ color: POS.action }}>
+                          {row.shiftCount} shifts combined
+                        </span>
+                      )}
                     </span>
                     <span className="text-end text-[13px]" style={{ color: POS.ink }}>
                       {row.orders}
