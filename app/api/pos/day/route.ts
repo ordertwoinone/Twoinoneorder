@@ -83,6 +83,12 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     date,
+    /* The day we are actually in, worked out in the branch's timezone. The
+       screen can now be pointed at any date, so it needs to be told which one
+       is today rather than asking the till's own clock — a tablet an hour out,
+       or one looked at before the five o'clock rollover, would otherwise offer
+       to close a day that has not happened yet. */
+    today: businessDateFor(),
     label: businessDateLabel(date),
     shifts,
     totals: sumShifts(shifts),
@@ -204,6 +210,18 @@ export async function POST(request: Request) {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(String(body?.date ?? ""))
     ? String(body.date)
     : businessDateFor();
+
+  /* A day that has not been traded yet cannot be signed off. Any date can be
+     picked now, and a mistyped year closes a day nobody has worked — which
+     locks every shift out of that date when it eventually arrives, silently,
+     because nothing about the day looks wrong until somebody tries to open a
+     till on it. */
+  if (date > businessDateFor()) {
+    return NextResponse.json(
+      { error: `${businessDateLabel(date)} has not happened yet. A day can only be closed once it is over.` },
+      { status: 400 },
+    );
+  }
 
   const shifts = await shiftsForBusinessDay(date);
 

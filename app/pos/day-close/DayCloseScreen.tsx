@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   BarChart3,
+  CalendarDays,
   Check,
   CircleDot,
   Clock,
@@ -48,6 +49,8 @@ interface PendingGroup {
 
 interface DayState {
   date: string;
+  /** The business day we are actually in, per the branch's clock, not the tablet's. */
+  today: string;
   label: string;
   shifts: DayShift[];
   totals: DayTotals;
@@ -82,6 +85,24 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
       setDate(body.date as string);
     }
   }, []);
+
+  /**
+   * Pointing the screen at another day.
+   *
+   * Everything half-entered belongs to the day it was typed on: a note written
+   * for Monday must not be filed against Tuesday, a tick that said "nothing was
+   * traded" must not carry over to a day that was, and a manager who has read
+   * one day's unpaid orders has not read the next one's. So the day changes and
+   * the answers about it start again.
+   */
+  const openDate = useCallback((forDate: string) => {
+    setError("");
+    setNote("");
+    setConfirmEmpty(false);
+    setPendingSeen(false);
+    setWarnPending(false);
+    load(forDate);
+  }, [load]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -144,6 +165,10 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
     setDone({ report: body.report, whatsappUrl: body.whatsappUrl, totals: body.totals });
   }
 
+  /* Whether what was just signed off was a day that had been missed, rather
+     than the day the branch is trading through now. */
+  const backDated = Boolean(day && day.today !== date);
+
   /* ─── Signed off ─── */
   if (done) {
     return (
@@ -167,7 +192,9 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
               {done.totals.shiftCount === 1 ? "" : "s"} · {aed(done.totals.netSales)} net
             </p>
             <p className="mt-1 text-[12.5px]" style={{ color: POS.inkSoft }}>
-              The next order starts a new business day.
+              {backDated
+                ? "A day that was missed is now signed off. Today's trading is untouched."
+                : "The next order starts a new business day."}
             </p>
 
             <pre
@@ -206,11 +233,20 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
                 </button>
               )}
               <button
-                onClick={() => { router.replace("/pos/login"); router.refresh(); }}
+                /* Closing today's day is the last thing a manager does before
+                   handing the till over, so it ends at the login screen. Closing
+                   a day that was missed is housekeeping in the middle of a
+                   working shift — signing the manager out of a till that is
+                   still trading would be the wrong end to it. */
+                onClick={() => {
+                  if (backDated) { setDone(null); openDate(day!.today); return; }
+                  router.replace("/pos/login");
+                  router.refresh();
+                }}
                 className="flex-1 rounded-xl text-sm font-bold text-white"
                 style={{ background: POS.action, height: 48 }}
               >
-                Finish
+                {backDated ? "Back to today" : "Finish"}
               </button>
             </div>
           </div>
@@ -230,6 +266,54 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
       subtitle={day ? `${day.label} · the whole restaurant's day` : "Working out the day…"}
     >
       <div className="pos-scroll h-full p-4">
+        {/*
+          Which day is being closed.
+
+          The screen opens on today and the warning below names the days that
+          were missed, but a day only reaches that warning if a shift was opened
+          on it — a day the branch traded through the kiosk alone, or one that
+          has scrolled past the last five, is unreachable. A manager who knows
+          which date was forgotten should be able to say so and close it, rather
+          than being limited to the days the screen thought to offer.
+        */}
+        <div
+          className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-white px-4 py-3"
+          style={{ border: `1px solid ${POS.line}` }}
+        >
+          <span className="flex items-center gap-2 text-[13px] font-bold" style={{ color: POS.ink }}>
+            <CalendarDays size={16} style={{ color: POS.inkSoft }} />
+            Day being closed
+          </span>
+          <input
+            type="date"
+            value={date}
+            /* A day that has not been traded yet has nothing to sign off, and
+               closing it would lock every till out of that date when it
+               arrived. The server refuses one too — this only saves the trip. */
+            max={day?.today}
+            onChange={(e) => { if (e.target.value) openDate(e.target.value); }}
+            className="rounded-lg px-3 py-1.5 text-[13px] font-bold focus:outline-none"
+            style={{ border: `1px solid ${POS.line}`, color: POS.ink }}
+          />
+          {day && backDated && (
+            <>
+              <span
+                className="rounded-lg px-2.5 py-1 text-[11.5px] font-bold"
+                style={{ background: "#FFF7ED", color: "#9A3412" }}
+              >
+                An earlier day — not today
+              </span>
+              <button
+                onClick={() => openDate(day.today)}
+                className="rounded-lg px-3 py-1.5 text-[12.5px] font-bold"
+                style={{ border: `1px solid ${POS.line}`, color: POS.inkSoft }}
+              >
+                Back to today
+              </button>
+            </>
+          )}
+        </div>
+
         {/* A day before this one that was traded and never signed off. */}
         {(day?.missed?.length ?? 0) > 0 && (
           <div
@@ -244,7 +328,7 @@ export default function DayCloseScreen({ staff }: { staff: PosStaff }) {
             {day!.missed.map((d) => (
               <button
                 key={d}
-                onClick={() => { setError(""); load(d); }}
+                onClick={() => openDate(d)}
                 className="rounded-lg px-3 py-1.5 text-[12.5px] font-bold"
                 style={{ background: "#fff", border: "1px solid #FED7AA", color: "#9A3412" }}
               >
