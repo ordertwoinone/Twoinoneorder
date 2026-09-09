@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { currentStaff } from "@/lib/pos/auth";
 import { can } from "@/lib/pos/permissions";
-import { openShiftFor } from "@/lib/pos/shift-server";
+import { openShiftFor, shiftById } from "@/lib/pos/shift-server";
 import { getPosSettings } from "@/lib/pos/menu-server";
 import { KITCHEN_TYPES, sourceOrderCode } from "@/lib/order-source";
 import { loadSourceDirectory, sourceFrom } from "@/lib/order-source-server";
@@ -336,16 +336,70 @@ export async function PUT(request: Request) {
       );
     }
 
-    /* Only claimed if it is not already on one. A till order belongs to the
-       shift that rang it up, and re-pointing it at whoever happened to touch it
-       later would move takings between two people's drawers. */
     const { data: existing } = await supabaseAdminLive
       .from("bookings")
-      .select("pos_shift_id")
+      .select("pos_shift_id, payment_method")
       .eq("id", id)
       .maybeSingle();
 
-    if (!(existing as { pos_shift_id?: string | null } | null)?.pos_shift_id) {
+    const before = (existing ?? {}) as {
+      pos_shift_id?: string | null;
+      payment_method?: string | null;
+    };
+    const was = String(before.payment_method ?? "pending").trim().toLowerCase();
+
+    /*
+     * Correcting a payment, which is not the same act as taking one.
+     *
+     * Taking one turns nothing into money. Correcting one moves money that has
+     * already been counted from one column to another: card to cash puts notes
+     * in a drawer that will be counted at close, and cash to card takes them
+     * out. The takings are read back from the orders every time, so the shift
+     * follows along on its own — but only while it is still open.
+     */
+    const correcting = was !== "pending" && was !== "" && was !== payment;
+
+    if (correcting) {
+      const on = before.pos_shift_id ? await shiftById(before.pos_shift_id) : null;
+
+      /*
+       * A closed shift has frozen its figures onto its own row, and the day
+       * close adds up those rows rather than recounting the orders. So a
+       * correction made now would change the order and reach no report at all:
+       * the shift would still say cash AED 500, the day would still say cash
+       * AED 500, and only the order would disagree. Refused rather than
+       * written, because a change that appears to work and alters nothing is
+       * worse than one that says why it cannot.
+       */
+      if (on && on.status !== "open") {
+        return NextResponse.json(
+          {
+            error:
+              "That shift has been closed and its takings signed off. How this order was paid can no longer be changed at the till.",
+          },
+          { status: 409 },
+        );
+      }
+
+      /* Your own mistake, caught at your own counter, is yours to fix — making
+         a cashier fetch a manager to undo a mistyped button is the friction
+         that gets worked around instead of used. Somebody else's drawer is a
+         different matter: it changes what they will be counting. */
+      if (on && on.staff_uuid !== staff.id && !can(staff, "void_order")) {
+        return NextResponse.json(
+          {
+            error:
+              "That order was paid on another cashier's shift. Changing it moves cash in their drawer, so it needs a manager.",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
+    /* Only claimed if it is not already on one. A till order belongs to the
+       shift that rang it up, and re-pointing it at whoever happened to touch it
+       later would move takings between two people's drawers. */
+    if (!before.pos_shift_id) {
       patch.pos_shift_id = shift.id;
       patch.pos_staff_uuid = staff.id;
     }

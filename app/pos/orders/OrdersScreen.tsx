@@ -248,6 +248,9 @@ export default function OrdersScreen({
   const showsMoney = can(staff, "till") || can(staff, "reports");
   /** Cancelling is a refund the drawer answers for, so it is its own grant. */
   const canVoid = can(staff, "void_order");
+  /* Whoever may take money may also correct how it was taken. The server draws
+     the harder lines — a shift already signed off, or another cashier's. */
+  const canTakeMoney = can(staff, "till");
 
   /*
    * The alert, remembered under one key for both boards.
@@ -376,6 +379,10 @@ export default function OrdersScreen({
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       setError(body?.error || "Could not record that payment.");
+      /* Left open on a refusal. The server declines a correction on a shift
+         that has been signed off, and a dialog that vanished would leave the
+         message stranded on a board the cashier has already scrolled. */
+      setPaying(order);
       return;
     }
     load();
@@ -752,6 +759,20 @@ export default function OrdersScreen({
                         <Banknote size={13} />
                         Take payment
                       </button>
+                    ) : canTakeMoney ? (
+                      /* Rung up as card when it was cash, or the other way
+                         about, is the commonest mistake at a busy counter and
+                         until now the board could only state it. The label is
+                         the way to fix it, because that is where somebody
+                         looking for the wrong word is already looking. */
+                      <button
+                        onClick={() => setPaying(order)}
+                        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11.5px] font-semibold capitalize"
+                        style={{ border: `1px solid ${POS.line}`, color: POS.inkSoft }}
+                      >
+                        paid · {order.payment_method}
+                        <Pencil size={11} />
+                      </button>
                     ) : (
                       <span className="text-[11.5px] capitalize" style={{ color: POS.inkSoft }}>
                         paid · {order.payment_method}
@@ -843,18 +864,28 @@ export default function OrdersScreen({
         />
       )}
 
-      {/* ─── Taking the money for an unpaid order ─── */}
-      {paying && (
+      {/* ─── Taking the money, or correcting how it was taken ─── */}
+      {paying && (() => {
+        /* The same three buttons answer both questions, so they are one dialog.
+           What differs is what is being said: an unpaid order is money arriving,
+           and a settled one is money that has already been counted moving from
+           one column to another. */
+        const was = String(paying.payment_method ?? "pending").trim().toLowerCase();
+        const changing = was !== "pending" && was !== "";
+
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(0,0,0,0.5)" }}>
           <div className="w-full max-w-[380px] rounded-2xl bg-white p-6">
             <p className="text-center text-[13px] font-semibold" style={{ color: POS.inkSoft }}>
-              {paying.code} · amount due
+              {paying.code} · {changing ? `recorded as ${was.replace("_", " ")}` : "amount due"}
             </p>
             <p className="text-center text-4xl font-black" style={{ color: POS.ink }}>
               {money(paying.total_amount)}
             </p>
             <p className="mt-2 text-center text-[12px]" style={{ color: POS.inkSoft }}>
-              This goes onto your shift, so it counts at day close.
+              {changing
+                ? "Pick how it was actually paid. The shift it is on reads its takings back from the orders, so the drawer and the card total both follow — as long as that shift is still open."
+                : "This goes onto your shift, so it counts at day close."}
             </p>
 
             <div className="mt-5 grid grid-cols-3 gap-2">
@@ -862,21 +893,48 @@ export default function OrdersScreen({
                 ["cash", Banknote],
                 ["card", CreditCard],
                 ["online", Globe],
-              ] as const).map(([method, Icon]) => (
-                <button
-                  key={method}
-                  onClick={() => takePayment(paying, method)}
-                  className="flex flex-col items-center gap-1.5 rounded-xl py-3 text-[13px] font-bold capitalize"
-                  style={{ background: POS.page, color: POS.ink, border: `1px solid ${POS.line}` }}
-                >
-                  <Icon size={19} />
-                  {method}
-                </button>
-              ))}
+              ] as const).map(([method, Icon]) => {
+                /* The one it already is, marked and inert. Offering it as a
+                   choice invites a pointless write, and greying it out entirely
+                   hides the answer to "what does it say now". */
+                const current = was === method;
+                return (
+                  <button
+                    key={method}
+                    onClick={() => (current ? setPaying(null) : takePayment(paying, method))}
+                    className="flex flex-col items-center gap-1.5 rounded-xl py-3 text-[13px] font-bold capitalize"
+                    style={{
+                      background: current ? POS.night : POS.page,
+                      color: current ? "#fff" : POS.ink,
+                      border: `1px solid ${current ? POS.night : POS.line}`,
+                    }}
+                  >
+                    <Icon size={19} />
+                    {method}
+                    {current && (
+                      <span className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.8)" }}>
+                        now
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
+            {/* Said here rather than on the board behind, which this dialog is
+                covering. A refusal the cashier cannot read is a button that
+                simply does nothing. */}
+            {error && (
+              <p
+                className="mt-4 rounded-lg px-3 py-2.5 text-[12px] font-semibold"
+                style={{ background: POS.badSoft, color: POS.bad }}
+              >
+                {error}
+              </p>
+            )}
+
             <button
-              onClick={() => setPaying(null)}
+              onClick={() => { setError(""); setPaying(null); }}
               className="mt-4 w-full rounded-xl text-sm font-bold"
               style={{ background: POS.page, color: POS.ink, height: 46 }}
             >
@@ -884,7 +942,8 @@ export default function OrdersScreen({
             </button>
           </div>
         </div>
-      )}
+        );
+      })()}
     </PosShell>
   );
 }
