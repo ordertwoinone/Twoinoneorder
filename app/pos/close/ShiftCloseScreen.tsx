@@ -25,7 +25,7 @@ import { businessDateLabel } from "@/lib/pos/business-day";
 import type { PosStaff } from "@/lib/pos/constants";
 import { can } from "@/lib/pos/permissions";
 import type { ShiftTakings } from "@/lib/pos/reconcile";
-import type { PosShift } from "@/lib/pos/shift";
+import type { ClosableShift, PosShift } from "@/lib/pos/shift";
 import PosShell from "@/components/pos/PosShell";
 import StaleShiftWarning from "@/components/pos/StaleShiftWarning";
 import type { StaleShift } from "@/lib/pos/shift";
@@ -76,14 +76,25 @@ interface Contribution {
 export default function ShiftCloseScreen({
   staff,
   shift: initialShift,
+  closable: initialClosable = [],
   stale = [],
 }: {
   staff: PosStaff;
   shift: PosShift;
+  closable?: ClosableShift[];
   stale?: StaleShift[];
 }) {
   const router = useRouter();
-  const [shift] = useState(initialShift);
+  const [shift, setShift] = useState(initialShift);
+  /* Which drawer this screen is counting. Usually the caller's own; on a
+     clean-up, one somebody else left open. */
+  const [targetId, setTargetId] = useState(initialShift.id);
+  const [closable, setClosable] = useState<ClosableShift[]>(initialClosable);
+  /** Whose takings these are, which is not always who is signing them off. */
+  const [owner, setOwner] = useState(staff.name || staff.staff_id);
+  const [mine, setMine] = useState(true);
+  /** The trading day we are in, per the branch's clock rather than the tablet's. */
+  const [today, setToday] = useState("");
   const [takings, setTakings] = useState<ShiftTakings | null>(null);
   /** Who sold what across the whole trading day, not just this shift. */
   const [contributions, setContributions] = useState<Contribution[]>([]);
@@ -107,22 +118,55 @@ export default function ShiftCloseScreen({
      be ticked to wave away a drawer that simply has not been counted. */
   const [zeroSales, setZeroSales] = useState(false);
   const [zeroCash, setZeroCash] = useState(false);
+  /* The third declaration, and the only one about a drawer that is not there
+     any more. See the API for why it records nil rather than assuming a match. */
+  const [uncounted, setUncounted] = useState(false);
   const [photo, setPhoto] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ summary: string; whatsappUrl: string; difference: number } | null>(null);
 
-  const load = useCallback(async () => {
-    const res = await fetch("/api/pos/close", { cache: "no-store" });
+  const load = useCallback(async (forShift: string) => {
+    const res = await fetch(`/api/pos/close?shift=${forShift}`, { cache: "no-store" });
     const body = await res.json().catch(() => null);
+    if (body?.shift) setShift(body.shift as PosShift);
     if (body?.takings) setTakings(body.takings as ShiftTakings);
     if (Array.isArray(body?.contributions)) setContributions(body.contributions as Contribution[]);
+    if (Array.isArray(body?.closable)) setClosable(body.closable as ClosableShift[]);
+    if (body?.owner) setOwner(body.owner as string);
+    setMine(body?.mine !== false);
     if (body?.businessDate) setBusinessDate(body.businessDate as string);
+    if (body?.today) setToday(body.today as string);
     if (Array.isArray(body?.pending)) setPending(body.pending as PendingOrder[]);
     if (Array.isArray(body?.pendingKiosk)) setPendingKiosk(body.pendingKiosk as PendingOrder[]);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(targetId); }, [load, targetId]);
+
+  /**
+   * Turning the screen to another drawer.
+   *
+   * Every figure on it is about the drawer it was entered for. A count of notes
+   * belongs to one drawer and would be a fabrication against any other; so does
+   * a closing note, a photograph of the till, and a declaration that nothing was
+   * sold. So the drawer changes and all of it is put back to nothing — rather
+   * than carrying one shift's count into another shift's sign-off, which is the
+   * one mistake on this screen that writes a false figure and looks fine.
+   */
+  function openShift(id: string) {
+    if (id === targetId) return;
+    setError("");
+    setCounts({});
+    setNote("");
+    setZeroSales(false);
+    setZeroCash(false);
+    setUncounted(false);
+    setPhoto(null);
+    setPendingSeen(false);
+    setWarnPending(false);
+    setTakings(null);
+    setTargetId(id);
+  }
 
   const counted = useMemo(
     () => DENOMINATIONS.reduce((sum, d) => sum + d * (counts[d] ?? 0), 0),
@@ -143,7 +187,15 @@ export default function ShiftCloseScreen({
      is actually in front of the person, and refuses the tick otherwise. */
   const canDeclareZeroSales = (takings?.netSales ?? 0) === 0;
   const canDeclareZeroCash = (takings?.cashSales ?? 0) === 0;
-  const declared = (zeroSales && canDeclareZeroSales) || (zeroCash && canDeclareZeroCash);
+  /* A close where the money is not in front of the person doing it: somebody
+     else's drawer, or one left open on an earlier trading day. Both mean the
+     cash has almost certainly been emptied and the till put back into use. */
+  const lateClose = !mine || Boolean(today && businessDate && businessDate !== today);
+
+  const declared =
+    (zeroSales && canDeclareZeroSales) ||
+    (zeroCash && canDeclareZeroCash) ||
+    (uncounted && lateClose);
 
   const startedCounting = countedSomething || declared;
 
@@ -198,9 +250,13 @@ export default function ShiftCloseScreen({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        // Named rather than assumed. The screen can be pointed at a drawer that
+        // is not the caller's own, and the server must close the one on screen.
+        shift: targetId,
         counts,
         note,
         photoUrl,
+        uncounted: uncounted && lateClose,
         /* Sent so the shift row records which zero this was. A drawer signed
            off at nothing with nothing rung up is a quiet morning; the same
            drawer on a shift that took AED 800 on card is a different fact. */
@@ -221,6 +277,10 @@ export default function ShiftCloseScreen({
      rule that made the old combined screen unusable at a handover. What still
      needs a manager is the day, on its own screen. */
   const canClose = can(staff, "shift_close");
+  /* Somebody else's takings are a manager's signature. The guard already
+     refuses to offer another cashier's drawer to anyone else, and the API
+     refuses to close it — this is what greys the button out in between. */
+  const canCloseThis = canClose && (mine || can(staff, "day_close"));
 
   if (done) {
     return (
@@ -239,8 +299,9 @@ export default function ShiftCloseScreen({
             {/* Said plainly, because the old screen said the opposite by
                 implication and people went home believing the day was done. */}
             <p className="mt-1 text-[12.5px]" style={{ color: POS.inkSoft }}>
-              This closes your shift only. The restaurant keeps trading, and a manager signs the
-              business day off at the end of it.
+              {mine
+                ? "This closes your shift only. The restaurant keeps trading, and a manager signs the business day off at the end of it."
+                : `${owner}'s drawer is now reconciled and their shift is closed. Nothing about your own shift has changed.`}
             </p>
 
             <pre
@@ -279,11 +340,20 @@ export default function ShiftCloseScreen({
                 </button>
               )}
               <button
-                onClick={() => { router.replace("/pos/login"); router.refresh(); }}
+                /* Closing your own drawer is the last thing you do before going
+                   home, so it ends at the login screen. Clearing up after
+                   somebody else is not — there may be another drawer behind
+                   this one, and the guard on /pos/close hands back whichever
+                   is next, or sends them to open their own if there is none. */
+                onClick={() => {
+                  if (!mine) { router.replace("/pos/close"); router.refresh(); return; }
+                  router.replace("/pos/login");
+                  router.refresh();
+                }}
                 className="flex-1 rounded-xl text-sm font-bold text-white"
                 style={{ background: POS.action, height: 48 }}
               >
-                Finish
+                {mine ? "Finish" : "Next drawer"}
               </button>
             </div>
           </div>
@@ -296,23 +366,81 @@ export default function ShiftCloseScreen({
     <PosShell
       staff={staff}
       title="Shift Close"
-      subtitle={`${businessDate ? `${businessDateLabel(businessDate)} · ` : ""}${shift.shift_label} shift · ${staff.name || staff.staff_id} · opened ${new Date(shift.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
+      subtitle={`${businessDate ? `${businessDateLabel(businessDate)} · ` : ""}${shift.shift_label} shift · ${owner} · opened ${new Date(shift.opened_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`}
       actions={
-        /* Says out loud that this drawer is still taking money. The screen is
-           otherwise indistinguishable from one showing a shift already closed,
-           and a cashier counting a drawer that is still being sold out of will
-           never balance. */
-        <span
-          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-black uppercase tracking-wide"
-          style={{ background: POS.goodSoft, color: POS.good }}
-        >
-          <span className="h-2 w-2 rounded-full" style={{ background: POS.good }} />
-          Current shift · running
-        </span>
+        /* Says out loud what kind of drawer this is. A live one is still taking
+           money, and a cashier counting a drawer that is still being sold out of
+           will never balance. One left open on an earlier day is the opposite
+           problem — it looks identical on screen, and the money is long gone. */
+        lateClose ? (
+          <span
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-black uppercase tracking-wide"
+            style={{ background: "#FEF3C7", color: "#B45309" }}
+          >
+            <AlertTriangle size={12} />
+            {mine ? "Your drawer · left open" : `${owner}'s drawer · left open`}
+          </span>
+        ) : (
+          <span
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-black uppercase tracking-wide"
+            style={{ background: POS.goodSoft, color: POS.good }}
+          >
+            <span className="h-2 w-2 rounded-full" style={{ background: POS.good }} />
+            Current shift · running
+          </span>
+        )
       }
       warning={<StaleShiftWarning shifts={stale} />}
     >
       <div className="pos-scroll h-full p-4">
+        {/*
+          Which drawer is being closed.
+
+          Hidden in the ordinary case, which is one cashier with one drawer
+          handing over at four — putting a chooser in front of them would be
+          asking a question that has only ever had one answer. It appears when
+          there is genuinely something to choose: a drawer somebody walked away
+          from, which until now no screen could reach. The stale-shift banner
+          above has named those shifts all along and nothing could close them.
+        */}
+        {(closable.length > 1 || !mine) && (
+          <div
+            className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-white px-4 py-3"
+            style={{ border: `1px solid ${POS.line}` }}
+          >
+            <span className="flex items-center gap-2 text-[13px] font-bold" style={{ color: POS.ink }}>
+              <Users size={16} style={{ color: POS.inkSoft }} />
+              Drawer being closed
+            </span>
+            {closable.map((s) => {
+              const on = s.id === targetId;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => openShift(s.id)}
+                  className="rounded-lg px-3 py-1.5 text-start text-[12.5px] font-bold"
+                  style={{
+                    background: on ? POS.night : "#fff",
+                    color: on ? "#fff" : POS.ink,
+                    border: `1px solid ${on ? POS.night : POS.line}`,
+                  }}
+                >
+                  <span className="block">
+                    {s.mine ? "Your" : `${s.staff_name}'s`} {s.shift_label.toLowerCase()}
+                  </span>
+                  <span
+                    className="block text-[11px] font-semibold"
+                    style={{ color: on ? "rgba(255,255,255,0.75)" : POS.inkSoft }}
+                  >
+                    {s.business_date ? businessDateLabel(s.business_date) : shortDay(s.opened_at)}
+                    {s.days_old > 0 && ` · open ${s.days_old} day${s.days_old === 1 ? "" : "s"}`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="grid gap-4 xl:grid-cols-[1fr_1fr_320px]">
           {/* ─── What was sold ─── */}
           <Card title="Sales summary" icon={<BarChart3 size={16} />}>
@@ -515,6 +643,17 @@ export default function ShiftCloseScreen({
                   on={zeroCash}
                   onToggle={() => setZeroCash((v) => !v)}
                 />
+                {/* Only on a drawer nobody can count any more. Offering it on a
+                    live shift would be offering a way to skip counting, which is
+                    the entire job. */}
+                <Declaration
+                  title="Drawer never counted"
+                  detail={`I confirm this drawer was already emptied and cannot be counted. ${aed(expected)} is recorded as unaccounted for.`}
+                  unavailable="Available only on a shift left open from an earlier day"
+                  available={lateClose}
+                  on={uncounted}
+                  onToggle={() => setUncounted((v) => !v)}
+                />
               </div>
             )}
 
@@ -550,12 +689,12 @@ export default function ShiftCloseScreen({
 
             <button
               onClick={attemptClose}
-              disabled={busy || !takings || !canClose || !startedCounting}
+              disabled={busy || !takings || !canCloseThis || !startedCounting}
               className="w-full flex items-center justify-center gap-2 rounded-xl text-[15px] font-bold text-white disabled:opacity-40"
               style={{ background: POS.night, height: 52 }}
             >
               <Lock size={16} />
-              {busy ? "Closing…" : "Close shift & hand over"}
+              {busy ? "Closing…" : mine ? "Close shift & hand over" : `Close ${owner}'s shift`}
             </button>
           </Card>
         </div>
@@ -801,6 +940,11 @@ export default function ShiftCloseScreen({
 /** "14:22" — when the ticket was rung up, so it can be found on the board. */
 function clockOf(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+/** "Mon 7 Sept", for a shift row written before business_date existed. */
+function shortDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 }
 
 function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {

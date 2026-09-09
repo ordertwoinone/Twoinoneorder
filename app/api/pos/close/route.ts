@@ -4,13 +4,15 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { roundMoney } from "@/lib/kalba/pricing";
 import { currentStaff } from "@/lib/pos/auth";
-import { openShiftFor } from "@/lib/pos/shift-server";
+import { closableShifts, openShiftFor, shiftById, staleShifts } from "@/lib/pos/shift-server";
 import { cleanCounts, countTotal } from "@/lib/pos/shift";
 import { getPosSettings } from "@/lib/pos/menu-server";
 import { shiftTakings, whatsappSummary } from "@/lib/pos/reconcile";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { can } from "@/lib/pos/permissions";
 import { businessDateFor, businessDayRange } from "@/lib/pos/business-day";
+import type { PosShift } from "@/lib/pos/shift";
+import type { PosStaff } from "@/lib/pos/constants";
 import { posOrderCode } from "@/lib/pos/cart";
 import { isPaid } from "@/lib/pos/amend";
 
@@ -26,34 +28,114 @@ import { isPaid } from "@/lib/pos/amend";
  * daily total that has already been reported.
  */
 
-export async function GET() {
+/**
+ * Which drawer is being worked on, and whether this person may touch it.
+ *
+ * No id means the old behaviour and the everyday one: your own open shift. An
+ * id means somebody is closing a drawer that was left open — their own from
+ * before the weekend, or a cashier's who has gone home — and only a manager may
+ * sign off takings that were never in their hands.
+ */
+type Target = { shift: PosShift; owner: string } | { error: string; status: 403 | 404 | 409 };
+
+async function resolveShift(staff: PosStaff, askedId: string): Promise<Target> {
+  const shift = askedId ? await shiftById(askedId) : await openShiftFor(staff.id);
+
+  if (!shift) {
+    return askedId
+      ? { error: "That shift no longer exists.", status: 404 }
+      : { error: "No shift is open", status: 409 };
+  }
+
+  /* Already signed off. Worth its own message: two managers clearing the same
+     backlog would otherwise see a close silently do nothing, and the figures
+     that matter are the ones written by whoever got there first. */
+  if (shift.status !== "open") {
+    return { error: "That shift has already been closed.", status: 409 };
+  }
+
+  if (shift.staff_uuid !== staff.id && !can(staff, "day_close")) {
+    return {
+      error: "That drawer belongs to somebody else. Only a manager can close another cashier's shift.",
+      status: 403,
+    };
+  }
+
+  return { shift, owner: await ownerName(shift.staff_uuid) };
+}
+
+/** Whose takings these are — which is not necessarily who is signing them off. */
+async function ownerName(staffUuid: string): Promise<string> {
+  const { data } = await supabaseAdminLive
+    .from("pos_staff")
+    .select("name, staff_id")
+    .eq("id", staffUuid)
+    .maybeSingle();
+  const row = data as { name?: string; staff_id?: string } | null;
+  return row?.name || row?.staff_id || "Unknown";
+}
+
+/** The trading day a shift belongs to, falling back to the one we are in. */
+function dateOf(shift: PosShift): string {
+  return shift.business_date || businessDateFor();
+}
+
+export async function GET(request: Request) {
   const staff = await currentStaff();
   if (!staff) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
-  const shift = await openShiftFor(staff.id);
-  if (!shift) return NextResponse.json({ error: "No shift is open" }, { status: 409 });
+  const asked = new URL(request.url).searchParams.get("shift") ?? "";
+  const target = await resolveShift(staff, asked);
+  if ("error" in target) {
+    return NextResponse.json({ error: target.error }, { status: target.status });
+  }
 
-  const [takings, settings, expensesRes, contributions] = await Promise.all([
+  const { shift, owner } = target;
+  const shiftDate = dateOf(shift);
+  const isToday = shiftDate === businessDateFor();
+
+  const [takings, settings, expensesRes, contributions, closable] = await Promise.all([
     shiftTakings(shift.id, Number(shift.opening_float)),
     getPosSettings(),
     supabaseAdminLive.from("pos_expenses").select("*").eq("shift_id", shift.id).order("spent_at"),
-    dailyContributions(),
+    /* The day this shift was worked, not the day somebody is reading the screen
+       on. Closing Friday's abandoned drawer on a Monday used to show Monday's
+       contribution table underneath it, which is a different day's money sitting
+       under a heading that names this one. */
+    dailyContributions(shiftDate),
+    closableShifts(staff.id),
   ]);
 
   return NextResponse.json({
     staff,
     shift,
+    /* Whose drawer it is. The screen says so out loud, because signing off
+       somebody else's takings under your own name and not noticing is the
+       mistake this whole path makes possible. */
+    owner,
+    mine: shift.staff_uuid === staff.id,
     takings,
     settings,
     expenses: expensesRes.data ?? [],
     contributions,
+    /* Every drawer still open that this person is allowed to close. A cashier
+       sees only their own; a manager sees the backlog. */
+    closable: can(staff, "day_close") ? closable : closable.filter((s) => s.mine),
     /* Named, not just counted. takings.pendingTotal already says how much is
        outstanding, and a cashier reading "AED 84.00 still to pay" two minutes
        before going home cannot do anything with it — they need to know which
        tickets, so they can go and collect. */
     pending: await unpaidOrders(shift.id, settings.order_prefix),
-    pendingKiosk: await unpaidKiosk(settings.order_prefix),
-    businessDate: businessDateFor(),
+    /* Only while the shift being closed is one from today. The point of this
+       list is that the cashier can still walk over and collect — on a drawer
+       abandoned last Tuesday nobody can, and putting uncollectable tickets in
+       front of a manager doing a clean-up is a warning they can only dismiss. */
+    pendingKiosk: isToday ? await unpaidKiosk(settings.order_prefix) : [],
+    businessDate: shiftDate,
+    /* The day we are actually in. The screen compares the two to know whether
+       it is looking at a handover or at a drawer somebody walked away from,
+       and the branch's clock is the only one entitled to that answer. */
+    today: businessDateFor(),
   });
 }
 
@@ -143,9 +225,7 @@ async function unpaidKiosk(prefix: string) {
  * a single "Morning" because the labels went into a Set. Both read on screen as
  * the first close having vanished and only the second one counting.
  */
-async function dailyContributions() {
-  const date = businessDateFor();
-
+async function dailyContributions(date: string) {
   const { data: shiftRows, error: shiftError } = await supabaseAdminLive
     .from("pos_shifts")
     .select("id, shift_label, staff_uuid, pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id)")
@@ -247,12 +327,37 @@ export async function POST(request: Request) {
     );
   }
 
-  const shift = await openShiftFor(staff.id);
-  if (!shift) return NextResponse.json({ error: "No shift is open" }, { status: 409 });
-
   const body = await request.json().catch(() => ({}));
+
+  const target = await resolveShift(staff, String(body?.shift ?? ""));
+  if ("error" in target) {
+    return NextResponse.json({ error: target.error }, { status: target.status });
+  }
+  const { shift, owner } = target;
+
+  /* A close that is not the everyday one: somebody else's drawer, or one left
+     open on an earlier trading day. Either way the money is not in front of the
+     person signing it off, which is what makes the declaration below available
+     and what the closing note has to record. */
+  const mine = shift.staff_uuid === staff.id;
+  const lateClose = !mine || dateOf(shift) !== businessDateFor();
+
   const counts = cleanCounts(body?.counts);
   const countedCash = countTotal(counts);
+
+  /* "The drawer was never counted."
+   *
+   * A drawer abandoned three days ago has been emptied and put back into use,
+   * so there is nothing left to count and no honest figure to type. The other
+   * two declarations cannot cover it — they are about a drawer that is in front
+   * of somebody and reads zero — and without this one a stale shift could not
+   * be closed at all, which is what left them open for months.
+   *
+   * It records nil counted rather than assuming the drawer matched. The shift
+   * then reports the whole expected amount as missing, which is ugly on the
+   * report and is the truth: nobody knows where that money went. Refused on a
+   * cashier's own live drawer, where the answer is to go and count it. */
+  const uncounted = Boolean(body?.uncounted) && lateClose;
 
   const [takings, settings, heroRes] = await Promise.all([
     shiftTakings(shift.id, Number(shift.opening_float)),
@@ -281,6 +386,11 @@ export async function POST(request: Request) {
         String(body?.note ?? "").trim(),
         body?.zeroSales ? "Declared: no sales this shift." : "",
         body?.zeroCash ? "Declared: no cash received this shift." : "",
+        uncounted ? "Declared: the drawer was never counted." : "",
+        /* Who actually signed it off, when that is not whose shift it was.
+           closed_by holds the same fact, but the note is what gets read out of
+           a report a month later by somebody who will not be joining tables. */
+        !mine ? `Closed by ${staff.name || staff.staff_id} on behalf of ${owner}.` : "",
       ]
         .filter(Boolean)
         .join(" · ")
@@ -319,9 +429,16 @@ export async function POST(request: Request) {
      who left hours ago. */
   await supabaseAdminLive.from("pos_parked_orders").delete().eq("shift_id", shift.id);
 
+  /* Invalidated rather than left to time out. Closing a stale shift is exactly
+     the moment the warning about it becomes wrong, and a banner still shouting
+     about a drawer somebody has just reconciled is how people learn to ignore
+     the banner. */
+  staleShifts.invalidate();
+
   const summary = whatsappSummary({
     branch: heroRes.data?.name?.trim() || "Two in One",
-    staffName: staff.name || staff.staff_id,
+    // Whose takings these are. The manager who signed them off is in the note.
+    staffName: owner,
     shiftLabel: shift.shift_label,
     openedAt: shift.opened_at,
     closedAt,

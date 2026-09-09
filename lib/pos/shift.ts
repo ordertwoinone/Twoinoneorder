@@ -72,6 +72,8 @@ export interface PosShift {
   opening_float: number | string;
   opening_counts: Record<string, number>;
   opening_note: string;
+  /** The trading day it opened on. Absent on rows written before the column. */
+  business_date?: string | null;
 }
 
 /**
@@ -88,5 +90,27 @@ export interface StaleShift {
   shift_label: string;
   opened_at: string;
   /** Whole days between it opening and now. 1 is "yesterday's". */
+  days_old: number;
+}
+
+/**
+ * A shift the close screen is willing to sign off.
+ *
+ * Your own open drawer is one of these; so is every drawer somebody else walked
+ * away from, which a manager can now close. Declared here beside StaleShift and
+ * for the same reason — the screen that lists them is a client component, and
+ * importing a type out of the module holding the service-role key is one
+ * careless edit away from shipping the key to the browser.
+ */
+export interface ClosableShift {
+  id: string;
+  staff_name: string;
+  shift_label: string;
+  opened_at: string;
+  /** The trading day it was opened on. Null on rows older than the column. */
+  business_date: string | null;
+  /** Whether it is the asker's own. Theirs is a handover; anyone else's is a clean-up. */
+  mine: boolean;
+  /** Whole days it has been open. 0 is one opened today. */
   days_old: number;
 }

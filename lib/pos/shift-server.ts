@@ -1,5 +1,5 @@
 import { supabaseAdminLive } from "@/lib/supabase-admin";
-import type { PosShift, StaleShift } from "@/lib/pos/shift";
+import type { ClosableShift, PosShift, StaleShift } from "@/lib/pos/shift";
 import { memo, TTL } from "@/lib/pos/cache";
 import { businessDateFor, type DayShift } from "@/lib/pos/business-day";
 
@@ -22,6 +22,68 @@ export async function openShiftFor(staffUuid: string): Promise<PosShift | null> 
 
   if (error || !data) return null;
   return data as PosShift;
+}
+
+/** One shift by id, open or closed. Null when there is no such row. */
+export async function shiftById(id: string): Promise<PosShift | null> {
+  const { data, error } = await supabaseAdminLive
+    .from("pos_shifts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as PosShift;
+}
+
+/**
+ * Every drawer still open, branch-wide, oldest first.
+ *
+ * staleShifts() below answers a different question — "has something gone wrong"
+ * — and deliberately excludes today, because a shift opened this morning is not
+ * a problem. This is the list of drawers that can actually be signed off, so it
+ * includes today's: the caller's own is on it, and is the one they are usually
+ * here to close.
+ *
+ * Oldest first, because the order they need dealing with is the order they were
+ * abandoned in. Not cached: it decides what a close is allowed to write, and a
+ * drawer somebody signed off thirty seconds ago must not still be offered.
+ */
+export async function closableShifts(mineUuid: string): Promise<ClosableShift[]> {
+  const { data, error } = await supabaseAdminLive
+    .from("pos_shifts")
+    // The foreign key is named for the reason staleShifts() names one:
+    // pos_shifts points at pos_staff twice and PostgREST refuses to guess.
+    .select(
+      "id, staff_uuid, shift_label, opened_at, business_date, opened_by:pos_staff!pos_shifts_staff_uuid_fkey(name, staff_id)",
+    )
+    .eq("status", "open")
+    .order("opened_at", { ascending: true });
+
+  if (error || !data) return [];
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  return (data as unknown as {
+    id: string;
+    staff_uuid: string;
+    shift_label: string;
+    opened_at: string;
+    business_date: string | null;
+    opened_by: { name: string; staff_id: string } | null;
+  }[]).map((row) => ({
+    id: row.id,
+    staff_name: row.opened_by?.name || row.opened_by?.staff_id || "Unknown",
+    shift_label: row.shift_label,
+    opened_at: row.opened_at,
+    business_date: row.business_date ?? null,
+    mine: row.staff_uuid === mineUuid,
+    days_old: Math.max(
+      0,
+      Math.floor((startOfToday.getTime() - new Date(row.opened_at).getTime()) / 86_400_000) + 1,
+    ),
+  }));
 }
 
 /**

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { currentStaff } from "@/lib/pos/auth";
-import { openShiftFor, staleShifts } from "@/lib/pos/shift-server";
-import type { PosShift, StaleShift } from "@/lib/pos/shift";
+import { closableShifts, openShiftFor, shiftById, staleShifts } from "@/lib/pos/shift-server";
+import type { ClosableShift, PosShift, StaleShift } from "@/lib/pos/shift";
 import type { PosStaff } from "@/lib/pos/constants";
 import { can, landingFor, type PosPermission } from "@/lib/pos/permissions";
 
@@ -56,6 +56,49 @@ export async function requireShift(key: PosPermission = "till"): Promise<{
   if (!shift) redirect("/pos/shift/open");
 
   return { staff, shift, stale };
+}
+
+/**
+ * The shift-close screen, which is the one screen that can be here for a drawer
+ * that is not the caller's own.
+ *
+ * requireShift() sends anybody without an open shift off to open one, and for
+ * every other till screen that is right — there is nothing to sell from and
+ * nothing to count. It is wrong here in exactly the case this screen exists
+ * for: a cashier walked out on Friday without closing, and the manager who
+ * comes in to clear it up has no open drawer of their own, so the screen that
+ * could fix it was the one screen they could not reach.
+ *
+ * So: their own drawer if they have one, and otherwise — for a manager — the
+ * oldest one anybody left open, because that is the one that has gone
+ * unreconciled longest. Only when there is neither does it fall back to the old
+ * answer of sending them to open a shift.
+ */
+export async function requireCloseTarget(): Promise<{
+  staff: PosStaff;
+  shift: PosShift;
+  closable: ClosableShift[];
+  stale: StaleShift[];
+}> {
+  const staff = await requirePermission("shift_close");
+  if (staff.role === "kitchen") redirect("/pos/kitchen");
+
+  const [mine, allOpen, stale] = await Promise.all([
+    openShiftFor(staff.id),
+    closableShifts(staff.id),
+    staleShifts(),
+  ]);
+
+  /* Closing your own drawer is a cashier's job. Closing somebody else's is
+     signing your name to takings you did not handle, which is a manager's —
+     the same rule the stale-shift banner has always stated in words. */
+  const offered = can(staff, "day_close") ? allOpen : allOpen.filter((s) => s.mine);
+
+  // Oldest first out of closableShifts(), so [0] is the longest-abandoned.
+  const target = mine ?? (offered.length > 0 ? await shiftById(offered[0].id) : null);
+  if (!target) redirect("/pos/shift/open");
+
+  return { staff, shift: target, closable: offered, stale };
 }
 
 /**
