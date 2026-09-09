@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import type { StaleShift } from "@/lib/pos/shift";
 
@@ -37,6 +38,20 @@ export default function StaleShiftWarning({ shifts }: { shifts: StaleShift[] }) 
           reconciled.
         </p>
       </div>
+
+      {/* The way to do the thing the sentence above asks for.
+
+          It said "until a manager counts the drawer and closes it" on every
+          till screen for months while no screen could reach one of these, and
+          now that one can, the banner naming the problem is the obvious place
+          to look for the answer. Shift Close works out which drawer is meant. */}
+      <Link
+        href="/pos/close"
+        className="ms-auto shrink-0 self-center rounded-lg px-3 py-1.5 text-[12px] font-bold"
+        style={{ background: "#fff", border: "1px solid #FDE68A", color: "#92400E" }}
+      >
+        Close it now
+      </Link>
     </div>
   );
 }

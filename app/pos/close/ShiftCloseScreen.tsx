@@ -398,12 +398,16 @@ export default function ShiftCloseScreen({
 
           Hidden in the ordinary case, which is one cashier with one drawer
           handing over at four — putting a chooser in front of them would be
-          asking a question that has only ever had one answer. It appears when
-          there is genuinely something to choose: a drawer somebody walked away
-          from, which until now no screen could reach. The stale-shift banner
-          above has named those shifts all along and nothing could close them.
+          asking a question that has only ever had one answer.
+
+          Shown whenever this is not that: more than one drawer open, somebody
+          else's, or one left open on an earlier day. That last one is why it is
+          here at all, and it is the case where a lone chip still earns its
+          place — a manager who has come to clear up a drawer from Monday wants
+          to see the screen say Monday before they sign anything, and this is
+          where they look for it.
         */}
-        {(closable.length > 1 || !mine) && (
+        {(closable.length > 1 || !mine || lateClose) && (
           <div
             className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-white px-4 py-3"
             style={{ border: `1px solid ${POS.line}` }}
