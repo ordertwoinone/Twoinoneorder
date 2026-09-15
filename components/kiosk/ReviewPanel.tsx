@@ -18,6 +18,7 @@ import { addonSummary } from "@/lib/kalba/addons";
 import type { AddonSelection } from "@/lib/kalba/addons";
 import { aed, type KioskTotals } from "@/lib/kiosk/cart";
 import type { KioskItem } from "@/lib/kiosk/types";
+import { STUDENT_DISCOUNT_PERCENT } from "@/lib/student-card";
 
 /**
  * Step 2 — reviewing, as a panel over the menu rather than a page of its own.
@@ -51,6 +52,7 @@ export default function ReviewPanel({
   onDropPrivilege,
   onContinue,
   continueLabel,
+  tio,
 }: {
   t: (key: string) => string;
   lang: KioskLang;
@@ -70,7 +72,15 @@ export default function ReviewPanel({
   onDropPrivilege: () => void;
   onContinue: () => void;
   continueLabel: string;
+  /** TIO's "complete your meal" card, drawn above the lines. */
+  tio?: React.ReactNode;
 }) {
+  /* What a card would take off, in money rather than a percentage: "save AED
+     4.20" is a reason to dig the card out, "10% off" is a banner. The card's own
+     rate can differ, so this is the printed standard rate, and the real figure
+     replaces it the moment a card is applied. */
+  const cardWouldSave = Math.round(totals.subtotal * STUDENT_DISCOUNT_PERCENT) / 100;
+
   return (
     <div className="absolute inset-0 z-30 flex" style={{ background: "rgba(0,0,0,0.45)" }}>
       <button className="flex-1" aria-label="Back to the menu" onClick={onClose} />
@@ -100,6 +110,7 @@ export default function ReviewPanel({
 
         {/* The lines */}
         <div className="kiosk-scroll flex-1 px-[2.4vh] py-[1.4vh]">
+          {totals.lines.length > 0 && tio}
           {totals.lines.length === 0 ? (
             <p className="py-[8vh] text-center text-[1.7vh]" style={{ color: KIOSK.inkSoft }}>
               {t("review.empty")}
@@ -300,7 +311,9 @@ export default function ReviewPanel({
                     {t("review.havePrivilege")}
                   </span>
                   <span className="block text-[1.2vh]" style={{ color: "#6B5A12" }}>
-                    {t("review.enterMember")}
+                    {cardWouldSave > 0
+                      ? t("review.privilegeSave").replace("{amount}", aed(cardWouldSave))
+                      : t("review.enterMember")}
                   </span>
                 </span>
                 <ArrowRight className="w-[2vh] h-[2vh] shrink-0" style={{ color: KIOSK.onGold }} />

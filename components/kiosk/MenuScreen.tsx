@@ -117,7 +117,9 @@ export default function MenuScreen({
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
-      <div className="kiosk-scroll flex-1 px-[2.4vh] pt-[1.8vh] pb-[2vh]">
+      {/* Bottom padding clears TIO's Help-me-choose button, which floats over
+          the last row; without it the final cards' add buttons sat under it. */}
+      <div className="kiosk-scroll flex-1 px-[2.4vh] pt-[1.8vh] pb-[10vh]">
         {/* The combo, if one is set up */}
         {comboReady && (
           <div

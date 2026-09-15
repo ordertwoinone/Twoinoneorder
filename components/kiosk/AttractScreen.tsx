@@ -5,7 +5,9 @@ import { ChevronRight, CreditCard } from "lucide-react";
 import { KIOSK } from "@/lib/kiosk/theme";
 import { kioskField, KIOSK_LANGS, type KioskLang } from "@/lib/kiosk/i18n";
 import { AD_FALLBACK_SECONDS, type KioskAd, type KioskSettings } from "@/lib/kiosk/types";
+import { tioGreetings } from "@/lib/kiosk/tio";
 import { KioskWordmark } from "./Chrome";
+import TioAvatar from "./TioAvatar";
 
 /**
  * The screen nobody is standing at.
@@ -27,6 +29,7 @@ export default function AttractScreen({
   lang,
   onLang,
   onStart,
+  onTio,
 }: {
   settings: KioskSettings;
   ads: KioskAd[];
@@ -37,6 +40,8 @@ export default function AttractScreen({
   lang: KioskLang;
   onLang: (next: KioskLang) => void;
   onStart: () => void;
+  /** Start an order with TIO's Help-me-choose already open. */
+  onTio: () => void;
 }) {
   const [index, setIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -66,6 +71,19 @@ export default function AttractScreen({
     if (!el) return;
     el.play().catch(() => { /* a panel that refuses autoplay still shows the poster */ });
   }, [index]);
+
+  /* TIO turns its two lines over on its own clock, independent of the ads.
+     Worked out on the client after mount: the server's hour is not the
+     branch's, and a greeting rendered there would say good morning at night. */
+  const [greetings, setGreetings] = useState<string[]>([]);
+  const [line, setLine] = useState(0);
+  useEffect(() => {
+    setGreetings(tioGreetings(lang));
+    setLine(0);
+    const timer = setInterval(() => setLine((l) => l + 1), 5500);
+    return () => clearInterval(timer);
+  }, [lang]);
+  const greeting = greetings.length > 0 ? greetings[line % greetings.length] : "";
 
   /* The ad's own Arabic, not a dictionary: these are words an admin typed. */
   const headline = kioskField(lang, ad, "headline");
@@ -186,6 +204,25 @@ export default function AttractScreen({
           </div>
         ) : (
           <>
+            {/* TIO, waving people over. Its own button: pressing the robot
+                means "help me", which is a different start from Order. */}
+            {greeting && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onTio(); }}
+                className="self-start flex items-end gap-[1.4vh] mb-[2.2vh] text-start active:scale-[0.98] transition-transform"
+                aria-label={greeting}
+              >
+                <TioAvatar size="12vh" float />
+                <span
+                  key={`${lang}-${line % greetings.length}`}
+                  className="tio-bubble mb-[5vh] rounded-[2vh] rounded-es-[0.4vh] bg-white px-[2vh] py-[1.3vh] font-bold text-[2.1vh] leading-snug max-w-[46vh]"
+                  style={{ color: KIOSK.ink, boxShadow: "0 1vh 2.6vh rgba(0,0,0,0.35)" }}
+                >
+                  {greeting}
+                </span>
+              </button>
+            )}
+
             <button
               onClick={(e) => { e.stopPropagation(); onStart(); }}
               className="w-full rounded-[2.4vh] flex items-center justify-center gap-[1.6vh] font-black active:scale-[0.97] transition-transform"

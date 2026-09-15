@@ -151,6 +151,25 @@ const EN: Dict = {
   "badge.bestSeller": "BEST SELLER",
   "badge.spicy": "SPICY",
   "badge.veg": "VEG",
+
+  // TIO, the assistant
+  "tio.name": "TIO AI",
+  "tio.add": "Add",
+  "tio.noThanks": "No thanks",
+  "tio.help": "Help me choose",
+  "tio.sheetTitle": "Hi, I'm TIO!",
+  "tio.sheetSubtitle": "Tell me what you feel like, or ask me about a dish.",
+  "tio.placeholder": "Type a question… e.g. what goes with a burger?",
+  "tio.ask": "Ask",
+  "tio.type": "Type a question",
+  "tio.hideKeyboard": "Hide keyboard",
+  "tio.thinking": "TIO is thinking",
+  "tio.suggests": "TIO suggests",
+  "tio.inOrder": "In your order",
+  "tio.close": "Close",
+  "tio.error": "TIO couldn't answer that — please try again.",
+  "tio.allergyTitle": "Allergy notice",
+  "review.privilegeSave": "Save {amount} on this order with your member number",
 };
 
 const AR: Dict = {
@@ -272,6 +291,24 @@ const AR: Dict = {
   "badge.bestSeller": "الأكثر مبيعًا",
   "badge.spicy": "حار",
   "badge.veg": "نباتي",
+
+  "tio.name": "TIO AI",
+  "tio.add": "أضف",
+  "tio.noThanks": "لا شكراً",
+  "tio.help": "ساعدني في الاختيار",
+  "tio.sheetTitle": "أهلاً، أنا TIO!",
+  "tio.sheetSubtitle": "أخبرني بما تشتهي، أو اسألني عن أي طبق.",
+  "tio.placeholder": "اكتب سؤالك… مثلاً: ماذا يناسب البرجر؟",
+  "tio.ask": "اسأل",
+  "tio.type": "اكتب سؤالاً",
+  "tio.hideKeyboard": "إخفاء لوحة المفاتيح",
+  "tio.thinking": "TIO يفكر",
+  "tio.suggests": "اقتراح TIO",
+  "tio.inOrder": "في طلبك",
+  "tio.close": "إغلاق",
+  "tio.error": "لم يستطع TIO الإجابة — يرجى المحاولة مرة أخرى.",
+  "tio.allergyTitle": "تنبيه الحساسية",
+  "review.privilegeSave": "وفّر {amount} على هذا الطلب برقم عضويتك",
 };
 
 const DICTS: Record<KioskLang, Dict> = { en: EN, ar: AR };

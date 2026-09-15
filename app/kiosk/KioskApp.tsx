@@ -21,6 +21,11 @@ import PrivilegeModal from "@/components/kiosk/PrivilegeModal";
 import PhoneScreen from "@/components/kiosk/PhoneScreen";
 import NoteSheet from "@/components/kiosk/NoteSheet";
 import DoneScreen, { type KioskConfirmation } from "@/components/kiosk/DoneScreen";
+import TioAvatar from "@/components/kiosk/TioAvatar";
+import TioToast from "@/components/kiosk/TioToast";
+import TioSheet from "@/components/kiosk/TioSheet";
+import TioCheckout from "@/components/kiosk/TioCheckout";
+import { fetchTio } from "@/lib/kiosk/tio";
 
 /**
  * The kiosk, as one state machine over four screens.
@@ -53,6 +58,15 @@ function without<T>(record: Record<string, T>, key: string): Record<string, T> {
  * which keeps the two from firing at the same instant and resetting twice.
  */
 const DONE_BACKSTOP_SECONDS = 15;
+
+/**
+ * How often TIO may pipe up after a dish goes in: not before this many more
+ * dishes, and not before this long, since it last did. The first add always
+ * gets one. A pop-up on every tap is the fastest way to teach people to close
+ * it without reading.
+ */
+const PAIR_EVERY_ADDS = 2;
+const PAIR_GAP_MS = 20_000;
 
 export default function KioskApp({
   initial,
@@ -97,6 +111,16 @@ export default function KioskApp({
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState<KioskConfirmation | null>(null);
 
+  /* TIO. The pop-up after an add, the Help-me-choose sheet, and every dish it
+     has already put forward — so it never offers the same one twice to the
+     same customer. All of it goes with the basket. */
+  const [tioOpen, setTioOpen] = useState(false);
+  const [tioPair, setTioPair] = useState<{ item: KioskItem; message: string } | null>(null);
+  const [tioShown, setTioShown] = useState<string[]>([]);
+  const pairSeq = useRef(0);
+  const addsSincePair = useRef(0);
+  const lastPairAt = useRef(0);
+
   const { settings, ads, categories, items } = data;
 
   const totals = useMemo(
@@ -122,6 +146,12 @@ export default function KioskApp({
     setConfirmation(null);
     setError("");
     setSubmitting(false);
+    setTioOpen(false);
+    setTioPair(null);
+    setTioShown([]);
+    pairSeq.current += 1;
+    addsSincePair.current = 0;
+    lastPairAt.current = 0;
     setScreen("attract");
 
     /* The menu is re-read here rather than on a timer: idle is the only moment
@@ -157,6 +187,45 @@ export default function KioskApp({
     return () => { if (idleRef.current) clearTimeout(idleRef.current); };
   }, [bumpIdle]);
 
+  /* ─── TIO's pairing ───────────────────────────────────────────────────── */
+
+  /* Anything over the menu means the customer is busy with something else, and
+     a pop-up underneath it would only appear the moment they close it, stale.
+     The options sheet is kept apart: confirming it is exactly when a dish has
+     gone in and a pairing is wanted. */
+  const overMenu = screen !== "menu" || reviewOpen || privilegeOpen || tioOpen || noting !== null;
+  const busyRef = useRef({ overMenu, sheet: false });
+  busyRef.current = { overMenu, sheet: sheet !== null };
+
+  useEffect(() => {
+    if (!overMenu && !sheet) return;
+    pairSeq.current += 1;
+    setTioPair(null);
+  }, [overMenu, sheet]);
+
+  const offerPairing = useCallback((added: KioskItem, cart: string[]) => {
+    if (busyRef.current.overMenu) return;
+    addsSincePair.current += 1;
+    if (lastPairAt.current > 0) {
+      if (addsSincePair.current < PAIR_EVERY_ADDS) return;
+      if (Date.now() - lastPairAt.current < PAIR_GAP_MS) return;
+    }
+
+    const seq = ++pairSeq.current;
+    fetchTio({ kind: "pair", lang, cart, added: added.id, exclude: tioShown }).then(({ reply }) => {
+      if (seq !== pairSeq.current) return;
+      if (busyRef.current.overMenu || busyRef.current.sheet) return;
+      const item = items.find((i) => i.id === reply?.itemIds[0]);
+      if (!item || !reply?.message) return;
+      setTioPair({ item, message: reply.message });
+      setTioShown((shown) => (shown.includes(item.id) ? shown : [...shown, item.id]));
+      addsSincePair.current = 0;
+      lastPairAt.current = Date.now();
+    });
+  }, [items, lang, tioShown]);
+
+  const closeTioPair = useCallback(() => setTioPair(null), []);
+
   /* ─── The basket ──────────────────────────────────────────────────────── */
 
   const bump = useCallback((item: KioskItem, by: number) => {
@@ -179,7 +248,9 @@ export default function KioskApp({
       return;
     }
     bump(item, 1);
-  }, [bump, qty]);
+    // A new dish, not a second helping of one TIO has already seen.
+    if (!qty[item.id]) offerPairing(item, [...Object.keys(qty), item.id]);
+  }, [bump, qty, offerPairing]);
 
   const remove = useCallback((item: KioskItem) => {
     setQty((q) => without(q, item.id));
@@ -303,6 +374,7 @@ export default function KioskApp({
         deviceName={device ? deviceLabel(device) : ""}
         closedMessage={closed ? settings.closed_message : ""}
         onStart={() => setScreen("menu")}
+        onTio={() => { setScreen("menu"); setTioOpen(true); }}
       />
     );
   }
@@ -398,6 +470,16 @@ export default function KioskApp({
             }
           }}
           continueLabel={settings.phone_enabled ? t("review.continue") : t("review.placeOrder")}
+          tio={
+            <TioCheckout
+              t={t}
+              lang={lang}
+              items={items}
+              cart={Object.keys(qty)}
+              exclude={tioShown}
+              onAdd={add}
+            />
+          }
         />
       )}
 
@@ -413,7 +495,43 @@ export default function KioskApp({
             setAddons((a) => ({ ...a, [sheet.item.id]: selection }));
             setQty((q) => ({ ...q, [sheet.item.id]: chosenQty }));
             setSheet(null);
+            if (!sheet.editing) offerPairing(sheet.item, [...Object.keys(qty), sheet.item.id]);
           }}
+        />
+      )}
+
+      {/* ─── TIO ─── */}
+      {screen === "menu" && !overMenu && !sheet && (
+        tioPair ? (
+          <TioToast
+            t={t}
+            lang={lang}
+            item={tioPair.item}
+            message={tioPair.message}
+            onAdd={() => { setTioPair(null); add(tioPair.item); }}
+            onClose={closeTioPair}
+          />
+        ) : (
+          <button
+            onClick={() => setTioOpen(true)}
+            className="tio-bubble absolute z-20 end-[2.4vh] flex items-center gap-[1vh] rounded-full bg-white ps-[0.7vh] pe-[2vh] py-[0.7vh] font-black text-[1.7vh] active:scale-95 transition-transform"
+            style={{ bottom: "11vh", color: KIOSK.ink, border: `0.2vh solid ${KIOSK.gold}`, boxShadow: "0 0.8vh 2.4vh rgba(0,0,0,0.2)" }}
+          >
+            <TioAvatar size="5.4vh" ring={false} />
+            {t("tio.help")}
+          </button>
+        )
+      )}
+
+      {screen === "menu" && tioOpen && (
+        <TioSheet
+          t={t}
+          lang={lang}
+          items={items}
+          cart={Object.keys(qty)}
+          qty={qty}
+          onAdd={add}
+          onClose={() => setTioOpen(false)}
         />
       )}
 
