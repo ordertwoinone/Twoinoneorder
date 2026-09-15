@@ -21,6 +21,7 @@ import { itemPrice } from "@/lib/kiosk/cart";
 import {
   TIO_MAX_RESULTS,
   looksLikeAllergyQuestion,
+  ruleAskFallback,
   ruleChipResults,
   ruleMessage,
   ruleSuggestion,
@@ -303,25 +304,18 @@ Reply as JSON: {"message": "at most 40 words in ${languageName(req.lang)}", "ref
     }
   }
 
-  /* No AI answer. A chip can still be answered from tags and prices; a typed
-     question cannot, and saying so is better than guessing at it. */
-  if (req.chip) {
-    const items = ruleChipResults(req.chip, data.items, data.categories, req.cart);
-    return {
-      message: ruleMessage("ask", req.lang, "", items.length > 0),
-      itemIds: items.map((i) => i.id),
-      allergy: false,
-      source: "rules",
-    };
-  }
-
-  const resting =
-    req.lang === "ar"
-      ? "لا أستطيع الإجابة الآن — جرّب أحد الخيارات أعلاه أو اسأل موظفينا عند الكاشير."
-      : "I can't answer that right now — try one of the options above, or ask our staff at the counter.";
+  /* No AI answer — no key, no credit, or it timed out. A chip is answered
+     from its own test; a typed question is read for the same kind of words
+     a chip stands for ("best", "spicy", "under 15"...), so a customer typing
+     their own words is never worse off than one who tapped a chip. Either
+     way this always finds something: the last resort is the best sellers,
+     which beats sending someone away with nothing while OpenAI is down. */
+  const items = req.chip
+    ? ruleChipResults(req.chip, data.items, data.categories, req.cart)
+    : ruleAskFallback(query, data.items, data.categories, req.cart);
   return {
-    message: resting,
-    itemIds: [],
+    message: ruleMessage("ask", req.lang, "", items.length > 0),
+    itemIds: items.map((i) => i.id),
     allergy: allergyAsked,
     source: "rules",
   };

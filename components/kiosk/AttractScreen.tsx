@@ -204,25 +204,6 @@ export default function AttractScreen({
           </div>
         ) : (
           <>
-            {/* TIO, waving people over. Its own button: pressing the robot
-                means "help me", which is a different start from Order. */}
-            {greeting && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onTio(); }}
-                className="self-start flex items-end gap-[1.4vh] mb-[2.2vh] text-start active:scale-[0.98] transition-transform"
-                aria-label={greeting}
-              >
-                <TioAvatar size="12vh" float />
-                <span
-                  key={`${lang}-${line % greetings.length}`}
-                  className="tio-bubble mb-[5vh] rounded-[2vh] rounded-es-[0.4vh] bg-white px-[2vh] py-[1.3vh] font-bold text-[2.1vh] leading-snug max-w-[46vh]"
-                  style={{ color: KIOSK.ink, boxShadow: "0 1vh 2.6vh rgba(0,0,0,0.35)" }}
-                >
-                  {greeting}
-                </span>
-              </button>
-            )}
-
             <button
               onClick={(e) => { e.stopPropagation(); onStart(); }}
               className="w-full rounded-[2.4vh] flex items-center justify-center gap-[1.6vh] font-black active:scale-[0.97] transition-transform"
@@ -276,6 +257,29 @@ export default function AttractScreen({
           </div>
         )}
       </div>
+
+      {/* TIO, minimal: a corner button rather than a banner across the screen
+          it used to sit on top of. Pressing the robot means "help me", which
+          is a different start from Order, so it stays its own button. */}
+      {!closedMessage && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onTio(); }}
+          aria-label={greeting || (lang === "ar" ? "اسأل TIO" : "Ask TIO")}
+          className="absolute z-10 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+          style={{
+            width: "7.2vh",
+            height: "7.2vh",
+            right: "3vh",
+            bottom: "3vh",
+            background: "rgba(20,20,20,0.55)",
+            border: "0.14vh solid rgba(255,255,255,0.4)",
+            boxShadow: "0 0.6vh 2vh rgba(0,0,0,0.4)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <TioAvatar size="5.6vh" ring={false} float />
+        </button>
+      )}
     </div>
   );
 }

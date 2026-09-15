@@ -198,6 +198,57 @@ export function ruleChipResults(
   return found.slice(0, TIO_MAX_RESULTS);
 }
 
+const BEST_WORDS = /\b(best|top|popular|recommend\w*|favou?rite|famous|must ?try|good)\b|أفضل|الأكثر|طلبا|مشهور|ينصح/i;
+const OFFER_WORDS = /\b(offer|discount|deal|promo|cheap|price)\b|عرض|خصم|رخيص|سعر/i;
+const SPICY_WORDS = /\bspic\w*|hot\b|حار/i;
+const VEG_WORDS = /\bveg\w*|vegetarian|نباتي/i;
+const HUNGRY_WORDS = /\bhungry|filling|big|large|جوعان|جائع/i;
+
+/**
+ * What a typed question is actually asking for, read from its own words.
+ *
+ * This is the one place a customer's free text is looked at without OpenAI:
+ * no key configured, the request timed out, or the account is out of
+ * allowance are all the same case here — the kiosk still has a live menu and
+ * a keyboard's worth of hints about what somebody wants from it. Never comes
+ * back empty: the last resort is the same best sellers the idle screen and
+ * the Popular filter already lead with, which beats sending someone away
+ * with nothing.
+ */
+export function ruleAskFallback(
+  query: string,
+  items: KioskItem[],
+  categories: KioskCategory[],
+  cart: string[],
+): KioskItem[] {
+  const inCart = new Set(cart);
+  const pool = items.filter((i) => !inCart.has(i.id));
+
+  const tests: [RegExp, (i: KioskItem) => boolean][] = [
+    [BEST_WORDS, (i) => Boolean(i.show_in_top_picks)],
+    [OFFER_WORDS, (i) => toPercentOrZero(i) > 0 || (itemPrice(i) > 0 && itemPrice(i) < TIO_CHEAP_UNDER)],
+    [SPICY_WORDS, (i) => (i.tags ?? []).includes("spicy")],
+    [VEG_WORDS, (i) => (i.tags ?? []).includes("veg")],
+    [DRINK, (i) => DRINK.test(categoryText(i, categories))],
+    [SWEET, (i) => SWEET.test(categoryText(i, categories))],
+    [HUNGRY_WORDS, (i) => itemPrice(i) >= TIO_CHEAP_UNDER],
+  ];
+
+  for (const [pattern, test] of tests) {
+    if (!pattern.test(query)) continue;
+    const found = pool.filter(test).sort(byAppeal);
+    if (found.length > 0) return found.slice(0, TIO_MAX_RESULTS);
+  }
+
+  // Nothing in the question matched anything. Best sellers rather than nothing.
+  return [...pool].sort(byAppeal).slice(0, TIO_MAX_RESULTS);
+}
+
+function toPercentOrZero(item: KioskItem): number {
+  const n = Number(item.discount_percent ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
 /** The sentence TIO puts on a rule-picked dish. */
 export function ruleMessage(kind: TioKind, lang: KioskLang, name: string, found = true): string {
   if (lang === "ar") {
