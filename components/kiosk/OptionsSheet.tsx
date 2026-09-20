@@ -133,7 +133,7 @@ export default function OptionsSheet({
                 </div>
 
                 {group.options.some((o) => o.image_url?.trim()) ? (
-                  <div className="grid grid-cols-2 gap-[1vh]">
+                  <div className="flex gap-[1.2vh] overflow-x-auto pb-[0.4vh]">
                     {group.options.map((option) => {
                       const ticked = chosen.includes(option.id);
                       const price = addonPrice(option);
@@ -143,14 +143,15 @@ export default function OptionsSheet({
                           onClick={() =>
                             setSelection((s) => toggleOption(s, item.id, group, option.id))
                           }
-                          className="relative flex flex-col rounded-[1.3vh] p-[1vh] text-start active:scale-[0.98] transition-transform"
+                          className="relative shrink-0 flex flex-col rounded-[1.3vh] p-[1vh] text-start active:scale-[0.98] transition-transform"
                           style={{
+                            width: "13.5vh",
                             border: `0.16vh solid ${ticked ? KIOSK.gold : KIOSK.line}`,
-                            background: ticked ? KIOSK.goldSoft : "#fff",
+                            background: "#fff",
                           }}
                         >
                           <span
-                            className={`absolute top-[0.8vh] end-[0.8vh] z-10 flex items-center justify-center w-[2.4vh] h-[2.4vh] ${single ? "rounded-full" : "rounded-[0.6vh]"}`}
+                            className={`absolute top-[0.7vh] end-[0.7vh] z-10 flex items-center justify-center w-[2.4vh] h-[2.4vh] ${single ? "rounded-full" : "rounded-[0.6vh]"}`}
                             style={{
                               background: ticked ? KIOSK.gold : "#fff",
                               border: `0.16vh solid ${ticked ? KIOSK.gold : "#D4D4D8"}`,
@@ -165,20 +166,20 @@ export default function OptionsSheet({
                               src={sizedImage(option.image_url, 200)}
                               alt=""
                               loading="lazy"
-                              className="w-full h-[8vh] object-cover rounded-[0.9vh] mb-[0.8vh]"
+                              className="w-full h-[9vh] object-contain mb-[0.8vh]"
                             />
                           ) : (
-                            <span className="block w-full h-[8vh] mb-[0.8vh]" />
+                            <span className="block w-full h-[9vh] mb-[0.8vh]" />
                           )}
                           <span
-                            className="block font-bold text-[1.5vh] leading-tight truncate"
+                            className="block font-bold text-[1.4vh] leading-tight"
                             style={{ color: KIOSK.ink }}
                           >
                             {kioskField(lang, option, "name")}
                           </span>
                           {price > 0 && (
                             <span
-                              className="block text-[1.25vh] font-semibold mt-[0.2vh]"
+                              className="block text-[1.2vh] font-semibold mt-[0.2vh]"
                               style={{ color: KIOSK.inkSoft }}
                             >
                               + AED {price.toFixed(2)}
