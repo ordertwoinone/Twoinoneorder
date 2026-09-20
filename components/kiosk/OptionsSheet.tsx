@@ -132,33 +132,44 @@ export default function OptionsSheet({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-[1vh]">
-                  {group.options.map((option) => {
-                    const ticked = chosen.includes(option.id);
-                    const price = addonPrice(option);
-                    return (
-                      <button
-                        key={option.id}
-                        onClick={() =>
-                          setSelection((s) => toggleOption(s, item.id, group, option.id))
-                        }
-                        className="flex items-center gap-[1.2vh] rounded-[1.3vh] px-[1.4vh] py-[1.3vh] text-start active:scale-[0.98] transition-transform"
-                        style={{
-                          border: `0.16vh solid ${ticked ? KIOSK.gold : KIOSK.line}`,
-                          background: ticked ? KIOSK.goldSoft : "#fff",
-                        }}
-                      >
-                        <span
-                          className={`shrink-0 flex items-center justify-center w-[2.8vh] h-[2.8vh] ${single ? "rounded-full" : "rounded-[0.7vh]"}`}
+                {group.options.some((o) => o.image_url?.trim()) ? (
+                  <div className="grid grid-cols-2 gap-[1vh]">
+                    {group.options.map((option) => {
+                      const ticked = chosen.includes(option.id);
+                      const price = addonPrice(option);
+                      return (
+                        <button
+                          key={option.id}
+                          onClick={() =>
+                            setSelection((s) => toggleOption(s, item.id, group, option.id))
+                          }
+                          className="relative flex flex-col rounded-[1.3vh] p-[1vh] text-start active:scale-[0.98] transition-transform"
                           style={{
-                            background: ticked ? KIOSK.gold : "#fff",
-                            border: `0.16vh solid ${ticked ? KIOSK.gold : "#D4D4D8"}`,
-                            color: KIOSK.onGold,
+                            border: `0.16vh solid ${ticked ? KIOSK.gold : KIOSK.line}`,
+                            background: ticked ? KIOSK.goldSoft : "#fff",
                           }}
                         >
-                          {ticked && <Check strokeWidth={4} className="w-[1.6vh] h-[1.6vh]" />}
-                        </span>
-                        <span className="flex-1 min-w-0">
+                          <span
+                            className={`absolute top-[0.8vh] end-[0.8vh] z-10 flex items-center justify-center w-[2.4vh] h-[2.4vh] ${single ? "rounded-full" : "rounded-[0.6vh]"}`}
+                            style={{
+                              background: ticked ? KIOSK.gold : "#fff",
+                              border: `0.16vh solid ${ticked ? KIOSK.gold : "#D4D4D8"}`,
+                              color: KIOSK.onGold,
+                            }}
+                          >
+                            {ticked && <Check strokeWidth={4} className="w-[1.4vh] h-[1.4vh]" />}
+                          </span>
+                          {option.image_url?.trim() ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={sizedImage(option.image_url, 200)}
+                              alt=""
+                              loading="lazy"
+                              className="w-full h-[8vh] object-cover rounded-[0.9vh] mb-[0.8vh]"
+                            />
+                          ) : (
+                            <span className="block w-full h-[8vh] mb-[0.8vh]" />
+                          )}
                           <span
                             className="block font-bold text-[1.5vh] leading-tight truncate"
                             style={{ color: KIOSK.ink }}
@@ -173,11 +184,58 @@ export default function OptionsSheet({
                               + AED {price.toFixed(2)}
                             </span>
                           )}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-[1vh]">
+                    {group.options.map((option) => {
+                      const ticked = chosen.includes(option.id);
+                      const price = addonPrice(option);
+                      return (
+                        <button
+                          key={option.id}
+                          onClick={() =>
+                            setSelection((s) => toggleOption(s, item.id, group, option.id))
+                          }
+                          className="flex items-center gap-[1.2vh] rounded-[1.3vh] px-[1.4vh] py-[1.3vh] text-start active:scale-[0.98] transition-transform"
+                          style={{
+                            border: `0.16vh solid ${ticked ? KIOSK.gold : KIOSK.line}`,
+                            background: ticked ? KIOSK.goldSoft : "#fff",
+                          }}
+                        >
+                          <span
+                            className={`shrink-0 flex items-center justify-center w-[2.8vh] h-[2.8vh] ${single ? "rounded-full" : "rounded-[0.7vh]"}`}
+                            style={{
+                              background: ticked ? KIOSK.gold : "#fff",
+                              border: `0.16vh solid ${ticked ? KIOSK.gold : "#D4D4D8"}`,
+                              color: KIOSK.onGold,
+                            }}
+                          >
+                            {ticked && <Check strokeWidth={4} className="w-[1.6vh] h-[1.6vh]" />}
+                          </span>
+                          <span className="flex-1 min-w-0">
+                            <span
+                              className="block font-bold text-[1.5vh] leading-tight truncate"
+                              style={{ color: KIOSK.ink }}
+                            >
+                              {kioskField(lang, option, "name")}
+                            </span>
+                            {price > 0 && (
+                              <span
+                                className="block text-[1.25vh] font-semibold mt-[0.2vh]"
+                                style={{ color: KIOSK.inkSoft }}
+                              >
+                                + AED {price.toFixed(2)}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             );
           })}
