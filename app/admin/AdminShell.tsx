@@ -97,6 +97,8 @@ const NAV: NavItem[] = [
     children: [
       { label: "Orders",  href: "/admin/kitchens/orders",  icon: Receipt    },
       { label: "Payments", href: "/admin/kitchens/payments", icon: CreditCard },
+      { label: "Credit",  href: "/admin/kitchens/credit",  icon: Receipt    },
+      { label: "Order History", href: "/admin/kitchens/history", icon: History },
       { label: "Dishes",  href: "/admin/kitchens/dishes",  icon: Utensils   },
       { label: "Tables",  href: "/admin/kitchens/tables",  icon: Armchair   },
       { label: "Waiters", href: "/admin/kitchens/waiters", icon: UsersRound },

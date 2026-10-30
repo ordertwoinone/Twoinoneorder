@@ -152,6 +152,20 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/kitchens/payments"],
   },
   {
+    key: "kitchens-credit",
+    label: "Kitchens Page: Credit",
+    hint: "Customers who owe for orders, with their names and phone numbers",
+    paths: ["/admin/kitchens/credit"],
+    apiPaths: ["/api/admin/kitchens/credit"],
+  },
+  {
+    key: "kitchens-history",
+    label: "Kitchens Page: Order History",
+    hint: "Looking back through past orders and their totals",
+    paths: ["/admin/kitchens/history"],
+    apiPaths: ["/api/admin/kitchens/history"],
+  },
+  {
     key: "kitchens-tables",
     label: "Kitchens Page: Tables",
     hint: "The tables guests choose from on the kitchens page",

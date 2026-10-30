@@ -1,24 +1,13 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import type { OrderItem } from "@/lib/kitchen-orders";
-
-interface ServedOrder {
-  id: string;
-  order_number: number;
-  table_code: string | null;
-  guests: number;
-  waiter_name: string | null;
-  items: OrderItem[];
-  total: number | string;
-  paid_at: string | null;
-  created_at: string;
-}
+import OrderMoneyCard, { money, when, type ServedOrder } from "../OrderMoneyCard";
 
 const REFRESH_MS = 15_000;
 
-const money = (amount: number) => `AED ${amount.toFixed(2)}`;
-const when = (iso: string) =>
-  new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
+const methodBtn = "flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50";
+
+const METHOD_LABEL: Record<string, string> = { card: "Card", cash: "Cash" };
 
 export default function KitchenPaymentsAdmin() {
   const [unpaid, setUnpaid] = useState<ServedOrder[]>([]);
@@ -28,6 +17,10 @@ export default function KitchenPaymentsAdmin() {
   const [view, setView] = useState<"unpaid" | "paid">("unpaid");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
+  // The order whose credit details are being typed.
+  const [creditFor, setCreditFor] = useState<string | null>(null);
+  const [creditName, setCreditName] = useState("");
+  const [creditPhone, setCreditPhone] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/kitchens/payments").catch(() => null);
@@ -48,17 +41,33 @@ export default function KitchenPaymentsAdmin() {
     return () => window.clearInterval(timer);
   }, [load]);
 
-  async function setPaidStatus(id: string, isPaid: boolean) {
+  async function send(id: string, body: Record<string, unknown>): Promise<boolean> {
     setBusyId(id);
     setActionError("");
     const res = await fetch(`/api/admin/kitchens/payments/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paid: isPaid }),
+      body: JSON.stringify(body),
     }).catch(() => null);
-    if (!res?.ok) setActionError("That order couldn't be updated. Please try again.");
+    if (!res?.ok) {
+      const data = await res?.json().catch(() => null);
+      setActionError(data?.error ?? "That order couldn't be updated. Please try again.");
+    }
     await load();
     setBusyId(null);
+    return Boolean(res?.ok);
+  }
+
+  function openCredit(id: string) {
+    setActionError("");
+    setCreditName("");
+    setCreditPhone("");
+    setCreditFor(id);
+  }
+
+  async function saveCredit(id: string) {
+    const ok = await send(id, { action: "credit", name: creditName, phone: creditPhone });
+    if (ok) setCreditFor(null);
   }
 
   const owed = unpaid.reduce((sum, o) => sum + Number(o.total), 0);
@@ -90,7 +99,7 @@ export default function KitchenPaymentsAdmin() {
       {loadError && (
         <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {loadError}
-          <span className="block text-xs mt-1 text-red-600">If something is missing, run supabase/kitchen_order_payments.sql in the Supabase SQL editor.</span>
+          <span className="block text-xs mt-1 text-red-600">If something is missing, run supabase/kitchen_order_payments.sql and supabase/kitchen_order_credit.sql in the Supabase SQL editor.</span>
         </div>
       )}
       {actionError && <p role="alert" className="mb-4 text-sm text-red-600">{actionError}</p>}
@@ -103,64 +112,64 @@ export default function KitchenPaymentsAdmin() {
         </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visible.map((order) => (
-            <article key={order.id} className="flex flex-col bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold text-gray-900">
-                    #{order.order_number}{order.table_code ? ` · Table ${order.table_code}` : ""}
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {when(order.created_at)}
-                    {" · "}{order.guests} {order.guests === 1 ? "person" : "people"}
-                    {order.waiter_name ? ` · ${order.waiter_name}` : ""}
-                  </p>
-                </div>
-                <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${order.paid_at ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                  {order.paid_at ? "Paid" : "Not paid"}
-                </span>
-              </div>
-
-              <ul className="mt-3 flex-1 space-y-1 text-sm">
-                {(order.items ?? []).map((item, i) => (
-                  <li key={i} className="flex justify-between gap-3">
-                    <span className="text-gray-800">
-                      {item.qty} × {item.name}
-                      {item.addons?.length ? <span className="block text-xs text-gray-500">{item.addons.map((a) => a.name).join(", ")}</span> : null}
-                    </span>
-                    <span className="shrink-0 text-gray-600">{money(Number(item.line_total))}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                <span className="text-sm font-semibold text-gray-600">Total</span>
-                <span className="text-base font-bold text-gray-900">{money(Number(order.total))}</span>
-              </div>
-
-              {order.paid_at ? (
+          {visible.map((order) => {
+            const busy = busyId === order.id;
+            const method = METHOD_LABEL[order.payment_method ?? ""];
+            return order.paid_at ? (
+              <OrderMoneyCard
+                key={order.id}
+                order={order}
+                badge={`Paid${method ? ` · ${method}` : ""}`}
+                badgeCls="bg-green-100 text-green-700"
+              >
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-500">Paid {when(order.paid_at)}</span>
+                  <span className="text-xs text-gray-500">
+                    {when(order.paid_at)}{order.credit_at ? " · was on credit" : ""}
+                  </span>
                   <button
-                    onClick={() => setPaidStatus(order.id, false)}
-                    disabled={busyId === order.id}
+                    onClick={() => send(order.id, { action: "undo" })}
+                    disabled={busy}
                     className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
                   >
                     Mark not paid
                   </button>
                 </div>
-              ) : (
-                <button
-                  onClick={() => setPaidStatus(order.id, true)}
-                  disabled={busyId === order.id}
-                  className="mt-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
-                  style={{ background: "#ea580c" }}
-                >
-                  Mark paid
-                </button>
-              )}
-            </article>
-          ))}
+              </OrderMoneyCard>
+            ) : (
+              <OrderMoneyCard key={order.id} order={order} badge="Not paid" badgeCls="bg-red-100 text-red-700">
+                {creditFor === order.id ? (
+                  <div className="mt-3 space-y-2">
+                    <input
+                      type="text"
+                      value={creditName}
+                      onChange={(e) => setCreditName(e.target.value)}
+                      placeholder="Customer name"
+                      aria-label="Customer name"
+                      className={inputCls}
+                    />
+                    <input
+                      type="tel"
+                      value={creditPhone}
+                      onChange={(e) => setCreditPhone(e.target.value)}
+                      placeholder="Phone number"
+                      aria-label="Phone number"
+                      className={inputCls}
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => setCreditFor(null)} className={`${methodBtn} text-gray-700 bg-gray-100 hover:bg-gray-200`}>Back</button>
+                      <button onClick={() => saveCredit(order.id)} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Save on credit</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={() => send(order.id, { action: "pay", method: "card" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Card</button>
+                    <button onClick={() => send(order.id, { action: "pay", method: "cash" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Cash</button>
+                    <button onClick={() => openCredit(order.id)} disabled={busy} className={`${methodBtn} text-gray-800 bg-white border border-gray-300 hover:bg-gray-50`}>Credit</button>
+                  </div>
+                )}
+              </OrderMoneyCard>
+            );
+          })}
         </div>
       )}
     </div>

@@ -148,7 +148,9 @@ export default function KitchenOrdersAdmin() {
                     <p className="text-xs text-gray-500 mt-0.5">
                       {new Date(order.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                       {" · "}{order.guests} {order.guests === 1 ? "person" : "people"}
-                      {order.waiter_name ? ` · ${order.waiter_name}` : ""}
+                    </p>
+                    <p className="text-xs font-medium text-gray-700 mt-0.5">
+                      {order.waiter_name ? `Waiter: ${order.waiter_name}` : "No waiter"}
                     </p>
                   </div>
                   <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${style.cls}`}>{style.label}</span>

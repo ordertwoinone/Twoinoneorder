@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight, Armchair, CheckCircle2, Download, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, Users, X,
+  ArrowRight, Armchair, CheckCircle2, Download, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, X,
   type LucideIcon,
 } from "lucide-react";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
@@ -87,19 +87,17 @@ function QtyStepper({
 }
 
 function DishCard({
-  dish, qty, guests, hasAddons, onAdd, onQtyChange,
+  dish, qty, hasAddons, onAdd, onQtyChange,
 }: {
   dish: KitchenDish;
   qty: number;
-  guests: number | null;
   hasAddons: boolean;
   onAdd: () => void;
   onQtyChange: (qty: number) => void;
 }) {
-  const { t, tp } = useTranslation();
+  const { t } = useTranslation();
   const pick = useLocalizedField();
   const name = pick(dish, "name");
-  const matchesParty = dish.serves === guests;
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
@@ -123,13 +121,6 @@ function DishCard({
         <p className="mt-1 text-xs leading-relaxed text-gray-500 sm:text-sm">{pick(dish, "description")}</p>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${matchesParty ? "text-white" : "bg-gray-100 text-gray-700"}`}
-            style={matchesParty ? { background: INK } : undefined}
-          >
-            <Users size={12} />
-            {tp("kitchens.serves", dish.serves)}
-          </span>
           {dish.kcal !== null && (
             <span
               className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:text-xs"
@@ -508,7 +499,6 @@ export default function KitchensContent({
       key={dish.id}
       dish={dish}
       qty={quantities[dish.id] ?? 0}
-      guests={seating?.guests ?? null}
       hasAddons={(addonGroups[dish.id]?.length ?? 0) > 0}
       onAdd={() => addDish(dish)}
       onQtyChange={(qty) => setQty(dish.id, qty)}
