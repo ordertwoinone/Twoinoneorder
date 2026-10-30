@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { FileSpreadsheet, Plus, Pencil, Trash2, X } from "lucide-react";
 import AddonGroupsEditor, { addonGroupsProblem, type EditableAddonGroup } from "@/components/admin/AddonGroupsEditor";
 import BilingualField from "@/components/admin/BilingualField";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import type { DishBadge, Kitchen, Meal } from "@/data/kitchenDishes";
 import { BADGE_LABELS, KITCHEN_LABELS, MEAL_LABELS, type KitchenDishRow } from "@/lib/kitchens";
+import ImportDialog from "./ImportDialog";
 
 type DishWithAddons = KitchenDishRow & { addon_groups?: EditableAddonGroup[] };
 
@@ -70,6 +71,7 @@ export default function KitchensAdmin() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -153,10 +155,16 @@ export default function KitchensAdmin() {
           <h1 className="text-2xl font-semibold text-gray-900">Dishes</h1>
           <p className="text-sm text-gray-500 mt-0.5">{items.length} dish{items.length !== 1 ? "es" : ""} · the page shows samples until one is active</p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: "#ea580c" }}>
-          <Plus size={16} />
-          Add dish
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setImporting(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-gray-800 bg-white border border-gray-200 hover:bg-gray-50 transition-colors">
+            <FileSpreadsheet size={16} />
+            Import from Excel
+          </button>
+          <button onClick={openAdd} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: "#ea580c" }}>
+            <Plus size={16} />
+            Add dish
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -361,6 +369,8 @@ export default function KitchensAdmin() {
           </div>
         </div>
       )}
+
+      {importing && <ImportDialog onClose={() => setImporting(false)} onImported={load} />}
 
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
