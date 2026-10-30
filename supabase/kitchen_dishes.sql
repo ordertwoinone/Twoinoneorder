@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS kitchen_dishes (
   description_ar  text          NOT NULL DEFAULT '',
   price           numeric(10,2) NOT NULL CHECK (price >= 0),
   kcal            integer       CHECK (kcal IS NULL OR kcal >= 0),
+  -- How many people the dish feeds. The menu lists the closest match to the party first.
+  serves          integer       NOT NULL DEFAULT 1 CHECK (serves >= 1),
   image_url       text          NOT NULL DEFAULT '',
   badge           text          CHECK (badge IS NULL OR badge IN ('pizza', 'bbq', 'fresh', 'morning')),
   is_healthy      boolean       NOT NULL DEFAULT false,
@@ -24,6 +26,10 @@ CREATE TABLE IF NOT EXISTS kitchen_dishes (
   created_at      timestamptz   DEFAULT now(),
   updated_at      timestamptz   DEFAULT now()
 );
+
+-- For a database that ran an earlier copy of this file.
+ALTER TABLE kitchen_dishes
+  ADD COLUMN IF NOT EXISTS serves integer NOT NULL DEFAULT 1 CHECK (serves >= 1);
 
 -- Read and written only through the service role, as with the other admin tables.
 ALTER TABLE kitchen_dishes ENABLE ROW LEVEL SECURITY;

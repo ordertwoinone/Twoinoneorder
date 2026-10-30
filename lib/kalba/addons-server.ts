@@ -45,19 +45,28 @@ export interface GroupInput {
 
 type GroupRow = Omit<KalbaAddonGroup, "options">;
 
+/** Where a menu keeps its questions. The Kalba tables reference Kalba items only. */
+export interface AddonTables {
+  groups: string;
+  addons: string;
+}
+
+const KALBA_TABLES: AddonTables = { groups: "kalba_addon_groups", addons: "kalba_item_addons" };
+export const KITCHEN_TABLES: AddonTables = { groups: "kitchen_addon_groups", addons: "kitchen_addons" };
+
 /**
  * `live` picks the client, `activeOnly` picks the rows — two separate questions
  * that used to be one flag. The kiosk needs both at once: it must never read
  * through Next's data cache, and it must never offer an option that has been
  * switched off.
  */
-async function read(live: boolean, activeOnly: boolean) {
+async function read(live: boolean, activeOnly: boolean, tables: AddonTables = KALBA_TABLES) {
   const client = live ? supabaseAdminLive : supabaseAdmin;
 
-  const addons = client.from("kalba_item_addons").select(COLUMNS);
+  const addons = client.from(tables.addons).select(COLUMNS);
 
   const [groupsRes, addonsRes] = await Promise.all([
-    client.from("kalba_addon_groups").select(COLUMNS).order("sort_order", { ascending: true }),
+    client.from(tables.groups).select(COLUMNS).order("sort_order", { ascending: true }),
     (activeOnly ? addons.eq("is_active", true) : addons).order("sort_order", { ascending: true }),
   ]);
 
@@ -90,6 +99,12 @@ export async function getAllAddonGroupsByItem(): Promise<Record<string, KalbaAdd
   return buildGroups(groups, addons, LOOSE_LABEL);
 }
 
+/** Every kitchen dish's questions. `live` and all options for the admin panel. */
+export async function getKitchenAddonGroups(forAdmin = false): Promise<Record<string, KalbaAddonGroup[]>> {
+  const { groups, addons } = await read(forAdmin, !forAdmin, KITCHEN_TABLES);
+  return buildGroups(groups, addons, LOOSE_LABEL);
+}
+
 /**
  * Makes an item's stored questions match what the admin panel just sent.
  *
@@ -102,6 +117,7 @@ export async function getAllAddonGroupsByItem(): Promise<Record<string, KalbaAdd
 export async function syncItemAddonGroups(
   itemId: string,
   groups: GroupInput[],
+  tables: AddonTables = KALBA_TABLES,
 ): Promise<{ droppedColumns: string[] }> {
   /* Columns the database turned out not to have. Dropping one beats losing the
      whole edit, but doing it silently is how an admin ends up uploading the
@@ -134,11 +150,13 @@ export async function syncItemAddonGroups(
     .filter((group) => group.name !== "" && group.options.length > 0);
 
   const { data: existingGroups, error: groupsError } = await supabaseAdminLive
-    .from("kalba_addon_groups")
+    .from(tables.groups)
     .select("id")
     .eq("item_id", itemId);
 
-  if (groupsError) return { droppedColumns: [] };
+  /* Nothing to lose if nothing was being saved; otherwise the admin has to hear
+     that their groups went nowhere. */
+  if (groupsError) return { droppedColumns: clean.length > 0 ? [tables.groups] : [] };
 
   const keptGroupIds = new Set(clean.map((g) => g.id).filter(Boolean) as string[]);
   const goneGroupIds = (existingGroups ?? [])
@@ -147,7 +165,7 @@ export async function syncItemAddonGroups(
 
   // The options cascade with their group.
   if (goneGroupIds.length > 0) {
-    await supabaseAdminLive.from("kalba_addon_groups").delete().in("id", goneGroupIds);
+    await supabaseAdminLive.from(tables.groups).delete().in("id", goneGroupIds);
   }
 
   /** Every option id the loop below wrote — updated or freshly inserted. */
@@ -166,24 +184,24 @@ export async function syncItemAddonGroups(
 
     if (groupId) {
       await supabaseAdminLive
-        .from("kalba_addon_groups")
+        .from(tables.groups)
         .update({ ...fields, updated_at: new Date().toISOString() })
         .eq("id", groupId);
     } else {
       const { data, error } = await supabaseAdminLive
-        .from("kalba_addon_groups")
+        .from(tables.groups)
         .insert([{ ...fields, item_id: itemId }])
         .select("id")
         .single();
       if (error || !data) {
         // No table for the groups: the questions cannot be stored at all.
-        dropped.add("kalba_addon_groups");
+        dropped.add(tables.groups);
         continue;
       }
       groupId = (data as { id: string }).id;
     }
 
-    const ids = await syncGroupOptions(itemId, groupId, group.options, dropped);
+    const ids = await syncGroupOptions(itemId, groupId, group.options, dropped, tables);
     for (const id of ids) writtenOptionIds.add(id);
   }
 
@@ -203,7 +221,7 @@ export async function syncItemAddonGroups(
    */
 
   const { data: allOptions } = await supabaseAdminLive
-    .from("kalba_item_addons")
+    .from(tables.addons)
     .select("id")
     .eq("item_id", itemId);
 
@@ -212,7 +230,7 @@ export async function syncItemAddonGroups(
     .filter((id) => !writtenOptionIds.has(id));
 
   if (goneOptionIds.length > 0) {
-    await supabaseAdminLive.from("kalba_item_addons").delete().in("id", goneOptionIds);
+    await supabaseAdminLive.from(tables.addons).delete().in("id", goneOptionIds);
   }
 
   return { droppedColumns: Array.from(dropped) };
@@ -223,6 +241,7 @@ async function syncGroupOptions(
   groupId: string,
   options: { id?: string; name: string; name_ar: string; image_url: string; price: number; sort_order: number }[],
   dropped: Set<string>,
+  tables: AddonTables,
 ): Promise<string[]> {
   /* Writes only — removals are swept up once, per item, by the caller. Doing
      it here per group could not see an option that had moved out of one.
@@ -246,7 +265,7 @@ async function syncGroupOptions(
         await tolerate(
           (f) =>
             supabaseAdminLive
-              .from("kalba_item_addons")
+              .from(tables.addons)
               .update({ ...f, updated_at: new Date().toISOString() })
               .eq("id", option.id as string),
           dropped,
@@ -255,7 +274,7 @@ async function syncGroupOptions(
       }
 
       const result = await tolerate(
-        (f) => supabaseAdminLive.from("kalba_item_addons").insert([f]).select("id").single(),
+        (f) => supabaseAdminLive.from(tables.addons).insert([f]).select("id").single(),
         dropped,
       )(fields);
 

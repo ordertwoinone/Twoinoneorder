@@ -41,12 +41,21 @@ export interface SheetItem {
   listPrice?: number;
 }
 
+/** Colours a page can pass in. Defaults to the orange of the Kalba pages. */
+export interface SheetAccent {
+  accent: string;
+  strong: string;
+  soft: string;
+}
+
+const ORANGE: SheetAccent = { accent: "#ea580c", strong: "#f97316", soft: "#ffedd5" };
+
 /** The chosen/not-chosen dot, shared by both ways of drawing an option. */
 function Tick({ on, className = "" }: { on: boolean; className?: string }) {
   return (
     <span
       className={`w-4 h-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-        on ? "bg-orange-500 border-orange-500" : "bg-white border-gray-300"
+        on ? "bg-[var(--sheet-strong)] border-[var(--sheet-strong)]" : "bg-white border-gray-300"
       } ${className}`}
     >
       {on && <Check size={10} strokeWidth={4} className="text-white" />}
@@ -60,6 +69,7 @@ export default function ItemOptionsSheet({
   initialSelection,
   initialQty = 1,
   mode,
+  colors = ORANGE,
   onConfirm,
   onClose,
 }: {
@@ -69,6 +79,7 @@ export default function ItemOptionsSheet({
   initialSelection?: string[];
   initialQty?: number;
   mode: "add" | "edit";
+  colors?: SheetAccent;
   onConfirm: (selection: string[], qty: number) => void;
   onClose: () => void;
 }) {
@@ -124,6 +135,11 @@ export default function ItemOptionsSheet({
     <div
       className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={onClose}
+      style={{
+        "--sheet-accent": colors.accent,
+        "--sheet-strong": colors.strong,
+        "--sheet-soft": colors.soft,
+      } as React.CSSProperties}
     >
       <div
         className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[92vh] sm:max-h-[88vh] flex flex-col"
@@ -143,7 +159,7 @@ export default function ItemOptionsSheet({
             {/* The offer follows them in from the card, so the saving is still
                 on screen while they are choosing what to add to it. */}
             <p className="mt-1.5 flex items-baseline gap-2">
-              <span className="text-[15px] font-extrabold" style={{ color: "#ea580c" }}>
+              <span className="text-[15px] font-extrabold" style={{ color: "var(--sheet-accent)" }}>
                 {t("common.price", { amount: item.numericPrice })}
               </span>
               {item.listPrice != null && item.listPrice > item.numericPrice && (
@@ -222,7 +238,7 @@ export default function ItemOptionsSheet({
                           aria-pressed={on}
                           onClick={() => toggle(group, option.id)}
                           className={`relative shrink-0 w-[104px] rounded-xl border-2 bg-white p-2 text-start transition-colors ${
-                            on ? "border-orange-500" : "border-gray-200 hover:border-orange-300"
+                            on ? "border-[var(--sheet-strong)]" : "border-gray-200 hover:border-gray-400"
                           }`}
                         >
                           <Tick on={on} className="absolute top-1.5 end-1.5" />
@@ -244,7 +260,7 @@ export default function ItemOptionsSheet({
                           </span>
                           {/* An option included in the price says nothing. */}
                           {price > 0 && (
-                            <span className="block text-[10.5px] font-semibold text-orange-600 mt-0.5">
+                            <span className="block text-[10.5px] font-semibold text-[var(--sheet-accent)] mt-0.5">
                               {t("kalba.addons.plusPrice", { amount: price })}
                             </span>
                           )}
@@ -264,7 +280,7 @@ export default function ItemOptionsSheet({
                           aria-pressed={on}
                           onClick={() => toggle(group, option.id)}
                           className={`w-full flex items-center gap-2.5 rounded-xl border-2 bg-white px-3 py-2.5 text-start transition-colors ${
-                            on ? "border-orange-500" : "border-gray-200 hover:border-orange-300"
+                            on ? "border-[var(--sheet-strong)]" : "border-gray-200 hover:border-gray-400"
                           }`}
                         >
                           <Tick on={on} />
@@ -272,7 +288,7 @@ export default function ItemOptionsSheet({
                             {pick(option, "name")}
                           </span>
                           {price > 0 && (
-                            <span className="shrink-0 text-[12px] font-semibold text-orange-600">
+                            <span className="shrink-0 text-[12px] font-semibold text-[var(--sheet-accent)]">
                               {t("kalba.addons.plusPrice", { amount: price })}
                             </span>
                           )}
@@ -299,7 +315,7 @@ export default function ItemOptionsSheet({
               <button
                 onClick={() => setQty((n) => Math.max(1, n - 1))}
                 aria-label={t("common.remove")}
-                className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center hover:bg-orange-200 transition-colors"
+                className="w-7 h-7 rounded-full bg-[var(--sheet-soft)] text-[var(--sheet-accent)] flex items-center justify-center hover:opacity-80 transition-opacity"
               >
                 <Minus size={14} strokeWidth={3} />
               </button>
@@ -308,7 +324,7 @@ export default function ItemOptionsSheet({
                 onClick={() => setQty((n) => n + 1)}
                 aria-label={t("common.add")}
                 className="w-7 h-7 rounded-full text-white flex items-center justify-center hover:opacity-90 transition-opacity"
-                style={{ background: "#ea580c" }}
+                style={{ background: "var(--sheet-accent)" }}
               >
                 <Plus size={14} strokeWidth={3} />
               </button>
@@ -319,7 +335,7 @@ export default function ItemOptionsSheet({
               className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-white font-extrabold text-sm shadow-md transition-opacity ${
                 complete ? "hover:opacity-90" : "opacity-60"
               }`}
-              style={{ background: "#ea580c" }}
+              style={{ background: "var(--sheet-accent)" }}
             >
               {mode === "edit" ? t("kalba.addons.saveChoices") : t("common.addToCart")}
               <span className="font-extrabold">{t("common.price", { amount: unit * qty })}</span>

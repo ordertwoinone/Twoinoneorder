@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { Archivo_Narrow } from "next/font/google";
-import { kitchenDishes } from "@/data/kitchenDishes";
+import { kitchenDishes, sampleAddonGroups } from "@/data/kitchenDishes";
+import { sizedImage } from "@/lib/image-url";
+import { getKitchenAddonGroups } from "@/lib/kalba/addons-server";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { dishFromRow, type KitchenDishRow } from "@/lib/kitchens";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import KitchensContent from "./KitchensContent";
+import type { DiningTable } from "./TableGuestsDialog";
 
 export const revalidate = 60;
 
@@ -33,14 +36,36 @@ export default async function KitchensPage() {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   const rows = (data ?? []) as KitchenDishRow[];
+  const isSample = rows.length === 0;
+  // Blank if the table list cannot be read: the popup then only asks for the party size.
+  const { data: tableRows } = await supabaseAdmin
+    .from("booking_tables")
+    .select("code, section, seats, status")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  const groups = isSample ? {} : await getKitchenAddonGroups();
+  // Option photos show at about 100px.
+  const addonGroups = isSample
+    ? sampleAddonGroups
+    : Object.fromEntries(
+        Object.entries(groups).map(([id, list]) => [
+          id,
+          list.map((g) => ({
+            ...g,
+            options: g.options.map((o) => ({ ...o, image_url: sizedImage(o.image_url, 200) })),
+          })),
+        ]),
+      );
 
   return (
     <>
       <PageMeta titleKey="kitchens.metaTitle" descriptionKey="kitchens.metaDescription" />
       <KitchensContent
         fontClass={heading.variable}
-        dishes={rows.length > 0 ? rows.map(dishFromRow) : kitchenDishes}
-        isSample={rows.length === 0}
+        dishes={isSample ? kitchenDishes : rows.map(dishFromRow)}
+        addonGroups={addonGroups}
+        isSample={isSample}
+        tables={(tableRows ?? []) as DiningTable[]}
       />
     </>
   );

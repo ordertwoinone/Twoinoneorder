@@ -3,11 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, SunMedium, X,
+  ArrowRight, Armchair, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, SunMedium, Users, X,
   type LucideIcon,
 } from "lucide-react";
+import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
 import type { Kitchen, KitchenDish, Meal } from "@/data/kitchenDishes";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
+import { addonsTotal, addonSummary, type AddonSelection, type KalbaAddonGroup } from "@/lib/kalba/addons";
+import { roundMoney } from "@/lib/kalba/pricing";
+import { sortByGuests } from "@/lib/kitchens";
+import TableGuestsDialog, { type DiningTable, type Seating } from "./TableGuestsDialog";
 import { useLocalizedField } from "@/lib/i18n/localized";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -16,6 +21,10 @@ const INK = "#211f1c";
 const GREEN = "#2f6b1f";
 const GREEN_SOFT = "#eaf0e1";
 const PAGE_BG = "#f7f5ef";
+
+const SHEET_COLORS = { accent: RED, strong: RED, soft: "#fbe9ea" };
+
+const SEATING_KEY = "kitchens-seating";
 
 const HEADING_FONT = "var(--font-kitchens-heading), var(--font-ar), sans-serif";
 
@@ -77,15 +86,19 @@ function QtyStepper({
 }
 
 function DishCard({
-  dish, qty, onQtyChange,
+  dish, qty, guests, hasAddons, onAdd, onQtyChange,
 }: {
   dish: KitchenDish;
   qty: number;
+  guests: number | null;
+  hasAddons: boolean;
+  onAdd: () => void;
   onQtyChange: (qty: number) => void;
 }) {
-  const { t } = useTranslation();
+  const { t, tp } = useTranslation();
   const pick = useLocalizedField();
   const name = pick(dish, "name");
+  const matchesParty = dish.serves === guests;
 
   return (
     <article className="flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
@@ -109,6 +122,13 @@ function DishCard({
         <p className="mt-1 text-xs leading-relaxed text-gray-500 sm:text-sm">{pick(dish, "description")}</p>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${matchesParty ? "text-white" : "bg-gray-100 text-gray-700"}`}
+            style={matchesParty ? { background: INK } : undefined}
+          >
+            <Users size={12} />
+            {tp("kitchens.serves", dish.serves)}
+          </span>
           {dish.kcal !== null && (
             <span
               className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:text-xs"
@@ -135,6 +155,10 @@ function DishCard({
           )}
         </div>
 
+        {hasAddons && (
+          <p className="mt-2 text-[11px] font-medium text-gray-500">{t("kalba.addons.available")}</p>
+        )}
+
         <div className="mt-auto flex min-h-10 flex-wrap items-center justify-between gap-x-1 gap-y-2 pt-3">
           <Money amount={dish.price} className="text-base text-gray-900 sm:text-lg" />
           {qty > 0 ? (
@@ -144,7 +168,7 @@ function DishCard({
           ) : (
             <button
               type="button"
-              onClick={() => onQtyChange(1)}
+              onClick={onAdd}
               aria-label={t("kitchens.addOne", { name })}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-transform hover:scale-105 active:scale-95"
               style={{ background: RED }}
@@ -159,30 +183,37 @@ function DishCard({
 }
 
 function OrderSheet({
-  cart, total, fontClass, onQtyChange, onClear, onClose,
+  cart, total, fontClass, seatingLabel, onQtyChange, onEdit, onClear, onClose, escapeEnabled,
 }: {
-  cart: { dish: KitchenDish; qty: number }[];
+  cart: { dish: KitchenDish; qty: number; unit: number; extras: string; hasAddons: boolean }[];
   total: number;
   fontClass: string;
+  seatingLabel: string;
   onQtyChange: (id: string, qty: number) => void;
+  onEdit: (dish: KitchenDish) => void;
   onClear: () => void;
   onClose: () => void;
+  /** Off while the add-ons popup is open above this, so Escape only closes that. */
+  escapeEnabled: boolean;
 }) {
   const { t } = useTranslation();
   const pick = useLocalizedField();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && escapeEnabled) onClose();
     };
     window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, escapeEnabled]);
+
+  useEffect(() => {
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
     };
-  }, [onClose]);
+  }, []);
 
   /* Portalled because app/template.tsx's page-enter wrapper is its own stacking
      context, which would leave the sheet underneath the install prompt (z-60). */
@@ -201,9 +232,12 @@ function OrderSheet({
         className="relative flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom,0px)] sm:rounded-2xl"
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-          <h2 id="kitchens-order-title" className="text-xl font-bold text-gray-900" style={{ fontFamily: HEADING_FONT }}>
-            {t("kitchens.yourOrder")}
-          </h2>
+          <div className="min-w-0">
+            <h2 id="kitchens-order-title" className="text-xl font-bold text-gray-900" style={{ fontFamily: HEADING_FONT }}>
+              {t("kitchens.yourOrder")}
+            </h2>
+            {seatingLabel && <p className="text-xs text-gray-500">{seatingLabel}</p>}
+          </div>
           <button
             type="button"
             autoFocus
@@ -223,7 +257,7 @@ function OrderSheet({
         ) : (
           <>
             <ul className="flex-1 divide-y divide-gray-100 overflow-y-auto px-5">
-              {cart.map(({ dish, qty }) => {
+              {cart.map(({ dish, qty, unit, extras, hasAddons }) => {
                 const name = pick(dish, "name");
                 return (
                   <li key={dish.id} className="flex items-center gap-3 py-3">
@@ -235,7 +269,19 @@ function OrderSheet({
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
-                      <Money amount={dish.price * qty} className="text-sm text-gray-600" />
+                      {extras && <p className="text-xs leading-snug text-gray-500">{extras}</p>}
+                      {hasAddons && (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(dish)}
+                          aria-label={`${t("kalba.addons.edit")} ${name}`}
+                          className="block text-xs font-semibold underline"
+                          style={{ color: RED }}
+                        >
+                          {t("kalba.addons.edit")}
+                        </button>
+                      )}
+                      <Money amount={roundMoney(unit * qty)} className="text-sm text-gray-600" />
                     </div>
                     <QtyStepper name={name} qty={qty} onChange={(next) => onQtyChange(dish.id, next)} size="sm" />
                   </li>
@@ -265,48 +311,122 @@ function OrderSheet({
 }
 
 export default function KitchensContent({
-  fontClass, dishes: allDishes, isSample,
+  fontClass, dishes: allDishes, addonGroups, isSample, tables,
 }: {
   fontClass: string;
   dishes: KitchenDish[];
+  addonGroups: Record<string, KalbaAddonGroup[]>;
   isSample: boolean;
+  tables: DiningTable[];
 }) {
   const { t, tp } = useTranslation();
+  const pick = useLocalizedField();
   const [meal, setMeal] = useState<Meal>("dinner");
   const [kitchen, setKitchen] = useState<KitchenFilter>("all");
   const [healthyOnly, setHealthyOnly] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [orderOpen, setOrderOpen] = useState(false);
+  const [selection, setSelection] = useState<AddonSelection>({});
+  const [choosing, setChoosing] = useState<{ dish: KitchenDish; mode: "add" | "edit" } | null>(null);
+
+  const [seating, setSeating] = useState<Seating | null>(null);
+  const [seatingOpen, setSeatingOpen] = useState(false);
 
   useBottomBarSpace();
 
-  const dishes = useMemo(
-    () =>
-      allDishes.filter(
-        (d) =>
-          d.meal === meal &&
-          (kitchen === "all" || d.kitchen === kitchen) &&
-          (!healthyOnly || d.healthy),
-      ),
-    [allDishes, meal, kitchen, healthyOnly],
+  /* Asked once per visit: a refresh keeps the answer, a fresh open of the link
+     asks again. Read here, not in useState, so the server and first client
+     render agree. An answer naming a table since removed counts as no answer. */
+  useEffect(() => {
+    let saved: Seating | null = null;
+    try {
+      saved = JSON.parse(sessionStorage.getItem(SEATING_KEY) ?? "null");
+    } catch {}
+    const stillValid =
+      saved &&
+      Number.isInteger(saved.guests) &&
+      saved.guests >= 1 &&
+      (tables.length === 0 || tables.some((x) => x.code === saved?.table));
+    if (stillValid) setSeating(saved);
+    else setSeatingOpen(true);
+  }, [tables]);
+
+  const confirmSeating = (next: Seating) => {
+    setSeating(next);
+    setSeatingOpen(false);
+    try {
+      sessionStorage.setItem(SEATING_KEY, JSON.stringify(next));
+    } catch {}
+  };
+
+  const seatingLabel = seating
+    ? [seating.table && t("kitchens.tableLabel", { table: seating.table }), tp("kitchens.guests", seating.guests)]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
+
+  const dishes = useMemo(() => {
+    const matching = allDishes.filter(
+      (d) =>
+        d.meal === meal &&
+        (kitchen === "all" || d.kitchen === kitchen) &&
+        (!healthyOnly || d.healthy),
+    );
+    return seating ? sortByGuests(matching, seating.guests) : matching;
+  }, [allDishes, meal, kitchen, healthyOnly, seating],
   );
 
   const cart = useMemo(
     () =>
       allDishes
         .filter((d) => quantities[d.id] > 0)
-        .map((dish) => ({ dish, qty: quantities[dish.id] })),
-    [allDishes, quantities],
+        .map((dish) => {
+          const groups = addonGroups[dish.id] ?? [];
+          const chosen = selection[dish.id];
+          return {
+            dish,
+            qty: quantities[dish.id],
+            unit: roundMoney(dish.price + addonsTotal(groups, chosen)),
+            extras: addonSummary(groups, chosen, (a) => pick(a, "name")),
+            hasAddons: groups.length > 0,
+          };
+        }),
+    [allDishes, addonGroups, quantities, selection, pick],
   );
-  const total = cart.reduce((sum, line) => sum + line.dish.price * line.qty, 0);
+  const total = roundMoney(cart.reduce((sum, line) => sum + line.unit * line.qty, 0));
   const itemCount = cart.reduce((sum, line) => sum + line.qty, 0);
 
-  const setQty = (id: string, qty: number) =>
+  const setQty = (id: string, qty: number) => {
     setQuantities((prev) => ({ ...prev, [id]: Math.max(0, qty) }));
+    // Removed from the order, so adding it again asks the questions afresh.
+    if (qty <= 0) setSelection((prev) => ({ ...prev, [id]: [] }));
+  };
+
+  /* A dish with add-ons goes through the popup; any other goes straight in. */
+  const addDish = (dish: KitchenDish) => {
+    if (addonGroups[dish.id]?.length) setChoosing({ dish, mode: "add" });
+    else setQty(dish.id, 1);
+  };
 
   return (
     <main className={`min-h-screen pb-24 ${fontClass}`} style={{ background: PAGE_BG }}>
       <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
+        {seating && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white px-3 py-2">
+            <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900">
+              <Armchair size={16} className="shrink-0" />
+              <span className="truncate">{seatingLabel}</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setSeatingOpen(true)}
+              className="shrink-0 text-sm font-semibold underline"
+              style={{ color: RED }}
+            >
+              {t("kitchens.change")}
+            </button>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-2" role="group" aria-label={t("kitchens.mealLabel")}>
           {MEALS.map(({ id, icon: Icon }) => {
             const active = meal === id;
@@ -372,6 +492,9 @@ export default function KitchensContent({
             </h1>
             <p className="shrink-0 text-xs text-gray-500 sm:text-sm">{tp("kitchens.choices", dishes.length)}</p>
           </div>
+          {seating && dishes.length > 1 && (
+            <p className="mt-1 text-xs text-gray-500 sm:text-sm">{t("kitchens.sortedForParty")}</p>
+          )}
 
           {dishes.length > 0 ? (
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 sm:gap-4">
@@ -380,6 +503,9 @@ export default function KitchensContent({
                   key={dish.id}
                   dish={dish}
                   qty={quantities[dish.id] ?? 0}
+                  guests={seating?.guests ?? null}
+                  hasAddons={(addonGroups[dish.id]?.length ?? 0) > 0}
+                  onAdd={() => addDish(dish)}
                   onQtyChange={(qty) => setQty(dish.id, qty)}
                 />
               ))}
@@ -426,16 +552,59 @@ export default function KitchensContent({
         </button>
       </div>
 
+      {seatingOpen && (
+        <TableGuestsDialog
+          tables={tables}
+          initial={seating}
+          fontClass={fontClass}
+          headingFont={HEADING_FONT}
+          onConfirm={confirmSeating}
+          onClose={seating ? () => setSeatingOpen(false) : undefined}
+        />
+      )}
+
       {orderOpen && (
         <OrderSheet
           cart={cart}
           total={total}
           fontClass={fontClass}
+          seatingLabel={seatingLabel}
           onQtyChange={setQty}
-          onClear={() => setQuantities({})}
+          onEdit={(dish) => setChoosing({ dish, mode: "edit" })}
+          onClear={() => {
+            setQuantities({});
+            setSelection({});
+          }}
           onClose={() => setOrderOpen(false)}
+          escapeEnabled={!choosing}
         />
       )}
+
+      {/* Portalled for the same reason as the order sheet. */}
+      {choosing &&
+        createPortal(
+          <ItemOptionsSheet
+            key={choosing.dish.id}
+            item={{
+              id: choosing.dish.id,
+              name: pick(choosing.dish, "name"),
+              description: pick(choosing.dish, "description"),
+              numericPrice: choosing.dish.price,
+            }}
+            groups={addonGroups[choosing.dish.id] ?? []}
+            initialSelection={choosing.mode === "edit" ? selection[choosing.dish.id] : undefined}
+            initialQty={choosing.mode === "edit" ? quantities[choosing.dish.id] : 1}
+            mode={choosing.mode}
+            colors={SHEET_COLORS}
+            onConfirm={(chosen, qty) => {
+              setSelection((prev) => ({ ...prev, [choosing.dish.id]: chosen }));
+              setQty(choosing.dish.id, qty);
+              setChoosing(null);
+            }}
+            onClose={() => setChoosing(null)}
+          />,
+          document.body,
+        )}
     </main>
   );
 }

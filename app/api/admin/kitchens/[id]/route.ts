@@ -4,16 +4,23 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 import { updateRow } from "@/lib/admin-write";
+import { KITCHEN_TABLES, syncItemAddonGroups, type GroupInput } from "@/lib/kalba/addons-server";
 import { parseKitchenDish } from "@/lib/kitchens";
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const parsed = parseKitchenDish(await request.json());
+  const body = await request.json();
+  const parsed = parseKitchenDish(body);
   if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
   const { data, error } = await updateRow("kitchen_dishes", params.id, parsed.row);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { droppedColumns } = await syncItemAddonGroups(
+    params.id,
+    (body.addon_groups ?? []) as GroupInput[],
+    KITCHEN_TABLES,
+  );
   revalidatePath("/kitchens");
-  return NextResponse.json(data);
+  return NextResponse.json({ ...(data as object), droppedColumns });
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {

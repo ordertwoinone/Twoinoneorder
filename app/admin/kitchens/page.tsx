@@ -1,18 +1,23 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
+import AddonGroupsEditor, { addonGroupsProblem, type EditableAddonGroup } from "@/components/admin/AddonGroupsEditor";
 import BilingualField from "@/components/admin/BilingualField";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import type { DishBadge, Kitchen, Meal } from "@/data/kitchenDishes";
 import { BADGE_LABELS, KITCHEN_LABELS, MEAL_LABELS, type KitchenDishRow } from "@/lib/kitchens";
 
+type DishWithAddons = KitchenDishRow & { addon_groups?: EditableAddonGroup[] };
+
 /** Number fields hold what is typed, so a half-entered value is not rewritten. */
-type FormData = Omit<KitchenDishRow, "id" | "price" | "kcal" | "badge" | "sort_order"> & {
+type FormData = Omit<KitchenDishRow, "id" | "price" | "kcal" | "serves" | "badge" | "sort_order"> & {
   id?: string;
   price: string;
   kcal: string;
+  serves: string;
   badge: DishBadge | "";
   sort_order: string;
+  addon_groups: EditableAddonGroup[];
 };
 
 const EMPTY: FormData = {
@@ -24,29 +29,37 @@ const EMPTY: FormData = {
   description_ar: "",
   price: "",
   kcal: "",
+  serves: "1",
   image_url: "",
   badge: "",
   is_healthy: false,
   is_high_protein: false,
   sort_order: "0",
   is_active: true,
+  addon_groups: [],
 };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 const labelCls = "block text-xs font-semibold text-gray-700 mb-1.5";
 
-function toForm(item: KitchenDishRow): FormData {
+function toForm(item: DishWithAddons): FormData {
   return {
     ...item,
     price: String(item.price),
     kcal: item.kcal === null ? "" : String(item.kcal),
+    serves: String(item.serves ?? 1),
     badge: item.badge ?? "",
     sort_order: String(item.sort_order),
+    addon_groups: (item.addon_groups ?? []).map((g) => ({
+      ...g,
+      name_ar: g.name_ar ?? "",
+      options: g.options.map((o) => ({ ...o, name_ar: o.name_ar ?? "", image_url: o.image_url ?? "" })),
+    })),
   };
 }
 
 export default function KitchensAdmin() {
-  const [items, setItems] = useState<KitchenDishRow[]>([]);
+  const [items, setItems] = useState<DishWithAddons[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [mealFilter, setMealFilter] = useState<Meal | "all">("all");
@@ -75,7 +88,7 @@ export default function KitchensAdmin() {
     // Keeps the meal being browsed, since dishes tend to be added a meal at a time.
     setModal({ open: true, mode: "add", data: { ...EMPTY, meal: mealFilter === "all" ? EMPTY.meal : mealFilter } });
   }
-  function openEdit(item: KitchenDishRow) {
+  function openEdit(item: DishWithAddons) {
     setFormError("");
     setModal({ open: true, mode: "edit", data: toForm(item) });
   }
@@ -85,6 +98,11 @@ export default function KitchensAdmin() {
   }
 
   async function handleSave() {
+    const problem = addonGroupsProblem(modal.data.addon_groups);
+    if (problem) {
+      setFormError(problem);
+      return;
+    }
     setSaving(true);
     setFormError("");
     const res = await fetch(
@@ -96,9 +114,16 @@ export default function KitchensAdmin() {
       },
     );
     setSaving(false);
+    const data = await res.json().catch(() => null);
     if (!res.ok) {
-      const data = await res.json().catch(() => null);
       setFormError(data?.error ?? "Could not save this dish.");
+      return;
+    }
+    /* The dish saved but its add-ons had nowhere to go. Stays open so that does
+       not look like a clean save. */
+    if (data?.droppedColumns?.length) {
+      setFormError("The dish saved, but not its add-ons. Run supabase/kitchen_addons.sql in the Supabase SQL editor, then save again.");
+      load();
       return;
     }
     closeModal();
@@ -181,10 +206,17 @@ export default function KitchensAdmin() {
                         <img src={item.image_url} alt="" loading="lazy" className="w-full h-full object-cover" />
                       )}
                     </div>
-                    <span className="font-semibold text-gray-800">{item.name}</span>
+                    <div>
+                      <span className="block font-semibold text-gray-800">{item.name}</span>
+                      {(item.addon_groups ?? []).length > 0 && (
+                        <span className="block text-[11px] text-gray-500">
+                          {item.addon_groups!.reduce((n, g) => n + g.options.length, 0)} add-ons
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{MEAL_LABELS[item.meal]} · {KITCHEN_LABELS[item.kitchen]}</td>
+                <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{MEAL_LABELS[item.meal]} · {KITCHEN_LABELS[item.kitchen]} · Serves {item.serves ?? 1}</td>
                 <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">AED {Number(item.price).toFixed(2)}</td>
                 <td className="px-4 py-3 text-xs whitespace-nowrap">
                   {item.name_ar ? <span dir="rtl">{item.name_ar}</span> : <span className="text-amber-600">Missing</span>}
@@ -273,6 +305,12 @@ export default function KitchensAdmin() {
               </div>
 
               <div>
+                <label htmlFor="kd-serves" className={labelCls}>Serves (people)</label>
+                <input id="kd-serves" type="number" min="1" step="1" value={modal.data.serves} onChange={(e) => handleField("serves", e.target.value)} className={inputCls} />
+                <p className="text-[11px] text-gray-500 mt-1">The menu lists dishes that match the size of the party first.</p>
+              </div>
+
+              <div>
                 <label htmlFor="kd-badge" className={labelCls}>Photo badge</label>
                 <select id="kd-badge" value={modal.data.badge} onChange={(e) => handleField("badge", e.target.value as DishBadge | "")} className={`${inputCls} bg-white`}>
                   <option value="">None</option>
@@ -290,6 +328,12 @@ export default function KitchensAdmin() {
                   High protein
                 </label>
               </div>
+
+              <AddonGroupsEditor
+                groups={modal.data.addon_groups}
+                onChange={(groups) => handleField("addon_groups", groups)}
+                folder="kitchens"
+              />
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
