@@ -360,7 +360,11 @@ export default function KitchensContent({
   };
 
   const seatingLabel = seating
-    ? [seating.table && t("kitchens.tableLabel", { table: seating.table }), tp("kitchens.guests", seating.guests)]
+    ? [
+        seating.table && t("kitchens.tableLabel", { table: seating.table }),
+        tp("kitchens.guests", seating.guests),
+        seating.waiter && t("kitchens.waiterLabel", { name: seating.waiter }),
+      ]
         .filter(Boolean)
         .join(" · ")
     : "";

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Minus, Plus, Users, X } from "lucide-react";
+import { Minus, Plus, UserCheck, Users, X } from "lucide-react";
 import { useLocalized } from "@/lib/i18n/localized";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -17,6 +17,8 @@ export interface DiningTable {
 export interface Seating {
   table: string | null;
   guests: number;
+  /** Set once a waiter has typed a PIN the server accepted. */
+  waiter?: string | null;
 }
 
 const RED = "#b71c24";
@@ -49,6 +51,35 @@ export default function TableGuestsDialog({
   const localized = useLocalized();
   const [guests, setGuests] = useState(initial?.guests ?? 2);
   const [table, setTable] = useState<string | null>(initial?.table ?? null);
+  const [waiter, setWaiter] = useState<string | null>(initial?.waiter ?? null);
+  const [pin, setPin] = useState("");
+  const [pinState, setPinState] = useState<"idle" | "checking" | "wrong" | "locked" | "unavailable">("idle");
+
+  /* Checked as soon as the fourth digit is in, so there is no extra button for
+     customers to wonder about. */
+  async function changePin(value: string) {
+    const digits = value.replace(/\D/g, "").slice(0, 4);
+    setPin(digits);
+    if (digits.length < 4) {
+      setPinState("idle");
+      return;
+    }
+    setPinState("checking");
+    const res = await fetch("/api/kitchens/waiter-pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: digits }),
+    }).catch(() => null);
+    const data = await res?.json().catch(() => null);
+    if (res?.ok && data?.name) {
+      setWaiter(data.name);
+      setPin("");
+      setPinState("idle");
+      return;
+    }
+    setPin("");
+    setPinState(res?.status === 401 ? "wrong" : res?.status === 429 ? "locked" : "unavailable");
+  }
 
   useEffect(() => {
     const overflow = document.body.style.overflow;
@@ -165,10 +196,56 @@ export default function TableGuestsDialog({
         </div>
 
         <div className="border-t border-gray-100 px-5 py-4">
+          {waiter ? (
+            <div className="mb-3 flex min-h-10 items-center justify-between gap-3">
+              <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900">
+                <UserCheck size={16} className="shrink-0" />
+                <span className="truncate">{t("kitchens.waiterLabel", { name: waiter })}</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setWaiter(null)}
+                aria-label={t("kitchens.waiterRemove")}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="mb-3">
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="kitchens-waiter-pin" className="min-w-0 text-xs font-medium text-gray-500">
+                  {t("kitchens.waiterPin")}
+                </label>
+                {/* text-base: iOS Safari zooms into any smaller field on focus. */}
+                <input
+                  id="kitchens-waiter-pin"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={4}
+                  value={pin}
+                  disabled={pinState === "checking" || pinState === "locked"}
+                  onChange={(e) => changePin(e.target.value)}
+                  placeholder="••••"
+                  dir="ltr"
+                  className="h-10 w-24 shrink-0 rounded-lg border border-gray-300 text-center text-base tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-100"
+                />
+              </div>
+              {pinState !== "idle" && (
+                <p role="status" className={`mt-1 text-xs ${pinState === "checking" ? "text-gray-500" : "text-red-600"}`}>
+                  {pinState === "checking" && t("kitchens.waiterPinChecking")}
+                  {pinState === "wrong" && t("kitchens.waiterPinWrong")}
+                  {pinState === "locked" && t("kitchens.waiterPinLocked")}
+                  {pinState === "unavailable" && t("kitchens.waiterPinUnavailable")}
+                </p>
+              )}
+            </div>
+          )}
           <button
             type="button"
             disabled={!canContinue}
-            onClick={() => onConfirm({ table, guests })}
+            onClick={() => onConfirm({ table, guests, waiter })}
             className="h-12 w-full rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
             style={{ background: RED }}
           >
