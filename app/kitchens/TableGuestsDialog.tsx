@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 export interface DiningTable {
   code: string;
   section: string;
+  section_ar?: string | null;
   /** Free text in the table list: "4", or a range like "8–10". */
   seats: string;
   status: string;
@@ -182,7 +183,7 @@ export default function TableGuestsDialog({
               <p className="text-sm font-semibold text-gray-900">{t("kitchens.selectTable")}</p>
               {sections.map((section) => (
                 <div key={section} className="mt-3">
-                  <p className="mb-1.5 text-xs font-medium text-gray-500">{localized(section, SECTION_AR[section])}</p>
+                  <p className="mb-1.5 text-xs font-medium text-gray-500">{localized(section, tables.find((x) => x.section === section)?.section_ar || SECTION_AR[section])}</p>
                   <div className="grid grid-cols-3 gap-2 min-[375px]:grid-cols-4">
                     {tables.filter((x) => x.section === section).map((x) => {
                       const active = table === x.code;

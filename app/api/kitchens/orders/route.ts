@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getLiveKitchenAddonGroups } from "@/lib/kalba/addons-server";
+import { getKitchenTables } from "@/lib/kitchen-tables";
 import { MAX_GUESTS, priceOrder, type OrderDish } from "@/lib/kitchen-orders";
 import { waiterFromToken } from "@/lib/kitchen-waiters";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
@@ -40,9 +41,9 @@ export async function POST(request: Request) {
   if ((count ?? 0) >= MAX_ORDERS_PER_WINDOW) return NextResponse.json({ error: "limit" }, { status: 429 });
 
   // The table must be a real one, whenever the restaurant has a list of them.
-  const { data: tables } = await supabaseAdminLive.from("booking_tables").select("code").eq("is_active", true);
+  const tables = await getKitchenTables(true);
   const table = body?.table ? String(body.table) : null;
-  const tableOk = (tables ?? []).length === 0 || (tables ?? []).some((t) => (t as { code: string }).code === table);
+  const tableOk = tables.length === 0 || tables.some((t) => t.code === table);
   if (!tableOk) return NextResponse.json({ error: "invalid" }, { status: 400 });
 
   const dishIds = lines.map((l: { dishId?: unknown }) => String(l?.dishId ?? ""));

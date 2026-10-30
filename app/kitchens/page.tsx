@@ -4,10 +4,10 @@ import { kitchenDishes, sampleAddonGroups } from "@/data/kitchenDishes";
 import { sizedImage } from "@/lib/image-url";
 import { getKitchenAddonGroups } from "@/lib/kalba/addons-server";
 import PageMeta from "@/lib/i18n/PageMeta";
+import { getKitchenTables } from "@/lib/kitchen-tables";
 import { dishFromRow, type KitchenDishRow } from "@/lib/kitchens";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import KitchensContent from "./KitchensContent";
-import type { DiningTable } from "./TableGuestsDialog";
 
 export const revalidate = 60;
 
@@ -37,12 +37,7 @@ export default async function KitchensPage() {
     .order("created_at", { ascending: true });
   const rows = (data ?? []) as KitchenDishRow[];
   const isSample = rows.length === 0;
-  // Blank if the table list cannot be read: the popup then only asks for the party size.
-  const { data: tableRows } = await supabaseAdmin
-    .from("booking_tables")
-    .select("code, section, seats, status")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true });
+  const tables = await getKitchenTables();
   const groups = isSample ? {} : await getKitchenAddonGroups();
   // Option photos show at about 100px.
   const addonGroups = isSample
@@ -65,7 +60,7 @@ export default async function KitchensPage() {
         dishes={isSample ? kitchenDishes : rows.map(dishFromRow)}
         addonGroups={addonGroups}
         isSample={isSample}
-        tables={(tableRows ?? []) as DiningTable[]}
+        tables={tables}
       />
     </>
   );

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { Kitchen } from "@/data/kitchenDishes";
-import { KITCHEN_LABELS, MEAL_LABELS } from "@/lib/kitchens";
+import { KITCHEN_LABELS } from "@/lib/kitchens";
 import { parseMenuFile, type ParsedMenu } from "@/lib/kitchens-import";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -103,7 +103,7 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
                 <label htmlFor="ki-file" className={labelCls}>Excel file (.xlsx)</label>
                 <input id="ki-file" type="file" accept=".xlsx" onChange={(e) => chooseFile(e.target.files?.[0])} className="block w-full text-sm" />
                 <p className="text-[11px] text-gray-500 mt-1">
-                  Columns: Category (Breakfast, Lunch or Dinner), Item name, Description, a price column headed Price or twoinone, and optional add on columns.
+                  Columns: Category (Breakfast or Lunch & Dinner), Item name english, اسم الطبق, Description, وصف الطبق and price. Arabic and add on columns are optional.
                 </p>
               </div>
 
@@ -148,6 +148,7 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
                           <tr className="border-b border-gray-200 bg-gray-50 text-left text-gray-500">
                             <th className="px-3 py-2 font-semibold">Meal</th>
                             <th className="px-3 py-2 font-semibold">Dish</th>
+                            <th className="px-3 py-2 font-semibold">Arabic</th>
                             <th className="px-3 py-2 font-semibold">Price</th>
                             <th className="px-3 py-2 font-semibold">Add-ons</th>
                           </tr>
@@ -155,8 +156,9 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
                         <tbody>
                           {menu.dishes.map((d) => (
                             <tr key={`${d.meal}-${d.name}`} className="border-b border-gray-100 last:border-0">
-                              <td className="px-3 py-2 whitespace-nowrap">{MEAL_LABELS[d.meal]}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{d.meal === "breakfast" ? "Breakfast" : "Lunch & Dinner"}</td>
                               <td className="px-3 py-2 font-medium text-gray-800">{d.name}</td>
+                              <td className="px-3 py-2 text-gray-600" dir="rtl">{d.name_ar || "—"}</td>
                               <td className="px-3 py-2 whitespace-nowrap">AED {d.price.toFixed(2)}</td>
                               <td className="px-3 py-2 text-gray-500">{d.addons.map((a) => a.name).join(", ") || "—"}</td>
                             </tr>
@@ -167,7 +169,7 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
                   </div>
 
                   <p className="text-[11px] text-gray-500">
-                    A dish already on the menu with the same name, meal and kitchen only has its price and description updated. New dishes start with no photo and Serves 1.
+                    A dish already on the menu with the same English name, meal and kitchen only has its price and descriptions updated, so a renamed dish is added as a new one. New dishes start with no photo and Serves 1.
                   </p>
                 </>
               )}

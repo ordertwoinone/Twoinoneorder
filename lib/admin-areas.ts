@@ -145,6 +145,20 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/kitchens/orders"],
   },
   {
+    key: "kitchens-payments",
+    label: "Kitchens Page: Payments",
+    hint: "Marking served orders from the kitchens page as paid or not paid",
+    paths: ["/admin/kitchens/payments"],
+    apiPaths: ["/api/admin/kitchens/payments"],
+  },
+  {
+    key: "kitchens-tables",
+    label: "Kitchens Page: Tables",
+    hint: "The tables guests choose from on the kitchens page",
+    paths: ["/admin/kitchens/tables"],
+    apiPaths: ["/api/admin/kitchens/tables"],
+  },
+  {
     key: "kitchens-waiters",
     label: "Kitchens Page: Waiters",
     hint: "Adding waiters and changing their PINs",

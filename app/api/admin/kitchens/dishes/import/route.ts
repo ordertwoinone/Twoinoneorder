@@ -15,9 +15,10 @@ const keyOf = (meal: string, name: string) => `${meal}|${name.trim().toLowerCase
 /**
  * Saves dishes read from a menu spreadsheet.
  *
- * A dish already on the menu has only its price and description refreshed, so
- * re-uploading a corrected file does not create doubles or wipe the photos,
- * Arabic and settings added since. It gains the file's add-ons only if it has none.
+ * A dish already on the menu has only its price and descriptions refreshed, and
+ * its Arabic only where the file has some, so re-uploading a corrected file does
+ * not create doubles or wipe the photos and settings added since. It gains the
+ * file's add-ons only if it has none.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
@@ -51,7 +52,9 @@ export async function POST(request: Request) {
       meal: dish.meal,
       kitchen,
       name: dish.name,
+      name_ar: dish.name_ar,
       description: dish.description,
+      description_ar: dish.description_ar,
       price: dish.price,
       serves: 1,
       is_active: body?.active !== false,
@@ -67,6 +70,8 @@ export async function POST(request: Request) {
       ? await updateRow("kitchen_dishes", existingId, {
           description: parsed.row.description,
           price: parsed.row.price,
+          ...(parsed.row.name_ar && { name_ar: parsed.row.name_ar }),
+          ...(parsed.row.description_ar && { description_ar: parsed.row.description_ar }),
         })
       : await insertRow("kitchen_dishes", parsed.row);
 

@@ -5,8 +5,9 @@ import type { Kitchen, Meal } from "@/data/kitchenDishes";
  * Reading a menu spreadsheet in the browser, for admin → Kitchens Page → Dishes.
  *
  * An .xlsx file is a zip of XML, which is all this needs from it. The expected
- * shape is a table with Category, Item name, Description, a price column and any
- * number of "add on" columns, starting on whichever row those headings are on.
+ * shape is a table with Category, Item name, Description and a price column,
+ * plus optional Arabic name, Arabic description and "add on" columns, starting
+ * on whichever row those headings are on.
  * Nothing is saved here: the admin sees the result first, and the server checks
  * every row again when it is sent.
  */
@@ -19,7 +20,9 @@ export interface ImportAddon {
 export interface ImportDish {
   meal: Meal;
   name: string;
+  name_ar: string;
   description: string;
+  description_ar: string;
   price: number;
   addons: ImportAddon[];
 }
@@ -40,7 +43,20 @@ export interface ParsedMenu {
   problems: ImportProblem[];
 }
 
-const MEALS: Meal[] = ["breakfast", "lunch", "dinner"];
+/* Lunch and dinner share one tab on the page, so a combined category is filed
+   under lunch. */
+const MEAL_BY_CATEGORY: Record<string, Meal> = {
+  breakfast: "breakfast",
+  lunch: "lunch",
+  dinner: "dinner",
+  lunchdinner: "lunch",
+  lunchanddinner: "lunch",
+};
+
+const NAME_HEADINGS = ["itemname", "itemnameenglish", "itemnameen"];
+// Arabic headings have no Latin letters, so they are compared as written.
+const NAME_AR_HEADINGS = ["اسم الطبق", "الاسم بالعربية"];
+const DESCRIPTION_AR_HEADINGS = ["وصف الطبق", "الوصف بالعربية"];
 
 /** The price column is headed with the restaurant's name in the menu file. */
 const PRICE_HEADINGS = ["price", "twoinone", "aed"];
@@ -106,7 +122,7 @@ export function parseMenuFile(bytes: Uint8Array): ParsedMenu {
 
   const headerAt = rows.findIndex((r) => {
     const names = r.cells.map((c) => normalise(c ?? ""));
-    return names.includes("category") && names.includes("itemname");
+    return names.includes("category") && names.some((n) => NAME_HEADINGS.includes(n));
   });
   if (headerAt === -1) {
     throw new Error('Couldn\'t find the "Category" and "Item name" headings in that file.');
@@ -115,7 +131,10 @@ export function parseMenuFile(bytes: Uint8Array): ParsedMenu {
   const headers = rows[headerAt].cells.map((c) => normalise(c ?? ""));
   const col = (...names: string[]) => headers.findIndex((h) => names.includes(h));
   const categoryCol = col("category");
-  const nameCol = col("itemname");
+  const nameCol = col(...NAME_HEADINGS);
+  const rawHeaders = rows[headerAt].cells.map((c) => tidy(c ?? ""));
+  const nameArCol = rawHeaders.findIndex((h) => NAME_AR_HEADINGS.includes(h));
+  const descriptionArCol = rawHeaders.findIndex((h) => DESCRIPTION_AR_HEADINGS.includes(h));
   const descriptionCol = col("description");
   const priceCol = col(...PRICE_HEADINGS);
   if (priceCol === -1) {
@@ -145,10 +164,10 @@ export function parseMenuFile(bytes: Uint8Array): ParsedMenu {
 
     const fail = (reason: string) => problems.push({ row, name: name || "(no name)", reason });
 
-    const meal = MEALS.find((m) => m === category.toLowerCase());
+    const meal = MEAL_BY_CATEGORY[normalise(category)];
     const price = Number(priceText);
     if (!name) { fail("No item name"); continue; }
-    if (!meal) { fail(`Category must be Breakfast, Lunch or Dinner, not "${category}"`); continue; }
+    if (!meal) { fail(`Category must be Breakfast, Lunch, Dinner or Lunch & Dinner, not "${category}"`); continue; }
     if (!priceText || !Number.isFinite(price) || price < 0) {
       fail(priceText ? `Price isn't a number: "${priceText}"` : "No price");
       continue;
@@ -161,7 +180,9 @@ export function parseMenuFile(bytes: Uint8Array): ParsedMenu {
     dishes.push({
       meal,
       name,
+      name_ar: nameArCol === -1 ? "" : cell(nameArCol),
       description: descriptionCol === -1 ? "" : cell(descriptionCol),
+      description_ar: descriptionArCol === -1 ? "" : cell(descriptionArCol),
       // The format has no column for add-on prices, so they start at zero.
       price,
       addons: addonCols.map(cell).filter(Boolean).map((addon) => ({ name: addon, price: 0 })),

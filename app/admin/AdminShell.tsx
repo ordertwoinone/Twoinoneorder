@@ -96,7 +96,9 @@ const NAV: NavItem[] = [
     basePath: "/admin/kitchens",
     children: [
       { label: "Orders",  href: "/admin/kitchens/orders",  icon: Receipt    },
+      { label: "Payments", href: "/admin/kitchens/payments", icon: CreditCard },
       { label: "Dishes",  href: "/admin/kitchens/dishes",  icon: Utensils   },
+      { label: "Tables",  href: "/admin/kitchens/tables",  icon: Armchair   },
       { label: "Waiters", href: "/admin/kitchens/waiters", icon: UsersRound },
     ],
   },
