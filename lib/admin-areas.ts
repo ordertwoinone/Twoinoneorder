@@ -131,6 +131,13 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/kalba"],
   },
   {
+    key: "kitchens",
+    label: "Kitchens Page",
+    hint: "The dishes on the Italian & Turkish kitchens page",
+    paths: ["/admin/kitchens"],
+    apiPaths: ["/api/admin/kitchens"],
+  },
+  {
     key: "pos",
     label: "Point of Sale",
     hint: "Till accounts and the shifts they work",

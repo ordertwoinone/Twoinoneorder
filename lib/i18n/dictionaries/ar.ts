@@ -937,6 +937,7 @@ const ar: Dictionary = {
     noMatches: "لا توجد أطباق تطابق هذه الخيارات لهذه الوجبة.",
     clearFilters: "مسح الخيارات",
     sampleNote: "الأطباق والأسعار والسعرات نماذج للتصميم فقط • للحصة الواحدة",
+    perServing: "السعرات للحصة الواحدة",
     addOne: "إضافة واحد من {name}",
     removeOne: "إزالة واحد من {name}",
     viewOrder: "عرض طلبك",

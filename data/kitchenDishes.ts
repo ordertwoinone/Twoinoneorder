@@ -1,6 +1,7 @@
 /**
- * Sample dishes for the /kitchens page. Nothing here is on the live menu: the
- * names, prices and calories are placeholders, which the page says out loud.
+ * Sample dishes for the /kitchens page, shown until admin → Kitchens has an
+ * active dish. The names, prices and calories are placeholders, which the page
+ * says out loud.
  */
 
 export type Meal = "breakfast" | "lunch" | "dinner";
@@ -16,7 +17,7 @@ export interface KitchenDish {
   description: string;
   description_ar: string;
   price: number;
-  kcal: number;
+  kcal: number | null;
   image: string;
   /** Pinned to the corner of the photo. */
   badge?: DishBadge;

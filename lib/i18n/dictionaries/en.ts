@@ -917,6 +917,7 @@ const en = {
     noMatches: "Nothing matches those filters for this meal.",
     clearFilters: "Clear filters",
     sampleNote: "Sample dishes, prices and calories for design only • Per serving",
+    perServing: "Calories are per serving",
     addOne: "Add one {name}",
     removeOne: "Remove one {name}",
     viewOrder: "View your order",

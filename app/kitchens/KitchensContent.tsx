@@ -6,7 +6,7 @@ import {
   ArrowRight, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, SunMedium, X,
   type LucideIcon,
 } from "lucide-react";
-import { kitchenDishes, type Kitchen, type KitchenDish, type Meal } from "@/data/kitchenDishes";
+import type { Kitchen, KitchenDish, Meal } from "@/data/kitchenDishes";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { useLocalizedField } from "@/lib/i18n/localized";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -90,8 +90,10 @@ function DishCard({
   return (
     <article className="flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <div className="relative aspect-[3/2] bg-gray-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={dish.image} alt={name} loading="lazy" className="h-full w-full object-cover" />
+        {dish.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={dish.image} alt={name} loading="lazy" className="h-full w-full object-cover" />
+        )}
         {dish.badge && (
           <span className="absolute start-2 top-2 rounded-md bg-[#fbf3e4] px-2 py-1 text-[9.5px] font-bold uppercase tracking-wide text-gray-900 sm:start-3 sm:top-3 sm:text-[10.5px]">
             {t(`kitchens.badges.${dish.badge}`)}
@@ -107,13 +109,15 @@ function DishCard({
         <p className="mt-1 text-xs leading-relaxed text-gray-500 sm:text-sm">{pick(dish, "description")}</p>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <span
-            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:text-xs"
-            style={{ background: GREEN_SOFT, color: GREEN }}
-          >
-            <Leaf size={13} fill="currentColor" strokeWidth={1} />
-            {t("kitchens.kcal", { count: dish.kcal })}
-          </span>
+          {dish.kcal !== null && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold sm:text-xs"
+              style={{ background: GREEN_SOFT, color: GREEN }}
+            >
+              <Leaf size={13} fill="currentColor" strokeWidth={1} />
+              {t("kitchens.kcal", { count: dish.kcal })}
+            </span>
+          )}
           {dish.healthy && (
             <span
               className="inline-flex items-center gap-1 rounded-full border bg-white px-2 py-1 text-[11px] font-semibold"
@@ -131,10 +135,12 @@ function DishCard({
           )}
         </div>
 
-        <div className="mt-auto flex min-h-10 items-center justify-between gap-1 pt-3">
-          <Money amount={dish.price} className={`text-gray-900 ${qty > 0 ? "text-sm" : "text-base sm:text-lg"}`} />
+        <div className="mt-auto flex min-h-10 flex-wrap items-center justify-between gap-x-1 gap-y-2 pt-3">
+          <Money amount={dish.price} className="text-base text-gray-900 sm:text-lg" />
           {qty > 0 ? (
-            <QtyStepper name={name} qty={qty} onChange={onQtyChange} size="sm" />
+            <div className="ms-auto">
+              <QtyStepper name={name} qty={qty} onChange={onQtyChange} />
+            </div>
           ) : (
             <button
               type="button"
@@ -221,8 +227,12 @@ function OrderSheet({
                 const name = pick(dish, "name");
                 return (
                   <li key={dish.id} className="flex items-center gap-3 py-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={dish.image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                    {dish.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={dish.image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="h-14 w-14 shrink-0 rounded-lg bg-gray-100" />
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
                       <Money amount={dish.price * qty} className="text-sm text-gray-600" />
@@ -254,7 +264,13 @@ function OrderSheet({
   );
 }
 
-export default function KitchensContent({ fontClass }: { fontClass: string }) {
+export default function KitchensContent({
+  fontClass, dishes: allDishes, isSample,
+}: {
+  fontClass: string;
+  dishes: KitchenDish[];
+  isSample: boolean;
+}) {
   const { t, tp } = useTranslation();
   const [meal, setMeal] = useState<Meal>("dinner");
   const [kitchen, setKitchen] = useState<KitchenFilter>("all");
@@ -266,21 +282,21 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
 
   const dishes = useMemo(
     () =>
-      kitchenDishes.filter(
+      allDishes.filter(
         (d) =>
           d.meal === meal &&
           (kitchen === "all" || d.kitchen === kitchen) &&
           (!healthyOnly || d.healthy),
       ),
-    [meal, kitchen, healthyOnly],
+    [allDishes, meal, kitchen, healthyOnly],
   );
 
   const cart = useMemo(
     () =>
-      kitchenDishes
+      allDishes
         .filter((d) => quantities[d.id] > 0)
         .map((dish) => ({ dish, qty: quantities[dish.id] })),
-    [quantities],
+    [allDishes, quantities],
   );
   const total = cart.reduce((sum, line) => sum + line.dish.price * line.qty, 0);
   const itemCount = cart.reduce((sum, line) => sum + line.qty, 0);
@@ -289,7 +305,7 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
     setQuantities((prev) => ({ ...prev, [id]: Math.max(0, qty) }));
 
   return (
-    <main className={`min-h-screen pb-28 ${fontClass}`} style={{ background: PAGE_BG }}>
+    <main className={`min-h-screen pb-24 ${fontClass}`} style={{ background: PAGE_BG }}>
       <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
         <div className="grid grid-cols-3 gap-2" role="group" aria-label={t("kitchens.mealLabel")}>
           {MEALS.map(({ id, icon: Icon }) => {
@@ -300,19 +316,19 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
                 type="button"
                 onClick={() => setMeal(id)}
                 aria-pressed={active}
-                className={`flex h-12 items-center justify-center gap-1.5 rounded-lg border text-sm font-semibold transition-colors sm:gap-2 sm:text-base ${
+                className={`flex h-12 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border text-[13px] font-semibold transition-colors min-[375px]:gap-1.5 min-[375px]:text-sm sm:gap-2 sm:text-base ${
                   active ? "border-transparent text-white" : "border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
                 }`}
                 style={active ? { background: INK } : undefined}
               >
-                <Icon size={17} fill="currentColor" />
+                <Icon size={16} fill="currentColor" className="shrink-0" />
                 {t(`kitchens.meals.${id}`)}
               </button>
             );
           })}
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-1" role="group" aria-label={t("kitchens.kitchenLabel")}>
+        <div className="mt-3 flex items-center gap-0.5 sm:gap-1" role="group" aria-label={t("kitchens.kitchenLabel")}>
           {KITCHENS.map((id) => {
             const active = kitchen === id;
             return (
@@ -321,7 +337,7 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
                 type="button"
                 onClick={() => setKitchen(id)}
                 aria-pressed={active}
-                className={`min-h-9 rounded-full px-3 text-sm font-medium transition-colors ${
+                className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-xs font-medium transition-colors min-[375px]:px-3 min-[375px]:text-[13px] sm:text-sm ${
                   active ? "font-semibold text-white" : "text-gray-500 hover:text-gray-900"
                 }`}
                 style={active ? { background: RED } : undefined}
@@ -334,7 +350,7 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
             type="button"
             onClick={() => setHealthyOnly((v) => !v)}
             aria-pressed={healthyOnly}
-            className="ms-1 inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition-colors"
+            className="ms-auto inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold transition-colors min-[375px]:px-3 min-[375px]:text-[13px] sm:ms-1 sm:gap-1.5 sm:text-sm"
             style={
               healthyOnly
                 ? { background: GREEN, borderColor: GREEN, color: "#fff" }
@@ -350,8 +366,8 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
       <div className="mt-4 border-t border-black/10">
         <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t("kitchens.eyebrow")}</p>
-          <div className="mt-1 flex items-baseline justify-between gap-3">
-            <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl" style={{ fontFamily: HEADING_FONT }}>
+          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3">
+            <h1 className="text-[28px] font-bold leading-tight text-gray-900 sm:text-4xl" style={{ fontFamily: HEADING_FONT }}>
               {t(`kitchens.headings.${meal}`)}
             </h1>
             <p className="shrink-0 text-xs text-gray-500 sm:text-sm">{tp("kitchens.choices", dishes.length)}</p>
@@ -385,7 +401,7 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
             </div>
           )}
 
-          <p className="mt-5 text-center text-xs text-gray-500">{t("kitchens.sampleNote")}</p>
+          <p className="mt-5 text-center text-xs text-gray-500">{t(isSample ? "kitchens.sampleNote" : "kitchens.perServing")}</p>
         </div>
       </div>
 
@@ -393,20 +409,20 @@ export default function KitchensContent({ fontClass }: { fontClass: string }) {
         <button
           type="button"
           onClick={() => setOrderOpen(true)}
-          className="pointer-events-auto mx-auto flex h-14 w-full max-w-2xl items-center gap-3 rounded-xl px-5 text-white shadow-lg transition-opacity hover:opacity-95"
+          className="pointer-events-auto mx-auto flex h-12 w-full max-w-md items-center gap-2 rounded-lg px-4 text-white  shadow-lg transition-opacity hover:opacity-95"
           style={{ background: RED }}
         >
-          <span className="relative">
-            <ShoppingBag size={22} />
+          <span className="relative shrink-0">
+            <ShoppingBag size={18} />
             {itemCount > 0 && (
               <span className="absolute -end-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold" style={{ color: RED }}>
                 {itemCount}
               </span>
             )}
           </span>
-          <span className="flex-1 text-start font-semibold">{t("kitchens.viewOrder")}</span>
+          <span className="min-w-0 flex-1 truncate text-start text-sm font-semibold">{t("kitchens.viewOrder")}</span>
           <Money amount={total} className="text-sm" />
-          <ArrowRight size={18} />
+          <ArrowRight size={16} className="shrink-0" />
         </button>
       </div>
 
