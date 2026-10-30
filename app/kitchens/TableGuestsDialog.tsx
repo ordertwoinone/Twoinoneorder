@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Delete, Minus, Plus, UserCheck, Users, X } from "lucide-react";
+import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import { useLocalized } from "@/lib/i18n/localized";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -133,9 +134,11 @@ export default function TableGuestsDialog({
         className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom,0px)] sm:rounded-2xl"
       >
         <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
-          <h2 id="kitchens-seating-title" className="text-2xl font-bold text-gray-900" style={{ fontFamily: headingFont }}>
+          <h2 id="kitchens-seating-title" className="min-w-0 flex-1 text-xl font-bold leading-tight text-gray-900 sm:text-2xl" style={{ fontFamily: headingFont }}>
             {t("kitchens.seatingTitle")}
           </h2>
+          {/* The first thing a guest sees, so the language has to be choosable here. */}
+          <LanguageSwitcher />
           {onClose && (
             <button
               type="button"

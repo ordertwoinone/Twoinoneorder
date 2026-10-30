@@ -7,6 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
+import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import type { Kitchen, KitchenDish } from "@/data/kitchenDishes";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { addonsTotal, addonSummary, type AddonSelection, type KalbaAddonGroup } from "@/lib/kalba/addons";
@@ -509,8 +510,9 @@ export default function KitchensContent({
     <main className={`min-h-screen pb-24 ${fontClass}`} style={{ background: PAGE_BG }}>
       <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
         {/* iPhones never offer an install prompt, so this has to be findable. */}
-        {!installed && (
-          <div className="mb-2 flex justify-end">
+        <div className="mb-2 flex min-h-9 items-center justify-between gap-3">
+          <LanguageSwitcher />
+          {!installed && (
             <button
               type="button"
               onClick={() => window.dispatchEvent(new Event("tio-open-install"))}
@@ -519,8 +521,8 @@ export default function KitchensContent({
               <Download size={14} />
               {t("kitchens.installApp")}
             </button>
-          </div>
-        )}
+          )}
+        </div>
         {seating && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white px-3 py-2">
             <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900">
@@ -609,8 +611,8 @@ export default function KitchensContent({
           {dishes.length > 0 ? (
             kitchen === "all" ? (
               /* Both kitchens: Italian on the left two columns, Turkish on the
-                 right two. Stacked below lg, where four cards would not fit. */
-              <div className="mt-4 grid grid-cols-1 items-start gap-6 lg:grid-cols-2 sm:gap-4">
+                 right two; one column each on a portrait tablet. Stacked on phones. */
+              <div className="mt-4 grid grid-cols-1 items-start gap-6 sm:grid-cols-2 sm:gap-4">
                 {(["italian", "turkish"] as const).map((id) => {
                   const own = dishes.filter((d) => d.kitchen === id);
                   return (
@@ -623,7 +625,7 @@ export default function KitchensContent({
                         {t(`kitchens.origin.${id}`)}
                       </h2>
                       {own.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-2">
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-1 sm:gap-4 lg:grid-cols-2">
                           {own.map(renderCard)}
                         </div>
                       ) : (
