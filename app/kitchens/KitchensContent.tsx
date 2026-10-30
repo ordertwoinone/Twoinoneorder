@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight, Armchair, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, SunMedium, Users, X,
+  ArrowRight, Armchair, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, Users, X,
   type LucideIcon,
 } from "lucide-react";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
-import type { Kitchen, KitchenDish, Meal } from "@/data/kitchenDishes";
+import type { Kitchen, KitchenDish } from "@/data/kitchenDishes";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { addonsTotal, addonSummary, type AddonSelection, type KalbaAddonGroup } from "@/lib/kalba/addons";
 import { roundMoney } from "@/lib/kalba/pricing";
@@ -28,10 +28,11 @@ const SEATING_KEY = "kitchens-seating";
 
 const HEADING_FONT = "var(--font-kitchens-heading), var(--font-ar), sans-serif";
 
-const MEALS: { id: Meal; icon: LucideIcon }[] = [
+/* Lunch and dinner share a tab, so a dish filed under either one appears there. */
+type MealTab = "breakfast" | "lunchDinner";
+const MEALS: { id: MealTab; icon: LucideIcon }[] = [
   { id: "breakfast", icon: Sun },
-  { id: "lunch", icon: SunMedium },
-  { id: "dinner", icon: Moon },
+  { id: "lunchDinner", icon: Moon },
 ];
 
 type KitchenFilter = "all" | Kitchen;
@@ -321,7 +322,7 @@ export default function KitchensContent({
 }) {
   const { t, tp } = useTranslation();
   const pick = useLocalizedField();
-  const [meal, setMeal] = useState<Meal>("breakfast");
+  const [meal, setMeal] = useState<MealTab>("breakfast");
   const [kitchen, setKitchen] = useState<KitchenFilter>("all");
   const [healthyOnly, setHealthyOnly] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -372,7 +373,7 @@ export default function KitchensContent({
   const dishes = useMemo(() => {
     const matching = allDishes.filter(
       (d) =>
-        d.meal === meal &&
+        (meal === "breakfast" ? d.meal === "breakfast" : d.meal !== "breakfast") &&
         (kitchen === "all" || d.kitchen === kitchen) &&
         (!healthyOnly || d.healthy),
     );
@@ -443,7 +444,7 @@ export default function KitchensContent({
             </button>
           </div>
         )}
-        <div className="grid grid-cols-3 gap-2" role="group" aria-label={t("kitchens.mealLabel")}>
+        <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("kitchens.mealLabel")}>
           {MEALS.map(({ id, icon: Icon }) => {
             const active = meal === id;
             return (

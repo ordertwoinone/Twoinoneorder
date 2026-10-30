@@ -893,13 +893,12 @@ const en = {
     metaDescription: "Breakfast, lunch and dinner from our Italian and Turkish kitchens.",
     mealLabel: "Choose a meal",
     kitchenLabel: "Choose a kitchen",
-    meals: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner" },
+    meals: { breakfast: "Breakfast", lunchDinner: "Lunch & Dinner" },
     kitchens: { all: "Both kitchens", italian: "Italian", turkish: "Turkish" },
     origin: { italian: "Italian kitchen", turkish: "Turkish kitchen" },
     headings: {
       breakfast: "Breakfast favourites",
-      lunch: "Lunch favourites",
-      dinner: "Dinner favourites",
+      lunchDinner: "Lunch & Dinner favourites",
     },
     badges: {
       pizza: "Pizza favourite",

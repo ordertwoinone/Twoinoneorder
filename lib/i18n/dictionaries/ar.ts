@@ -909,13 +909,12 @@ const ar: Dictionary = {
     metaDescription: "الفطور والغداء والعشاء من مطبخينا الإيطالي والتركي.",
     mealLabel: "اختر وجبة",
     kitchenLabel: "اختر مطبخًا",
-    meals: { breakfast: "الفطور", lunch: "الغداء", dinner: "العشاء" },
+    meals: { breakfast: "الفطور", lunchDinner: "الغداء والعشاء" },
     kitchens: { all: "المطبخان معًا", italian: "إيطالي", turkish: "تركي" },
     origin: { italian: "المطبخ الإيطالي", turkish: "المطبخ التركي" },
     headings: {
       breakfast: "أطباق الفطور المفضلة",
-      lunch: "أطباق الغداء المفضلة",
-      dinner: "أطباق العشاء المفضلة",
+      lunchDinner: "أطباق الغداء والعشاء المفضلة",
     },
     badges: {
       pizza: "البيتزا المفضلة",
