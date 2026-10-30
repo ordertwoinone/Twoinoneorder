@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight, Armchair, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, Users, X,
+  ArrowRight, Armchair, CheckCircle2, Download, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, Users, X,
   type LucideIcon,
 } from "lucide-react";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
@@ -184,12 +184,19 @@ function DishCard({
 }
 
 function OrderSheet({
-  cart, total, fontClass, seatingLabel, onQtyChange, onEdit, onClear, onClose, escapeEnabled,
+  cart, total, fontClass, seatingLabel, canOrder, placing, orderError, placedNumber, onPlace, onQtyChange, onEdit, onClear, onClose, escapeEnabled,
 }: {
   cart: { dish: KitchenDish; qty: number; unit: number; extras: string; hasAddons: boolean }[];
   total: number;
   fontClass: string;
   seatingLabel: string;
+  /** False while the page is showing sample dishes, which can't be ordered. */
+  canOrder: boolean;
+  placing: boolean;
+  orderError: string;
+  /** Set once the order has gone through. */
+  placedNumber: number | null;
+  onPlace: () => void;
   onQtyChange: (id: string, qty: number) => void;
   onEdit: (dish: KitchenDish) => void;
   onClear: () => void;
@@ -250,7 +257,21 @@ function OrderSheet({
           </button>
         </div>
 
-        {cart.length === 0 ? (
+        {placedNumber !== null ? (
+          <div className="px-5 py-10 text-center">
+            <CheckCircle2 size={40} className="mx-auto" style={{ color: GREEN }} />
+            <p role="status" className="mt-3 text-base font-semibold text-gray-900">{t("kitchens.orderPlaced", { number: placedNumber })}</p>
+            <p className="mt-1 text-sm text-gray-500">{t("kitchens.orderPlacedHint")}</p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="mt-5 h-12 w-full rounded-lg text-sm font-semibold text-white hover:opacity-95"
+              style={{ background: RED }}
+            >
+              {t("kitchens.orderDone")}
+            </button>
+          </div>
+        ) : cart.length === 0 ? (
           <div className="px-5 py-12 text-center">
             <ShoppingBag size={32} className="mx-auto text-gray-300" />
             <p className="mt-3 text-sm text-gray-500">{t("kitchens.emptyOrder")}</p>
@@ -294,11 +315,27 @@ function OrderSheet({
                 <span className="text-sm font-semibold text-gray-600">{t("kitchens.total")}</span>
                 <Money amount={total} className="text-lg text-gray-900" />
               </div>
-              <p className="mt-2 text-xs text-gray-500">{t("kitchens.previewNote")}</p>
+              {canOrder ? (
+                <>
+                  {orderError && <p role="alert" className="mt-2 text-sm text-red-600">{orderError}</p>}
+                  <button
+                    type="button"
+                    onClick={onPlace}
+                    disabled={placing}
+                    className="mt-3 h-12 w-full rounded-lg text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
+                    style={{ background: RED }}
+                  >
+                    {placing ? t("kitchens.placingOrder") : t("kitchens.placeOrder")}
+                  </button>
+                </>
+              ) : (
+                <p className="mt-2 text-xs text-gray-500">{t("kitchens.previewNote")}</p>
+              )}
               <button
                 type="button"
                 onClick={onClear}
-                className="mt-3 w-full rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                disabled={placing}
+                className="mt-2 w-full rounded-lg border border-gray-300 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-60"
               >
                 {t("kitchens.clearOrder")}
               </button>
@@ -330,10 +367,25 @@ export default function KitchensContent({
   const [selection, setSelection] = useState<AddonSelection>({});
   const [choosing, setChoosing] = useState<{ dish: KitchenDish; mode: "add" | "edit" } | null>(null);
 
+  const [installed, setInstalled] = useState(true);
+  const [placing, setPlacing] = useState(false);
+  const [orderError, setOrderError] = useState("");
+  const [placedNumber, setPlacedNumber] = useState<number | null>(null);
+  /* One id per version of the cart: a retry of the same order can't be placed
+     twice, and changing the order makes it a new one. */
+  const orderRef = useRef("");
   const [seating, setSeating] = useState<Seating | null>(null);
   const [seatingOpen, setSeatingOpen] = useState(false);
 
   useBottomBarSpace();
+
+  // Starts true so the button doesn't flash inside the installed app.
+  useEffect(() => {
+    setInstalled(
+      window.matchMedia("(display-mode: standalone)").matches ||
+        (navigator as unknown as { standalone?: boolean }).standalone === true,
+    );
+  }, []);
 
   /* Asked once per visit: a refresh keeps the answer, a fresh open of the link
      asks again. Read here, not in useState, so the server and first client
@@ -413,6 +465,44 @@ export default function KitchensContent({
     else setQty(dish.id, 1);
   };
 
+  useEffect(() => {
+    orderRef.current = "";
+    setOrderError("");
+  }, [quantities, selection]);
+
+  const placeOrder = async () => {
+    if (!seating) {
+      setOrderOpen(false);
+      setSeatingOpen(true);
+      return;
+    }
+    orderRef.current ||= crypto.randomUUID();
+    setPlacing(true);
+    setOrderError("");
+    const res = await fetch("/api/kitchens/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clientRef: orderRef.current,
+        table: seating.table,
+        guests: seating.guests,
+        waiterToken: seating.waiterToken ?? null,
+        items: cart.map(({ dish, qty }) => ({ dishId: dish.id, qty, addonIds: selection[dish.id] ?? [] })),
+      }),
+    }).catch(() => null);
+    const data = await res?.json().catch(() => null);
+    setPlacing(false);
+    if (res?.ok && data?.orderNumber) {
+      setPlacedNumber(Number(data.orderNumber));
+      setQuantities({});
+      setSelection({});
+      return;
+    }
+    setOrderError(
+      t(res?.status === 409 ? "kitchens.orderChanged" : res?.status === 429 ? "kitchens.orderLimit" : "kitchens.orderFailed"),
+    );
+  };
+
   const renderCard = (dish: KitchenDish) => (
     <DishCard
       key={dish.id}
@@ -428,6 +518,19 @@ export default function KitchensContent({
   return (
     <main className={`min-h-screen pb-24 ${fontClass}`} style={{ background: PAGE_BG }}>
       <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
+        {/* iPhones never offer an install prompt, so this has to be findable. */}
+        {!installed && (
+          <div className="mb-2 flex justify-end">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("tio-open-install"))}
+              className="inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-gray-900"
+            >
+              <Download size={14} />
+              {t("kitchens.installApp")}
+            </button>
+          </div>
+        )}
         {seating && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-black/10 bg-white px-3 py-2">
             <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-gray-900">
@@ -606,13 +709,21 @@ export default function KitchensContent({
           total={total}
           fontClass={fontClass}
           seatingLabel={seatingLabel}
+          canOrder={!isSample}
+          placing={placing}
+          orderError={orderError}
+          placedNumber={placedNumber}
+          onPlace={placeOrder}
           onQtyChange={setQty}
           onEdit={(dish) => setChoosing({ dish, mode: "edit" })}
           onClear={() => {
             setQuantities({});
             setSelection({});
           }}
-          onClose={() => setOrderOpen(false)}
+          onClose={() => {
+            setOrderOpen(false);
+            setPlacedNumber(null);
+          }}
           escapeEnabled={!choosing}
         />
       )}

@@ -105,6 +105,12 @@ export async function getKitchenAddonGroups(forAdmin = false): Promise<Record<st
   return buildGroups(groups, addons, LOOSE_LABEL);
 }
 
+/** What a customer may choose right now, for pricing an order. Never cached. */
+export async function getLiveKitchenAddonGroups(): Promise<Record<string, KalbaAddonGroup[]>> {
+  const { groups, addons } = await read(true, true, KITCHEN_TABLES);
+  return buildGroups(groups, addons, LOOSE_LABEL);
+}
+
 /**
  * Makes an item's stored questions match what the admin panel just sent.
  *

@@ -76,7 +76,7 @@ export default function KitchensAdmin() {
   async function load() {
     setLoading(true);
     setLoadError("");
-    const res = await fetch("/api/admin/kitchens");
+    const res = await fetch("/api/admin/kitchens/dishes");
     const data = await res.json().catch(() => null);
     if (res.ok && Array.isArray(data)) setItems(data);
     else setLoadError(data?.error ?? "Could not load the dishes.");
@@ -108,7 +108,7 @@ export default function KitchensAdmin() {
     setSaving(true);
     setFormError("");
     const res = await fetch(
-      modal.mode === "add" ? "/api/admin/kitchens" : `/api/admin/kitchens/${modal.data.id}`,
+      modal.mode === "add" ? "/api/admin/kitchens/dishes" : `/api/admin/kitchens/dishes/${modal.data.id}`,
       {
         method: modal.mode === "add" ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
@@ -135,7 +135,7 @@ export default function KitchensAdmin() {
   async function handleDelete() {
     if (!deleteId) return;
     setDeleteError("");
-    const res = await fetch(`/api/admin/kitchens/${deleteId}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/kitchens/dishes/${deleteId}`, { method: "DELETE" });
     if (!res.ok) {
       const data = await res.json().catch(() => null);
       setDeleteError(data?.error ?? "Could not delete this dish.");

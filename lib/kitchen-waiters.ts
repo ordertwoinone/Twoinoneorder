@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { hashPin, pinMatches } from "@/lib/pos/auth";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 
@@ -51,8 +51,39 @@ export async function preparePin(
   return hashPin(pin);
 }
 
+/** How long a PIN stays good for on a device: about one working day. */
+const TOKEN_HOURS = 16;
+
+const tokenSignature = (payload: string) =>
+  createHmac("sha256", process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").update(`kitchen-waiter:${payload}`).digest("hex");
+
+/* Handed to the page once a PIN checks out, so orders can name the waiter
+   without the PIN being kept in the browser or a name being taken on trust. */
+function waiterToken(id: string): string {
+  const payload = `${id}.${Date.now() + TOKEN_HOURS * 3600_000}`;
+  return `${payload}.${tokenSignature(payload)}`;
+}
+
+/** The waiter behind a token, if it is genuine, unexpired and they are still active. */
+export async function waiterFromToken(token: unknown): Promise<{ id: string; name: string } | null> {
+  if (typeof token !== "string") return null;
+  const [id, expires, signature] = token.split(".");
+  if (!id || !expires || !signature || Number(expires) < Date.now()) return null;
+
+  const expected = Buffer.from(tokenSignature(`${id}.${expires}`));
+  const given = Buffer.from(signature);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+
+  const { data } = await supabaseAdminLive
+    .from("kitchen_waiters")
+    .select("id, name, is_active")
+    .eq("id", id)
+    .maybeSingle();
+  return data?.is_active ? { id: data.id, name: data.name } : null;
+}
+
 export type PinResult =
-  | { status: "ok"; name: string }
+  | { status: "ok"; name: string; token: string }
   | { status: "wrong" | "locked" | "unavailable" };
 
 /** Checks a PIN typed on the public page, counting failures against the address. */
@@ -81,7 +112,7 @@ export async function verifyWaiterPin(pin: string, ip: string): Promise<PinResul
     if (attempt) {
       await supabaseAdminLive.from("kitchen_waiter_pin_attempts").delete().eq("ip_hash", ipHash);
     }
-    return { status: "ok", name: match.name };
+    return { status: "ok", name: match.name, token: waiterToken(match.id) };
   }
 
   // A count left over from before the last lock, or long ago, starts again.

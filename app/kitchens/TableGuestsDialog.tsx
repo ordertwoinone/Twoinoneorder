@@ -19,6 +19,8 @@ export interface Seating {
   guests: number;
   /** Set once a waiter has typed a PIN the server accepted. */
   waiter?: string | null;
+  /** Sent with an order to prove who the waiter is. */
+  waiterToken?: string | null;
 }
 
 const RED = "#b71c24";
@@ -52,6 +54,7 @@ export default function TableGuestsDialog({
   const [guests, setGuests] = useState(initial?.guests ?? 2);
   const [table, setTable] = useState<string | null>(initial?.table ?? null);
   const [waiter, setWaiter] = useState<string | null>(initial?.waiter ?? null);
+  const [waiterToken, setWaiterToken] = useState<string | null>(initial?.waiterToken ?? null);
   const [pin, setPin] = useState("");
   const [padOpen, setPadOpen] = useState(false);
   const [pinState, setPinState] = useState<"idle" | "checking" | "wrong" | "locked" | "unavailable">("idle");
@@ -73,6 +76,7 @@ export default function TableGuestsDialog({
     const data = await res?.json().catch(() => null);
     if (res?.ok && data?.name) {
       setWaiter(data.name);
+      setWaiterToken(data.token ?? null);
       setPin("");
       setPinState("idle");
       setPadOpen(false);
@@ -219,7 +223,10 @@ export default function TableGuestsDialog({
               </p>
               <button
                 type="button"
-                onClick={() => setWaiter(null)}
+                onClick={() => {
+                  setWaiter(null);
+                  setWaiterToken(null);
+                }}
                 aria-label={t("kitchens.waiterRemove")}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200"
               >
@@ -298,7 +305,7 @@ export default function TableGuestsDialog({
           <button
             type="button"
             disabled={!canContinue}
-            onClick={() => onConfirm({ table, guests, waiter })}
+            onClick={() => onConfirm({ table, guests, waiter, waiterToken })}
             className="h-12 w-full rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-95 disabled:opacity-50"
             style={{ background: RED }}
           >

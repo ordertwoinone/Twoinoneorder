@@ -49,7 +49,7 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
     if (!menu || !kitchen) return;
     setSaving(true);
     setSaveError("");
-    const res = await fetch("/api/admin/kitchens/import", {
+    const res = await fetch("/api/admin/kitchens/dishes/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kitchen, active, dishes: menu.dishes }),

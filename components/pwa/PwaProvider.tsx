@@ -82,6 +82,9 @@ export default function PwaProvider({
      covered the cart bar; on the till it sits over the payment panel. */
   const STAFF_AREAS = ["/admin", "/kiosk", "/pos"];
   const inAdmin = STAFF_AREAS.some((area) => pathname?.startsWith(area) ?? false);
+  /* /kitchens installs as its own app, so the card has to say which one. */
+  const inKitchens = pathname?.startsWith("/kitchens") ?? false;
+  const cardLogo = inKitchens ? "/icons/kitchens-icon-192.png" : logoUrl;
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -208,12 +211,12 @@ export default function PwaProvider({
             <div className="bg-white rounded-2xl border border-gray-100 p-3 flex items-center gap-3 shadow-[0_10px_40px_rgba(0,0,0,0.16)]">
               <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-gray-50 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
+                <img src={cardLogo} alt={siteName} className="w-full h-full object-contain" />
               </div>
 
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-extrabold text-gray-900 leading-tight">
-                  {t("pwa.installTitle")}
+                  {t(inKitchens ? "kitchens.installTitle" : "pwa.installTitle")}
                 </p>
                 <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
                   {t("pwa.installText")}
@@ -268,11 +271,11 @@ export default function PwaProvider({
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-gray-50 flex items-center justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logoUrl} alt={siteName} className="w-full h-full object-contain" />
+                    <img src={cardLogo} alt={siteName} className="w-full h-full object-contain" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-extrabold text-gray-900">{t("pwa.addToHomeScreen")}</p>
-                    <p className="text-[11px] text-gray-500">{t("pwa.installAsApp")}</p>
+                    <p className="text-[11px] text-gray-500">{t(inKitchens ? "kitchens.installTitle" : "pwa.installAsApp")}</p>
                   </div>
                   <button
                     onClick={() => setGuideOpen(false)}

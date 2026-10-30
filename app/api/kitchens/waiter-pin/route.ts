@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     "unknown";
 
   const result = await verifyWaiterPin(body.pin, ip);
-  if (result.status === "ok") return NextResponse.json({ name: result.name });
+  if (result.status === "ok") return NextResponse.json({ name: result.name, token: result.token });
 
   const status = result.status === "locked" ? 429 : result.status === "unavailable" ? 503 : 401;
   return NextResponse.json({ error: result.status }, { status });

@@ -19,7 +19,7 @@ const heading = Archivo_Narrow({
   display: "swap",
 });
 
-/* Kept out of search results while orders can't be placed from the page. */
+/* For guests already in the restaurant, so it stays out of search results. */
 export const metadata: Metadata = {
   title: "Italian & Turkish Kitchens",
   description: "Breakfast, lunch and dinner from our Italian and Turkish kitchens.",
