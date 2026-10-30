@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Minus, Plus, UserCheck, Users, X } from "lucide-react";
+import { Delete, Minus, Plus, UserCheck, Users, X } from "lucide-react";
 import { useLocalized } from "@/lib/i18n/localized";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 
@@ -53,12 +53,12 @@ export default function TableGuestsDialog({
   const [table, setTable] = useState<string | null>(initial?.table ?? null);
   const [waiter, setWaiter] = useState<string | null>(initial?.waiter ?? null);
   const [pin, setPin] = useState("");
+  const [padOpen, setPadOpen] = useState(false);
   const [pinState, setPinState] = useState<"idle" | "checking" | "wrong" | "locked" | "unavailable">("idle");
 
   /* Checked as soon as the fourth digit is in, so there is no extra button for
      customers to wonder about. */
-  async function changePin(value: string) {
-    const digits = value.replace(/\D/g, "").slice(0, 4);
+  async function changePin(digits: string) {
     setPin(digits);
     if (digits.length < 4) {
       setPinState("idle");
@@ -75,10 +75,12 @@ export default function TableGuestsDialog({
       setWaiter(data.name);
       setPin("");
       setPinState("idle");
+      setPadOpen(false);
       return;
     }
     setPin("");
     setPinState(res?.status === 401 ? "wrong" : res?.status === 429 ? "locked" : "unavailable");
+    if (res?.status === 429) setPadOpen(false);
   }
 
   useEffect(() => {
@@ -88,6 +90,19 @@ export default function TableGuestsDialog({
       document.body.style.overflow = overflow;
     };
   }, []);
+
+  /* A number pad rather than an input, so a phone never opens its own keyboard.
+     Digit keys still work on a computer with one. */
+  useEffect(() => {
+    if (!padOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (pinState === "checking") return;
+      if (/^\d$/.test(e.key) && pin.length < 4) changePin(pin + e.key);
+      else if (e.key === "Backspace") changePin(pin.slice(0, -1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   useEffect(() => {
     if (!onClose) return;
@@ -214,23 +229,21 @@ export default function TableGuestsDialog({
           ) : (
             <div className="mb-3">
               <div className="flex items-center justify-between gap-3">
-                <label htmlFor="kitchens-waiter-pin" className="min-w-0 text-xs font-medium text-gray-500">
-                  {t("kitchens.waiterPin")}
-                </label>
-                {/* text-base: iOS Safari zooms into any smaller field on focus. */}
-                <input
+                <span className="min-w-0 text-xs font-medium text-gray-500">{t("kitchens.waiterPin")}</span>
+                <button
                   id="kitchens-waiter-pin"
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={4}
-                  value={pin}
-                  disabled={pinState === "checking" || pinState === "locked"}
-                  onChange={(e) => changePin(e.target.value)}
-                  placeholder="••••"
+                  type="button"
+                  disabled={pinState === "locked"}
+                  onClick={() => setPadOpen((open) => !open)}
+                  aria-expanded={padOpen}
+                  aria-label={`${t("kitchens.waiterPin")}: ${pin.length}/4`}
                   dir="ltr"
-                  className="h-10 w-24 shrink-0 rounded-lg border border-gray-300 text-center text-base tracking-[0.3em] focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:bg-gray-100"
-                />
+                  className={`flex h-10 w-24 shrink-0 items-center justify-center gap-2 rounded-lg border-2 transition-colors disabled:bg-gray-100 ${padOpen ? "border-gray-900" : "border-gray-300"}`}
+                >
+                  {[0, 1, 2, 3].map((i) => (
+                    <span key={i} className={`h-2.5 w-2.5 rounded-full ${i < pin.length ? "bg-gray-900" : "bg-gray-300"}`} />
+                  ))}
+                </button>
               </div>
               {pinState !== "idle" && (
                 <p role="status" className={`mt-1 text-xs ${pinState === "checking" ? "text-gray-500" : "text-red-600"}`}>
@@ -239,6 +252,46 @@ export default function TableGuestsDialog({
                   {pinState === "locked" && t("kitchens.waiterPinLocked")}
                   {pinState === "unavailable" && t("kitchens.waiterPinUnavailable")}
                 </p>
+              )}
+              {padOpen && (
+                <div className="mt-2 grid grid-cols-3 gap-1.5" dir="ltr">
+                  {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
+                    <button
+                      key={digit}
+                      type="button"
+                      disabled={pinState === "checking"}
+                      onClick={() => changePin(pin + digit)}
+                      className="h-11 rounded-lg bg-gray-100 text-lg font-semibold text-gray-900 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50"
+                    >
+                      {digit}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setPadOpen(false)}
+                    aria-label={t("common.close")}
+                    className="flex h-11 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100"
+                  >
+                    <X size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pinState === "checking"}
+                    onClick={() => changePin(pin + "0")}
+                    className="h-11 rounded-lg bg-gray-100 text-lg font-semibold text-gray-900 hover:bg-gray-200 active:bg-gray-300 disabled:opacity-50"
+                  >
+                    0
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pinState === "checking" || pin.length === 0}
+                    onClick={() => changePin(pin.slice(0, -1))}
+                    aria-label={t("kitchens.waiterPinDelete")}
+                    className="flex h-11 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 disabled:opacity-40"
+                  >
+                    <Delete size={20} />
+                  </button>
+                </div>
               )}
             </div>
           )}

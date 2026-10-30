@@ -412,6 +412,18 @@ export default function KitchensContent({
     else setQty(dish.id, 1);
   };
 
+  const renderCard = (dish: KitchenDish) => (
+    <DishCard
+      key={dish.id}
+      dish={dish}
+      qty={quantities[dish.id] ?? 0}
+      guests={seating?.guests ?? null}
+      hasAddons={(addonGroups[dish.id]?.length ?? 0) > 0}
+      onAdd={() => addDish(dish)}
+      onQtyChange={(qty) => setQty(dish.id, qty)}
+    />
+  );
+
   return (
     <main className={`min-h-screen pb-24 ${fontClass}`} style={{ background: PAGE_BG }}>
       <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
@@ -501,19 +513,39 @@ export default function KitchensContent({
           )}
 
           {dishes.length > 0 ? (
-            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 sm:gap-4">
-              {dishes.map((dish) => (
-                <DishCard
-                  key={dish.id}
-                  dish={dish}
-                  qty={quantities[dish.id] ?? 0}
-                  guests={seating?.guests ?? null}
-                  hasAddons={(addonGroups[dish.id]?.length ?? 0) > 0}
-                  onAdd={() => addDish(dish)}
-                  onQtyChange={(qty) => setQty(dish.id, qty)}
-                />
-              ))}
-            </div>
+            kitchen === "all" ? (
+              /* Both kitchens: Italian on the left two columns, Turkish on the
+                 right two. Stacked below lg, where four cards would not fit. */
+              <div className="mt-4 grid grid-cols-1 items-start gap-6 lg:grid-cols-2 sm:gap-4">
+                {(["italian", "turkish"] as const).map((id) => {
+                  const own = dishes.filter((d) => d.kitchen === id);
+                  return (
+                    <section key={id} aria-labelledby={`kitchen-${id}`} className="min-w-0">
+                      <h2
+                        id={`kitchen-${id}`}
+                        className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl"
+                        style={{ fontFamily: HEADING_FONT }}
+                      >
+                        {t(`kitchens.origin.${id}`)}
+                      </h2>
+                      {own.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-2">
+                          {own.map(renderCard)}
+                        </div>
+                      ) : (
+                        <p className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-10 text-center text-sm text-gray-500">
+                          {t("kitchens.kitchenEmpty")}
+                        </p>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 sm:gap-4">
+                {dishes.map(renderCard)}
+              </div>
+            )
           ) : (
             <div className="mt-4 rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center">
               <p className="text-sm text-gray-600">{t("kitchens.noMatches")}</p>
