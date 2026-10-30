@@ -72,6 +72,10 @@ export default function KitchensAdmin() {
   const [deleteError, setDeleteError] = useState("");
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkError, setBulkError] = useState("");
 
   async function load() {
     setLoading(true);
@@ -146,6 +150,43 @@ export default function KitchensAdmin() {
   }
 
   const visible = mealFilter === "all" ? items : items.filter((i) => i.meal === mealFilter);
+  const allSelected = visible.length > 0 && visible.every((i) => selected.has(i.id));
+
+  /* Changing the filter clears the ticks, so nothing out of sight can be deleted. */
+  function changeMeal(id: Meal | "all") {
+    setMealFilter(id);
+    setSelected(new Set());
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    setBulkDeleting(true);
+    setBulkError("");
+    const res = await fetch("/api/admin/kitchens/dishes", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: Array.from(selected) }),
+    }).catch(() => null);
+    const data = await res?.json().catch(() => null);
+    setBulkDeleting(false);
+    if (!res?.ok) {
+      setBulkError(data?.error ?? "Could not delete these dishes.");
+      // Some may have gone before the failure, so the list has to be re-read.
+      if (data?.deleted) load();
+      return;
+    }
+    setSelected(new Set());
+    setBulkOpen(false);
+    load();
+  }
 
   return (
     <div className="p-4 sm:p-8">
@@ -171,7 +212,7 @@ export default function KitchensAdmin() {
         {(["all", "breakfast", "lunch", "dinner"] as const).map((id) => (
           <button
             key={id}
-            onClick={() => setMealFilter(id)}
+            onClick={() => changeMeal(id)}
             aria-pressed={mealFilter === id}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${mealFilter === id ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
           >
@@ -187,10 +228,33 @@ export default function KitchensAdmin() {
         </div>
       )}
 
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
+          <p className="text-sm font-semibold text-red-800">{selected.size} selected</p>
+          <div className="flex gap-2">
+            <button onClick={() => setSelected(new Set())} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50">Clear</button>
+            <button onClick={() => { setBulkError(""); setBulkOpen(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700">
+              <Trash2 size={14} />
+              Delete selected
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="w-10 ps-4 py-3 text-left">
+                <input
+                  type="checkbox"
+                  aria-label="Select all dishes shown"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = selected.size > 0 && !allSelected; }}
+                  onChange={() => setSelected(allSelected ? new Set() : new Set(visible.map((i) => i.id)))}
+                  className="w-4 h-4 align-middle"
+                />
+              </th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Dish</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Categories</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Price</th>
@@ -201,11 +265,20 @@ export default function KitchensAdmin() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
+              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : visible.length === 0 ? (
-              <tr><td colSpan={6} className="text-center py-16 text-gray-400 text-sm">No dishes yet.</td></tr>
+              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No dishes yet.</td></tr>
             ) : visible.map((item) => (
-              <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+              <tr key={item.id} className={`border-b border-gray-100 transition-colors ${selected.has(item.id) ? "bg-red-50/50" : "hover:bg-gray-50"}`}>
+                <td className="ps-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${item.name}`}
+                    checked={selected.has(item.id)}
+                    onChange={() => toggleOne(item.id)}
+                    className="w-4 h-4 align-middle"
+                  />
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3 min-w-[180px]">
                     <div className="w-11 h-11 rounded-lg overflow-hidden bg-gray-100 shrink-0">
@@ -371,6 +444,23 @@ export default function KitchensAdmin() {
       )}
 
       {importing && <ImportDialog onClose={() => setImporting(false)} onImported={load} />}
+
+      {bulkOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={22} className="text-red-600" />
+            </div>
+            <h3 className="text-base font-semibold text-gray-900 text-center mb-2">Delete {selected.size} dish{selected.size !== 1 ? "es" : ""}?</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">Their add-ons go too, and this cannot be undone. Past orders keep their details.</p>
+            {bulkError && <p role="alert" className="text-sm text-red-600 text-center mb-4">{bulkError}</p>}
+            <div className="flex gap-3">
+              <button onClick={() => setBulkOpen(false)} disabled={bulkDeleting} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50">Cancel</button>
+              <button onClick={handleBulkDelete} disabled={bulkDeleting} className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50">{bulkDeleting ? "Deleting..." : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">

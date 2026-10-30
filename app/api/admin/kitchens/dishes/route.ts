@@ -34,3 +34,34 @@ export async function POST(request: Request) {
   revalidatePath("/kitchens");
   return NextResponse.json({ ...(data as object), droppedColumns }, { status: 201 });
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Each id goes in the request URL, so a long list is sent in pieces.
+const DELETE_BATCH = 100;
+
+/** Deletes several dishes. Their add-ons go with them; past orders keep their own copy. */
+export async function DELETE(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const ids: string[] = Array.isArray(body?.ids) ? body.ids : [];
+  if (ids.length === 0 || ids.some((id) => typeof id !== "string" || !UUID.test(id))) {
+    return NextResponse.json({ error: "Choose at least one dish." }, { status: 400 });
+  }
+
+  let deleted = 0;
+  let failure: string | null = null;
+  for (let i = 0; i < ids.length; i += DELETE_BATCH) {
+    const { error } = await supabaseAdminLive
+      .from("kitchen_dishes")
+      .delete()
+      .in("id", ids.slice(i, i + DELETE_BATCH));
+    if (error) {
+      failure = error.message;
+      break;
+    }
+    deleted += Math.min(DELETE_BATCH, ids.length - i);
+  }
+
+  revalidatePath("/kitchens");
+  if (failure) return NextResponse.json({ error: failure, deleted }, { status: 500 });
+  return NextResponse.json({ deleted });
+}
