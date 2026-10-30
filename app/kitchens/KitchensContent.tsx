@@ -118,7 +118,7 @@ function DishCard({
           {t(`kitchens.origin.${dish.kitchen}`)}
         </p>
         <h3 className="mt-1 text-[15px] font-semibold leading-snug text-gray-900 sm:text-lg">{name}</h3>
-        <p className="mt-1 text-xs leading-relaxed text-gray-500 sm:text-sm">{pick(dish, "description")}</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-gray-500 sm:text-xs">{pick(dish, "description")}</p>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {dish.kcal !== null && (
