@@ -130,7 +130,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,
+  // Pinch-zoom is off site-wide. iOS Safari ignores both of these; see the
+  // gesturestart listener in <head>.
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
@@ -190,6 +193,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </>
         )}
         <JsonLd data={[organizationSchema(sameAs), webSiteSchema()]} />
+        {/* iOS Safari ignores user-scalable=no, so its pinch gesture is cancelled
+            here. Leaflet's map zoom runs on touch events and is unaffected. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "document.addEventListener('gesturestart',function(e){e.preventDefault();},{passive:false});",
+          }}
+        />
         {/* Capture the install prompt as early as possible — it can fire before
             React hydrates. PwaProvider reads window.deferredInstallPrompt. */}
         <script
