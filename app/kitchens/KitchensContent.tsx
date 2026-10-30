@@ -321,7 +321,7 @@ export default function KitchensContent({
 }) {
   const { t, tp } = useTranslation();
   const pick = useLocalizedField();
-  const [meal, setMeal] = useState<Meal>("dinner");
+  const [meal, setMeal] = useState<Meal>("breakfast");
   const [kitchen, setKitchen] = useState<KitchenFilter>("all");
   const [healthyOnly, setHealthyOnly] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
