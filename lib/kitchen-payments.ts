@@ -54,6 +54,7 @@ export function paymentPatch(action: PaymentAction, current: PaymentState, now: 
 
 export async function applyPayment(
   client: SupabaseClient,
+  update: (table: string, id: string, row: Record<string, unknown>) => PromiseLike<{ error: { message?: string } | null }>,
   id: string,
   body: Record<string, unknown>,
 ): Promise<{ status: number; error?: string }> {
@@ -62,16 +63,21 @@ export async function applyPayment(
 
   const { data: order, error: readError } = await client
     .from("kitchen_orders")
-    .select("paid_at, credit_at, status")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
   if (readError) return { status: 500, error: readError.message };
   if (!order || order.status === "cancelled") return { status: 404, error: "That order has been cancelled." };
 
   const now = new Date().toISOString();
-  const { error } = await client
-    .from("kitchen_orders")
-    .update({ ...paymentPatch(action, order, now), updated_at: now })
-    .eq("id", id);
-  return error ? { status: 500, error: error.message } : { status: 200 };
+  const event =
+    action.action === "pay" ? { type: "paid", at: now, method: action.method }
+    : action.action === "credit" ? { type: "credit", at: now }
+    : { type: "payment_undone", at: now };
+  // Through the caller's writer, so a history column not added yet can't lose the payment.
+  const { error } = await update("kitchen_orders", id, {
+    ...paymentPatch(action, order, now),
+    events: [...(order.events ?? []), event],
+  });
+  return error ? { status: 500, error: error.message ?? "Could not save." } : { status: 200 };
 }

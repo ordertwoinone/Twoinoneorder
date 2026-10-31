@@ -17,6 +17,9 @@ interface TrackedOrder {
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
   ready_at?: string | null;
+  round?: number | null;
+  round_started_at?: string | null;
+  paid_amount?: number | string | null;
   served_at?: string | null;
   created_at: string;
 }
@@ -32,10 +35,6 @@ const STEPS: { status: KitchenOrderStatus; label: string }[] = [
 ];
 
 const onCredit = (o: TrackedOrder) => !o.paid_at && o.payment_method === "credit";
-
-/** Done with: cancelled, or served and either paid or moved to credit. */
-const isFinished = (o: TrackedOrder) =>
-  o.status === "cancelled" || (o.status === "served" && (Boolean(o.paid_at) || onCredit(o)));
 
 /** Where the order is right now, in a sentence. */
 function whereNow(o: TrackedOrder): string {
@@ -54,6 +53,8 @@ function paymentPill(o: TrackedOrder): { label: string; cls: string } {
     return { label: `Paid${method}`, cls: "bg-green-100 text-green-700" };
   }
   if (onCredit(o)) return { label: "On credit", cls: "bg-amber-100 text-amber-800" };
+  const already = Number(o.paid_amount ?? 0);
+  if (already > 0) return { label: `Balance ${money(Number(o.total) - already)}`, cls: "bg-red-100 text-red-700" };
   return { label: "Not paid", cls: "bg-red-100 text-red-700" };
 }
 
@@ -61,7 +62,6 @@ export default function KitchenOrderTracker() {
   const [orders, setOrders] = useState<TrackedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [view, setView] = useState<"progress" | "finished" | "all">("progress");
   const [waiter, setWaiter] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
@@ -98,12 +98,10 @@ export default function KitchenOrderTracker() {
   }
 
   const waiters = Array.from(new Set(orders.map((o) => o.waiter_name).filter(Boolean))) as string[];
-  const inProgress = orders.filter((o) => !isFinished(o)).length;
+  const inProgress = orders.length;
 
   const visible = orders
     .filter((o) => {
-      if (view === "progress" && isFinished(o)) return false;
-      if (view === "finished" && !isFinished(o)) return false;
       if (waiter === NO_WAITER) return !o.waiter_name;
       return !waiter || o.waiter_name === waiter;
     })
@@ -123,19 +121,7 @@ export default function KitchenOrderTracker() {
         <p className="text-sm text-gray-500 mt-0.5">{inProgress} in progress · updates every 15 seconds</p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex flex-wrap gap-2">
-          {([["progress", `In progress (${inProgress})`], ["finished", "Finished"], ["all", "All"]] as const).map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => setView(id)}
-              aria-pressed={view === id}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${view === id ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <div className="flex justify-end mb-4">
         <select
           value={waiter}
           onChange={(e) => setWaiter(e.target.value)}
@@ -175,7 +161,7 @@ export default function KitchenOrderTracker() {
                       {when(order.created_at)} · {order.guests} {order.guests === 1 ? "person" : "people"}
                     </p>
                   </div>
-                  <OrderTimer from={order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
+                  <OrderTimer from={order.round_started_at ?? order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
                 </div>
 
                 <p className="mt-2 text-sm font-semibold text-gray-800">
@@ -186,6 +172,10 @@ export default function KitchenOrderTracker() {
                   <div className="mt-2">
                     <WaiterTimer readyAt={order.ready_at} servedAt={order.status === "served" ? order.served_at : null} now={now} />
                   </div>
+                )}
+
+                {(order.round ?? 1) > 1 && (
+                  <p className="mt-2 inline-block self-start rounded bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">Added items</p>
                 )}
 
                 <p className={`mt-3 text-sm font-bold ${cancelled ? "text-gray-500" : "text-gray-900"}`}>{whereNow(order)}</p>
@@ -216,7 +206,10 @@ export default function KitchenOrderTracker() {
                 )}
 
                 <p className="mt-3 flex-1 text-xs text-gray-600">
-                  {(order.items ?? []).map((item) => `${item.qty} × ${item.name}`).join(", ")}
+                  {(order.items ?? [])
+                    .filter((item) => (item.round ?? 1) === (order.round ?? 1))
+                    .map((item) => `${item.qty} × ${item.name}`)
+                    .join(", ")}
                 </p>
 
                 <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
@@ -224,11 +217,11 @@ export default function KitchenOrderTracker() {
                   <span className="text-sm font-bold text-gray-900">{money(Number(order.total))}</span>
                 </div>
 
-                {order.status === "ready" && (
+                {(order.status === "ready" || order.status === "preparing") && (
                   <button
                     onClick={() => markServed(order.id)}
                     disabled={busyId === order.id}
-                    className="mt-3 h-11 rounded-lg bg-green-700 text-sm font-bold text-white hover:bg-green-800 disabled:opacity-50"
+                    className={`mt-3 h-11 rounded-lg text-sm font-bold disabled:opacity-50 ${order.status === "ready" ? "bg-green-700 text-white hover:bg-green-800" : "border border-gray-300 bg-white text-gray-800 hover:bg-gray-50"}`}
                   >
                     Mark served
                   </button>

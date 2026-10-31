@@ -35,6 +35,9 @@ export interface OrderItem {
   unit_price: number;
   addons: { name: string; price: number }[];
   line_total: number;
+  /** Which cooking this belongs to: 1 for the first, 2 for the first items added... */
+  round?: number;
+  added_at?: string;
 }
 
 export function priceOrder(
@@ -127,6 +130,8 @@ export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceO
         unit_price: roundMoney(Number(item.unit_price) - extras),
         extras: (item.addons ?? []).map((a) => a.name).join(", ") || undefined,
         extras_price: extras || undefined,
+        // Tells the kitchen this is the part still to cook.
+        note: (item.round ?? 1) > 1 ? "Added item" : undefined,
         line_total: Number(item.line_total),
       };
     }),
@@ -135,4 +140,57 @@ export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceO
     tax_amount: vatIncludedIn(total),
     total_amount: total,
   };
+}
+
+/** One step in an order's history, stored in its events column. */
+export interface OrderEvent {
+  type: "preparing" | "ready" | "served" | "cancelled" | "items_added" | "paid" | "credit" | "payment_undone";
+  at: string;
+  method?: string;
+  count?: number;
+  amount?: number;
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  preparing: "Kitchen started preparing",
+  ready: "Ready in the kitchen",
+  served: "Served to the table",
+  cancelled: "Cancelled",
+  credit: "Put on credit",
+  payment_undone: "Payment undone",
+};
+
+function eventLabel(event: OrderEvent): string {
+  if (event.type === "items_added") {
+    const count = event.count ?? 0;
+    return `${count} item${count === 1 ? "" : "s"} added, back to the kitchen`;
+  }
+  if (event.type === "paid") return event.method === "card" ? "Paid by card" : event.method === "cash" ? "Paid by cash" : "Paid";
+  return EVENT_LABELS[event.type] ?? event.type;
+}
+
+/**
+ * Everything that happened to an order, oldest first. Orders from before history
+ * was recorded still show the times they do have.
+ */
+export function orderTimeline(order: {
+  created_at: string;
+  ready_at?: string | null;
+  served_at?: string | null;
+  paid_at?: string | null;
+  payment_method?: string | null;
+  events?: OrderEvent[] | null;
+}): { label: string; at: string }[] {
+  const events = [...(order.events ?? [])];
+  const has = (type: OrderEvent["type"]) => events.some((e) => e.type === type);
+  if (order.ready_at && !has("ready")) events.push({ type: "ready", at: order.ready_at });
+  if (order.served_at && !has("served")) events.push({ type: "served", at: order.served_at });
+  if (order.paid_at && !has("paid")) events.push({ type: "paid", at: order.paid_at, method: order.payment_method ?? undefined });
+
+  return [
+    { label: "Order received", at: order.created_at },
+    ...events
+      .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+      .map((event) => ({ label: eventLabel(event), at: event.at })),
+  ];
 }

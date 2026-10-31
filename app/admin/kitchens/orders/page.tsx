@@ -20,6 +20,8 @@ interface KitchenOrder {
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
   ready_at?: string | null;
+  round?: number | null;
+  round_started_at?: string | null;
   served_at?: string | null;
   created_at: string;
 }
@@ -63,8 +65,10 @@ export default function KitchenOrdersAdmin() {
     }
     setLoadError("");
     const list = data as KitchenOrder[];
-    const fresh = knownIds.current ? list.some((o) => !knownIds.current?.has(o.id)) : false;
-    knownIds.current = new Set(list.map((o) => o.id));
+    // By round as well, so items added to an old order ring like a new order.
+    const key = (o: KitchenOrder) => `${o.id}:${o.round ?? 1}`;
+    const fresh = knownIds.current ? list.some((o) => !knownIds.current?.has(key(o))) : false;
+    knownIds.current = new Set(list.map(key));
     setOrders(list);
     if (fresh) chime();
   }, [chime]);
@@ -168,7 +172,7 @@ export default function KitchenOrdersAdmin() {
                 </div>
 
                 <div className="mt-2 flex items-center justify-between gap-2">
-                  <OrderTimer from={order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
+                  <OrderTimer from={order.round_started_at ?? order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
                   <button
                     onClick={() => printDocument(`/admin/kitchens/receipt/${order.id}`)}
                     aria-label={`Print order ${order.order_number}`}
@@ -180,11 +184,22 @@ export default function KitchenOrdersAdmin() {
                   </button>
                 </div>
 
+                {(order.round ?? 1) > 1 && (
+                  <p className="mt-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900">
+                    Added items: cook the items marked NEW only
+                  </p>
+                )}
+
                 <ul className="mt-3 flex-1 divide-y divide-gray-100 text-sm">
                   {(order.items ?? []).map((item, i) => (
-                    <li key={i} className="py-2">
+                    <li key={i} className={`py-2 ${(order.round ?? 1) > 1 && (item.round ?? 1) < (order.round ?? 1) ? "opacity-50" : ""}`}>
                       <div className="flex justify-between gap-3">
-                        <span className="font-medium text-gray-800">{item.qty} × {item.name}</span>
+                        <span className="font-medium text-gray-800">
+                          {item.qty} × {item.name}
+                          {(order.round ?? 1) > 1 && (item.round ?? 1) === (order.round ?? 1) && (
+                            <span className="ms-1.5 rounded bg-amber-400 px-1 py-0.5 text-[10px] font-black text-gray-900">NEW</span>
+                          )}
+                        </span>
                         <span className="shrink-0 text-gray-600">AED {Number(item.line_total).toFixed(2)}</span>
                       </div>
                       <p className="text-xs text-gray-500">
@@ -219,7 +234,10 @@ export default function KitchenOrdersAdmin() {
                     </div>
                   ) : (
                     <div className="mt-3 flex gap-2">
-                      <button onClick={() => setCancelId(order.id)} className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                      {/* Part of this order has already been eaten, so it can't be cancelled whole. */}
+                      {(order.round ?? 1) <= 1 && (
+                        <button onClick={() => setCancelId(order.id)} className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
+                      )}
                       {next && (
                         <button onClick={() => setStatus(order.id, next.status)} disabled={busyId === order.id} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>
                           {next.label}

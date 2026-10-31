@@ -8,7 +8,9 @@ export async function GET() {
   const { data, error } = await supabaseAdminLive
     .from("kitchen_orders")
     .select("*")
-    .order("created_at", { ascending: false })
+    // Served orders move to Served Orders.
+    .in("status", ["new", "preparing", "ready"])
+    .order("created_at", { ascending: true })
     .limit(300);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

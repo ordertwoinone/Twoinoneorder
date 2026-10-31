@@ -20,6 +20,8 @@ export interface ServedOrder {
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
   ready_at?: string | null;
+  round_started_at?: string | null;
+  paid_amount?: number | string | null;
   served_at?: string | null;
   credit_name?: string | null;
   credit_phone?: string | null;
@@ -61,7 +63,7 @@ export default function OrderMoneyCard({
 
       {now !== undefined && (
         <div className="mt-2 flex items-center justify-between gap-2">
-          <OrderTimer from={order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
+          <OrderTimer from={order.round_started_at ?? order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
           <button
             onClick={() => printDocument(`/admin/kitchens/receipt/${order.id}`)}
             aria-label={`Print order ${order.order_number}`}
@@ -90,6 +92,13 @@ export default function OrderMoneyCard({
         <span className="text-sm font-semibold text-gray-600">Total</span>
         <span className="text-base font-bold text-gray-900">{money(Number(order.total))}</span>
       </div>
+
+      {!order.paid_at && Number(order.paid_amount ?? 0) > 0 && (
+        <div className="mt-1 text-sm">
+          <p className="flex justify-between text-gray-500"><span>Already paid</span><span>{money(Number(order.paid_amount))}</span></p>
+          <p className="flex justify-between font-bold text-red-700"><span>Balance to pay</span><span>{money(Number(order.total) - Number(order.paid_amount))}</span></p>
+        </div>
+      )}
 
       {children}
     </article>

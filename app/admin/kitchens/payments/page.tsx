@@ -72,7 +72,7 @@ export default function KitchenPaymentsAdmin() {
     if (ok) setCreditFor(null);
   }
 
-  const owed = unpaid.reduce((sum, o) => sum + Number(o.total), 0);
+  const owed = unpaid.reduce((sum, o) => sum + Number(o.total) - Number(o.paid_amount ?? 0), 0);
   const visible = view === "unpaid" ? unpaid : paid;
 
   return (
