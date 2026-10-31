@@ -6,6 +6,8 @@ import { Delete, Minus, Plus, UserCheck, Users, X } from "lucide-react";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import { useLocalized } from "@/lib/i18n/localized";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import type { TableShape } from "@/lib/table-layout";
+import TableMap from "./TableMap";
 
 export interface DiningTable {
   code: string;
@@ -14,6 +16,9 @@ export interface DiningTable {
   /** Free text in the table list: "4", or a range like "8–10". */
   seats: string;
   status: string;
+  pos_x?: number | string | null;
+  pos_y?: number | string | null;
+  shape?: TableShape | null;
 }
 
 export interface Seating {
@@ -33,12 +38,6 @@ const SECTION_AR: Record<string, string> = {
   "VIP Majlis Area": "مجلس كبار الشخصيات",
   "Outdoor Terrace": "التراس الخارجي",
 };
-
-/** The most a table seats: "8–10" holds 10. */
-function maxSeats(seats: string): number {
-  const numbers = seats.match(/\d+/g);
-  return numbers ? Number(numbers[numbers.length - 1]) : 0;
-}
 
 export default function TableGuestsDialog({
   tables, initial, fontClass, headingFont, onConfirm, onClose,
@@ -119,7 +118,6 @@ export default function TableGuestsDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const sections = Array.from(new Set(tables.map((x) => x.section)));
   // With no tables to list, the guest count is still worth asking for.
   const canContinue = tables.length === 0 || table !== null;
 
@@ -184,36 +182,16 @@ export default function TableGuestsDialog({
           {tables.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-gray-900">{t("kitchens.selectTable")}</p>
-              {sections.map((section) => (
-                <div key={section} className="mt-3">
-                  <p className="mb-1.5 text-xs font-medium text-gray-500">{localized(section, tables.find((x) => x.section === section)?.section_ar || SECTION_AR[section])}</p>
-                  <div className="grid grid-cols-3 gap-2 min-[375px]:grid-cols-4">
-                    {tables.filter((x) => x.section === section).map((x) => {
-                      const active = table === x.code;
-                      const booked = x.status === "booked";
-                      const tooSmall = maxSeats(x.seats) > 0 && maxSeats(x.seats) < guests;
-                      return (
-                        <button
-                          key={x.code}
-                          type="button"
-                          disabled={booked}
-                          onClick={() => setTable(x.code)}
-                          aria-pressed={active}
-                          className={`rounded-lg border-2 px-1 py-2 text-center transition-colors disabled:cursor-not-allowed disabled:bg-gray-100 disabled:opacity-50 ${
-                            active ? "text-white" : "border-gray-200 bg-white text-gray-900 hover:border-gray-400"
-                          } ${tooSmall && !active ? "opacity-60" : ""}`}
-                          style={active ? { background: RED, borderColor: RED } : undefined}
-                        >
-                          <span className="block text-sm font-bold">{x.code}</span>
-                          <span className={`block text-[11px] ${active ? "text-white/90" : "text-gray-500"}`}>
-                            {booked ? t("kitchens.tableBooked") : t("kitchens.tableSeats", { seats: x.seats })}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+              <div className="mt-2">
+                <TableMap
+                  tables={tables}
+                  selected={table}
+                  guests={guests}
+                  onSelect={setTable}
+                  areaLabel={(section) => localized(section, tables.find((x) => x.section === section)?.section_ar || SECTION_AR[section])}
+                  tableLabel={(x) => `${t("kitchens.tableLabel", { table: x.code })}, ${x.status === "booked" ? t("kitchens.tableBooked") : t("kitchens.tableSeats", { seats: x.seats })}`}
+                />
+              </div>
             </div>
           )}
         </div>

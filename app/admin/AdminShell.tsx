@@ -95,6 +95,7 @@ const NAV: NavItem[] = [
     icon: ChefHat,
     basePath: "/admin/kitchens",
     children: [
+      { label: "Order Tracker", href: "/admin/kitchens/tracker", icon: Radio },
       { label: "Orders",  href: "/admin/kitchens/orders",  icon: Receipt    },
       { label: "Payments", href: "/admin/kitchens/payments", icon: CreditCard },
       { label: "Credit",  href: "/admin/kitchens/credit",  icon: Receipt    },

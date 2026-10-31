@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Volume2, VolumeX } from "lucide-react";
+import { Printer, Volume2, VolumeX } from "lucide-react";
+import { printDocument } from "@/lib/print-document";
+import OrderTimer, { useNow } from "../OrderTimer";
 import { useAlertChime } from "@/hooks/useAlertChime";
 import { KITCHEN_LABELS } from "@/lib/kitchens";
 import type { KitchenOrderStatus, OrderItem } from "@/lib/kitchen-orders";
@@ -17,6 +19,7 @@ interface KitchenOrder {
   status: KitchenOrderStatus;
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
+  served_at?: string | null;
   created_at: string;
 }
 
@@ -35,6 +38,7 @@ const NEXT_STEP: Partial<Record<KitchenOrderStatus, { status: KitchenOrderStatus
 };
 
 export default function KitchenOrdersAdmin() {
+  const now = useNow();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -156,6 +160,19 @@ export default function KitchenOrdersAdmin() {
                     </p>
                   </div>
                   <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${style.cls}`}>{style.label}</span>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <OrderTimer from={order.created_at} servedAt={order.served_at} status={order.status} now={now} />
+                  <button
+                    onClick={() => printDocument(`/admin/kitchens/receipt/${order.id}`)}
+                    aria-label={`Print order ${order.order_number}`}
+                    title="Print receipt"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    <Printer size={14} />
+                    Print
+                  </button>
                 </div>
 
                 <ul className="mt-3 flex-1 divide-y divide-gray-100 text-sm">

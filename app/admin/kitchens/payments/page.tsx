@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import OrderMoneyCard, { money, when, type ServedOrder } from "../OrderMoneyCard";
+import { useNow } from "../OrderTimer";
 
 const REFRESH_MS = 15_000;
 
@@ -10,6 +11,7 @@ const methodBtn = "flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold transitio
 const METHOD_LABEL: Record<string, string> = { card: "Card", cash: "Cash" };
 
 export default function KitchenPaymentsAdmin() {
+  const now = useNow();
   const [unpaid, setUnpaid] = useState<ServedOrder[]>([]);
   const [paid, setPaid] = useState<ServedOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +121,7 @@ export default function KitchenPaymentsAdmin() {
               <OrderMoneyCard
                 key={order.id}
                 order={order}
+                now={now}
                 badge={`Paid${method ? ` · ${method}` : ""}`}
                 badgeCls="bg-green-100 text-green-700"
               >
@@ -136,7 +139,7 @@ export default function KitchenPaymentsAdmin() {
                 </div>
               </OrderMoneyCard>
             ) : (
-              <OrderMoneyCard key={order.id} order={order} badge="Not paid" badgeCls="bg-red-100 text-red-700">
+              <OrderMoneyCard key={order.id} order={order} now={now} badge="Not paid" badgeCls="bg-red-100 text-red-700">
                 {creditFor === order.id ? (
                   <div className="mt-3 space-y-2">
                     <input

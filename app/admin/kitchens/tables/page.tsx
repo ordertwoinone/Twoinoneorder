@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X } from "lucide-react";
 import BilingualField from "@/components/admin/BilingualField";
+import TableMap from "@/app/kitchens/TableMap";
+import { layoutTables, type TableShape } from "@/lib/table-layout";
 
 interface KitchenTable {
   id: string;
@@ -11,12 +13,15 @@ interface KitchenTable {
   seats: string;
   sort_order: number;
   is_active: boolean;
+  pos_x?: number | string | null;
+  pos_y?: number | string | null;
+  shape?: TableShape | null;
 }
 
 /** Sort order holds what is typed, so a half-entered value is not rewritten. */
-type FormData = Omit<KitchenTable, "id" | "sort_order"> & { id?: string; sort_order: string };
+type FormData = Omit<KitchenTable, "id" | "sort_order" | "pos_x" | "pos_y" | "shape"> & { id?: string; sort_order: string; shape: TableShape };
 
-const EMPTY: FormData = { code: "", section: "", section_ar: "", seats: "4", sort_order: "0", is_active: true };
+const EMPTY: FormData = { code: "", section: "", section_ar: "", seats: "4", sort_order: "0", is_active: true, shape: "square" };
 
 const inputCls = "w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 const labelCls = "block text-xs font-semibold text-gray-700 mb-1.5";
@@ -32,6 +37,11 @@ export default function KitchenTablesAdmin() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [view, setView] = useState<"list" | "map">("list");
+  // Where tables have been dragged to, until Save layout.
+  const [moved, setMoved] = useState<Record<string, { x: number; y: number }>>({});
+  const [layoutMessage, setLayoutMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [savingLayout, setSavingLayout] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -57,7 +67,7 @@ export default function KitchenTablesAdmin() {
   }
   function openEdit(item: KitchenTable) {
     setFormError("");
-    setModal({ open: true, mode: "edit", data: { ...item, section_ar: item.section_ar ?? "", sort_order: String(item.sort_order) } });
+    setModal({ open: true, mode: "edit", data: { id: item.id, code: item.code, section: item.section, section_ar: item.section_ar ?? "", seats: item.seats, is_active: item.is_active, sort_order: String(item.sort_order), shape: item.shape ?? "square" } });
   }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField<K extends keyof FormData>(key: K, value: FormData[K]) {
@@ -99,6 +109,32 @@ export default function KitchenTablesAdmin() {
   }
 
   const sections = Array.from(new Set(items.map((i) => i.section).filter(Boolean)));
+  const dirty = Object.keys(moved).length > 0;
+  // Guests never see inactive tables, so the map shows what they will see.
+  const mapTables = items
+    .filter((i) => i.is_active)
+    .map((i) => (moved[i.code] ? { ...i, pos_x: moved[i.code].x, pos_y: moved[i.code].y } : i));
+
+  async function saveLayout() {
+    setSavingLayout(true);
+    setLayoutMessage(null);
+    // Includes tables never dragged, which fixes them where they appear now.
+    const positions = layoutTables(mapTables).map((t) => ({ id: t.id, x: t.x, y: t.y }));
+    const res = await fetch("/api/admin/kitchens/tables/positions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ positions }),
+    }).catch(() => null);
+    const data = await res?.json().catch(() => null);
+    setSavingLayout(false);
+    if (!res?.ok) {
+      setLayoutMessage({ ok: false, text: `${data?.error ?? "Could not save the layout."} If a column is missing, run supabase/kitchen_table_positions.sql.` });
+      return;
+    }
+    setMoved({});
+    setLayoutMessage({ ok: true, text: "Layout saved." });
+    load();
+  }
 
   return (
     <div className="p-4 sm:p-8">
@@ -121,6 +157,46 @@ export default function KitchenTablesAdmin() {
         </div>
       )}
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        {([["list", "List"], ["map", "Floor map"]] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setView(id)}
+            aria-pressed={view === id}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${view === id ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === "map" ? (
+        <div className="max-w-xl">
+          <p className="text-sm text-gray-600 mb-3">Drag each table to where it sits, then save. Guests see this same map in the popup.</p>
+          {mapTables.length === 0 ? (
+            <p className="text-center py-16 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">No active tables to place.</p>
+          ) : (
+            <TableMap
+              tables={mapTables}
+              onMove={(code, x, y) => {
+                setLayoutMessage(null);
+                setMoved((prev) => ({ ...prev, [code]: { x, y } }));
+              }}
+              tableLabel={(t) => `Move table ${t.code}`}
+            />
+          )}
+          <div className="flex flex-wrap items-center gap-3 mt-3">
+            <button onClick={saveLayout} disabled={savingLayout || mapTables.length === 0} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>
+              {savingLayout ? "Saving..." : "Save layout"}
+            </button>
+            {dirty && (
+              <button onClick={() => setMoved({})} className="px-4 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Undo changes</button>
+            )}
+            {dirty && <span className="text-xs text-amber-700">Unsaved changes</span>}
+            {layoutMessage && <span role="status" className={`text-sm ${layoutMessage.ok ? "text-green-700" : "text-red-600"}`}>{layoutMessage.text}</span>}
+          </div>
+        </div>
+      ) : (
       <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -164,6 +240,7 @@ export default function KitchenTablesAdmin() {
           </tbody>
         </table>
       </div>
+      )}
 
       {modal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
@@ -183,6 +260,15 @@ export default function KitchenTablesAdmin() {
                   <label htmlFor="kt-seats" className={labelCls}>Seats</label>
                   <input id="kt-seats" type="text" value={modal.data.seats} onChange={(e) => handleField("seats", e.target.value)} placeholder="4 or 8–10" className={inputCls} />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="kt-shape" className={labelCls}>Shape on the map</label>
+                <select id="kt-shape" value={modal.data.shape} onChange={(e) => handleField("shape", e.target.value as TableShape)} className={`${inputCls} bg-white`}>
+                  <option value="square">Square</option>
+                  <option value="round">Round</option>
+                  <option value="long">Long</option>
+                </select>
               </div>
 
               <BilingualField

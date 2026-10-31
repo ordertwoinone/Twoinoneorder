@@ -141,14 +141,14 @@ export const ADMIN_AREAS: AdminArea[] = [
     key: "kitchens-orders",
     label: "Kitchens Page: Orders",
     hint: "Seeing and updating orders placed on the kitchens page",
-    paths: ["/admin/kitchens/orders"],
+    paths: ["/admin/kitchens/orders", "/admin/kitchens/receipt"],
     apiPaths: ["/api/admin/kitchens/orders"],
   },
   {
     key: "kitchens-payments",
     label: "Kitchens Page: Payments",
     hint: "Marking served orders from the kitchens page as paid or not paid",
-    paths: ["/admin/kitchens/payments"],
+    paths: ["/admin/kitchens/payments", "/admin/kitchens/receipt"],
     apiPaths: ["/api/admin/kitchens/payments"],
   },
   {
@@ -164,6 +164,13 @@ export const ADMIN_AREAS: AdminArea[] = [
     hint: "Looking back through past orders and their totals",
     paths: ["/admin/kitchens/history"],
     apiPaths: ["/api/admin/kitchens/history"],
+  },
+  {
+    key: "kitchens-tracker",
+    label: "Kitchens Page: Order Tracker",
+    hint: "Seeing where every order is, with its waiter",
+    paths: ["/admin/kitchens/tracker"],
+    apiPaths: ["/api/admin/kitchens/tracker"],
   },
   {
     key: "kitchens-tables",

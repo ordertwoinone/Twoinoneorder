@@ -1,4 +1,9 @@
+"use client";
+
+import { Printer } from "lucide-react";
+import { printDocument } from "@/lib/print-document";
 import type { OrderItem } from "@/lib/kitchen-orders";
+import OrderTimer from "./OrderTimer";
 
 const KITCHEN_STATUS: Record<string, string> = { new: "New", preparing: "Preparing", served: "Served" };
 
@@ -14,6 +19,7 @@ export interface ServedOrder {
   status: string;
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
+  served_at?: string | null;
   credit_name?: string | null;
   credit_phone?: string | null;
   credit_at: string | null;
@@ -25,11 +31,13 @@ export const when = (iso: string) =>
   new Date(iso).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export default function OrderMoneyCard({
-  order, badge, badgeCls, children,
+  order, badge, badgeCls, now, children,
 }: {
   order: ServedOrder;
   badge: string;
   badgeCls: string;
+  /** Given where the timer and print button should show. */
+  now?: number;
   children: React.ReactNode;
 }) {
   return (
@@ -49,6 +57,21 @@ export default function OrderMoneyCard({
         </div>
         <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}>{badge}</span>
       </div>
+
+      {now !== undefined && (
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <OrderTimer from={order.created_at} servedAt={order.served_at} status={order.status} now={now} />
+          <button
+            onClick={() => printDocument(`/admin/kitchens/receipt/${order.id}`)}
+            aria-label={`Print order ${order.order_number}`}
+            title="Print receipt"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            <Printer size={14} />
+            Print
+          </button>
+        </div>
+      )}
 
       <ul className="mt-3 flex-1 space-y-1 text-sm">
         {(order.items ?? []).map((item, i) => (

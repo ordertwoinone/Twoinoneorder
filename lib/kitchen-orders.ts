@@ -1,5 +1,6 @@
 import { addonPrice, chosenAddons, countChosen, isSelectionComplete, type KalbaAddonGroup } from "@/lib/kalba/addons";
-import { roundMoney } from "@/lib/kalba/pricing";
+import { roundMoney, vatIncludedIn } from "@/lib/kalba/pricing";
+import type { InvoiceOrder } from "@/lib/invoice";
 
 /**
  * Turning what a customer's page sent into an order, using only prices from the
@@ -76,4 +77,62 @@ export function priceOrder(
   }
 
   return { items, total: roundMoney(items.reduce((sum, i) => sum + i.line_total, 0)) };
+}
+
+/** Columns no list screen needs: the abuse hash, and what only Credit may show. */
+export function withoutPrivate<T extends Record<string, unknown>>(row: T) {
+  const rest: Record<string, unknown> = { ...row };
+  for (const column of ["ip_hash", "client_ref", "credit_name", "credit_phone"]) delete rest[column];
+  return rest;
+}
+
+export interface KitchenOrderForReceipt {
+  id: string;
+  order_number: number;
+  table_code: string | null;
+  guests: number;
+  waiter_name: string | null;
+  items: OrderItem[];
+  total: number | string;
+  status: string;
+  payment_method: string | null;
+  paid_at: string | null;
+  created_at: string;
+}
+
+/** A kitchen order in the shape the till's receipt template prints. */
+export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceOrder {
+  const total = Number(order.total);
+  return {
+    id: order.id,
+    order_number: order.order_number,
+    type: "kitchens",
+    order_type: "Dine in",
+    guest_name: "",
+    phone: "",
+    table_id: order.table_code ?? "",
+    table_section: "",
+    guests: order.guests,
+    notes: "",
+    customer_note: "",
+    status: order.status,
+    // Only money actually taken prints as "Paid by".
+    payment_method: order.paid_at ? order.payment_method ?? "pending" : "pending",
+    created_at: order.created_at,
+    items: (order.items ?? []).map((item) => {
+      const extras = roundMoney((item.addons ?? []).reduce((sum, a) => sum + Number(a.price), 0));
+      return {
+        name: item.name,
+        qty: item.qty,
+        unit_price: roundMoney(Number(item.unit_price) - extras),
+        extras: (item.addons ?? []).map((a) => a.name).join(", ") || undefined,
+        extras_price: extras || undefined,
+        line_total: Number(item.line_total),
+      };
+    }),
+    subtotal: roundMoney(total - vatIncludedIn(total)),
+    discount_total: 0,
+    tax_amount: vatIncludedIn(total),
+    total_amount: total,
+  };
 }

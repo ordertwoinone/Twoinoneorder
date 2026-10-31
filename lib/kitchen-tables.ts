@@ -1,4 +1,5 @@
 import { supabaseAdmin, supabaseAdminLive } from "@/lib/supabase-admin";
+import type { TableShape } from "@/lib/table-layout";
 
 export interface KitchenTableOption {
   code: string;
@@ -6,6 +7,9 @@ export interface KitchenTableOption {
   section_ar?: string | null;
   seats: string;
   status: string;
+  pos_x?: number | string | null;
+  pos_y?: number | string | null;
+  shape?: TableShape | null;
 }
 
 /**
@@ -20,7 +24,8 @@ export async function getKitchenTables(live = false): Promise<KitchenTableOption
 
   const { data, error } = await client
     .from("kitchen_tables")
-    .select("code, section, section_ar, seats")
+    // * rather than a list, so the map columns arriving later cannot break this read.
+    .select("*")
     .eq("is_active", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
@@ -40,6 +45,7 @@ export interface KitchenTableRow {
   seats: string;
   section: string;
   section_ar: string;
+  shape: TableShape;
   sort_order: number;
   is_active: boolean;
 }
@@ -56,6 +62,7 @@ export function parseKitchenTable(body: Record<string, unknown>): { row: Kitchen
       seats,
       section: String(body?.section ?? "").trim().slice(0, 80),
       section_ar: String(body?.section_ar ?? "").trim().slice(0, 80),
+      shape: body?.shape === "round" || body?.shape === "long" ? body.shape : "square",
       sort_order: Number.isInteger(Number(body?.sort_order)) ? Number(body?.sort_order) : 0,
       is_active: body?.is_active !== false,
     },
