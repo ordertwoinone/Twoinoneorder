@@ -676,3 +676,21 @@ canvas {
 @media (prefers-reduced-motion: reduce) {
   .tio-float, .tio-rise, .tio-bubble, .tio-dot { animation: none; }
 }
+
+/* A kitchen order ready to go out: a green warning the waiter can't miss from
+   across the room. Without motion it stays solid green, which still stands out. */
+.kitchen-ready-card {
+  background-color: #bbf7d0;
+  border-color: #16a34a;
+  border-width: 2px;
+  animation: kitchen-ready-blink 1s ease-in-out infinite;
+}
+
+@keyframes kitchen-ready-blink {
+  0%, 100% { background-color: #86efac; box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.55), 0 0 22px rgba(22, 163, 74, 0.6); }
+  50% { background-color: #dcfce7; box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kitchen-ready-card { animation: none; }
+}

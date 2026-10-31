@@ -20,6 +20,7 @@ interface HistoryOrder {
 const STATUS_STYLE: Record<KitchenOrderStatus, { label: string; cls: string }> = {
   new: { label: "New", cls: "bg-red-100 text-red-700" },
   preparing: { label: "Preparing", cls: "bg-amber-100 text-amber-800" },
+  ready: { label: "Ready", cls: "bg-green-200 text-green-900" },
   served: { label: "Served", cls: "bg-green-100 text-green-700" },
   cancelled: { label: "Cancelled", cls: "bg-gray-100 text-gray-500" },
 };

@@ -5,7 +5,7 @@ import { printDocument } from "@/lib/print-document";
 import type { OrderItem } from "@/lib/kitchen-orders";
 import OrderTimer from "./OrderTimer";
 
-const KITCHEN_STATUS: Record<string, string> = { new: "New", preparing: "Preparing", served: "Served" };
+const KITCHEN_STATUS: Record<string, string> = { new: "New", preparing: "Preparing", ready: "Ready", served: "Served" };
 
 /** An order as the Payments and Credit screens show it. */
 export interface ServedOrder {
@@ -19,6 +19,7 @@ export interface ServedOrder {
   status: string;
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
+  ready_at?: string | null;
   served_at?: string | null;
   credit_name?: string | null;
   credit_phone?: string | null;
@@ -60,7 +61,7 @@ export default function OrderMoneyCard({
 
       {now !== undefined && (
         <div className="mt-2 flex items-center justify-between gap-2">
-          <OrderTimer from={order.created_at} servedAt={order.served_at} status={order.status} now={now} />
+          <OrderTimer from={order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
           <button
             onClick={() => printDocument(`/admin/kitchens/receipt/${order.id}`)}
             aria-label={`Print order ${order.order_number}`}

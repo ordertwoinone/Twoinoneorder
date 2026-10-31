@@ -9,7 +9,7 @@ const SUM_BATCH = 1000;
 // No credit_name or credit_phone: those stay with the Credit permission.
 const COLUMNS = "id, order_number, table_code, guests, waiter_name, items, total, status, payment_method, paid_at, created_at";
 
-const STATUSES = ["new", "preparing", "served", "cancelled"];
+const STATUSES = ["new", "preparing", "ready", "served", "cancelled"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** The filters, applied alike to the page of rows and to the totals. */

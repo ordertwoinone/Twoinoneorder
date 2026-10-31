@@ -19,6 +19,7 @@ interface KitchenOrder {
   status: KitchenOrderStatus;
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
+  ready_at?: string | null;
   served_at?: string | null;
   created_at: string;
 }
@@ -28,13 +29,14 @@ const REFRESH_MS = 15_000;
 const STATUS_STYLE: Record<KitchenOrderStatus, { label: string; cls: string }> = {
   new: { label: "New", cls: "bg-red-100 text-red-700" },
   preparing: { label: "Preparing", cls: "bg-amber-100 text-amber-800" },
+  ready: { label: "Ready", cls: "bg-green-200 text-green-900" },
   served: { label: "Served", cls: "bg-green-100 text-green-700" },
   cancelled: { label: "Cancelled", cls: "bg-gray-100 text-gray-500" },
 };
 
 const NEXT_STEP: Partial<Record<KitchenOrderStatus, { status: KitchenOrderStatus; label: string }>> = {
   new: { status: "preparing", label: "Start preparing" },
-  preparing: { status: "served", label: "Mark served" },
+  preparing: { status: "ready", label: "Mark ready" },
 };
 
 export default function KitchenOrdersAdmin() {
@@ -84,15 +86,18 @@ export default function KitchenOrdersAdmin() {
     setBusyId(null);
     setCancelId(null);
     if (!res?.ok) {
-      setActionError("That order couldn't be updated. Please try again.");
+      const data = await res?.json().catch(() => null);
+      setActionError(data?.error ?? "That order couldn't be updated. Please try again.");
       return;
     }
     load();
   }
 
-  const isActive = (o: KitchenOrder) => o.status === "new" || o.status === "preparing";
-  const activeCount = orders.filter(isActive).length;
-  const visible = orders.filter((o) => (view === "active" ? isActive(o) : !isActive(o)));
+  const isActive = (o: KitchenOrder) => o.status === "new" || o.status === "preparing" || o.status === "ready";
+  // The kitchen is done once an order is ready; the waiter serves it from Order Tracker.
+  const inKitchen = (o: KitchenOrder) => o.status === "new" || o.status === "preparing";
+  const activeCount = orders.filter(inKitchen).length;
+  const visible = orders.filter((o) => (view === "active" ? inKitchen(o) : !inKitchen(o)));
 
   return (
     <div className="p-4 sm:p-8">
@@ -113,7 +118,7 @@ export default function KitchenOrdersAdmin() {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {([["active", "Active"], ["done", "Served & cancelled"]] as const).map(([id, label]) => (
+        {([["active", "Active"], ["done", "Ready & cancelled"]] as const).map(([id, label]) => (
           <button
             key={id}
             onClick={() => setView(id)}
@@ -163,7 +168,7 @@ export default function KitchenOrdersAdmin() {
                 </div>
 
                 <div className="mt-2 flex items-center justify-between gap-2">
-                  <OrderTimer from={order.created_at} servedAt={order.served_at} status={order.status} now={now} />
+                  <OrderTimer from={order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
                   <button
                     onClick={() => printDocument(`/admin/kitchens/receipt/${order.id}`)}
                     aria-label={`Print order ${order.order_number}`}

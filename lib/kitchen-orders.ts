@@ -8,7 +8,7 @@ import type { InvoiceOrder } from "@/lib/invoice";
  * imports so its rules can be exercised on their own.
  */
 
-export type KitchenOrderStatus = "new" | "preparing" | "served" | "cancelled";
+export type KitchenOrderStatus = "new" | "preparing" | "ready" | "served" | "cancelled";
 
 export const MAX_ORDER_LINES = 50;
 export const MAX_LINE_QTY = 50;

@@ -667,20 +667,20 @@ export default function KitchensContent({
         <button
           type="button"
           onClick={() => setOrderOpen(true)}
-          className="pointer-events-auto mx-auto flex h-12 w-full max-w-md items-center gap-2 rounded-lg px-4 text-white  shadow-lg transition-opacity hover:opacity-95"
+          className="pointer-events-auto mx-auto flex h-10 w-fit items-center gap-2.5 rounded-full px-3.5 text-white lg:h-12 lg:w-full lg:max-w-md lg:rounded-lg lg:px-4  shadow-lg transition-opacity hover:opacity-95"
           style={{ background: RED }}
         >
           <span className="relative shrink-0">
-            <ShoppingBag size={18} />
+            <ShoppingBag size={16} />
             {itemCount > 0 && (
               <span className="absolute -end-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 text-[10px] font-bold" style={{ color: RED }}>
                 {itemCount}
               </span>
             )}
           </span>
-          <span className="min-w-0 flex-1 truncate text-start text-sm font-semibold">{t("kitchens.viewOrder")}</span>
-          <Money amount={total} className="text-sm" />
-          <ArrowRight size={16} className="shrink-0" />
+          <span className="whitespace-nowrap text-start text-xs font-semibold lg:flex-1 lg:text-sm">{t("kitchens.viewOrder")}</span>
+          <Money amount={total} className="text-xs lg:text-sm" />
+          <ArrowRight size={14} className="shrink-0" />
         </button>
       </div>
 

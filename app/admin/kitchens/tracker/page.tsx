@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { money, when } from "../OrderMoneyCard";
-import OrderTimer, { useNow } from "../OrderTimer";
+import OrderTimer, { useNow, WaiterTimer } from "../OrderTimer";
 import type { KitchenOrderStatus, OrderItem } from "@/lib/kitchen-orders";
 
 interface TrackedOrder {
@@ -16,6 +16,7 @@ interface TrackedOrder {
   status: KitchenOrderStatus;
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
+  ready_at?: string | null;
   served_at?: string | null;
   created_at: string;
 }
@@ -26,6 +27,7 @@ const NO_WAITER = "__none__";
 const STEPS: { status: KitchenOrderStatus; label: string }[] = [
   { status: "new", label: "Received" },
   { status: "preparing", label: "Preparing" },
+  { status: "ready", label: "Ready" },
   { status: "served", label: "Served" },
 ];
 
@@ -40,6 +42,7 @@ function whereNow(o: TrackedOrder): string {
   if (o.status === "cancelled") return "Cancelled";
   if (o.status === "new") return "Waiting for the kitchen";
   if (o.status === "preparing") return "Being prepared";
+  if (o.status === "ready") return "Ready! Waiter to take it to the table";
   if (o.paid_at) return "Finished";
   return onCredit(o) ? "Served, on credit" : "Served, waiting for payment";
 }
@@ -60,6 +63,8 @@ export default function KitchenOrderTracker() {
   const [loadError, setLoadError] = useState("");
   const [view, setView] = useState<"progress" | "finished" | "all">("progress");
   const [waiter, setWaiter] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
   const now = useNow();
 
   const load = useCallback(async () => {
@@ -80,15 +85,35 @@ export default function KitchenOrderTracker() {
     return () => window.clearInterval(timer);
   }, [load]);
 
+  async function markServed(id: string) {
+    setBusyId(id);
+    setActionError("");
+    const res = await fetch(`/api/admin/kitchens/tracker/${id}`, { method: "PATCH" }).catch(() => null);
+    if (!res?.ok) {
+      const data = await res?.json().catch(() => null);
+      setActionError(data?.error ?? "That order couldn't be updated. Please try again.");
+    }
+    await load();
+    setBusyId(null);
+  }
+
   const waiters = Array.from(new Set(orders.map((o) => o.waiter_name).filter(Boolean))) as string[];
   const inProgress = orders.filter((o) => !isFinished(o)).length;
 
-  const visible = orders.filter((o) => {
-    if (view === "progress" && isFinished(o)) return false;
-    if (view === "finished" && !isFinished(o)) return false;
-    if (waiter === NO_WAITER) return !o.waiter_name;
-    return !waiter || o.waiter_name === waiter;
-  });
+  const visible = orders
+    .filter((o) => {
+      if (view === "progress" && isFinished(o)) return false;
+      if (view === "finished" && !isFinished(o)) return false;
+      if (waiter === NO_WAITER) return !o.waiter_name;
+      return !waiter || o.waiter_name === waiter;
+    })
+    // Food going cold comes first, longest wait at the top.
+    .sort((a, b) => {
+      const aReady = a.status === "ready";
+      const bReady = b.status === "ready";
+      if (aReady !== bReady) return aReady ? -1 : 1;
+      return aReady ? new Date(a.ready_at ?? 0).getTime() - new Date(b.ready_at ?? 0).getTime() : 0;
+    });
 
   return (
     <div className="p-4 sm:p-8">
@@ -127,6 +152,8 @@ export default function KitchenOrderTracker() {
         <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{loadError}</div>
       )}
 
+      {actionError && <p role="alert" className="mb-4 text-sm text-red-600">{actionError}</p>}
+
       {loading ? (
         <p className="text-center py-16 text-gray-400 text-sm">Loading...</p>
       ) : visible.length === 0 ? (
@@ -138,7 +165,7 @@ export default function KitchenOrderTracker() {
             const reached = STEPS.findIndex((s) => s.status === order.status);
             const pill = paymentPill(order);
             return (
-              <article key={order.id} className={`flex flex-col bg-white rounded-xl border border-gray-200 p-4 ${cancelled ? "opacity-70" : ""}`}>
+              <article key={order.id} className={`flex flex-col rounded-xl border p-4 ${order.status === "ready" ? "kitchen-ready-card" : "bg-white border-gray-200"} ${cancelled ? "opacity-70" : ""}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h2 className="text-base font-semibold text-gray-900">
@@ -148,12 +175,18 @@ export default function KitchenOrderTracker() {
                       {when(order.created_at)} · {order.guests} {order.guests === 1 ? "person" : "people"}
                     </p>
                   </div>
-                  <OrderTimer from={order.created_at} servedAt={order.served_at} status={order.status} now={now} />
+                  <OrderTimer from={order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
                 </div>
 
                 <p className="mt-2 text-sm font-semibold text-gray-800">
                   {order.waiter_name ? `Waiter: ${order.waiter_name}` : "No waiter"}
                 </p>
+
+                {order.ready_at && (order.status === "ready" || order.status === "served") && (
+                  <div className="mt-2">
+                    <WaiterTimer readyAt={order.ready_at} servedAt={order.status === "served" ? order.served_at : null} now={now} />
+                  </div>
+                )}
 
                 <p className={`mt-3 text-sm font-bold ${cancelled ? "text-gray-500" : "text-gray-900"}`}>{whereNow(order)}</p>
 
@@ -190,6 +223,16 @@ export default function KitchenOrderTracker() {
                   <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
                   <span className="text-sm font-bold text-gray-900">{money(Number(order.total))}</span>
                 </div>
+
+                {order.status === "ready" && (
+                  <button
+                    onClick={() => markServed(order.id)}
+                    disabled={busyId === order.id}
+                    className="mt-3 h-11 rounded-lg bg-green-700 text-sm font-bold text-white hover:bg-green-800 disabled:opacity-50"
+                  >
+                    Mark served
+                  </button>
+                )}
               </article>
             );
           })}
