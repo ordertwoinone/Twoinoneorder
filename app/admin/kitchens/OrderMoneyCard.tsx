@@ -1,6 +1,8 @@
 import type { OrderItem } from "@/lib/kitchen-orders";
 
-/** A served order as the Payments and Credit screens show it. */
+const KITCHEN_STATUS: Record<string, string> = { new: "New", preparing: "Preparing", served: "Served" };
+
+/** An order as the Payments and Credit screens show it. */
 export interface ServedOrder {
   id: string;
   order_number: number;
@@ -9,6 +11,7 @@ export interface ServedOrder {
   waiter_name: string | null;
   items: OrderItem[];
   total: number | string;
+  status: string;
   payment_method: "card" | "cash" | "credit" | null;
   paid_at: string | null;
   credit_name?: string | null;
@@ -41,6 +44,7 @@ export default function OrderMoneyCard({
           </p>
           <p className="text-xs font-medium text-gray-700 mt-0.5">
             {order.waiter_name ? `Waiter: ${order.waiter_name}` : "No waiter"}
+            {` · Kitchen: ${KITCHEN_STATUS[order.status] ?? order.status}`}
           </p>
         </div>
         <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}>{badge}</span>

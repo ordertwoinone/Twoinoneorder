@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Payment actions for served orders, shared by the Payments and Credit routes. */
+/** Payment actions for any order not cancelled, shared by the Payments and Credit routes. */
 
 export type PaymentAction =
   | { action: "pay"; method: "card" | "cash" }
@@ -66,7 +66,7 @@ export async function applyPayment(
     .eq("id", id)
     .maybeSingle();
   if (readError) return { status: 500, error: readError.message };
-  if (!order || order.status !== "served") return { status: 404, error: "That order isn't a served order." };
+  if (!order || order.status === "cancelled") return { status: 404, error: "That order has been cancelled." };
 
   const now = new Date().toISOString();
   const { error } = await client

@@ -29,7 +29,7 @@ function applyFilters(query: any, params: URLSearchParams) {
   const payment = params.get("payment") ?? "";
   if (payment === "card" || payment === "cash") q = q.eq("payment_method", payment).not("paid_at", "is", null);
   if (payment === "credit") q = q.eq("payment_method", "credit").is("paid_at", null);
-  if (payment === "unpaid") q = q.eq("status", "served").is("payment_method", null).is("paid_at", null);
+  if (payment === "unpaid") q = q.neq("status", "cancelled").is("payment_method", null).is("paid_at", null);
 
   // Characters that would change the meaning of the filter are dropped.
   const search = (params.get("q") ?? "").replace(/[,()*%\\"]/g, " ").trim().slice(0, 40);

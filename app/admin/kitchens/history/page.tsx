@@ -28,7 +28,7 @@ const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-200 bg-white te
 const labelCls = "block text-xs font-semibold text-gray-700 mb-1";
 
 function paymentLabel(order: HistoryOrder): string {
-  if (order.status !== "served") return "—";
+  if (order.status === "cancelled") return "—";
   if (order.paid_at) return order.payment_method === "card" ? "Card" : order.payment_method === "cash" ? "Cash" : "Paid";
   return order.payment_method === "credit" ? "On credit" : "Not paid";
 }

@@ -6,7 +6,7 @@ import { supabaseAdminLive } from "@/lib/supabase-admin";
 export async function GET() {
   const { data, error } = await supabaseAdminLive
     .from("kitchen_orders")
-    .select("id, order_number, table_code, guests, waiter_name, items, total, status, created_at")
+    .select("id, order_number, table_code, guests, waiter_name, items, total, status, payment_method, paid_at, created_at")
     .order("created_at", { ascending: false })
     .limit(200);
 

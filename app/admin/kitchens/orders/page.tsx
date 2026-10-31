@@ -15,6 +15,8 @@ interface KitchenOrder {
   items: OrderItem[];
   total: number | string;
   status: KitchenOrderStatus;
+  payment_method: "card" | "cash" | "credit" | null;
+  paid_at: string | null;
   created_at: string;
 }
 
@@ -180,6 +182,14 @@ export default function KitchenOrdersAdmin() {
                   cancelId === order.id ? (
                     <div className="mt-3">
                       <p className="text-xs text-gray-600 mb-2">Cancel order #{order.order_number}?</p>
+                      {/* Payments and Credit stop listing a cancelled order, so say so now. */}
+                      {(order.paid_at || order.payment_method === "credit") && (
+                        <p role="alert" className="text-xs font-semibold text-red-700 mb-2">
+                          {order.paid_at
+                            ? `Already paid by ${order.payment_method ?? "unknown"}. Refund the customer yourself.`
+                            : "This is on credit. It will be removed from what the customer owes."}
+                        </p>
+                      )}
                       <div className="flex gap-2">
                         <button onClick={() => setCancelId(null)} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Keep order</button>
                         <button onClick={() => setStatus(order.id, "cancelled")} disabled={busyId === order.id} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">Yes, cancel</button>

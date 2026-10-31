@@ -108,7 +108,7 @@ export default function KitchenPaymentsAdmin() {
         <p className="text-center py-16 text-gray-400 text-sm">Loading...</p>
       ) : visible.length === 0 ? (
         <p className="text-center py-16 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
-          {view === "unpaid" ? "Nothing to collect. Served orders appear here until they're paid." : "No paid orders yet."}
+          {view === "unpaid" ? "Nothing to collect. New orders appear here until they're paid." : "No paid orders yet."}
         </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

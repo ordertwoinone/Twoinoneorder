@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 const COLUMNS =
-  "id, order_number, table_code, guests, waiter_name, items, total, payment_method, paid_at, credit_name, credit_phone, credit_at, created_at";
+  "id, order_number, table_code, guests, waiter_name, items, total, status, payment_method, paid_at, credit_name, credit_phone, credit_at, created_at";
 
 /** Read separately, so a long settled history can never crowd out money still owed. */
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
     supabaseAdminLive
       .from("kitchen_orders")
       .select(COLUMNS)
-      .eq("status", "served")
+      .neq("status", "cancelled")
       .eq("payment_method", "credit")
       .is("paid_at", null)
       .order("credit_at", { ascending: true })
@@ -20,7 +20,7 @@ export async function GET() {
     supabaseAdminLive
       .from("kitchen_orders")
       .select(COLUMNS)
-      .eq("status", "served")
+      .neq("status", "cancelled")
       .not("credit_at", "is", null)
       .not("paid_at", "is", null)
       .order("paid_at", { ascending: false })

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 
-const COLUMNS = "id, order_number, table_code, guests, waiter_name, items, total, payment_method, paid_at, credit_at, created_at";
+const COLUMNS = "id, order_number, table_code, guests, waiter_name, items, total, status, payment_method, paid_at, credit_at, created_at";
 
 /** Read separately, so a long paid history can never crowd out money still owed. */
 export async function GET() {
@@ -11,7 +11,7 @@ export async function GET() {
     supabaseAdminLive
       .from("kitchen_orders")
       .select(COLUMNS)
-      .eq("status", "served")
+      .neq("status", "cancelled")
       .is("paid_at", null)
       // Orders on credit are listed under Credit instead.
       .is("payment_method", null)
@@ -20,7 +20,7 @@ export async function GET() {
     supabaseAdminLive
       .from("kitchen_orders")
       .select(COLUMNS)
-      .eq("status", "served")
+      .neq("status", "cancelled")
       .not("paid_at", "is", null)
       .order("paid_at", { ascending: false })
       .limit(200),
