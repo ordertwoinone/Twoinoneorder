@@ -180,6 +180,13 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/kitchens/served"],
   },
   {
+    key: "kitchens-preparing",
+    label: "Kitchens Page: Preparing Orders",
+    hint: "Waiters changing or adding to orders the kitchen is still making",
+    paths: ["/admin/kitchens/preparing"],
+    apiPaths: ["/api/admin/kitchens/preparing"],
+  },
+  {
     key: "kitchens-tables",
     label: "Kitchens Page: Tables",
     hint: "The tables guests choose from on the kitchens page",

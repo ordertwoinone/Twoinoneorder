@@ -147,7 +147,7 @@ export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceO
 
 /** One step in an order's history, stored in its events column. */
 export interface OrderEvent {
-  type: "preparing" | "ready" | "served" | "cancelled" | "items_added" | "paid" | "part_paid" | "credit" | "payment_undone";
+  type: "preparing" | "ready" | "served" | "cancelled" | "items_added" | "items_changed" | "paid" | "part_paid" | "credit" | "payment_undone";
   at: string;
   method?: string;
   count?: number;
@@ -167,6 +167,10 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 function eventLabel(event: OrderEvent): string {
+  if (event.type === "items_changed") {
+    const count = event.count ?? 0;
+    return count > 0 ? `${count} item${count === 1 ? "" : "s"} taken off by the waiter` : "Items changed by the waiter";
+  }
   if (event.type === "items_added") {
     const count = event.count ?? 0;
     return `${count} item${count === 1 ? "" : "s"} added${event.same_round ? "" : ", back to the kitchen"}`;

@@ -1,9 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Printer, Volume2, VolumeX } from "lucide-react";
+import { Printer, Volume2, VolumeX } from "lucide-react";
 import { printDocument } from "@/lib/print-document";
 import OrderTimer, { useNow } from "../OrderTimer";
-import AddItemsDialog from "../served/AddItemsDialog";
 import { useAlertChime } from "@/hooks/useAlertChime";
 import { KITCHEN_LABELS } from "@/lib/kitchens";
 import type { KitchenOrderStatus, OrderItem } from "@/lib/kitchen-orders";
@@ -24,8 +23,15 @@ interface KitchenOrder {
   round?: number | null;
   round_started_at?: string | null;
   served_at?: string | null;
+  events?: { type: string; at: string }[] | null;
   created_at: string;
 }
+
+/** What waiters did to the order while this round was being cooked. */
+const changesOf = (o: KitchenOrder) =>
+  (o.events ?? []).filter(
+    (e) => (e.type === "items_changed" || e.type === "items_added") && e.at > (o.round_started_at ?? o.created_at),
+  );
 
 const REFRESH_MS = 15_000;
 
@@ -51,8 +57,6 @@ export default function KitchenOrdersAdmin() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
-  const [adding, setAdding] = useState<KitchenOrder | null>(null);
-  const [notice, setNotice] = useState("");
   const { soundOn, toggle: toggleSound, chime } = useAlertChime("kitchen-order-alert");
 
   // Null until the first load, so opening the screen doesn't ring for old orders.
@@ -68,8 +72,8 @@ export default function KitchenOrdersAdmin() {
     }
     setLoadError("");
     const list = data as KitchenOrder[];
-    // By round as well, so items added to an old order ring like a new order.
-    const key = (o: KitchenOrder) => `${o.id}:${o.round ?? 1}`;
+    // By round and by waiter changes too, so added or changed items ring like a new order.
+    const key = (o: KitchenOrder) => `${o.id}:${o.round ?? 1}:${changesOf(o).length}`;
     const fresh = knownIds.current ? list.some((o) => !knownIds.current?.has(key(o))) : false;
     knownIds.current = new Set(list.map(key));
     setOrders(list);
@@ -144,25 +148,6 @@ export default function KitchenOrdersAdmin() {
         </div>
       )}
       {actionError && <p role="alert" className="mb-4 text-sm text-red-600">{actionError}</p>}
-      {notice && <p role="status" className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{notice}</p>}
-
-      {adding && (
-        <AddItemsDialog
-          orderId={adding.id}
-          orderLabel={`order #${adding.order_number}`}
-          endpoint="/api/admin/kitchens/orders"
-          onClose={() => setAdding(null)}
-          onSent={() => {
-            setNotice(
-              adding.status === "ready"
-                ? `Order #${adding.order_number} went back to the kitchen with the new items.`
-                : `Items added to order #${adding.order_number}.`,
-            );
-            setAdding(null);
-            load();
-          }}
-        />
-      )}
 
       {loading ? (
         <p className="text-center py-16 text-gray-400 text-sm">Loading...</p>
@@ -205,6 +190,12 @@ export default function KitchenOrdersAdmin() {
                     Print
                   </button>
                 </div>
+
+                {changesOf(order).length > 0 && (
+                  <p className="mt-2 rounded-lg bg-sky-100 px-3 py-1.5 text-xs font-bold text-sky-900">
+                    Changed by the waiter at {new Date(changesOf(order).at(-1)!.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}. Check the items again.
+                  </p>
+                )}
 
                 {(order.round ?? 1) > 1 && (
                   <p className="mt-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-900">
@@ -264,13 +255,6 @@ export default function KitchenOrdersAdmin() {
                       {(order.round ?? 1) <= 1 && (
                         <button onClick={() => setCancelId(order.id)} className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
                       )}
-                      <button
-                        onClick={() => { setNotice(""); setActionError(""); setAdding(order); }}
-                        className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200"
-                      >
-                        <Plus size={14} />
-                        Add items
-                      </button>
                       {next && (
                         <button onClick={() => setStatus(order.id, next.status)} disabled={busyId === order.id} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>
                           {next.label}
