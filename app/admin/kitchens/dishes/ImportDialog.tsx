@@ -103,7 +103,7 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
                 <label htmlFor="ki-file" className={labelCls}>Excel file (.xlsx)</label>
                 <input id="ki-file" type="file" accept=".xlsx" onChange={(e) => chooseFile(e.target.files?.[0])} className="block w-full text-sm" />
                 <p className="text-[11px] text-gray-500 mt-1">
-                  Columns: Category (Breakfast or Lunch & Dinner), Item name english, اسم الطبق, Description, وصف الطبق and price. Arabic and add on columns are optional.
+                  Columns: Category (Breakfast, Lunch & Dinner or Two in One Cafe), Item name english, اسم الطبق, Description, وصف الطبق and price. Arabic and add on columns are optional.
                 </p>
               </div>
 
@@ -156,7 +156,7 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
                         <tbody>
                           {menu.dishes.map((d) => (
                             <tr key={`${d.meal}-${d.name}`} className="border-b border-gray-100 last:border-0">
-                              <td className="px-3 py-2 whitespace-nowrap">{d.meal === "breakfast" ? "Breakfast" : "Lunch & Dinner"}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{d.meal === "breakfast" ? "Breakfast" : d.meal === "cafe" ? "Two in One Cafe" : "Lunch & Dinner"}</td>
                               <td className="px-3 py-2 font-medium text-gray-800">{d.name}</td>
                               <td className="px-3 py-2 text-gray-600" dir="rtl">{d.name_ar || "—"}</td>
                               <td className="px-3 py-2 whitespace-nowrap">AED {d.price.toFixed(2)}</td>

@@ -23,6 +23,29 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   return NextResponse.json({ ...(data as object), droppedColumns });
 }
 
+/** Stars or unstars a dish without touching anything else about it. */
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const body = await request.json().catch(() => ({}));
+  if (typeof body?.is_favorite !== "boolean") {
+    return NextResponse.json({ error: "That change isn't valid." }, { status: 400 });
+  }
+
+  const { error } = await supabaseAdminLive
+    .from("kitchen_dishes")
+    .update({ is_favorite: body.is_favorite, updated_at: new Date().toISOString() })
+    .eq("id", params.id);
+
+  if (error) {
+    const missing = (error.message ?? "").includes("is_favorite");
+    return NextResponse.json(
+      { error: missing ? "Run supabase/kitchen_dish_favorites.sql in the Supabase SQL editor first." : error.message },
+      { status: 500 },
+    );
+  }
+  revalidatePath("/kitchens");
+  return NextResponse.json({ success: true });
+}
+
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {
   const { error } = await supabaseAdminLive
     .from("kitchen_dishes")

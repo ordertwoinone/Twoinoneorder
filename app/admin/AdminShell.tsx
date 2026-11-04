@@ -102,6 +102,7 @@ const NAV: NavItem[] = [
       { label: "Credit",  href: "/admin/kitchens/credit",  icon: Receipt    },
       { label: "Order History", href: "/admin/kitchens/history", icon: History },
       { label: "Dishes",  href: "/admin/kitchens/dishes",  icon: Utensils   },
+      { label: "Categories", href: "/admin/kitchens/categories", icon: Tag },
       { label: "Tables",  href: "/admin/kitchens/tables",  icon: Armchair   },
       { label: "Waiters", href: "/admin/kitchens/waiters", icon: UsersRound },
     ],

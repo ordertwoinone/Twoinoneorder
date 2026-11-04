@@ -893,12 +893,14 @@ const en = {
     metaDescription: "Breakfast, lunch and dinner from our Italian and Turkish kitchens.",
     mealLabel: "Choose a meal",
     kitchenLabel: "Choose a kitchen",
-    meals: { breakfast: "Breakfast", lunchDinner: "Lunch & Dinner" },
+    categoryLabel: "Choose a category",
+    meals: { breakfast: "Breakfast", lunchDinner: "Lunch & Dinner", cafe: "Two in One Cafe" },
     kitchens: { all: "Both kitchens", italian: "Italian", turkish: "Turkish" },
     origin: { italian: "Italian kitchen", turkish: "Turkish kitchen" },
     headings: {
       breakfast: "Breakfast favourites",
       lunchDinner: "Lunch & Dinner favourites",
+      cafe: "Two in One Cafe favourites",
     },
     badges: {
       pizza: "Pizza favourite",
@@ -917,6 +919,7 @@ const en = {
     clearFilters: "Clear filters",
     sampleNote: "Sample dishes, prices and calories for design only • Per serving",
     perServing: "Calories are per serving",
+    favourite: "Favourite",
     installTitle: "Install Two In One Kitchens",
     installApp: "Install app",
     placeOrder: "Place order",

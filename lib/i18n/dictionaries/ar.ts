@@ -909,12 +909,14 @@ const ar: Dictionary = {
     metaDescription: "الفطور والغداء والعشاء من مطبخينا الإيطالي والتركي.",
     mealLabel: "اختر وجبة",
     kitchenLabel: "اختر مطبخًا",
-    meals: { breakfast: "الفطور", lunchDinner: "الغداء والعشاء" },
+    categoryLabel: "اختر فئة",
+    meals: { breakfast: "الفطور", lunchDinner: "الغداء والعشاء", cafe: "مقهى تو إن ون" },
     kitchens: { all: "المطبخان معًا", italian: "إيطالي", turkish: "تركي" },
     origin: { italian: "المطبخ الإيطالي", turkish: "المطبخ التركي" },
     headings: {
       breakfast: "أطباق الفطور المفضلة",
       lunchDinner: "أطباق الغداء والعشاء المفضلة",
+      cafe: "المفضلة من مقهى تو إن ون",
     },
     badges: {
       pizza: "البيتزا المفضلة",
@@ -937,6 +939,7 @@ const ar: Dictionary = {
     clearFilters: "مسح الخيارات",
     sampleNote: "الأطباق والأسعار والسعرات نماذج للتصميم فقط • للحصة الواحدة",
     perServing: "السعرات للحصة الواحدة",
+    favourite: "المفضلة",
     installTitle: "ثبّت تطبيق مطابخ تو إن ون",
     installApp: "تثبيت التطبيق",
     placeOrder: "تأكيد الطلب",

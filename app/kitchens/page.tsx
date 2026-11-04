@@ -5,7 +5,7 @@ import { sizedImage } from "@/lib/image-url";
 import { getKitchenAddonGroups } from "@/lib/kalba/addons-server";
 import PageMeta from "@/lib/i18n/PageMeta";
 import { getKitchenTables } from "@/lib/kitchen-tables";
-import { dishFromRow, type KitchenDishRow } from "@/lib/kitchens";
+import { dishFromRow, type KitchenCategory, type KitchenDishRow } from "@/lib/kitchens";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import KitchensContent from "./KitchensContent";
 
@@ -38,6 +38,15 @@ export default async function KitchensPage() {
   const rows = (data ?? []) as KitchenDishRow[];
   const isSample = rows.length === 0;
   const tables = await getKitchenTables();
+  // Missing until supabase/kitchen_categories.sql has run, which leaves no chips.
+  const { data: categoryRows } = isSample
+    ? { data: null }
+    : await supabaseAdmin
+        .from("kitchen_categories")
+        .select("id, name, name_ar")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
   const groups = isSample ? {} : await getKitchenAddonGroups();
   // Option photos show at about 100px.
   const addonGroups = isSample
@@ -61,6 +70,7 @@ export default async function KitchensPage() {
         addonGroups={addonGroups}
         isSample={isSample}
         tables={tables}
+        categories={(categoryRows ?? []) as KitchenCategory[]}
       />
     </>
   );

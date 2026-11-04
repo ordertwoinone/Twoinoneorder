@@ -5,6 +5,7 @@ export const MEAL_LABELS: Record<Meal, string> = {
   breakfast: "Breakfast",
   lunch: "Lunch",
   dinner: "Dinner",
+  cafe: "Two in One Cafe",
 };
 
 export const KITCHEN_LABELS: Record<Kitchen, string> = {
@@ -35,20 +36,53 @@ export interface KitchenDishRow {
   badge: DishBadge | null;
   is_healthy: boolean;
   is_high_protein: boolean;
+  is_favorite?: boolean;
+  /** Missing on a database that has not run supabase/kitchen_categories.sql. */
+  category_ids?: string[];
   sort_order: number;
   is_active: boolean;
 }
 
+/** A row of the kitchen_categories table: a filter chip on /kitchens. */
+export interface KitchenCategoryRow {
+  id: string;
+  name: string;
+  name_ar: string;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export type KitchenCategory = Pick<KitchenCategoryRow, "id" | "name" | "name_ar">;
+
+export function parseKitchenCategory(
+  body: Record<string, unknown>,
+): { row: Omit<KitchenCategoryRow, "id"> } | { error: string } {
+  const name = text(body.name).slice(0, 60);
+  if (!name) return { error: "Enter a name." };
+  return {
+    row: {
+      name,
+      name_ar: text(body.name_ar).slice(0, 60),
+      sort_order: Number.isInteger(Number(body.sort_order)) ? Number(body.sort_order) : 0,
+      is_active: body.is_active !== false,
+    },
+  };
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * The closest fit to the party first: exact matches, then the nearest size. Of
- * two equally near, the larger one, since it still feeds everybody. Array.sort
- * is stable, so admin's own order holds among equals.
+ * Favourites first, then the closest fit to the party: exact matches, then the
+ * nearest size. Of two equally near, the larger one, since it still feeds
+ * everybody. Array.sort is stable, so admin's own order holds among equals.
+ * Before the party size is known, only the favourites move.
  */
-export function sortByGuests<T extends { serves: number }>(dishes: T[], guests: number): T[] {
-  return [...dishes].sort(
-    (a, b) =>
-      Math.abs(a.serves - guests) - Math.abs(b.serves - guests) || b.serves - a.serves,
-  );
+export function sortForMenu<T extends { serves: number; favorite?: boolean }>(dishes: T[], guests: number | null): T[] {
+  return [...dishes].sort((a, b) => {
+    const favorites = Number(Boolean(b.favorite)) - Number(Boolean(a.favorite));
+    if (favorites || guests === null) return favorites;
+    return Math.abs(a.serves - guests) - Math.abs(b.serves - guests) || b.serves - a.serves;
+  });
 }
 
 export function dishFromRow(row: KitchenDishRow): KitchenDish {
@@ -68,6 +102,8 @@ export function dishFromRow(row: KitchenDishRow): KitchenDish {
     badge: row.badge ?? undefined,
     healthy: row.is_healthy,
     highProtein: row.is_high_protein,
+    favorite: row.is_favorite === true,
+    categories: row.category_ids ?? [],
   };
 }
 
@@ -113,6 +149,9 @@ export function parseKitchenDish(
       badge,
       is_healthy: body.is_healthy === true,
       is_high_protein: body.is_high_protein === true,
+      category_ids: Array.isArray(body.category_ids)
+        ? Array.from(new Set(body.category_ids.filter((id): id is string => typeof id === "string" && UUID.test(id))))
+        : [],
       sort_order: Number.isInteger(Number(body.sort_order)) ? Number(body.sort_order) : 0,
       is_active: body.is_active !== false,
     },

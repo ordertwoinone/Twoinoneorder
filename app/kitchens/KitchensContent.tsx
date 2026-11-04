@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  ArrowRight, Armchair, CheckCircle2, Download, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Sun, X,
+  ArrowRight, Armchair, CheckCircle2, Coffee, Download, Dumbbell, Leaf, Minus, Moon, Plus, ShoppingBag, Star, Sun, X,
   type LucideIcon,
 } from "lucide-react";
 import ItemOptionsSheet from "@/components/kalba/ItemOptionsSheet";
@@ -12,7 +12,7 @@ import type { Kitchen, KitchenDish } from "@/data/kitchenDishes";
 import { useBottomBarSpace } from "@/hooks/useBottomBarSpace";
 import { addonsTotal, addonSummary, type AddonSelection, type KalbaAddonGroup } from "@/lib/kalba/addons";
 import { roundMoney } from "@/lib/kalba/pricing";
-import { sortByGuests } from "@/lib/kitchens";
+import { sortForMenu, type KitchenCategory } from "@/lib/kitchens";
 import TableGuestsDialog, { type DiningTable, type Seating } from "./TableGuestsDialog";
 import { useLocalizedField } from "@/lib/i18n/localized";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -30,10 +30,11 @@ const SEATING_KEY = "kitchens-seating";
 const HEADING_FONT = "var(--font-kitchens-heading), var(--font-ar), sans-serif";
 
 /* Lunch and dinner share a tab, so a dish filed under either one appears there. */
-type MealTab = "breakfast" | "lunchDinner";
+type MealTab = "breakfast" | "lunchDinner" | "cafe";
 const MEALS: { id: MealTab; icon: LucideIcon }[] = [
   { id: "breakfast", icon: Sun },
   { id: "lunchDinner", icon: Moon },
+  { id: "cafe", icon: Coffee },
 ];
 
 type KitchenFilter = "all" | Kitchen;
@@ -106,6 +107,15 @@ function DishCard({
         {dish.image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={dish.image} alt={name} loading="lazy" className="h-full w-full object-cover" />
+        )}
+        {dish.favorite && (
+          <span
+            role="img"
+            aria-label={t("kitchens.favourite")}
+            className="absolute end-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white text-amber-500 shadow sm:end-3 sm:top-3"
+          >
+            <Star size={15} fill="currentColor" />
+          </span>
         )}
         {dish.badge && (
           <span className="absolute start-2 top-2 rounded-md bg-[#fbf3e4] px-2 py-1 text-[9.5px] font-bold uppercase tracking-wide text-gray-900 sm:start-3 sm:top-3 sm:text-[10.5px]">
@@ -341,19 +351,21 @@ function OrderSheet({
 }
 
 export default function KitchensContent({
-  fontClass, dishes: allDishes, addonGroups, isSample, tables,
+  fontClass, dishes: allDishes, addonGroups, isSample, tables, categories,
 }: {
   fontClass: string;
   dishes: KitchenDish[];
   addonGroups: Record<string, KalbaAddonGroup[]>;
   isSample: boolean;
   tables: DiningTable[];
+  categories: KitchenCategory[];
 }) {
   const { t, tp } = useTranslation();
   const pick = useLocalizedField();
   const [meal, setMeal] = useState<MealTab>("breakfast");
   const [kitchen, setKitchen] = useState<KitchenFilter>("all");
   const [healthyOnly, setHealthyOnly] = useState(false);
+  const [category, setCategory] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [orderOpen, setOrderOpen] = useState(false);
   const [selection, setSelection] = useState<AddonSelection>({});
@@ -414,15 +426,27 @@ export default function KitchensContent({
         .join(" · ")
     : "";
 
+  const mealDishes = useMemo(
+    () => allDishes.filter((d) => (meal === "lunchDinner" ? d.meal === "lunch" || d.meal === "dinner" : d.meal === meal)),
+    [allDishes, meal],
+  );
+
+  /* Only the categories with a dish in this meal, so no chip leads to an empty menu. */
+  const mealCategories = useMemo(
+    () => categories.filter((c) => mealDishes.some((d) => d.categories?.includes(c.id))),
+    [categories, mealDishes],
+  );
+  const activeCategory = mealCategories.some((c) => c.id === category) ? category : null;
+
   const dishes = useMemo(() => {
-    const matching = allDishes.filter(
+    const matching = mealDishes.filter(
       (d) =>
-        (meal === "breakfast" ? d.meal === "breakfast" : d.meal !== "breakfast") &&
         (kitchen === "all" || d.kitchen === kitchen) &&
-        (!healthyOnly || d.healthy),
+        (!healthyOnly || d.healthy) &&
+        (!activeCategory || d.categories?.includes(activeCategory)),
     );
-    return seating ? sortByGuests(matching, seating.guests) : matching;
-  }, [allDishes, meal, kitchen, healthyOnly, seating],
+    return sortForMenu(matching, seating?.guests ?? null);
+  }, [mealDishes, kitchen, healthyOnly, activeCategory, seating],
   );
 
   const cart = useMemo(
@@ -539,7 +563,7 @@ export default function KitchensContent({
             </button>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("kitchens.mealLabel")}>
+        <div className="grid grid-cols-3 gap-2" role="group" aria-label={t("kitchens.mealLabel")}>
           {MEALS.map(({ id, icon: Icon }) => {
             const active = meal === id;
             return (
@@ -548,7 +572,7 @@ export default function KitchensContent({
                 type="button"
                 onClick={() => setMeal(id)}
                 aria-pressed={active}
-                className={`flex h-12 min-w-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg border text-[13px] font-semibold transition-colors min-[375px]:gap-1.5 min-[375px]:text-sm sm:gap-2 sm:text-base ${
+                className={`flex h-12 min-w-0 items-center justify-center gap-1 rounded-lg border px-1 text-center text-[13px] leading-tight font-semibold transition-colors min-[375px]:gap-1.5 min-[375px]:text-sm sm:gap-2 sm:text-base ${
                   active ? "border-transparent text-white" : "border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
                 }`}
                 style={active ? { background: INK } : undefined}
@@ -593,6 +617,32 @@ export default function KitchensContent({
             {t("kitchens.healthy")}
           </button>
         </div>
+
+        {mealCategories.length > 0 && (
+          <div
+            className="-mx-4 mt-2 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+            role="group"
+            aria-label={t("kitchens.categoryLabel")}
+          >
+            {mealCategories.map((c) => {
+              const active = activeCategory === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setCategory(active ? null : c.id)}
+                  aria-pressed={active}
+                  className={`min-h-9 shrink-0 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors min-[375px]:text-[13px] sm:text-sm ${
+                    active ? "border-transparent text-white" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                  }`}
+                  style={active ? { background: INK } : undefined}
+                >
+                  {pick(c, "name")}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 border-t border-black/10">

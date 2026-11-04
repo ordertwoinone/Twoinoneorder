@@ -7,7 +7,7 @@
 
 CREATE TABLE IF NOT EXISTS kitchen_dishes (
   id              uuid          DEFAULT gen_random_uuid() PRIMARY KEY,
-  meal            text          NOT NULL CHECK (meal IN ('breakfast', 'lunch', 'dinner')),
+  meal            text          NOT NULL CHECK (meal IN ('breakfast', 'lunch', 'dinner', 'cafe')),
   kitchen         text          NOT NULL CHECK (kitchen IN ('italian', 'turkish')),
   name            text          NOT NULL,
   name_ar         text          NOT NULL DEFAULT '',
@@ -30,6 +30,11 @@ CREATE TABLE IF NOT EXISTS kitchen_dishes (
 -- For a database that ran an earlier copy of this file.
 ALTER TABLE kitchen_dishes
   ADD COLUMN IF NOT EXISTS serves integer NOT NULL DEFAULT 1 CHECK (serves >= 1);
+
+-- Two in One Cafe was added as a meal after the table was first created.
+ALTER TABLE kitchen_dishes DROP CONSTRAINT IF EXISTS kitchen_dishes_meal_check;
+ALTER TABLE kitchen_dishes
+  ADD CONSTRAINT kitchen_dishes_meal_check CHECK (meal IN ('breakfast', 'lunch', 'dinner', 'cafe'));
 
 -- Read and written only through the service role, as with the other admin tables.
 ALTER TABLE kitchen_dishes ENABLE ROW LEVEL SECURITY;

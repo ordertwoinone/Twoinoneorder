@@ -51,6 +51,8 @@ const MEAL_BY_CATEGORY: Record<string, Meal> = {
   dinner: "dinner",
   lunchdinner: "lunch",
   lunchanddinner: "lunch",
+  cafe: "cafe",
+  twoinonecafe: "cafe",
 };
 
 const NAME_HEADINGS = ["itemname", "itemnameenglish", "itemnameen"];
@@ -167,7 +169,7 @@ export function parseMenuFile(bytes: Uint8Array): ParsedMenu {
     const meal = MEAL_BY_CATEGORY[normalise(category)];
     const price = Number(priceText);
     if (!name) { fail("No item name"); continue; }
-    if (!meal) { fail(`Category must be Breakfast, Lunch, Dinner or Lunch & Dinner, not "${category}"`); continue; }
+    if (!meal) { fail(`Category must be Breakfast, Lunch, Dinner, Lunch & Dinner or Two in One Cafe, not "${category}"`); continue; }
     if (!priceText || !Number.isFinite(price) || price < 0) {
       fail(priceText ? `Price isn't a number: "${priceText}"` : "No price");
       continue;

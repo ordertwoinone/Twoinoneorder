@@ -6,7 +6,7 @@
 
 import type { KalbaAddonGroup } from "@/lib/kalba/addons";
 
-export type Meal = "breakfast" | "lunch" | "dinner";
+export type Meal = "breakfast" | "lunch" | "dinner" | "cafe";
 export type Kitchen = "italian" | "turkish";
 export type DishBadge = "pizza" | "bbq" | "fresh" | "morning";
 
@@ -26,7 +26,11 @@ export interface KitchenDish {
   /** Pinned to the corner of the photo. */
   badge?: DishBadge;
   healthy?: boolean;
+  /** Starred in admin; comes first on the menu. */
+  favorite?: boolean;
   highProtein?: boolean;
+  /** Ids of the admin-made categories it is filed under. */
+  categories?: string[];
 }
 
 const photo = (id: string) =>

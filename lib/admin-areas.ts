@@ -133,9 +133,9 @@ export const ADMIN_AREAS: AdminArea[] = [
   {
     key: "kitchens-menu",
     label: "Kitchens Page: Menu",
-    hint: "Adding, editing and importing the dishes on the kitchens page",
-    paths: ["/admin/kitchens/dishes"],
-    apiPaths: ["/api/admin/kitchens/dishes"],
+    hint: "Adding, editing and importing the dishes and their categories on the kitchens page",
+    paths: ["/admin/kitchens/dishes", "/admin/kitchens/categories"],
+    apiPaths: ["/api/admin/kitchens/dishes", "/api/admin/kitchens/categories"],
   },
   {
     key: "kitchens-orders",

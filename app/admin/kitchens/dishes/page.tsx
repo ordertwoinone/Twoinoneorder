@@ -1,18 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
-import { FileSpreadsheet, Plus, Pencil, Trash2, X } from "lucide-react";
+import { FileSpreadsheet, Plus, Pencil, Star, Trash2, X } from "lucide-react";
 import AddonGroupsEditor, { addonGroupsProblem, type EditableAddonGroup } from "@/components/admin/AddonGroupsEditor";
 import BilingualField from "@/components/admin/BilingualField";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import type { DishBadge, Kitchen, Meal } from "@/data/kitchenDishes";
-import { BADGE_LABELS, KITCHEN_LABELS, MEAL_LABELS, type KitchenDishRow } from "@/lib/kitchens";
+import { BADGE_LABELS, KITCHEN_LABELS, MEAL_LABELS, type KitchenCategoryRow, type KitchenDishRow } from "@/lib/kitchens";
 import ImportDialog from "./ImportDialog";
 
 type DishWithAddons = KitchenDishRow & { addon_groups?: EditableAddonGroup[] };
 
 /** Number fields hold what is typed, so a half-entered value is not rewritten. */
-type FormData = Omit<KitchenDishRow, "id" | "price" | "kcal" | "serves" | "badge" | "sort_order"> & {
+type FormData = Omit<KitchenDishRow, "id" | "price" | "kcal" | "serves" | "badge" | "sort_order" | "category_ids"> & {
   id?: string;
+  category_ids: string[];
   price: string;
   kcal: string;
   serves: string;
@@ -35,6 +36,7 @@ const EMPTY: FormData = {
   badge: "",
   is_healthy: false,
   is_high_protein: false,
+  category_ids: [],
   sort_order: "0",
   is_active: true,
   addon_groups: [],
@@ -50,6 +52,7 @@ function toForm(item: DishWithAddons): FormData {
     kcal: item.kcal === null ? "" : String(item.kcal),
     serves: String(item.serves ?? 1),
     badge: item.badge ?? "",
+    category_ids: item.category_ids ?? [],
     sort_order: String(item.sort_order),
     addon_groups: (item.addon_groups ?? []).map((g) => ({
       ...g,
@@ -61,9 +64,10 @@ function toForm(item: DishWithAddons): FormData {
 
 export default function KitchensAdmin() {
   const [items, setItems] = useState<DishWithAddons[]>([]);
+  const [categories, setCategories] = useState<KitchenCategoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [mealFilter, setMealFilter] = useState<Meal | "all">("all");
+  const [mealFilter, setMealFilter] = useState<Meal | "all" | "favorites">("all");
   const [modal, setModal] = useState<{ open: boolean; mode: "add" | "edit"; data: FormData }>({
     open: false, mode: "add", data: { ...EMPTY },
   });
@@ -72,6 +76,7 @@ export default function KitchensAdmin() {
   const [deleteError, setDeleteError] = useState("");
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [favoriteError, setFavoriteError] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
@@ -87,12 +92,26 @@ export default function KitchensAdmin() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Before supabase/kitchen_categories.sql has run there are none to pick.
+    fetch("/api/admin/kitchens/categories")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => { if (Array.isArray(data)) setCategories(data); })
+      .catch(() => {});
+  }, []);
+
+  const categoryName = new Map(categories.map((c) => [c.id, c.name]));
+
+  function toggleCategory(id: string) {
+    const current = modal.data.category_ids;
+    handleField("category_ids", current.includes(id) ? current.filter((c) => c !== id) : [...current, id]);
+  }
 
   function openAdd() {
     setFormError("");
     // Keeps the meal being browsed, since dishes tend to be added a meal at a time.
-    setModal({ open: true, mode: "add", data: { ...EMPTY, meal: mealFilter === "all" ? EMPTY.meal : mealFilter } });
+    setModal({ open: true, mode: "add", data: { ...EMPTY, meal: mealFilter === "all" || mealFilter === "favorites" ? EMPTY.meal : mealFilter } });
   }
   function openEdit(item: DishWithAddons) {
     setFormError("");
@@ -132,6 +151,12 @@ export default function KitchensAdmin() {
       load();
       return;
     }
+    // The column was shed because the database does not have it yet.
+    if (modal.data.category_ids.length > 0 && data && !("category_ids" in data)) {
+      setFormError("The dish saved, but not its categories. Run supabase/kitchen_categories.sql in the Supabase SQL editor, then save again.");
+      load();
+      return;
+    }
     closeModal();
     load();
   }
@@ -149,11 +174,34 @@ export default function KitchensAdmin() {
     load();
   }
 
-  const visible = mealFilter === "all" ? items : items.filter((i) => i.meal === mealFilter);
+  const visible =
+    mealFilter === "all" ? items
+    : mealFilter === "favorites" ? items.filter((i) => i.is_favorite)
+    : items.filter((i) => i.meal === mealFilter);
+  const favoriteCount = items.filter((i) => i.is_favorite).length;
+
+  /* Shows straight away, and goes back if the save fails. */
+  async function toggleFavorite(item: DishWithAddons) {
+    const next = !item.is_favorite;
+    const setStar = (value: boolean) =>
+      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, is_favorite: value } : i)));
+    setStar(next);
+    setFavoriteError("");
+    const res = await fetch(`/api/admin/kitchens/dishes/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_favorite: next }),
+    }).catch(() => null);
+    if (!res?.ok) {
+      const data = await res?.json().catch(() => null);
+      setStar(!next);
+      setFavoriteError(data?.error ?? "Could not save that favourite.");
+    }
+  }
   const allSelected = visible.length > 0 && visible.every((i) => selected.has(i.id));
 
   /* Changing the filter clears the ticks, so nothing out of sight can be deleted. */
-  function changeMeal(id: Meal | "all") {
+  function changeMeal(id: Meal | "all" | "favorites") {
     setMealFilter(id);
     setSelected(new Set());
   }
@@ -209,7 +257,7 @@ export default function KitchensAdmin() {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {(["all", "breakfast", "lunch", "dinner"] as const).map((id) => (
+        {(["all", "breakfast", "lunch", "dinner", "cafe"] as const).map((id) => (
           <button
             key={id}
             onClick={() => changeMeal(id)}
@@ -219,6 +267,14 @@ export default function KitchensAdmin() {
             {id === "all" ? "All meals" : MEAL_LABELS[id]}
           </button>
         ))}
+        <button
+          onClick={() => changeMeal("favorites")}
+          aria-pressed={mealFilter === "favorites"}
+          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${mealFilter === "favorites" ? "bg-amber-500 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+        >
+          <Star size={12} fill="currentColor" />
+          Favourites ({favoriteCount})
+        </button>
       </div>
 
       {loadError && (
@@ -227,6 +283,8 @@ export default function KitchensAdmin() {
           <span className="block text-xs mt-1 text-red-600">If the table is missing, run supabase/kitchen_dishes.sql in the Supabase SQL editor.</span>
         </div>
       )}
+
+      {favoriteError && <p role="alert" className="mb-3 text-sm text-red-600">{favoriteError}</p>}
 
       {selected.size > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
@@ -267,7 +325,7 @@ export default function KitchensAdmin() {
             {loading ? (
               <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">Loading...</td></tr>
             ) : visible.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">No dishes yet.</td></tr>
+              <tr><td colSpan={7} className="text-center py-16 text-gray-400 text-sm">{mealFilter === "favorites" ? "No favourites yet. Tap a star to add one." : "No dishes yet."}</td></tr>
             ) : visible.map((item) => (
               <tr key={item.id} className={`border-b border-gray-100 transition-colors ${selected.has(item.id) ? "bg-red-50/50" : "hover:bg-gray-50"}`}>
                 <td className="ps-4 py-3">
@@ -281,6 +339,15 @@ export default function KitchensAdmin() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3 min-w-[180px]">
+                    <button
+                      onClick={() => toggleFavorite(item)}
+                      aria-pressed={Boolean(item.is_favorite)}
+                      aria-label={`${item.is_favorite ? "Remove" : "Add"} ${item.name} ${item.is_favorite ? "from" : "to"} favourites`}
+                      title={item.is_favorite ? "Remove from favourites" : "Add to favourites"}
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-amber-50 ${item.is_favorite ? "text-amber-500" : "text-gray-300 hover:text-amber-500"}`}
+                    >
+                      <Star size={18} fill={item.is_favorite ? "currentColor" : "none"} />
+                    </button>
                     <div className="w-11 h-11 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                       {item.image_url && (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -297,7 +364,14 @@ export default function KitchensAdmin() {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{MEAL_LABELS[item.meal]} · {KITCHEN_LABELS[item.kitchen]} · Serves {item.serves ?? 1}</td>
+                <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                  {MEAL_LABELS[item.meal]} · {KITCHEN_LABELS[item.kitchen]} · Serves {item.serves ?? 1}
+                  {(item.category_ids ?? []).some((id) => categoryName.has(id)) && (
+                    <span className="block text-[11px] text-gray-500">
+                      {(item.category_ids ?? []).filter((id) => categoryName.has(id)).map((id) => categoryName.get(id)).join(", ")}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">AED {Number(item.price).toFixed(2)}</td>
                 <td className="px-4 py-3 text-xs whitespace-nowrap">
                   {item.name_ar ? <span dir="rtl">{item.name_ar}</span> : <span className="text-amber-600">Missing</span>}
@@ -409,6 +483,32 @@ export default function KitchensAdmin() {
                   High protein
                 </label>
               </div>
+
+              <fieldset>
+                <legend className={labelCls}>Categories</legend>
+                {categories.length === 0 ? (
+                  <p className="text-[11px] text-gray-500">
+                    None yet. Add them in Kitchens Page → Categories, then tick the ones this dish belongs to.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((c) => {
+                      const on = modal.data.category_ids.includes(c.id);
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => toggleCategory(c.id)}
+                          aria-pressed={on}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${on ? "bg-gray-900 text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                        >
+                          {c.name}{!c.is_active && " (hidden)"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </fieldset>
 
               <AddonGroupsEditor
                 groups={modal.data.addon_groups}
