@@ -3,8 +3,14 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 
-const COLUMNS =
-  "id, order_number, table_code, guests, waiter_name, items, total, status, payment_method, paid_at, credit_name, credit_phone, credit_at, created_at";
+// Every column, so the discount and part payments show once their SQL has run.
+const COLUMNS = "*";
+const withoutTracking = <T extends Record<string, unknown>>(row: T) => {
+  const rest: Record<string, unknown> = { ...row };
+  delete rest.ip_hash;
+  delete rest.client_ref;
+  return rest;
+};
 
 /** Read separately, so a long settled history can never crowd out money still owed. */
 export async function GET() {
@@ -29,5 +35,5 @@ export async function GET() {
 
   const error = outstanding.error ?? settled.error;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ outstanding: outstanding.data, settled: settled.data });
+  return NextResponse.json({ outstanding: (outstanding.data ?? []).map(withoutTracking), settled: (settled.data ?? []).map(withoutTracking) });
 }

@@ -1,4 +1,5 @@
 "use client";
+import { balanceDue } from "@/lib/kitchen-payments";
 import { useCallback, useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { money, when } from "../OrderMoneyCard";
@@ -14,12 +15,13 @@ interface TrackedOrder {
   items: OrderItem[];
   total: number | string;
   status: KitchenOrderStatus;
-  payment_method: "card" | "cash" | "credit" | null;
+  payment_method: "card" | "cash" | "split" | "credit" | null;
   paid_at: string | null;
   ready_at?: string | null;
   round?: number | null;
   round_started_at?: string | null;
   paid_amount?: number | string | null;
+  discount?: number | string | null;
   served_at?: string | null;
   created_at: string;
 }
@@ -49,12 +51,12 @@ function whereNow(o: TrackedOrder): string {
 function paymentPill(o: TrackedOrder): { label: string; cls: string } {
   if (o.status === "cancelled") return { label: "No payment", cls: "bg-gray-100 text-gray-500" };
   if (o.paid_at) {
-    const method = o.payment_method === "card" ? " · Card" : o.payment_method === "cash" ? " · Cash" : "";
+    const method = o.payment_method === "card" ? " · Card" : o.payment_method === "cash" ? " · Cash" : o.payment_method === "split" ? " · Cash + card" : "";
     return { label: `Paid${method}`, cls: "bg-green-100 text-green-700" };
   }
   if (onCredit(o)) return { label: "On credit", cls: "bg-amber-100 text-amber-800" };
   const already = Number(o.paid_amount ?? 0);
-  if (already > 0) return { label: `Balance ${money(Number(o.total) - already)}`, cls: "bg-red-100 text-red-700" };
+  if (already > 0) return { label: `Balance ${money(balanceDue(o))}`, cls: "bg-red-100 text-red-700" };
   return { label: "Not paid", cls: "bg-red-100 text-red-700" };
 }
 

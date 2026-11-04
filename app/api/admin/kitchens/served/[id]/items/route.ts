@@ -62,7 +62,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       round_started_at: now,
       ready_at: null,
       served_at: null,
-      ...(wasPaid ? { paid_amount: Number(order.total), paid_at: null, payment_method: null } : {}),
+      ...(wasPaid ? { paid_amount: roundMoney(Number(order.total) - Number(order.discount ?? 0)), paid_at: null, payment_method: null } : {}),
       events: [
         ...(order.events ?? []),
         { type: "items_added", at: now, count: added.reduce((n, i) => n + i.qty, 0), amount: priced.total },

@@ -2,13 +2,13 @@
 import { useCallback, useEffect, useState } from "react";
 import OrderMoneyCard, { money, when, type ServedOrder } from "../OrderMoneyCard";
 import { useNow } from "../OrderTimer";
+import TakePaymentDialog from "../TakePaymentDialog";
+import { balanceDue, PAYMENT_METHOD_LABELS as METHOD_LABEL } from "@/lib/kitchen-payments";
 
 const REFRESH_MS = 15_000;
 
 const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
 const methodBtn = "flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50";
-
-const METHOD_LABEL: Record<string, string> = { card: "Card", cash: "Cash" };
 
 export default function KitchenPaymentsAdmin() {
   const now = useNow();
@@ -23,6 +23,8 @@ export default function KitchenPaymentsAdmin() {
   const [creditFor, setCreditFor] = useState<string | null>(null);
   const [creditName, setCreditName] = useState("");
   const [creditPhone, setCreditPhone] = useState("");
+  const [paying, setPaying] = useState<ServedOrder | null>(null);
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/kitchens/payments").catch(() => null);
@@ -72,7 +74,7 @@ export default function KitchenPaymentsAdmin() {
     if (ok) setCreditFor(null);
   }
 
-  const owed = unpaid.reduce((sum, o) => sum + Number(o.total) - Number(o.paid_amount ?? 0), 0);
+  const owed = unpaid.reduce((sum, o) => sum + balanceDue(o), 0);
   const visible = view === "unpaid" ? unpaid : paid;
 
   return (
@@ -105,6 +107,25 @@ export default function KitchenPaymentsAdmin() {
         </div>
       )}
       {actionError && <p role="alert" className="mb-4 text-sm text-red-600">{actionError}</p>}
+      {notice && (
+        <p role="status" className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          {notice}
+          <button onClick={() => setNotice("")} className="ms-3 text-xs underline">OK</button>
+        </p>
+      )}
+
+      {paying && (
+        <TakePaymentDialog
+          order={paying}
+          endpoint="/api/admin/kitchens/payments"
+          onClose={() => setPaying(null)}
+          onSaved={(change) => {
+            setPaying(null);
+            setNotice(change > 0 ? `Saved. Give ${money(change)} change.` : "");
+            load();
+          }}
+        />
+      )}
 
       {loading ? (
         <p className="text-center py-16 text-gray-400 text-sm">Loading...</p>
@@ -164,10 +185,19 @@ export default function KitchenPaymentsAdmin() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-3 flex gap-2">
-                    <button onClick={() => send(order.id, { action: "pay", method: "card" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Card</button>
-                    <button onClick={() => send(order.id, { action: "pay", method: "cash" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Cash</button>
-                    <button onClick={() => openCredit(order.id)} disabled={busy} className={`${methodBtn} text-gray-800 bg-white border border-gray-300 hover:bg-gray-50`}>Credit</button>
+                  <div className="mt-3">
+                    <div className="flex gap-2">
+                      <button onClick={() => send(order.id, { action: "pay", method: "card" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Card</button>
+                      <button onClick={() => send(order.id, { action: "pay", method: "cash" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Cash</button>
+                      <button onClick={() => openCredit(order.id)} disabled={busy} className={`${methodBtn} text-gray-800 bg-white border border-gray-300 hover:bg-gray-50`}>Credit</button>
+                    </div>
+                    <button
+                      onClick={() => { setActionError(""); setPaying(order); }}
+                      disabled={busy}
+                      className={`${methodBtn} mt-2 w-full text-gray-800 bg-gray-100 hover:bg-gray-200`}
+                    >
+                      Discount or split payment
+                    </button>
                   </div>
                 )}
               </OrderMoneyCard>

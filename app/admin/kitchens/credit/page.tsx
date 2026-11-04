@@ -1,10 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import OrderMoneyCard, { money, when, type ServedOrder } from "../OrderMoneyCard";
+import TakePaymentDialog from "../TakePaymentDialog";
+import { balanceDue, PAYMENT_METHOD_LABELS } from "@/lib/kitchen-payments";
 
 const REFRESH_MS = 15_000;
-
-const METHOD_LABEL: Record<string, string> = { card: "card", cash: "cash" };
 
 export default function KitchenCreditAdmin() {
   const [outstanding, setOutstanding] = useState<ServedOrder[]>([]);
@@ -15,6 +15,8 @@ export default function KitchenCreditAdmin() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
+  const [paying, setPaying] = useState<ServedOrder | null>(null);
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/kitchens/credit").catch(() => null);
@@ -52,7 +54,7 @@ export default function KitchenCreditAdmin() {
     setBusyId(null);
   }
 
-  const owed = outstanding.reduce((sum, o) => sum + Number(o.total), 0);
+  const owed = outstanding.reduce((sum, o) => sum + balanceDue(o), 0);
   const visible = view === "outstanding" ? outstanding : settled;
 
   return (
@@ -85,6 +87,25 @@ export default function KitchenCreditAdmin() {
         </div>
       )}
       {actionError && <p role="alert" className="mb-4 text-sm text-red-600">{actionError}</p>}
+      {notice && (
+        <p role="status" className="mb-4 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          {notice}
+          <button onClick={() => setNotice("")} className="ms-3 text-xs underline">OK</button>
+        </p>
+      )}
+
+      {paying && (
+        <TakePaymentDialog
+          order={paying}
+          endpoint="/api/admin/kitchens/credit"
+          onClose={() => setPaying(null)}
+          onSaved={(change) => {
+            setPaying(null);
+            setNotice(change > 0 ? `Saved. Give ${money(change)} change.` : "");
+            load();
+          }}
+        />
+      )}
 
       {loading ? (
         <p className="text-center py-16 text-gray-400 text-sm">Loading...</p>
@@ -117,7 +138,7 @@ export default function KitchenCreditAdmin() {
                 {isSettled ? (
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="text-xs text-gray-500">
-                      Paid by {METHOD_LABEL[order.payment_method ?? ""] ?? "unknown"}, {when(order.paid_at as string)}
+                      Paid by {(PAYMENT_METHOD_LABELS[order.payment_method ?? ""] ?? "unknown").toLowerCase()}, {when(order.paid_at as string)}
                     </span>
                     <button onClick={() => send(order.id, { action: "undo" })} disabled={busy} className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50">
                       Back to owing
@@ -125,7 +146,7 @@ export default function KitchenCreditAdmin() {
                   </div>
                 ) : removeId === order.id ? (
                   <div className="mt-3">
-                    <p className="text-xs text-gray-600 mb-2">Move back to Not paid? The customer&apos;s details will be removed.</p>
+                    <p className="text-xs text-gray-600 mb-2">Move back to Not paid? The customer&apos;s details, and any part payment taken when it went on credit, will be removed.</p>
                     <div className="flex gap-2">
                       <button onClick={() => setRemoveId(null)} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Keep</button>
                       <button onClick={() => send(order.id, { action: "undo" })} disabled={busy} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50">Yes, move back</button>
@@ -138,6 +159,13 @@ export default function KitchenCreditAdmin() {
                       <button onClick={() => send(order.id, { action: "pay", method: "card" })} disabled={busy} className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>Card</button>
                       <button onClick={() => send(order.id, { action: "pay", method: "cash" })} disabled={busy} className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>Cash</button>
                     </div>
+                    <button
+                      onClick={() => { setActionError(""); setPaying(order); }}
+                      disabled={busy}
+                      className="mt-2 w-full px-3 py-2.5 rounded-lg text-sm font-semibold text-gray-800 bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                    >
+                      Discount or part payment
+                    </button>
                     <button onClick={() => setRemoveId(order.id)} className="mt-2 w-full text-xs font-semibold text-gray-500 underline">Credit added by mistake</button>
                   </div>
                 )}

@@ -97,6 +97,7 @@ export interface KitchenOrderForReceipt {
   waiter_name: string | null;
   items: OrderItem[];
   total: number | string;
+  discount?: number | string | null;
   status: string;
   payment_method: string | null;
   paid_at: string | null;
@@ -105,7 +106,9 @@ export interface KitchenOrderForReceipt {
 
 /** A kitchen order in the shape the till's receipt template prints. */
 export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceOrder {
-  const total = Number(order.total);
+  const discount = Number(order.discount ?? 0);
+  // What the customer pays. The subtotal is set so that subtotal - discount + VAT adds up to it.
+  const total = roundMoney(Number(order.total) - discount);
   return {
     id: order.id,
     order_number: order.order_number,
@@ -120,7 +123,7 @@ export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceO
     customer_note: "",
     status: order.status,
     // Only money actually taken prints as "Paid by".
-    payment_method: order.paid_at ? order.payment_method ?? "pending" : "pending",
+    payment_method: order.paid_at ? (order.payment_method === "split" ? "cash + card" : order.payment_method ?? "pending") : "pending",
     created_at: order.created_at,
     items: (order.items ?? []).map((item) => {
       const extras = roundMoney((item.addons ?? []).reduce((sum, a) => sum + Number(a.price), 0));
@@ -135,8 +138,8 @@ export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceO
         line_total: Number(item.line_total),
       };
     }),
-    subtotal: roundMoney(total - vatIncludedIn(total)),
-    discount_total: 0,
+    subtotal: roundMoney(total - vatIncludedIn(total) + discount),
+    discount_total: discount,
     tax_amount: vatIncludedIn(total),
     total_amount: total,
   };
@@ -144,11 +147,12 @@ export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceO
 
 /** One step in an order's history, stored in its events column. */
 export interface OrderEvent {
-  type: "preparing" | "ready" | "served" | "cancelled" | "items_added" | "paid" | "credit" | "payment_undone";
+  type: "preparing" | "ready" | "served" | "cancelled" | "items_added" | "paid" | "part_paid" | "credit" | "payment_undone";
   at: string;
   method?: string;
   count?: number;
   amount?: number;
+  discount?: number;
 }
 
 const EVENT_LABELS: Record<string, string> = {
@@ -165,7 +169,12 @@ function eventLabel(event: OrderEvent): string {
     const count = event.count ?? 0;
     return `${count} item${count === 1 ? "" : "s"} added, back to the kitchen`;
   }
-  if (event.type === "paid") return event.method === "card" ? "Paid by card" : event.method === "cash" ? "Paid by cash" : "Paid";
+  const how = event.method === "card" ? " by card" : event.method === "cash" ? " in cash" : event.method === "split" ? " in cash and card" : "";
+  const sum = event.amount ? ` AED ${event.amount.toFixed(2)}` : "";
+  const off = event.discount ? `, AED ${event.discount.toFixed(2)} discount` : "";
+  if (event.type === "paid") return `Paid${sum}${how}${off}`;
+  if (event.type === "part_paid") return `Part paid${sum}${how}${off}`;
+  if (event.type === "credit" && (event.amount || event.discount)) return `Put on credit after${sum ? `${sum} paid${how}` : ""}${off}`;
   return EVENT_LABELS[event.type] ?? event.type;
 }
 

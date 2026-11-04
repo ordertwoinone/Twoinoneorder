@@ -11,8 +11,9 @@ interface HistoryOrder {
   waiter_name: string | null;
   items: OrderItem[];
   total: number | string;
+  discount?: number | string | null;
   status: KitchenOrderStatus;
-  payment_method: "card" | "cash" | "credit" | null;
+  payment_method: "card" | "cash" | "split" | "credit" | null;
   paid_at: string | null;
   created_at: string;
 }
@@ -30,7 +31,7 @@ const labelCls = "block text-xs font-semibold text-gray-700 mb-1";
 
 function paymentLabel(order: HistoryOrder): string {
   if (order.status === "cancelled") return "—";
-  if (order.paid_at) return order.payment_method === "card" ? "Card" : order.payment_method === "cash" ? "Cash" : "Paid";
+  if (order.paid_at) return order.payment_method === "card" ? "Card" : order.payment_method === "cash" ? "Cash" : order.payment_method === "split" ? "Cash + card" : "Paid";
   return order.payment_method === "credit" ? "On credit" : "Not paid";
 }
 
@@ -129,6 +130,7 @@ export default function KitchenOrderHistoryAdmin() {
             <option value="">All</option>
             <option value="card">Card</option>
             <option value="cash">Cash</option>
+            <option value="split">Cash + card</option>
             <option value="credit">On credit</option>
             <option value="unpaid">Not paid</option>
           </select>
@@ -183,7 +185,9 @@ export default function KitchenOrderHistoryAdmin() {
                       </p>
                     ))}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{money(Number(order.total))}</td>
+                  <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{money(Number(order.total) - Number(order.discount ?? 0))}
+                    {Number(order.discount ?? 0) > 0 && <span className="block text-[11px] font-normal text-gray-500">after {money(Number(order.discount))} off</span>}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${style.cls}`}>{style.label}</span>
                   </td>

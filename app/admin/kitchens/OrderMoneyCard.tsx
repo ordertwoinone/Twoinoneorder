@@ -2,6 +2,7 @@
 
 import { Printer } from "lucide-react";
 import { printDocument } from "@/lib/print-document";
+import { balanceDue } from "@/lib/kitchen-payments";
 import type { OrderItem } from "@/lib/kitchen-orders";
 import OrderTimer from "./OrderTimer";
 
@@ -17,11 +18,14 @@ export interface ServedOrder {
   items: OrderItem[];
   total: number | string;
   status: string;
-  payment_method: "card" | "cash" | "credit" | null;
+  payment_method: "card" | "cash" | "split" | "credit" | null;
   paid_at: string | null;
   ready_at?: string | null;
   round_started_at?: string | null;
   paid_amount?: number | string | null;
+  discount?: number | string | null;
+  cash_amount?: number | string | null;
+  card_amount?: number | string | null;
   served_at?: string | null;
   credit_name?: string | null;
   credit_phone?: string | null;
@@ -43,6 +47,9 @@ export default function OrderMoneyCard({
   now?: number;
   children: React.ReactNode;
 }) {
+  const discount = Number(order.discount ?? 0);
+  const cash = Number(order.cash_amount ?? 0);
+  const card = Number(order.card_amount ?? 0);
   return (
     <article className="flex flex-col bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-start justify-between gap-2">
@@ -93,11 +100,21 @@ export default function OrderMoneyCard({
         <span className="text-base font-bold text-gray-900">{money(Number(order.total))}</span>
       </div>
 
+      {discount > 0 && (
+        <p className="mt-1 flex justify-between text-sm text-gray-500"><span>Discount</span><span>-{money(discount)}</span></p>
+      )}
+
       {!order.paid_at && Number(order.paid_amount ?? 0) > 0 && (
         <div className="mt-1 text-sm">
           <p className="flex justify-between text-gray-500"><span>Already paid</span><span>{money(Number(order.paid_amount))}</span></p>
-          <p className="flex justify-between font-bold text-red-700"><span>Balance to pay</span><span>{money(Number(order.total) - Number(order.paid_amount))}</span></p>
+          <p className="flex justify-between font-bold text-red-700"><span>Balance to pay</span><span>{money(balanceDue(order))}</span></p>
         </div>
+      )}
+
+      {(cash > 0 || card > 0) && (
+        <p className="mt-1 text-xs text-gray-500">
+          Taken: {[cash > 0 && `Cash ${money(cash)}`, card > 0 && `Card ${money(card)}`].filter(Boolean).join(" · ")}
+        </p>
       )}
 
       {children}

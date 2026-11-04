@@ -10,11 +10,13 @@ import {
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
   Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound,
   CreditCard, Sparkles, Receipt, History, MapPinned,
-  MonitorSmartphone, Film, Terminal, ChefHat, ListChecks,
+  MonitorSmartphone, Film, Terminal, ChefHat, ListChecks, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
 import { canAccess } from "@/lib/admin-areas";
+
+const COLLAPSED_KEY = "admin-sidebar-collapsed";
 
 type NavChild = { label: string; href: string; icon: LucideIcon };
 type NavItem =
@@ -153,6 +155,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     children.some((c) => pathname.startsWith(c.href));
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  /* Hides the sidebar on a wide screen, so a tablet gets the whole width.
+     Remembered on this device only. */
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem(COLLAPSED_KEY) === "1"); } catch { /* storage blocked */ }
+  }, []);
+  function toggleCollapsed(next: boolean) {
+    setCollapsed(next);
+    try { localStorage.setItem(COLLAPSED_KEY, next ? "1" : "0"); } catch { /* storage blocked */ }
+  }
   const [access, setAccess] = useState<Access | null>(null);
 
   /* The sidebar shows only what this member may open. Middleware is what
@@ -249,7 +261,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       <aside
         className={`w-[260px] lg:w-[240px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen fixed lg:sticky top-0 z-50 transition-transform duration-300 print:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        } lg:translate-x-0 ${collapsed ? "lg:hidden" : ""}`}
       >
         <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3 pt-safe">
           <div className="w-9 h-9 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
@@ -265,6 +277,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             aria-label="Close menu"
           >
             <X size={18} />
+          </button>
+          <button
+            onClick={() => toggleCollapsed(true)}
+            className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500"
+            aria-label="Hide menu"
+            title="Hide menu"
+          >
+            <PanelLeftClose size={18} />
           </button>
         </div>
 
@@ -345,7 +365,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 print:m-0 print:p-0">{children}</main>
+      {collapsed && (
+        <button
+          onClick={() => toggleCollapsed(false)}
+          className="hidden lg:flex fixed top-3 left-3 z-40 w-10 h-10 items-center justify-center rounded-lg bg-white border border-gray-200 shadow-sm text-gray-600 hover:bg-gray-50 print:hidden"
+          aria-label="Show menu"
+          title="Show menu"
+        >
+          <PanelLeftOpen size={18} />
+        </button>
+      )}
+
+      <main className={`flex-1 min-w-0 print:m-0 print:p-0 ${collapsed ? "lg:pl-12" : ""}`}>{children}</main>
     </div>
   );
 }

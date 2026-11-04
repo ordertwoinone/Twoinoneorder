@@ -7,7 +7,10 @@ const PAGE_SIZE = 50;
 const SUM_BATCH = 1000;
 
 // No credit_name or credit_phone: those stay with the Credit permission.
-const COLUMNS = "id, order_number, table_code, guests, waiter_name, items, total, status, payment_method, paid_at, created_at";
+const LEGACY_COLUMNS = "id, order_number, table_code, guests, waiter_name, items, total, status, payment_method, paid_at, created_at";
+// discount only exists once supabase/kitchen_order_split_payments.sql has run.
+const COLUMNS = `${LEGACY_COLUMNS}, discount`;
+const missingDiscount = (error: { message?: string } | null) => Boolean(error && /discount/.test(error.message ?? ""));
 
 const STATUSES = ["new", "preparing", "ready", "served", "cancelled"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -27,7 +30,7 @@ function applyFilters(query: any, params: URLSearchParams) {
   if (STATUSES.includes(status)) q = q.eq("status", status);
 
   const payment = params.get("payment") ?? "";
-  if (payment === "card" || payment === "cash") q = q.eq("payment_method", payment).not("paid_at", "is", null);
+  if (payment === "card" || payment === "cash" || payment === "split") q = q.eq("payment_method", payment).not("paid_at", "is", null);
   if (payment === "credit") q = q.eq("payment_method", "credit").is("paid_at", null);
   if (payment === "unpaid") q = q.neq("status", "cancelled").is("payment_method", null).is("paid_at", null);
 
@@ -51,12 +54,13 @@ export async function GET(request: Request) {
   const page = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1);
   const start = (page - 1) * PAGE_SIZE;
 
-  const { data, error, count } = await applyFilters(
-    supabaseAdminLive.from("kitchen_orders").select(COLUMNS, { count: "exact" }),
-    params,
-  )
-    .order("created_at", { ascending: false })
-    .range(start, start + PAGE_SIZE - 1);
+  const readPage = (columns: string) =>
+    applyFilters(supabaseAdminLive.from("kitchen_orders").select(columns, { count: "exact" }), params)
+      .order("created_at", { ascending: false })
+      .range(start, start + PAGE_SIZE - 1);
+  let { data, error, count } = await readPage(COLUMNS);
+  const hasDiscount = !missingDiscount(error);
+  if (!hasDiscount) ({ data, error, count } = await readPage(LEGACY_COLUMNS));
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   /* Summed across every match rather than this page, read in batches because a
@@ -64,15 +68,15 @@ export async function GET(request: Request) {
   let sales = 0;
   for (let offset = 0; ; offset += SUM_BATCH) {
     const { data: batch, error: sumError } = await applyFilters(
-      supabaseAdminLive.from("kitchen_orders").select("total").neq("status", "cancelled"),
+      supabaseAdminLive.from("kitchen_orders").select(hasDiscount ? "total, discount" : "total").neq("status", "cancelled"),
       params,
     )
       .order("created_at", { ascending: false })
       .order("id", { ascending: true })
       .range(offset, offset + SUM_BATCH - 1);
     if (sumError) return NextResponse.json({ error: sumError.message }, { status: 500 });
-    const rows = (batch ?? []) as { total: number | string }[];
-    sales += rows.reduce((sum, r) => sum + Number(r.total), 0);
+    const rows = (batch ?? []) as { total: number | string; discount?: number | string | null }[];
+    sales += rows.reduce((sum, r) => sum + Number(r.total) - Number(r.discount ?? 0), 0);
     if (rows.length < SUM_BATCH) break;
   }
 

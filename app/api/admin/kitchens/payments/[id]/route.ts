@@ -7,5 +7,5 @@ import { supabaseAdminLive } from "@/lib/supabase-admin";
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const result = await applyPayment(supabaseAdminLive, updateRow, params.id, await request.json().catch(() => ({})));
-  return NextResponse.json(result.error ? { error: result.error } : { success: true }, { status: result.status });
+  return NextResponse.json(result.error ? { error: result.error } : { success: true, change: result.change ?? 0 }, { status: result.status });
 }

@@ -1,4 +1,5 @@
 "use client";
+import { balanceDue } from "@/lib/kitchen-payments";
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Printer } from "lucide-react";
 import { printDocument } from "@/lib/print-document";
@@ -18,6 +19,7 @@ interface ServedOrder {
   payment_method: string | null;
   paid_at: string | null;
   paid_amount?: number | string | null;
+  discount?: number | string | null;
   ready_at?: string | null;
   served_at?: string | null;
   round?: number | null;
@@ -29,13 +31,13 @@ const REFRESH_MS = 15_000;
 
 function paymentText(o: ServedOrder): { label: string; cls: string } {
   if (o.paid_at) {
-    const method = o.payment_method === "card" ? " · Card" : o.payment_method === "cash" ? " · Cash" : "";
+    const method = o.payment_method === "card" ? " · Card" : o.payment_method === "cash" ? " · Cash" : o.payment_method === "split" ? " · Cash + card" : "";
     return { label: `Paid${method}`, cls: "bg-green-100 text-green-700" };
   }
   if (o.payment_method === "credit") return { label: "On credit", cls: "bg-amber-100 text-amber-800" };
   const already = Number(o.paid_amount ?? 0);
   return already > 0
-    ? { label: `Balance ${money(Number(o.total) - already)}`, cls: "bg-red-100 text-red-700" }
+    ? { label: `Balance ${money(balanceDue(o))}`, cls: "bg-red-100 text-red-700" }
     : { label: "Not paid", cls: "bg-red-100 text-red-700" };
 }
 
