@@ -1,7 +1,8 @@
 "use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, Volume2, VolumeX } from "lucide-react";
+import { useAlertChime } from "@/hooks/useAlertChime";
 import { balanceDue } from "@/lib/kitchen-payments";
-import { useCallback, useEffect, useState } from "react";
-import { Check } from "lucide-react";
 import { money, when } from "../OrderMoneyCard";
 import OrderTimer, { useNow, WaiterTimer } from "../OrderTimer";
 import type { KitchenOrderStatus, OrderItem } from "@/lib/kitchen-orders";
@@ -26,7 +27,8 @@ interface TrackedOrder {
   created_at: string;
 }
 
-const REFRESH_MS = 15_000;
+// Short, so the ready alert reaches the waiter soon after the kitchen taps Ready.
+const REFRESH_MS = 5_000;
 const NO_WAITER = "__none__";
 
 const STEPS: { status: KitchenOrderStatus; label: string }[] = [
@@ -68,6 +70,10 @@ export default function KitchenOrderTracker() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const now = useNow();
+  const { soundOn, toggle: toggleSound, chime } = useAlertChime("kitchen-ready-alert");
+
+  // Null until the first load, so opening the screen doesn't ring for orders already ready.
+  const knownReady = useRef<Set<string> | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/kitchens/tracker").catch(() => null);
@@ -78,8 +84,18 @@ export default function KitchenOrderTracker() {
       return;
     }
     setLoadError("");
-    setOrders(data);
-  }, []);
+    const list = data as TrackedOrder[];
+    // By round as well, so added items coming out of the kitchen ring again.
+    const ready = new Set(list.filter((o) => o.status === "ready").map((o) => `${o.id}:${o.round ?? 1}`));
+    const fresh = knownReady.current ? Array.from(ready).some((key) => !knownReady.current?.has(key)) : false;
+    knownReady.current = ready;
+    setOrders(list);
+    if (fresh) {
+      chime();
+      // A buzz too, for a phone in a pocket.
+      try { navigator.vibrate?.([400, 150, 400]); } catch { /* not supported */ }
+    }
+  }, [chime]);
 
   useEffect(() => {
     load();
@@ -117,11 +133,27 @@ export default function KitchenOrderTracker() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="mb-6">
-        <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">Kitchens Page</p>
-        <h1 className="text-2xl font-semibold text-gray-900">Order Tracker</h1>
-        <p className="text-sm text-gray-500 mt-0.5">{inProgress} in progress · updates every 15 seconds</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">Kitchens Page</p>
+          <h1 className="text-2xl font-semibold text-gray-900">Order Tracker</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{inProgress} in progress · rings when an order is ready</p>
+        </div>
+        <button
+          onClick={toggleSound}
+          aria-pressed={soundOn}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border transition-colors ${soundOn ? "bg-gray-900 border-gray-900 text-white" : "bg-white border-gray-200 text-gray-800 hover:bg-gray-50"}`}
+        >
+          {soundOn ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          {soundOn ? "Sound on" : "Sound off"}
+        </button>
       </div>
+
+      {!soundOn && (
+        <p className="mb-4 rounded-lg bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800">
+          Tap Sound off to turn the ready alert on. The tablet can&apos;t ring until it&apos;s switched on.
+        </p>
+      )}
 
       <div className="flex justify-end mb-4">
         <select
@@ -147,13 +179,13 @@ export default function KitchenOrderTracker() {
       ) : visible.length === 0 ? (
         <p className="text-center py-16 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">No orders to show.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {visible.map((order) => {
             const cancelled = order.status === "cancelled";
             const reached = STEPS.findIndex((s) => s.status === order.status);
             const pill = paymentPill(order);
             return (
-              <article key={order.id} className={`flex flex-col rounded-xl border p-4 ${order.status === "ready" ? "kitchen-ready-card" : "bg-white border-gray-200"} ${cancelled ? "opacity-70" : ""}`}>
+              <article key={order.id} className={`flex flex-col rounded-xl border p-3 ${order.status === "ready" ? "kitchen-ready-card" : "bg-white border-gray-200"} ${cancelled ? "opacity-70" : ""}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h2 className="text-base font-semibold text-gray-900">
@@ -162,13 +194,12 @@ export default function KitchenOrderTracker() {
                     <p className="text-xs text-gray-500 mt-0.5">
                       {when(order.created_at)} · {order.guests} {order.guests === 1 ? "person" : "people"}
                     </p>
+                    <p className="text-xs font-semibold text-gray-800 mt-0.5">
+                      {order.waiter_name ? `Waiter: ${order.waiter_name}` : "No waiter"}
+                    </p>
                   </div>
                   <OrderTimer from={order.round_started_at ?? order.created_at} readyAt={order.ready_at} servedAt={order.served_at} status={order.status} now={now} />
                 </div>
-
-                <p className="mt-2 text-sm font-semibold text-gray-800">
-                  {order.waiter_name ? `Waiter: ${order.waiter_name}` : "No waiter"}
-                </p>
 
                 {order.ready_at && (order.status === "ready" || order.status === "served") && (
                   <div className="mt-2">
@@ -180,7 +211,7 @@ export default function KitchenOrderTracker() {
                   <p className="mt-2 inline-block self-start rounded bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">Added items</p>
                 )}
 
-                <p className={`mt-3 text-sm font-bold ${cancelled ? "text-gray-500" : "text-gray-900"}`}>{whereNow(order)}</p>
+                <p className={`mt-2 text-sm font-bold ${cancelled ? "text-gray-500" : "text-gray-900"}`}>{whereNow(order)}</p>
 
                 {!cancelled && (
                   <ol className="mt-2 flex items-center" aria-label={`Progress: ${whereNow(order)}`}>
@@ -191,15 +222,15 @@ export default function KitchenOrderTracker() {
                           <span className="flex flex-col items-center">
                             <span
                               aria-current={i === reached ? "step" : undefined}
-                              className={`flex h-6 w-6 items-center justify-center rounded-full ${done ? "text-white" : "bg-gray-200 text-gray-400"}`}
+                              className={`flex h-5 w-5 items-center justify-center rounded-full ${done ? "text-white" : "bg-gray-200 text-gray-400"}`}
                               style={done ? { background: "#ea580c" } : undefined}
                             >
-                              {done && <Check size={14} strokeWidth={3} />}
+                              {done && <Check size={12} strokeWidth={3} />}
                             </span>
-                            <span className={`mt-1 text-[10px] font-semibold ${done ? "text-gray-800" : "text-gray-400"}`}>{step.label}</span>
+                            <span className={`mt-0.5 text-[10px] font-semibold ${done ? "text-gray-800" : "text-gray-400"}`}>{step.label}</span>
                           </span>
                           {i < STEPS.length - 1 && (
-                            <span className={`mx-1 mb-4 h-0.5 flex-1 ${i < reached ? "" : "bg-gray-200"}`} style={i < reached ? { background: "#ea580c" } : undefined} />
+                            <span className={`mx-1 mb-3.5 h-0.5 flex-1 ${i < reached ? "" : "bg-gray-200"}`} style={i < reached ? { background: "#ea580c" } : undefined} />
                           )}
                         </li>
                       );
@@ -207,14 +238,14 @@ export default function KitchenOrderTracker() {
                   </ol>
                 )}
 
-                <p className="mt-3 flex-1 text-xs text-gray-600">
+                <p className="mt-2 flex-1 text-xs text-gray-600">
                   {(order.items ?? [])
                     .filter((item) => (item.round ?? 1) === (order.round ?? 1))
                     .map((item) => `${item.qty} × ${item.name}`)
                     .join(", ")}
                 </p>
 
-                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
                   <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>
                   <span className="text-sm font-bold text-gray-900">{money(Number(order.total))}</span>
                 </div>
@@ -223,7 +254,7 @@ export default function KitchenOrderTracker() {
                   <button
                     onClick={() => markServed(order.id)}
                     disabled={busyId === order.id}
-                    className={`mt-3 h-11 rounded-lg text-sm font-bold disabled:opacity-50 ${order.status === "ready" ? "bg-green-700 text-white hover:bg-green-800" : "border border-gray-300 bg-white text-gray-800 hover:bg-gray-50"}`}
+                    className={`mt-2 h-10 rounded-lg text-sm font-bold disabled:opacity-50 ${order.status === "ready" ? "bg-green-700 text-white hover:bg-green-800" : "border border-gray-300 bg-white text-gray-800 hover:bg-gray-50"}`}
                   >
                     Mark served
                   </button>

@@ -97,10 +97,10 @@ export function WaiterTimer({
     return <span className="text-xs font-medium text-gray-500">Waiter took <span className="font-bold tabular-nums">{clock}</span></span>;
   }
   return (
-    <span className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-3 py-1.5 text-white shadow-sm">
+    <span className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-2.5 py-1 text-white shadow-sm">
       <Timer size={18} />
       <span className="text-xs font-semibold">Waiter</span>
-      <span data-waiter-timer className="text-2xl font-black tabular-nums leading-none">{clock}</span>
+      <span data-waiter-timer className="text-xl font-black tabular-nums leading-none">{clock}</span>
     </span>
   );
 }
