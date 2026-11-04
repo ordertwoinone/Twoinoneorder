@@ -26,9 +26,11 @@ interface Line {
 
 /** Choose more items for an order, then send them to the kitchen. */
 export default function AddItemsDialog({
-  orderId, orderLabel, endpoint = "/api/admin/kitchens/served", onClose, onSent,
+  orderId, orderLabel, endpoint = "/api/admin/kitchens/served", extra, onClose, onSent,
 }: {
   orderId: string;
+  /** Sent along with the items, such as the waiter's PIN on Preparing Orders. */
+  extra?: Record<string, unknown>;
   /** Served Orders' routes, or Orders' for the kitchen screen. */
   endpoint?: string;
   orderLabel: string;
@@ -92,7 +94,7 @@ export default function AddItemsDialog({
     const res = await fetch(`${endpoint}/${orderId}/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: lines.map((l) => ({ dishId: l.dish.id, qty: l.qty, addonIds: l.addonIds })) }),
+      body: JSON.stringify({ ...extra, items: lines.map((l) => ({ dishId: l.dish.id, qty: l.qty, addonIds: l.addonIds })) }),
     }).catch(() => null);
     setSending(false);
     if (!res?.ok) {

@@ -114,7 +114,7 @@ export default function KitchenCreditAdmin() {
           {view === "outstanding" ? "Nobody owes anything." : "No settled credit yet."}
         </p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {visible.map((order) => {
             const busy = busyId === order.id;
             const isSettled = Boolean(order.paid_at);
@@ -125,7 +125,7 @@ export default function KitchenCreditAdmin() {
                 badge={isSettled ? "Settled" : "Owing"}
                 badgeCls={isSettled ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"}
               >
-                <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2">
+                <div className="mt-2 rounded-lg bg-gray-50 px-3 py-1.5">
                   <p className="text-sm font-semibold text-gray-900">{order.credit_name}</p>
                   {order.credit_phone && (
                     <a href={`tel:${order.credit_phone.replace(/[^\d+]/g, "")}`} className="text-sm font-medium text-orange-700 underline">
@@ -136,7 +136,7 @@ export default function KitchenCreditAdmin() {
                 </div>
 
                 {isSettled ? (
-                  <div className="mt-3 flex items-center justify-between gap-2">
+                  <div className="mt-2 flex items-center justify-between gap-2">
                     <span className="text-xs text-gray-500">
                       Paid by {(PAYMENT_METHOD_LABELS[order.payment_method ?? ""] ?? "unknown").toLowerCase()}, {when(order.paid_at as string)}
                     </span>
@@ -145,7 +145,7 @@ export default function KitchenCreditAdmin() {
                     </button>
                   </div>
                 ) : removeId === order.id ? (
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <p className="text-xs text-gray-600 mb-2">Move back to Not paid? The customer&apos;s details, and any part payment taken when it went on credit, will be removed.</p>
                     <div className="flex gap-2">
                       <button onClick={() => setRemoveId(null)} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Keep</button>
@@ -153,11 +153,11 @@ export default function KitchenCreditAdmin() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <p className="text-xs font-medium text-gray-600 mb-1.5">Customer paid by</p>
                     <div className="flex gap-2">
-                      <button onClick={() => send(order.id, { action: "pay", method: "card" })} disabled={busy} className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>Card</button>
-                      <button onClick={() => send(order.id, { action: "pay", method: "cash" })} disabled={busy} className="flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>Cash</button>
+                      <button onClick={() => send(order.id, { action: "pay", method: "card" })} disabled={busy} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>Card</button>
+                      <button onClick={() => send(order.id, { action: "pay", method: "cash" })} disabled={busy} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>Cash</button>
                     </div>
                     <button
                       onClick={() => { setActionError(""); setPaying(order); }}

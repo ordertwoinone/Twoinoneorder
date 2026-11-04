@@ -8,7 +8,7 @@ import { balanceDue, PAYMENT_METHOD_LABELS as METHOD_LABEL } from "@/lib/kitchen
 const REFRESH_MS = 15_000;
 
 const inputCls = "w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400";
-const methodBtn = "flex-1 px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50";
+const methodBtn = "flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50";
 
 export default function KitchenPaymentsAdmin() {
   const now = useNow();
@@ -134,7 +134,7 @@ export default function KitchenPaymentsAdmin() {
           {view === "unpaid" ? "Nothing to collect. New orders appear here until they're paid." : "No paid orders yet."}
         </p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {visible.map((order) => {
             const busy = busyId === order.id;
             const method = METHOD_LABEL[order.payment_method ?? ""];
@@ -146,7 +146,7 @@ export default function KitchenPaymentsAdmin() {
                 badge={`Paid${method ? ` · ${method}` : ""}`}
                 badgeCls="bg-green-100 text-green-700"
               >
-                <div className="mt-3 flex items-center justify-between gap-2">
+                <div className="mt-2 flex items-center justify-between gap-2">
                   <span className="text-xs text-gray-500">
                     {when(order.paid_at)}{order.credit_at ? " · was on credit" : ""}
                   </span>
@@ -162,7 +162,7 @@ export default function KitchenPaymentsAdmin() {
             ) : (
               <OrderMoneyCard key={order.id} order={order} now={now} badge="Not paid" badgeCls="bg-red-100 text-red-700">
                 {creditFor === order.id ? (
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-2 space-y-2">
                     <input
                       type="text"
                       value={creditName}
@@ -185,7 +185,7 @@ export default function KitchenPaymentsAdmin() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <div className="flex gap-2">
                       <button onClick={() => send(order.id, { action: "pay", method: "card" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Card</button>
                       <button onClick={() => send(order.id, { action: "pay", method: "cash" })} disabled={busy} className={`${methodBtn} text-white`} style={{ background: "#ea580c" }}>Cash</button>

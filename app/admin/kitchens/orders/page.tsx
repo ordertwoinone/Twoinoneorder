@@ -156,12 +156,12 @@ export default function KitchenOrdersAdmin() {
           {view === "active" ? "No active orders." : "No finished orders yet."}
         </p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {visible.map((order) => {
             const next = NEXT_STEP[order.status];
             const style = STATUS_STYLE[order.status];
             return (
-              <article key={order.id} className="flex flex-col bg-white rounded-xl border border-gray-200 p-4">
+              <article key={order.id} className="flex flex-col bg-white rounded-xl border border-gray-200 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h2 className="text-base font-semibold text-gray-900">
@@ -203,9 +203,9 @@ export default function KitchenOrdersAdmin() {
                   </p>
                 )}
 
-                <ul className="mt-3 flex-1 divide-y divide-gray-100 text-sm">
+                <ul className="mt-2 flex-1 divide-y divide-gray-100 text-sm">
                   {(order.items ?? []).map((item, i) => (
-                    <li key={i} className={`py-2 ${(order.round ?? 1) > 1 && (item.round ?? 1) < (order.round ?? 1) ? "opacity-50" : ""}`}>
+                    <li key={i} className={`py-1.5 ${(order.round ?? 1) > 1 && (item.round ?? 1) < (order.round ?? 1) ? "opacity-50" : ""}`}>
                       <div className="flex justify-between gap-3">
                         <span className="font-medium text-gray-800">
                           {item.qty} × {item.name}
@@ -227,14 +227,14 @@ export default function KitchenOrdersAdmin() {
                   ))}
                 </ul>
 
-                <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-3">
+                <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
                   <span className="text-sm font-semibold text-gray-600">Total</span>
                   <span className="text-base font-bold text-gray-900">AED {Number(order.total).toFixed(2)}</span>
                 </div>
 
                 {isActive(order) && (
                   cancelId === order.id ? (
-                    <div className="mt-3">
+                    <div className="mt-2">
                       <p className="text-xs text-gray-600 mb-2">Cancel order #{order.order_number}?</p>
                       {/* Payments and Credit stop listing a cancelled order, so say so now. */}
                       {(order.paid_at || order.payment_method === "credit") && (
@@ -250,7 +250,7 @@ export default function KitchenOrdersAdmin() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-2 flex gap-2">
                       {/* Part of this order has already been eaten, so it can't be cancelled whole. */}
                       {(order.round ?? 1) <= 1 && (
                         <button onClick={() => setCancelId(order.id)} className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>

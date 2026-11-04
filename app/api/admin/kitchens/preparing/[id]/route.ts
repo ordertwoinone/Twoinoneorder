@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
 import { roundMoney } from "@/lib/kalba/pricing";
+import { checkOrderPin } from "@/lib/kitchen-waiters";
 import type { OrderItem } from "@/lib/kitchen-orders";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 
@@ -12,6 +13,7 @@ const MAX_QTY = 99;
  * still to be cooked can change, and only while the kitchen has the order, so
  * nothing already eaten or plated is touched. A change that would leave less to
  * pay than has already been taken is refused: that is a refund, done on Payments.
+ * Only the PIN of the waiter who took the order can change it.
  */
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const body = await request.json().catch(() => ({}));
@@ -32,6 +34,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!order || (order.status !== "new" && order.status !== "preparing")) {
     return NextResponse.json({ error: "This order has left the kitchen, so it can't be changed. Refresh the page." }, { status: 409 });
   }
+  const denied = await checkOrderPin(request, order, body?.pin);
+  if (denied) return NextResponse.json({ error: denied.error }, { status: denied.status });
   if (order.paid_at) {
     return NextResponse.json({ error: "This order is already paid. Add items instead, or sort it out on Payments." }, { status: 409 });
   }

@@ -51,7 +51,7 @@ export default function OrderMoneyCard({
   const cash = Number(order.cash_amount ?? 0);
   const card = Number(order.card_amount ?? 0);
   return (
-    <article className="flex flex-col bg-white rounded-xl border border-gray-200 p-4">
+    <article className="flex flex-col bg-white rounded-xl border border-gray-200 p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-gray-900">
@@ -83,7 +83,7 @@ export default function OrderMoneyCard({
         </div>
       )}
 
-      <ul className="mt-3 flex-1 space-y-1 text-sm">
+      <ul className="mt-2 flex-1 space-y-0.5 text-sm">
         {(order.items ?? []).map((item, i) => (
           <li key={i} className="flex justify-between gap-3">
             <span className="text-gray-800">
@@ -95,7 +95,7 @@ export default function OrderMoneyCard({
         ))}
       </ul>
 
-      <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+      <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
         <span className="text-sm font-semibold text-gray-600">Total</span>
         <span className="text-base font-bold text-gray-900">{money(Number(order.total))}</span>
       </div>

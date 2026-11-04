@@ -102,12 +102,12 @@ export default function KitchenServedOrders() {
       ) : visible.length === 0 ? (
         <p className="text-center py-16 text-gray-400 text-sm bg-white rounded-xl border border-gray-200">{q ? "No served orders match." : "No served orders yet."}</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {visible.map((order) => {
             const pill = paymentText(order);
             const rounds = Array.from(new Set((order.items ?? []).map((i) => i.round ?? 1))).sort((a, b) => a - b);
             return (
-              <article key={order.id} className="flex flex-col bg-white rounded-xl border border-gray-200 p-4">
+              <article key={order.id} className="flex flex-col bg-white rounded-xl border border-gray-200 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h2 className="text-base font-semibold text-gray-900">
@@ -140,7 +140,7 @@ export default function KitchenServedOrders() {
                   ))}
                 </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
                   <span className="text-sm font-semibold text-gray-600">Total</span>
                   <span className="text-base font-bold text-gray-900">{money(Number(order.total))}</span>
                 </div>
@@ -157,7 +157,7 @@ export default function KitchenServedOrders() {
                   </ol>
                 </div>
 
-                <div className="mt-3 flex gap-2">
+                <div className="mt-2 flex gap-2">
                   <button
                     onClick={() => printDocument(`/admin/kitchens/receipt/${order.id}`)}
                     aria-label={`Print order ${order.order_number}`}

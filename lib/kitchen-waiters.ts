@@ -83,7 +83,7 @@ export async function waiterFromToken(token: unknown): Promise<{ id: string; nam
 }
 
 export type PinResult =
-  | { status: "ok"; name: string; token: string }
+  | { status: "ok"; id: string; name: string; token: string }
   | { status: "wrong" | "locked" | "unavailable" };
 
 /** Checks a PIN typed on the public page, counting failures against the address. */
@@ -112,7 +112,7 @@ export async function verifyWaiterPin(pin: string, ip: string): Promise<PinResul
     if (attempt) {
       await supabaseAdminLive.from("kitchen_waiter_pin_attempts").delete().eq("ip_hash", ipHash);
     }
-    return { status: "ok", name: match.name, token: waiterToken(match.id) };
+    return { status: "ok", id: match.id, name: match.name, token: waiterToken(match.id) };
   }
 
   // A count left over from before the last lock, or long ago, starts again.
@@ -131,4 +131,36 @@ export async function verifyWaiterPin(pin: string, ip: string): Promise<PinResul
   if (writeError) return { status: "unavailable" };
 
   return { status: failed >= MAX_ATTEMPTS ? "locked" : "wrong" };
+}
+
+const PIN_MESSAGES: Record<string, string> = {
+  wrong: "That PIN isn't right.",
+  locked: "Too many wrong PINs. Wait 10 minutes and try again.",
+  unavailable: "PINs can't be checked right now. Run supabase/kitchen_waiters.sql, or try again.",
+};
+
+/**
+ * Whether a typed PIN may change this order: it has to be the PIN of the
+ * waiter who took it. An order taken with no waiter can be changed by any
+ * waiter. Wrong PINs count towards the same lock as the public page.
+ */
+export async function checkOrderPin(
+  request: Request,
+  order: { waiter_id?: string | null; waiter_name?: string | null },
+  pin: unknown,
+): Promise<{ error: string; status: number } | null> {
+  if (!isWaiterPin(pin)) return { error: "Type the 4-digit waiter PIN.", status: 401 };
+
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "unknown";
+  const result = await verifyWaiterPin(pin, ip);
+  if (result.status !== "ok") {
+    return { error: PIN_MESSAGES[result.status], status: result.status === "locked" ? 429 : result.status === "unavailable" ? 503 : 401 };
+  }
+  if (order.waiter_id && order.waiter_id !== result.id) {
+    return { error: `This is ${order.waiter_name ?? "another waiter"}'s order. Only their PIN can change it.`, status: 403 };
+  }
+  return null;
 }
