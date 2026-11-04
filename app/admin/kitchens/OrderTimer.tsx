@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Timer } from "lucide-react";
 
 /** How long an order can wait before its timer turns red. */
-const LATE_AFTER_MS = 20 * 60_000;
+export const LATE_AFTER_MS = 20 * 60_000;
 
 /**
  * One second hand for a whole screen of orders, ticking only while somebody is
@@ -77,7 +77,7 @@ export default function OrderTimer({
   );
 }
 
-function formatClock(ms: number): string {
+export function formatClock(ms: number): string {
   const total = Math.floor(ms / 1000);
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }

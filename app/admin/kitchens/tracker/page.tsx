@@ -4,7 +4,7 @@ import { Check, Volume2, VolumeX } from "lucide-react";
 import { useAlertChime } from "@/hooks/useAlertChime";
 import { balanceDue } from "@/lib/kitchen-payments";
 import { money, when } from "../OrderMoneyCard";
-import OrderTimer, { useNow, WaiterTimer } from "../OrderTimer";
+import OrderTimer, { formatClock, useNow, WaiterTimer } from "../OrderTimer";
 import type { KitchenOrderStatus, OrderItem } from "@/lib/kitchen-orders";
 
 interface TrackedOrder {
@@ -29,6 +29,8 @@ interface TrackedOrder {
 
 // Short, so the ready alert reaches the waiter soon after the kitchen taps Ready.
 const REFRESH_MS = 5_000;
+/** An item ready this long without being taken turns red. */
+const ITEM_WAIT_MS = 3 * 60_000;
 const NO_WAITER = "__none__";
 
 const STEPS: { status: KitchenOrderStatus; label: string }[] = [
@@ -44,7 +46,11 @@ const onCredit = (o: TrackedOrder) => !o.paid_at && o.payment_method === "credit
 function whereNow(o: TrackedOrder): string {
   if (o.status === "cancelled") return "Cancelled";
   if (o.status === "new") return "Waiting for the kitchen";
-  if (o.status === "preparing") return "Being prepared";
+  if (o.status === "preparing") {
+    const current = (o.items ?? []).filter((item) => (item.round ?? 1) === (o.round ?? 1));
+    const done = current.filter((item) => item.ready_at).length;
+    return done > 0 ? `Being prepared · ${done} of ${current.length} ready to take` : "Being prepared";
+  }
   if (o.status === "ready") return "Ready! Waiter to take it to the table";
   if (o.paid_at) return "Finished";
   return onCredit(o) ? "Served, on credit" : "Served, waiting for payment";
@@ -86,7 +92,13 @@ export default function KitchenOrderTracker() {
     setLoadError("");
     const list = data as TrackedOrder[];
     // By round as well, so added items coming out of the kitchen ring again.
-    const ready = new Set(list.filter((o) => o.status === "ready").map((o) => `${o.id}:${o.round ?? 1}`));
+    // Whole orders and single items, so a drink ready before the food rings too.
+    const ready = new Set(
+      list.flatMap((o) => [
+        ...(o.status === "ready" ? [`${o.id}:${o.round ?? 1}`] : []),
+        ...(o.items ?? []).flatMap((item, i) => (item.ready_at ? [`${o.id}:item:${i}:${item.ready_at}`] : [])),
+      ]),
+    );
     const fresh = knownReady.current ? Array.from(ready).some((key) => !knownReady.current?.has(key)) : false;
     knownReady.current = ready;
     setOrders(list);
@@ -238,12 +250,28 @@ export default function KitchenOrderTracker() {
                   </ol>
                 )}
 
-                <p className="mt-2 flex-1 text-xs text-gray-600">
+                <ul className="mt-2 flex-1 space-y-0.5 text-xs">
                   {(order.items ?? [])
                     .filter((item) => (item.round ?? 1) === (order.round ?? 1))
-                    .map((item) => `${item.qty} × ${item.name}`)
-                    .join(", ")}
-                </p>
+                    .map((item, i) => {
+                      // Waiting at the pass while the rest is still cooking.
+                      const waiting = item.ready_at && (order.status === "new" || order.status === "preparing");
+                      const ms = waiting ? Math.max(0, now - new Date(item.ready_at as string).getTime()) : 0;
+                      return (
+                        <li key={i} className={`flex items-center justify-between gap-2 ${waiting ? "rounded-md bg-green-100 px-1.5 py-1 font-semibold text-green-900" : "text-gray-600"}`}>
+                          <span className="min-w-0">
+                            {waiting && <Check size={12} strokeWidth={3} className="me-1 inline align-[-2px]" />}
+                            {item.qty} × {item.name}
+                          </span>
+                          {waiting && (
+                            <span className={`shrink-0 tabular-nums ${ms >= ITEM_WAIT_MS ? "rounded bg-red-600 px-1 text-white" : ""}`} title="Ready and waiting for">
+                              Ready {formatClock(ms)}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                </ul>
 
                 <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
                   <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${pill.cls}`}>{pill.label}</span>

@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Printer, Volume2, VolumeX } from "lucide-react";
+import { Check, Printer, Volume2, VolumeX } from "lucide-react";
 import { printDocument } from "@/lib/print-document";
-import OrderTimer, { useNow } from "../OrderTimer";
+import OrderTimer, { formatClock, LATE_AFTER_MS, useNow } from "../OrderTimer";
 import { useAlertChime } from "@/hooks/useAlertChime";
 import { KITCHEN_LABELS } from "@/lib/kitchens";
 import type { KitchenOrderStatus, OrderItem } from "@/lib/kitchen-orders";
@@ -56,6 +56,7 @@ export default function KitchenOrdersAdmin() {
   const [view, setView] = useState<"active" | "done">("active");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
+  const [busyItem, setBusyItem] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
   const { soundOn, toggle: toggleSound, chime } = useAlertChime("kitchen-order-alert");
 
@@ -100,6 +101,23 @@ export default function KitchenOrdersAdmin() {
       const data = await res?.json().catch(() => null);
       setActionError(data?.error ?? "That order couldn't be updated. Please try again.");
       return;
+    }
+    load();
+  }
+
+  async function setItemReady(order: KitchenOrder, index: number, ready: boolean) {
+    const key = `${order.id}:${index}`;
+    setBusyItem(key);
+    setActionError("");
+    const res = await fetch(`/api/admin/kitchens/orders/${order.id}/item-ready`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ index, ready }),
+    }).catch(() => null);
+    setBusyItem(null);
+    if (!res?.ok) {
+      const data = await res?.json().catch(() => null);
+      setActionError(data?.error ?? "That item couldn't be updated. Please try again.");
     }
     load();
   }
@@ -204,10 +222,30 @@ export default function KitchenOrdersAdmin() {
                 )}
 
                 <ul className="mt-2 flex-1 divide-y divide-gray-100 text-sm">
-                  {(order.items ?? []).map((item, i) => (
-                    <li key={i} className={`py-1.5 ${(order.round ?? 1) > 1 && (item.round ?? 1) < (order.round ?? 1) ? "opacity-50" : ""}`}>
+                  {(order.items ?? []).map((item, i) => {
+                    const current = (item.round ?? 1) === (order.round ?? 1);
+                    const cooking = current && inKitchen(order);
+                    // Ticked one by one, or ready with the rest of the order.
+                    const readyAt = item.ready_at ?? (current && order.status !== "new" && order.status !== "preparing" ? order.ready_at : null);
+                    const start = [order.round_started_at ?? order.created_at, item.added_at ?? ""].sort().at(-1) as string;
+                    const ms = Math.max(0, (readyAt ? new Date(readyAt).getTime() : now) - new Date(start).getTime());
+                    return (
+                    <li key={i} className={`flex items-start gap-2 py-1.5 ${(order.round ?? 1) > 1 && !current ? "opacity-50" : ""}`}>
+                      {cooking && (
+                        <button
+                          type="button"
+                          onClick={() => setItemReady(order, i, !item.ready_at)}
+                          disabled={busyItem === `${order.id}:${i}`}
+                          aria-pressed={Boolean(item.ready_at)}
+                          aria-label={item.ready_at ? `${item.name} ready. Tap to undo` : `Mark ${item.name} ready`}
+                          className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:opacity-50 ${item.ready_at ? "border-green-600 bg-green-600 text-white" : "border-gray-300 bg-white text-gray-300 hover:border-green-600 hover:text-green-600"}`}
+                        >
+                          <Check size={16} strokeWidth={3} />
+                        </button>
+                      )}
+                      <div className="min-w-0 flex-1">
                       <div className="flex justify-between gap-3">
-                        <span className="font-medium text-gray-800">
+                        <span className={`font-medium ${item.ready_at && cooking ? "text-green-800" : "text-gray-800"}`}>
                           {item.qty} × {item.name}
                           {(order.round ?? 1) > 1 && (item.round ?? 1) === (order.round ?? 1) && (
                             <span className="ms-1.5 rounded bg-amber-400 px-1 py-0.5 text-[10px] font-black text-gray-900">NEW</span>
@@ -217,14 +255,26 @@ export default function KitchenOrdersAdmin() {
                             <span className="ms-1.5 rounded bg-sky-200 px-1 py-0.5 text-[10px] font-black text-sky-900">ADDED</span>
                           )}
                         </span>
-                        <span className="shrink-0 text-gray-600">AED {Number(item.line_total).toFixed(2)}</span>
+                        {current && (order.status !== "cancelled") ? (
+                          <span
+                            className={`shrink-0 text-sm font-bold tabular-nums ${readyAt ? "text-green-700" : ms >= LATE_AFTER_MS ? "text-red-600" : "text-gray-700"}`}
+                            title={readyAt ? "Time it took" : "Time so far"}
+                          >
+                            {readyAt ? "✓ " : ""}{formatClock(ms)}
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-gray-600">AED {Number(item.line_total).toFixed(2)}</span>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500">
                         {KITCHEN_LABELS[item.kitchen as Kitchen] ?? item.kitchen}
                         {item.addons?.length ? ` · ${item.addons.map((a) => a.name).join(", ")}` : ""}
+                        {current && order.status !== "cancelled" && ` · AED ${Number(item.line_total).toFixed(2)}`}
                       </p>
+                      </div>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
 
                 <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">

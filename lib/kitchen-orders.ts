@@ -38,6 +38,8 @@ export interface OrderItem {
   /** Which cooking this belongs to: 1 for the first, 2 for the first items added... */
   round?: number;
   added_at?: string;
+  /** When the kitchen marked this item ready, if it did so item by item. */
+  ready_at?: string;
 }
 
 export function priceOrder(
@@ -147,9 +149,10 @@ export function receiptFromKitchenOrder(order: KitchenOrderForReceipt): InvoiceO
 
 /** One step in an order's history, stored in its events column. */
 export interface OrderEvent {
-  type: "preparing" | "ready" | "served" | "cancelled" | "items_added" | "items_changed" | "paid" | "part_paid" | "credit" | "payment_undone";
+  type: "preparing" | "ready" | "served" | "cancelled" | "items_added" | "items_changed" | "item_ready" | "item_not_ready" | "paid" | "part_paid" | "credit" | "payment_undone";
   at: string;
   method?: string;
+  name?: string;
   count?: number;
   amount?: number;
   discount?: number;
@@ -167,6 +170,8 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 function eventLabel(event: OrderEvent): string {
+  if (event.type === "item_ready") return `${event.name ?? "An item"} ready`;
+  if (event.type === "item_not_ready") return `${event.name ?? "An item"} not ready after all`;
   if (event.type === "items_changed") {
     const count = event.count ?? 0;
     return count > 0 ? `${count} item${count === 1 ? "" : "s"} taken off by the waiter` : "Items changed by the waiter";
