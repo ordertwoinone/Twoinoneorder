@@ -24,11 +24,13 @@ interface Line {
   addonIds: string[];
 }
 
-/** Choose more items for a served order, then send them to the kitchen. */
+/** Choose more items for an order, then send them to the kitchen. */
 export default function AddItemsDialog({
-  orderId, orderLabel, onClose, onSent,
+  orderId, orderLabel, endpoint = "/api/admin/kitchens/served", onClose, onSent,
 }: {
   orderId: string;
+  /** Served Orders' routes, or Orders' for the kitchen screen. */
+  endpoint?: string;
   orderLabel: string;
   onClose: () => void;
   onSent: () => void;
@@ -43,7 +45,7 @@ export default function AddItemsDialog({
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/kitchens/served/menu")
+    fetch(`${endpoint}/menu`)
       .then(async (res) => ({ ok: res.ok, data: await res.json().catch(() => null) }))
       .catch(() => ({ ok: false, data: null }))
       .then(({ ok, data }) => {
@@ -55,7 +57,7 @@ export default function AddItemsDialog({
         setDishes(data.dishes);
         setGroups(data.groups ?? {});
       });
-  }, []);
+  }, [endpoint]);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -87,7 +89,7 @@ export default function AddItemsDialog({
   async function send() {
     setSending(true);
     setError("");
-    const res = await fetch(`/api/admin/kitchens/served/${orderId}/items`, {
+    const res = await fetch(`${endpoint}/${orderId}/items`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: lines.map((l) => ({ dishId: l.dish.id, qty: l.qty, addonIds: l.addonIds })) }),

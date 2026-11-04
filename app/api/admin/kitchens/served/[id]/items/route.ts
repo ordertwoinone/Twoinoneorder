@@ -6,12 +6,17 @@ import { roundMoney } from "@/lib/kalba/pricing";
 import { priceOrder, type OrderDish } from "@/lib/kitchen-orders";
 import { supabaseAdminLive } from "@/lib/supabase-admin";
 
+const ADDABLE = ["new", "preparing", "ready", "served"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Adds items to a served order and sends it back to the kitchen as the same
- * order. Prices come from the database, as they do for a new order. Only a
- * served order qualifies, which also stops a double tap adding everything twice.
+ * Adds items to an order that isn't cancelled. Prices come from the database,
+ * as they do for a new order.
+ *
+ * Still in the kitchen (new or preparing): the items join the round being
+ * cooked. Ready or served: they go back to the kitchen as a new round, so only
+ * they are cooked. The write only lands if the status hasn't changed since it
+ * was read, which also stops a double tap adding everything twice.
  */
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const body = await request.json().catch(() => ({}));
@@ -27,8 +32,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     .eq("id", params.id)
     .maybeSingle();
   if (readError) return NextResponse.json({ error: readError.message }, { status: 500 });
-  if (!order || order.status !== "served") {
-    return NextResponse.json({ error: "This order isn't served any more. Refresh the page." }, { status: 409 });
+  if (!order || !ADDABLE.includes(order.status)) {
+    return NextResponse.json({ error: "This order has been cancelled. Refresh the page." }, { status: 409 });
   }
 
   const { data: dishes, error: dishError } = await supabaseAdminLive
@@ -45,32 +50,32 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const now = new Date().toISOString();
-  const round = Number(order.round ?? 1) + 1;
+  const inKitchen = order.status === "new" || order.status === "preparing";
+  const round = Number(order.round ?? 1) + (inKitchen ? 0 : 1);
   const added = priced.items.map((item) => ({ ...item, round, added_at: now }));
 
   /* A fully paid order now owes only the new items. An order on credit stays on
      credit, and the customer simply owes more. */
   const wasPaid = Boolean(order.paid_at);
 
-  const { error } = await supabaseAdminLive
+  const { data: saved, error } = await supabaseAdminLive
     .from("kitchen_orders")
     .update({
       items: [...(order.items ?? []), ...added],
       total: roundMoney(Number(order.total) + priced.total),
-      status: "new",
       round,
-      round_started_at: now,
-      ready_at: null,
-      served_at: null,
+      // Out of the kitchen already, so the new items start a round of their own.
+      ...(!inKitchen && { status: "new", round_started_at: now, ready_at: null, served_at: null }),
       ...(wasPaid ? { paid_amount: roundMoney(Number(order.total) - Number(order.discount ?? 0)), paid_at: null, payment_method: null } : {}),
       events: [
         ...(order.events ?? []),
-        { type: "items_added", at: now, count: added.reduce((n, i) => n + i.qty, 0), amount: priced.total },
+        { type: "items_added", at: now, count: added.reduce((n, i) => n + i.qty, 0), amount: priced.total, ...(inKitchen && { same_round: true }) },
       ],
       updated_at: now,
     })
     .eq("id", params.id)
-    .eq("status", "served");
+    .eq("status", order.status)
+    .select("id");
 
   if (error) {
     const missing = /round|paid_amount|events/.test(error.message ?? "");
@@ -79,5 +84,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       { status: 500 },
     );
   }
-  return NextResponse.json({ round });
+  if (!saved?.length) {
+    return NextResponse.json({ error: "This order changed while you were choosing. Refresh and try again." }, { status: 409 });
+  }
+  return NextResponse.json({ round, sameRound: inKitchen });
 }

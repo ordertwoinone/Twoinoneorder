@@ -5,7 +5,7 @@ import AddonGroupsEditor, { addonGroupsProblem, type EditableAddonGroup } from "
 import BilingualField from "@/components/admin/BilingualField";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import type { DishBadge, Kitchen, Meal } from "@/data/kitchenDishes";
-import { BADGE_LABELS, KITCHEN_LABELS, MEAL_LABELS, type KitchenCategoryRow, type KitchenDishRow } from "@/lib/kitchens";
+import { BADGE_LABELS, COOKING_KITCHENS, KITCHEN_LABELS, MEAL_LABELS, type KitchenCategoryRow, type KitchenDishRow } from "@/lib/kitchens";
 import ImportDialog from "./ImportDialog";
 
 type DishWithAddons = KitchenDishRow & { addon_groups?: EditableAddonGroup[] };
@@ -111,11 +111,23 @@ export default function KitchensAdmin() {
   function openAdd() {
     setFormError("");
     // Keeps the meal being browsed, since dishes tend to be added a meal at a time.
-    setModal({ open: true, mode: "add", data: { ...EMPTY, meal: mealFilter === "all" || mealFilter === "favorites" ? EMPTY.meal : mealFilter } });
+    const meal = mealFilter === "all" || mealFilter === "favorites" ? EMPTY.meal : mealFilter;
+    setModal({ open: true, mode: "add", data: { ...EMPTY, meal, kitchen: meal === "cafe" ? "cafe" : EMPTY.kitchen } });
   }
   function openEdit(item: DishWithAddons) {
     setFormError("");
     setModal({ open: true, mode: "edit", data: toForm(item) });
+  }
+  /* A cafe dish has no kitchen of its own, so one moved out of the cafe needs one again. */
+  function changeFormMeal(meal: Meal) {
+    setModal((m) => ({
+      ...m,
+      data: {
+        ...m.data,
+        meal,
+        kitchen: meal === "cafe" ? "cafe" : m.data.kitchen === "cafe" ? "italian" : m.data.kitchen,
+      },
+    }));
   }
   function closeModal() { setModal((m) => ({ ...m, open: false })); }
   function handleField<K extends keyof FormData>(key: K, value: FormData[K]) {
@@ -365,7 +377,7 @@ export default function KitchensAdmin() {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
-                  {MEAL_LABELS[item.meal]} · {KITCHEN_LABELS[item.kitchen]} · Serves {item.serves ?? 1}
+                  {item.meal === "cafe" ? MEAL_LABELS.cafe : `${MEAL_LABELS[item.meal]} · ${KITCHEN_LABELS[item.kitchen]}`} · Serves {item.serves ?? 1}
                   {(item.category_ids ?? []).some((id) => categoryName.has(id)) && (
                     <span className="block text-[11px] text-gray-500">
                       {(item.category_ids ?? []).filter((id) => categoryName.has(id)).map((id) => categoryName.get(id)).join(", ")}
@@ -409,16 +421,20 @@ export default function KitchensAdmin() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="kd-meal" className={labelCls}>Meal</label>
-                  <select id="kd-meal" value={modal.data.meal} onChange={(e) => handleField("meal", e.target.value as Meal)} className={`${inputCls} bg-white`}>
+                  <select id="kd-meal" value={modal.data.meal} onChange={(e) => changeFormMeal(e.target.value as Meal)} className={`${inputCls} bg-white`}>
                     {(Object.keys(MEAL_LABELS) as Meal[]).map((id) => <option key={id} value={id}>{MEAL_LABELS[id]}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label htmlFor="kd-kitchen" className={labelCls}>Kitchen</label>
-                  <select id="kd-kitchen" value={modal.data.kitchen} onChange={(e) => handleField("kitchen", e.target.value as Kitchen)} className={`${inputCls} bg-white`}>
-                    {(Object.keys(KITCHEN_LABELS) as Kitchen[]).map((id) => <option key={id} value={id}>{KITCHEN_LABELS[id]}</option>)}
-                  </select>
-                </div>
+                {modal.data.meal === "cafe" ? (
+                  <p className="self-end pb-2.5 text-xs text-gray-500">Cafe dishes are one menu, with no kitchen to choose.</p>
+                ) : (
+                  <div>
+                    <label htmlFor="kd-kitchen" className={labelCls}>Kitchen</label>
+                    <select id="kd-kitchen" value={modal.data.kitchen} onChange={(e) => handleField("kitchen", e.target.value as Kitchen)} className={`${inputCls} bg-white`}>
+                      {COOKING_KITCHENS.map((id) => <option key={id} value={id}>{KITCHEN_LABELS[id]}</option>)}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <BilingualField

@@ -153,6 +153,8 @@ export interface OrderEvent {
   count?: number;
   amount?: number;
   discount?: number;
+  /** Items added while the order was still being cooked, so it stayed in the kitchen. */
+  same_round?: boolean;
 }
 
 const EVENT_LABELS: Record<string, string> = {
@@ -167,7 +169,7 @@ const EVENT_LABELS: Record<string, string> = {
 function eventLabel(event: OrderEvent): string {
   if (event.type === "items_added") {
     const count = event.count ?? 0;
-    return `${count} item${count === 1 ? "" : "s"} added, back to the kitchen`;
+    return `${count} item${count === 1 ? "" : "s"} added${event.same_round ? "" : ", back to the kitchen"}`;
   }
   const how = event.method === "card" ? " by card" : event.method === "cash" ? " in cash" : event.method === "split" ? " in cash and card" : "";
   const sum = event.amount ? ` AED ${event.amount.toFixed(2)}` : "";

@@ -436,17 +436,20 @@ export default function KitchensContent({
     () => categories.filter((c) => mealDishes.some((d) => d.categories?.includes(c.id))),
     [categories, mealDishes],
   );
+  // The cafe is one menu, so the kitchen buttons don't apply to it.
+  const isCafe = meal === "cafe";
+  const shownKitchen: KitchenFilter = isCafe ? "all" : kitchen;
   const activeCategory = mealCategories.some((c) => c.id === category) ? category : null;
 
   const dishes = useMemo(() => {
     const matching = mealDishes.filter(
       (d) =>
-        (kitchen === "all" || d.kitchen === kitchen) &&
+        (shownKitchen === "all" || d.kitchen === shownKitchen) &&
         (!healthyOnly || d.healthy) &&
         (!activeCategory || d.categories?.includes(activeCategory)),
     );
     return sortForMenu(matching, seating?.guests ?? null);
-  }, [mealDishes, kitchen, healthyOnly, activeCategory, seating],
+  }, [mealDishes, shownKitchen, healthyOnly, activeCategory, seating],
   );
 
   const cart = useMemo(
@@ -585,7 +588,7 @@ export default function KitchensContent({
         </div>
 
         <div className="mt-3 flex items-center gap-0.5 sm:gap-1" role="group" aria-label={t("kitchens.kitchenLabel")}>
-          {KITCHENS.map((id) => {
+          {!isCafe && KITCHENS.map((id) => {
             const active = kitchen === id;
             return (
               <button
@@ -659,7 +662,7 @@ export default function KitchensContent({
           )}
 
           {dishes.length > 0 ? (
-            kitchen === "all" ? (
+            shownKitchen === "all" && !isCafe ? (
               /* Both kitchens: Italian on the left two columns, Turkish on the
                  right two; one column each on a portrait tablet. Stacked on phones. */
               <div className="mt-4 grid grid-cols-1 items-start gap-6 sm:grid-cols-2 sm:gap-4">

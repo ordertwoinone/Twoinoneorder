@@ -7,7 +7,8 @@
 import type { KalbaAddonGroup } from "@/lib/kalba/addons";
 
 export type Meal = "breakfast" | "lunch" | "dinner" | "cafe";
-export type Kitchen = "italian" | "turkish";
+/** cafe is for Two in One Cafe dishes, which belong to neither kitchen. */
+export type Kitchen = "italian" | "turkish" | "cafe";
 export type DishBadge = "pizza" | "bbq" | "fresh" | "morning";
 
 export interface KitchenDish {

@@ -911,8 +911,8 @@ const ar: Dictionary = {
     kitchenLabel: "اختر مطبخًا",
     categoryLabel: "اختر فئة",
     meals: { breakfast: "الفطور", lunchDinner: "الغداء والعشاء", cafe: "مقهى تو إن ون" },
-    kitchens: { all: "المطبخان معًا", italian: "إيطالي", turkish: "تركي" },
-    origin: { italian: "المطبخ الإيطالي", turkish: "المطبخ التركي" },
+    kitchens: { all: "المطبخان معًا", italian: "إيطالي", turkish: "تركي", cafe: "مقهى تو إن ون" },
+    origin: { italian: "المطبخ الإيطالي", turkish: "المطبخ التركي", cafe: "مقهى تو إن ون" },
     headings: {
       breakfast: "أطباق الفطور المفضلة",
       lunchDinner: "أطباق الغداء والعشاء المفضلة",

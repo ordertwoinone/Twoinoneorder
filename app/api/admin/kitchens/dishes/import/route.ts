@@ -33,7 +33,8 @@ export async function POST(request: Request) {
   const { data: existing, error } = await supabaseAdminLive
     .from("kitchen_dishes")
     .select("id, meal, name, sort_order")
-    .eq("kitchen", kitchen);
+    // Cafe rows are filed under the cafe whichever kitchen was chosen.
+    .in("kitchen", [kitchen, "cafe"]);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const rows = (existing ?? []) as { id: string; meal: string; name: string; sort_order: number }[];

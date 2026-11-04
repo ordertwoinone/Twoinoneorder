@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { Kitchen } from "@/data/kitchenDishes";
-import { KITCHEN_LABELS } from "@/lib/kitchens";
+import { COOKING_KITCHENS, KITCHEN_LABELS } from "@/lib/kitchens";
 import { parseMenuFile, type ParsedMenu } from "@/lib/kitchens-import";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -113,10 +113,10 @@ export default function ImportDialog({ onClose, onImported }: { onClose: () => v
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="ki-kitchen" className={labelCls}>Kitchen for all these dishes</label>
+                      <label htmlFor="ki-kitchen" className={labelCls}>Kitchen for all these dishes (not Cafe ones)</label>
                       <select id="ki-kitchen" value={kitchen} onChange={(e) => setKitchen(e.target.value as Kitchen | "")} className={`${inputCls} bg-white`}>
                         <option value="">Choose…</option>
-                        {(Object.keys(KITCHEN_LABELS) as Kitchen[]).map((id) => <option key={id} value={id}>{KITCHEN_LABELS[id]}</option>)}
+                        {COOKING_KITCHENS.map((id) => <option key={id} value={id}>{KITCHEN_LABELS[id]}</option>)}
                       </select>
                     </div>
                     <label className="flex items-center gap-2 text-sm text-gray-700 self-end pb-2.5">

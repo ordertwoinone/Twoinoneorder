@@ -155,7 +155,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     children.some((c) => pathname.startsWith(c.href));
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  /* Hides the sidebar on a wide screen, so a tablet gets the whole width.
+  /* Shrinks the sidebar to icons on a wide screen, so a tablet gets more width.
      Remembered on this device only. */
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
@@ -259,11 +259,23 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* Sidebar — slide-in drawer on mobile, static on desktop */}
       <aside
-        className={`w-[260px] lg:w-[240px] shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen fixed lg:sticky top-0 z-50 transition-transform duration-300 print:hidden ${
+        className={`w-[260px] ${collapsed ? "lg:w-16" : "lg:w-[240px]"} shrink-0 bg-white border-r border-gray-200 flex flex-col h-screen fixed lg:sticky top-0 z-50 transition-transform duration-300 print:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 ${collapsed ? "lg:hidden" : ""}`}
+        } lg:translate-x-0`}
       >
-        <div className="px-4 py-4 border-b border-gray-200 flex items-center gap-3 pt-safe">
+        {collapsed && (
+          <div className="hidden lg:flex justify-center py-4 border-b border-gray-200 pt-safe">
+            <button
+              onClick={() => toggleCollapsed(false)}
+              className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500"
+              aria-label="Show full menu"
+              title="Show full menu"
+            >
+              <PanelLeftOpen size={18} />
+            </button>
+          </div>
+        )}
+        <div className={`px-4 py-4 border-b border-gray-200 flex items-center gap-3 pt-safe ${collapsed ? "lg:hidden" : ""}`}>
           <div className="w-9 h-9 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center shrink-0">
             <Image src="/logos/two-in-one.png" alt="Two In One" width={32} height={32} className="object-contain" />
           </div>
@@ -281,14 +293,43 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <button
             onClick={() => toggleCollapsed(true)}
             className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500"
-            aria-label="Hide menu"
-            title="Hide menu"
+            aria-label="Shrink menu to icons"
+            title="Shrink menu to icons"
           >
             <PanelLeftClose size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+        {collapsed && (
+          <nav className="hidden lg:flex flex-1 flex-col items-center gap-1 py-3 overflow-y-auto" aria-label="Menu">
+            {nav.map((item, i) => {
+              const links = "children" in item ? item.children : [item];
+              return (
+                <div key={"children" in item ? item.label : item.href} className={`flex flex-col items-center gap-1 ${i > 0 ? "pt-1 border-t border-gray-100" : ""}`}>
+                  {links.map(({ label, href, icon: Icon }) => {
+                    const active = pathname.startsWith(href);
+                    const title = "children" in item ? `${item.label} · ${label}` : label;
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        aria-label={title}
+                        title={title}
+                        className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${
+                          active ? "bg-orange-50 text-orange-700" : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                        }`}
+                      >
+                        <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </nav>
+        )}
+
+        <nav className={`flex-1 px-3 py-4 space-y-0.5 overflow-y-auto ${collapsed ? "lg:hidden" : ""}`}>
           {nav.map((item) => {
             if ("children" in item) {
               const groupActive = isChildActive(item.children);
@@ -354,29 +395,20 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           })}
         </nav>
 
-        <div className="px-3 py-4 border-t border-gray-200 pb-safe">
+        <div className={`py-4 border-t border-gray-200 pb-safe ${collapsed ? "px-3 lg:px-0 lg:flex lg:justify-center" : "px-3"}`}>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors"
+            aria-label="Log out"
+            title="Log out"
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 transition-colors ${collapsed ? "lg:w-11 lg:h-11 lg:justify-center lg:px-0" : ""}`}
           >
             <LogOut size={17} strokeWidth={1.8} />
-            Log out
+            <span className={collapsed ? "lg:hidden" : ""}>Log out</span>
           </button>
         </div>
       </aside>
 
-      {collapsed && (
-        <button
-          onClick={() => toggleCollapsed(false)}
-          className="hidden lg:flex fixed top-3 left-3 z-40 w-10 h-10 items-center justify-center rounded-lg bg-white border border-gray-200 shadow-sm text-gray-600 hover:bg-gray-50 print:hidden"
-          aria-label="Show menu"
-          title="Show menu"
-        >
-          <PanelLeftOpen size={18} />
-        </button>
-      )}
-
-      <main className={`flex-1 min-w-0 print:m-0 print:p-0 ${collapsed ? "lg:pl-12" : ""}`}>{children}</main>
+      <main className="flex-1 min-w-0 print:m-0 print:p-0">{children}</main>
     </div>
   );
 }

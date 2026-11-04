@@ -8,7 +8,7 @@
 CREATE TABLE IF NOT EXISTS kitchen_dishes (
   id              uuid          DEFAULT gen_random_uuid() PRIMARY KEY,
   meal            text          NOT NULL CHECK (meal IN ('breakfast', 'lunch', 'dinner', 'cafe')),
-  kitchen         text          NOT NULL CHECK (kitchen IN ('italian', 'turkish')),
+  kitchen         text          NOT NULL CHECK (kitchen IN ('italian', 'turkish', 'cafe')),
   name            text          NOT NULL,
   name_ar         text          NOT NULL DEFAULT '',
   description     text          NOT NULL DEFAULT '',
@@ -38,3 +38,9 @@ ALTER TABLE kitchen_dishes
 
 -- Read and written only through the service role, as with the other admin tables.
 ALTER TABLE kitchen_dishes ENABLE ROW LEVEL SECURITY;
+
+-- Cafe dishes are one menu and belong to neither kitchen.
+ALTER TABLE kitchen_dishes DROP CONSTRAINT IF EXISTS kitchen_dishes_kitchen_check;
+ALTER TABLE kitchen_dishes
+  ADD CONSTRAINT kitchen_dishes_kitchen_check CHECK (kitchen IN ('italian', 'turkish', 'cafe'));
+UPDATE kitchen_dishes SET kitchen = 'cafe' WHERE meal = 'cafe' AND kitchen <> 'cafe';

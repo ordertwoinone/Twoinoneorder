@@ -895,8 +895,8 @@ const en = {
     kitchenLabel: "Choose a kitchen",
     categoryLabel: "Choose a category",
     meals: { breakfast: "Breakfast", lunchDinner: "Lunch & Dinner", cafe: "Two in One Cafe" },
-    kitchens: { all: "Both kitchens", italian: "Italian", turkish: "Turkish" },
-    origin: { italian: "Italian kitchen", turkish: "Turkish kitchen" },
+    kitchens: { all: "Both kitchens", italian: "Italian", turkish: "Turkish", cafe: "Two in One Cafe" },
+    origin: { italian: "Italian kitchen", turkish: "Turkish kitchen", cafe: "Two in One Cafe" },
     headings: {
       breakfast: "Breakfast favourites",
       lunchDinner: "Lunch & Dinner favourites",

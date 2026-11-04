@@ -11,7 +11,11 @@ export const MEAL_LABELS: Record<Meal, string> = {
 export const KITCHEN_LABELS: Record<Kitchen, string> = {
   italian: "Italian",
   turkish: "Turkish",
+  cafe: "Two in One Cafe",
 };
+
+/** The kitchens a breakfast, lunch or dinner dish can come from. */
+export const COOKING_KITCHENS: Kitchen[] = ["italian", "turkish"];
 
 export const BADGE_LABELS: Record<DishBadge, string> = {
   pizza: "Pizza favourite",
@@ -114,7 +118,8 @@ export function parseKitchenDish(
   body: Record<string, unknown>,
 ): { row: Omit<KitchenDishRow, "id"> } | { error: string } {
   const meal = body.meal as Meal;
-  const kitchen = body.kitchen as Kitchen;
+  // Cafe dishes are the cafe's own, whatever was sent.
+  const kitchen = (body.meal === "cafe" ? "cafe" : body.kitchen) as Kitchen;
   const name = text(body.name);
   const price = Number(body.price);
   const hasKcal = body.kcal !== null && body.kcal !== "" && body.kcal !== undefined;
@@ -123,7 +128,7 @@ export function parseKitchenDish(
   const badge = body.badge ? (body.badge as DishBadge) : null;
 
   if (!Object.keys(MEAL_LABELS).includes(meal)) return { error: "Choose a meal." };
-  if (!Object.keys(KITCHEN_LABELS).includes(kitchen)) return { error: "Choose a kitchen." };
+  if (meal !== "cafe" && !COOKING_KITCHENS.includes(kitchen)) return { error: "Choose Italian or Turkish." };
   if (!name) return { error: "Enter a name." };
   if (body.price === "" || body.price === null || !Number.isFinite(price) || price < 0) {
     return { error: "Enter a valid price." };

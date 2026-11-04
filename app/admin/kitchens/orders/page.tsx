@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Printer, Volume2, VolumeX } from "lucide-react";
+import { Plus, Printer, Volume2, VolumeX } from "lucide-react";
 import { printDocument } from "@/lib/print-document";
 import OrderTimer, { useNow } from "../OrderTimer";
+import AddItemsDialog from "../served/AddItemsDialog";
 import { useAlertChime } from "@/hooks/useAlertChime";
 import { KITCHEN_LABELS } from "@/lib/kitchens";
 import type { KitchenOrderStatus, OrderItem } from "@/lib/kitchen-orders";
@@ -50,6 +51,8 @@ export default function KitchenOrdersAdmin() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [actionError, setActionError] = useState("");
+  const [adding, setAdding] = useState<KitchenOrder | null>(null);
+  const [notice, setNotice] = useState("");
   const { soundOn, toggle: toggleSound, chime } = useAlertChime("kitchen-order-alert");
 
   // Null until the first load, so opening the screen doesn't ring for old orders.
@@ -141,6 +144,25 @@ export default function KitchenOrdersAdmin() {
         </div>
       )}
       {actionError && <p role="alert" className="mb-4 text-sm text-red-600">{actionError}</p>}
+      {notice && <p role="status" className="mb-4 rounded-lg bg-green-50 px-4 py-3 text-sm font-semibold text-green-800">{notice}</p>}
+
+      {adding && (
+        <AddItemsDialog
+          orderId={adding.id}
+          orderLabel={`order #${adding.order_number}`}
+          endpoint="/api/admin/kitchens/orders"
+          onClose={() => setAdding(null)}
+          onSent={() => {
+            setNotice(
+              adding.status === "ready"
+                ? `Order #${adding.order_number} went back to the kitchen with the new items.`
+                : `Items added to order #${adding.order_number}.`,
+            );
+            setAdding(null);
+            load();
+          }}
+        />
+      )}
 
       {loading ? (
         <p className="text-center py-16 text-gray-400 text-sm">Loading...</p>
@@ -199,6 +221,10 @@ export default function KitchenOrdersAdmin() {
                           {(order.round ?? 1) > 1 && (item.round ?? 1) === (order.round ?? 1) && (
                             <span className="ms-1.5 rounded bg-amber-400 px-1 py-0.5 text-[10px] font-black text-gray-900">NEW</span>
                           )}
+                          {/* Joined the round while it was already being cooked. */}
+                          {item.added_at && item.added_at > (order.round_started_at ?? order.created_at) && (
+                            <span className="ms-1.5 rounded bg-sky-200 px-1 py-0.5 text-[10px] font-black text-sky-900">ADDED</span>
+                          )}
                         </span>
                         <span className="shrink-0 text-gray-600">AED {Number(item.line_total).toFixed(2)}</span>
                       </div>
@@ -238,6 +264,13 @@ export default function KitchenOrdersAdmin() {
                       {(order.round ?? 1) <= 1 && (
                         <button onClick={() => setCancelId(order.id)} className="px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200">Cancel</button>
                       )}
+                      <button
+                        onClick={() => { setNotice(""); setActionError(""); setAdding(order); }}
+                        className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200"
+                      >
+                        <Plus size={14} />
+                        Add items
+                      </button>
                       {next && (
                         <button onClick={() => setStatus(order.id, next.status)} disabled={busyId === order.id} className="flex-1 px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50" style={{ background: "#ea580c" }}>
                           {next.label}
