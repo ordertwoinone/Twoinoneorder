@@ -166,6 +166,13 @@ export const ADMIN_AREAS: AdminArea[] = [
     apiPaths: ["/api/admin/kitchens/history"],
   },
   {
+    key: "kitchens-report",
+    label: "Kitchens Page: Report",
+    hint: "Sales, payments, waiters, kitchens and dishes summed up over any dates",
+    paths: ["/admin/kitchens/report"],
+    apiPaths: ["/api/admin/kitchens/report"],
+  },
+  {
     key: "kitchens-tracker",
     label: "Kitchens Page: Order Tracker",
     hint: "Seeing where every order is, with its waiter",

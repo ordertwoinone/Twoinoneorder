@@ -10,7 +10,7 @@ import {
   Armchair, CalendarDays, Gift, Percent, MapPin, LayoutGrid, Menu, X,
   Disc3, ShieldCheck, Phone, PanelTop, UsersRound, Radio, KeyRound,
   CreditCard, Sparkles, Receipt, History, MapPinned,
-  MonitorSmartphone, Film, Terminal, ChefHat, ListChecks, ClipboardList, PanelLeftClose, PanelLeftOpen,
+  MonitorSmartphone, Film, Terminal, ChefHat, ListChecks, ClipboardList, BarChart3, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { LucideIcon } from "lucide-react";
@@ -104,6 +104,7 @@ const NAV: NavItem[] = [
       { label: "Payments", href: "/admin/kitchens/payments", icon: CreditCard },
       { label: "Credit",  href: "/admin/kitchens/credit",  icon: Receipt    },
       { label: "Order History", href: "/admin/kitchens/history", icon: History },
+      { label: "Report",  href: "/admin/kitchens/report",  icon: BarChart3  },
       { label: "Dishes",  href: "/admin/kitchens/dishes",  icon: Utensils   },
       { label: "Categories", href: "/admin/kitchens/categories", icon: Tag },
       { label: "Tables",  href: "/admin/kitchens/tables",  icon: Armchair   },
