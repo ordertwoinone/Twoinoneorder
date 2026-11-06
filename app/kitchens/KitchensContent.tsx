@@ -517,6 +517,14 @@ export default function KitchensContent({
       setSelection({});
       return;
     }
+    if (res?.status === 401 && data?.error === "waiter") {
+      // The waiter's sign-in ran out: ask for their PIN again, keeping table and guests.
+      confirmSeating({ ...seating, waiter: null, waiterToken: null });
+      setOrderError(t("kitchens.waiterExpired"));
+      setOrderOpen(false);
+      setSeatingOpen(true);
+      return;
+    }
     setOrderError(
       t(res?.status === 409 ? "kitchens.orderChanged" : res?.status === 429 ? "kitchens.orderLimit" : "kitchens.orderFailed"),
     );

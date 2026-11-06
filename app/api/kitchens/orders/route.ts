@@ -63,7 +63,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: changed ? "changed" : "invalid" }, { status: changed ? 409 : 400 });
   }
 
+  /* A waiter's PIN is optional, but one that was given must still be good.
+     Saving the order without them would quietly lose who took it. */
   const waiter = await waiterFromToken(body?.waiterToken);
+  if (body?.waiterToken && !waiter) return NextResponse.json({ error: "waiter" }, { status: 401 });
 
   const { data, error } = await supabaseAdminLive
     .from("kitchen_orders")

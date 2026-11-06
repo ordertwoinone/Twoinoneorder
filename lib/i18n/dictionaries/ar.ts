@@ -953,6 +953,7 @@ const ar: Dictionary = {
     kitchenEmpty: "لا توجد أطباق لهذه الوجبة بعد.",
     waiterPin: "رمز النادل (للموظفين فقط)",
     waiterPinWrong: "الرمز غير صحيح.",
+    waiterExpired: "انتهت صلاحية رمز النادل. أدخله مرة أخرى ثم أرسل الطلب.",
     waiterPinLocked: "محاولات كثيرة. يرجى الانتظار 10 دقائق.",
     waiterPinUnavailable: "رموز النادل غير متاحة حاليًا.",
     waiterPinChecking: "جارٍ التحقق…",

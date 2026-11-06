@@ -14,6 +14,8 @@ const BATCH = 1000;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** The restaurant's own clock (Gulf Standard Time, no daylight saving). */
 const OFFSET_MS = 4 * 60 * 60 * 1000;
+/** The business day closes at 1 AM, so 00:00–00:59 belongs to the day before. */
+const DAY_START_HOUR = 1;
 /** Caps a range so one request cannot read the whole table forever. */
 const MAX_DAYS = 366;
 
@@ -47,14 +49,20 @@ interface Row {
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const num = (v: unknown) => Number(v ?? 0) || 0;
-/** The restaurant's local date and hour of an instant. */
+/** The business day and the local clock hour of an instant. */
 function local(iso: string) {
-  const d = new Date(new Date(iso).getTime() + OFFSET_MS);
-  return { day: d.toISOString().slice(0, 10), hour: d.getUTCHours() };
+  const ms = new Date(iso).getTime() + OFFSET_MS;
+  return {
+    day: new Date(ms - DAY_START_HOUR * 3_600_000).toISOString().slice(0, 10),
+    hour: new Date(ms).getUTCHours(),
+  };
 }
 function todayLocal() {
-  return new Date(Date.now() + OFFSET_MS).toISOString().slice(0, 10);
+  return new Date(Date.now() + OFFSET_MS - DAY_START_HOUR * 3_600_000).toISOString().slice(0, 10);
 }
+/** The calendar date after a YYYY-MM-DD date. */
+const nextDate = (d: string) => new Date(Date.parse(d) + 86_400_000).toISOString().slice(0, 10);
+const HH = String(DAY_START_HOUR).padStart(2, "0");
 
 interface Bucket { orders: number; sales: number; guests: number }
 const bucket = (): Bucket => ({ orders: 0, sales: 0, guests: 0 });
@@ -85,8 +93,9 @@ export async function GET(request: Request) {
     const { data, error } = await supabaseAdminLive
       .from("kitchen_orders")
       .select(columns)
-      .gte("created_at", `${from}T00:00:00+04:00`)
-      .lte("created_at", `${to}T23:59:59.999+04:00`)
+      // From 1 AM on the first day to just before 1 AM after the last.
+      .gte("created_at", `${from}T${HH}:00:00+04:00`)
+      .lt("created_at", `${nextDate(to)}T${HH}:00:00+04:00`)
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
       .range(offset, offset + BATCH - 1);
@@ -209,7 +218,9 @@ export async function GET(request: Request) {
       serveAvg: avg(serveTimes), serveMedian: median(serveTimes), serveCount: serveTimes.length,
     },
     byDay: Array.from(byDay).sort(([a], [b]) => a.localeCompare(b)).map(([day, b]) => ({ day, ...rounded(b) })),
-    byHour: byHour.map((b, hour) => ({ hour, ...rounded(b) })),
+    // In business-day order: 01:00 first, the hour after midnight last.
+    byHour: byHour.map((b, hour) => ({ hour, ...rounded(b) }))
+      .sort((a, b) => ((a.hour - DAY_START_HOUR + 24) % 24) - ((b.hour - DAY_START_HOUR + 24) % 24)),
     byWaiter: Array.from(byWaiter).map(([name, b]) => ({ name, ...rounded(b) })).sort((a, b) => b.sales - a.sales),
     byTable: Array.from(byTable).map(([name, b]) => ({ name, ...rounded(b) })).sort((a, b) => b.sales - a.sales),
     byKitchen: Array.from(byKitchen).map(([name, k]) => ({ name, qty: k.qty, sales: r2(k.sales) })).sort((a, b) => b.sales - a.sales),

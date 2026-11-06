@@ -933,6 +933,7 @@ const en = {
     kitchenEmpty: "Nothing here for this meal yet.",
     waiterPin: "Waiter PIN (staff only)",
     waiterPinWrong: "That PIN isn't recognised.",
+    waiterExpired: "The waiter's PIN has expired. Type it again, then send the order.",
     waiterPinLocked: "Too many tries. Please wait 10 minutes.",
     waiterPinUnavailable: "Waiter PINs aren't available right now.",
     waiterPinChecking: "Checking…",

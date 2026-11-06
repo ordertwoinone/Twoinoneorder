@@ -35,9 +35,9 @@ const labelCls = "block text-xs font-semibold text-gray-700 mb-1";
 const thCls = "px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide";
 const tdCls = "px-4 py-2.5 text-sm text-gray-700";
 
-/** Today and offsets from it on the restaurant's clock (UTC+4). */
+/** Today's business day (UTC+4, closing at 1 AM) and offsets from it. */
 function localDay(offsetDays = 0) {
-  return new Date(Date.now() + 4 * 3_600_000 + offsetDays * 86_400_000).toISOString().slice(0, 10);
+  return new Date(Date.now() + 3 * 3_600_000 + offsetDays * 86_400_000).toISOString().slice(0, 10);
 }
 function monthStart() {
   return `${localDay().slice(0, 8)}01`;
@@ -195,9 +195,11 @@ export default function KitchensReportAdmin() {
 
   const s = report?.summary;
   const multiDay = report ? report.byDay.length > 1 : false;
-  const busyHours = report?.byHour.filter((h) => h.orders > 0) ?? [];
-  const firstHour = busyHours[0]?.hour ?? 0;
-  const lastHour = busyHours[busyHours.length - 1]?.hour ?? -1;
+  // byHour comes in business-day order (01:00 … 00:00), so trim by position.
+  const hours = report?.byHour ?? [];
+  const firstHour = hours.findIndex((h) => h.orders > 0);
+  const lastHour = hours.length - 1 - [...hours].reverse().findIndex((h) => h.orders > 0);
+  const busyHours = hours.filter((h) => h.orders > 0);
   const peak = busyHours.reduce<(Bucket & { hour: number }) | null>((best, h) => (!best || h.sales > best.sales ? h : best), null);
   const shownDishes = allDishes || dishFilter ? dishes : dishes.slice(0, 15);
 
@@ -207,7 +209,7 @@ export default function KitchensReportAdmin() {
         <div>
           <p className="text-xs font-semibold text-orange-500 uppercase tracking-wider mb-1">Kitchens Page</p>
           <h1 className="text-2xl font-semibold text-gray-900">Report</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-500 mt-0.5" title="Each day runs from 1 AM to 1 AM">
             {report ? (report.from === report.to ? dayLabel(report.from) : `${dayLabel(report.from)} – ${dayLabel(report.to)}`) : " "}
             {loading && report && <span className="ml-2 text-gray-400">Updating…</span>}
           </p>
@@ -240,6 +242,7 @@ export default function KitchensReportAdmin() {
             <input id="kr-to" type="date" value={to} min={from || undefined} onChange={(e) => { setTo(e.target.value || from); setPreset(""); }} className={inputCls} />
           </div>
         </div>
+        <p className="mt-2 text-[11px] text-gray-500">Each day runs from 1 AM to 1 AM, so an order at 12:30 AM counts towards the day before.</p>
       </div>
 
       {error && (
@@ -315,7 +318,7 @@ export default function KitchensReportAdmin() {
             )}
             <Panel title="Sales by hour" className={multiDay ? "" : "lg:col-span-2"}>
               <Bars
-                rows={lastHour < 0 ? [] : report.byHour.slice(firstHour, lastHour + 1).map((h) => ({ label: hourLabel(h.hour), value: h.sales, note: `${money(h.sales)} · ${h.orders}` }))}
+                rows={firstHour < 0 ? [] : hours.slice(firstHour, lastHour + 1).map((h) => ({ label: hourLabel(h.hour), value: h.sales, note: `${money(h.sales)} · ${h.orders}` }))}
                 empty="No orders in this range."
               />
             </Panel>
